@@ -15,7 +15,7 @@ public class AvinorRoute extends RouteBuilder {
 
         from("quartz2://backend/avinor?cron=0+0/3+*+*+*+?")
                 .log("Starting avinor data import.")
-                .to("http4://flydata.avinor.no/XmlFeed.asp?TimeFrom=0&airport=OSL")
+                .to("http4://flydata.avinor.no/XmlFeed.asp?TimeFrom=0&airport=OSL") //TODO need complete list of IATA codes that we are interested in
                     .streamCaching()
                     .to("log:no.rutebanken.marduk.routes.avinor.AvinorRoute?showAll=true&multiline=true&showStreams=true&showBody=true&showOut=true&maxChars=1000000000")
                 .doTry()
