@@ -13,6 +13,7 @@ import no.rutebanken.marduk.security.AuthorizationService;
 import org.apache.camel.Body;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
+import org.apache.camel.component.google.pubsub.GooglePubsubConstants;
 import org.apache.camel.model.rest.RestBindingMode;
 import org.apache.camel.model.rest.RestParamType;
 import org.apache.camel.model.rest.RestPropertyDefinition;
@@ -28,6 +29,7 @@ import java.net.URLDecoder;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -91,7 +93,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .endpointProperty("filtersRef", "keycloakPreAuthActionsFilter,keycloakAuthenticationProcessingFilter")
                 .endpointProperty("sessionSupport", "true")
                 .endpointProperty("matchOnUriPrefix", "true")
-                .endpointProperty("enablemulti-partFilter","true")
+                .endpointProperty("enablemulti-partFilter", "true")
                 .enableCORS(true)
                 .dataFormatProperty("prettyPrint", "true")
                 .host(host)
@@ -284,8 +286,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                     e.getIn().setHeader(Constants.FILE_NAME, fileNameForStatusLogging);
                 })
                 .setBody(constant(null))
-
-                .inOnly("activemq:queue:ProcessFileQueue")
+                .inOnly("google-pubsub:{{blobstore.gcs.project.id}}:ProcessFileQueue")
                 .routeId("admin-chouette-import")
                 .endRest()
                 .get("/files")

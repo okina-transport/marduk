@@ -61,7 +61,7 @@ public class NRIFtpReceiverRouteBuilder extends BaseRouteBuilder {
                 .to("log:" + getClass().getName() + "?level=DEBUG&showAll=true&multiline=true")
                 .to("direct:uploadBlob")
                 .log(LoggingLevel.INFO, correlation() + "Putting handle ${header." + FILE_HANDLE + "}")
-                .to("activemq:queue:ProcessFileQueue")
+                .to("google-pubsub:{{blobstore.gcs.project.id}}:ProcessFileQueue")
                 .routeId("nri-ftp-activemq");
     }
 

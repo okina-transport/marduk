@@ -67,7 +67,7 @@ public class SftpReceiverRouteBuilder extends BaseRouteBuilder {
                 .process(e -> JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.FILE_TRANSFER).state(JobEvent.State.STARTED).build())
                 .to("direct:updateStatus")
                 .log(LoggingLevel.INFO, correlation() + "Putting handle ${header." + FILE_HANDLE + "} on queue...")
-                .to("activemq:queue:ProcessFileQueue")
+                .to("google-pubsub:{{blobstore.gcs.project.id}}:ProcessFileQueue")
                 .routeId("sftp-gcs-route");
 
 

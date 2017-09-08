@@ -4,8 +4,8 @@ import no.rutebanken.marduk.Constants;
 import no.rutebanken.marduk.domain.Provider;
 import no.rutebanken.marduk.routes.chouette.json.Parameters;
 import no.rutebanken.marduk.routes.status.JobEvent;
-import no.rutebanken.marduk.routes.status.JobEvent.TimetableAction;
 import no.rutebanken.marduk.routes.status.JobEvent.State;
+import no.rutebanken.marduk.routes.status.JobEvent.TimetableAction;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.builder.PredicateBuilder;
@@ -89,11 +89,15 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
                 .removeHeaders("Camel*")
                 .setHeader(Exchange.HTTP_METHOD, constant(HttpMethods.POST))
                 .setProperty("chouette_url", simple(chouetteUrl + "/chouette_iev/referentials/${header." + CHOUETTE_REFERENTIAL + "}/clean"))
+                .doTry()
                 .toD("${property.chouette_url}")
                 .routeId("chouette-clean-dataspace");
 
-        from("activemq:queue:ChouetteImportQueue?transacted=true").streamCaching()
-                .transacted()
+        from("google-pubsub:{{blobstore.gcs.project.id}}:ChouetteImportQueue?"
+                     + "maxMessagesPerPoll=1&"
+                     + "concurrentConsumers=10").streamCaching()
+// TODO jms transaction
+                .doTry()
                 .log(LoggingLevel.INFO, correlation() + "Starting Chouette import")
                 .removeHeader(Constants.CHOUETTE_JOB_ID)
                 .process(e -> JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.IMPORT).state(State.PENDING).build())

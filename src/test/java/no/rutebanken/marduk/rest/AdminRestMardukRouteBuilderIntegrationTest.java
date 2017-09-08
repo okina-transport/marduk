@@ -85,7 +85,7 @@ public class AdminRestMardukRouteBuilderIntegrationTest extends MardukRouteBuild
         camelContext.getRouteDefinition("admin-chouette-import").adviceWith(camelContext, new AdviceWithRouteBuilder() {
             @Override
             public void configure() throws Exception {
-                interceptSendToEndpoint("activemq:queue:ProcessFileQueue").skipSendToOriginalEndpoint().to("mock:chouetteImportQueue");
+                interceptSendToEndpoint("google-pubsub:{{blobstore.gcs.project.id}}:ProcessFileQueue").skipSendToOriginalEndpoint().to("mock:chouetteImportQueue");
             }
         });
 

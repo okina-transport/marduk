@@ -110,7 +110,7 @@ public class NRIFtpReceiverRouteTest extends MardukRouteBuilderIntegrationTestBa
         context.getRouteDefinitions().get(0).adviceWith(context, new AdviceWithRouteBuilder() {
             @Override
             public void configure() throws Exception {
-                interceptSendToEndpoint("activemq:queue:ProcessFileQueue").skipSendToOriginalEndpoint()
+                interceptSendToEndpoint("google-pubsub:{{blobstore.gcs.project.id}}:ProcessFileQueue").skipSendToOriginalEndpoint()
                         .to("mock:buskerud");
             }
         });

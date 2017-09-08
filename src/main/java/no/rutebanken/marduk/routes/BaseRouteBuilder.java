@@ -20,16 +20,16 @@ public abstract class BaseRouteBuilder extends SpringRouteBuilder {
     @Override
     public void configure() throws Exception {
         errorHandler(transactionErrorHandler()
-                .logExhausted(true)
-                .logRetryStackTrace(true));
+                             .logExhausted(true)
+                             .logRetryStackTrace(true));
     }
 
-    protected ProviderRepository getProviderRepository(){
+    protected ProviderRepository getProviderRepository() {
         return providerRepository;
     }
 
     protected String correlation() {
-    	return "[providerId=${header."+Constants.PROVIDER_ID+"} referential=${header."+Constants.CHOUETTE_REFERENTIAL+"} correlationId=${header."+Constants.CORRELATION_ID+"}] ";
+        return "[providerId=${header." + Constants.PROVIDER_ID + "} referential=${header." + Constants.CHOUETTE_REFERENTIAL + "} correlationId=${header." + Constants.CORRELATION_ID + "}] ";
     }
 
     /**
@@ -38,6 +38,11 @@ public abstract class BaseRouteBuilder extends SpringRouteBuilder {
     protected RouteDefinition singletonFrom(String uri) {
         return this.from(uri).group(SINGLETON_ROUTE_DEFINITION_GROUP_NAME);
     }
+
+
+
+
+
 
 
 }

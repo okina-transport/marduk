@@ -4,22 +4,22 @@ import no.rutebanken.marduk.Constants;
 import no.rutebanken.marduk.MardukRouteBuilderIntegrationTestBase;
 import no.rutebanken.marduk.repository.InMemoryBlobStoreRepository;
 import no.rutebanken.marduk.routes.file.ZipFileUtils;
-import org.apache.camel.*;
+import org.apache.camel.EndpointInject;
+import org.apache.camel.Exchange;
+import org.apache.camel.Expression;
+import org.apache.camel.Produce;
+import org.apache.camel.ProducerTemplate;
 import org.apache.camel.builder.AdviceWithRouteBuilder;
 import org.apache.camel.component.mock.MockEndpoint;
 import org.apache.camel.model.ModelCamelContext;
 import org.apache.camel.model.language.SimpleExpression;
-import org.apache.camel.test.spring.CamelSpringRunner;
-import org.apache.camel.test.spring.UseAdviceWith;
 import org.apache.commons.io.IOUtils;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.annotation.DirtiesContext;
-import org.springframework.test.context.ActiveProfiles;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -61,7 +61,7 @@ public class ChouetteImportFileMardukRouteIntegrationTest extends MardukRouteBui
     @EndpointInject(uri = "mock:updateStatus")
     protected MockEndpoint updateStatus;
 
-    @Produce(uri = "activemq:queue:ProcessFileQueue")
+    @Produce(uri = "google-pubsub:{{blobstore.gcs.project.id}}:ProcessFileQueue")
     protected ProducerTemplate importTemplate;
 
     @Produce(uri = "direct:processImportResult")
@@ -222,8 +222,9 @@ public class ChouetteImportFileMardukRouteIntegrationTest extends MardukRouteBui
         assertTrue("Testing invalid file, but file is not invalid.", ZipFileUtils.zipFileContainsSingleFolder(IOUtils.toByteArray(inMemoryBlobStoreRepository.getBlob(filename))));
         importTemplate.sendBodyAndHeaders(null, headers);
 
-        chouetteCreateImport.assertIsSatisfied();
         pollJobStatus.assertIsSatisfied();
+        chouetteCreateImport.assertIsSatisfied();
+
 
         Exchange exchange = pollJobStatus.getReceivedExchanges().get(0);
         exchange.getIn().setHeader("action_report_result", "OK");

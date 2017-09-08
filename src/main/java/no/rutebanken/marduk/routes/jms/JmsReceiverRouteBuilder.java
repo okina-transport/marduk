@@ -37,7 +37,7 @@ public class JmsReceiverRouteBuilder extends BaseRouteBuilder {
                 .when(simple("{{blobstore.delete.external.blobs:true}}"))
                 .to("direct:deleteExternalBlob")
              .end()
-            .to("activemq:queue:ProcessFileQueue");
+            .to("google-pubsub:{{blobstore.gcs.project.id}}:ProcessFileQueue");
 
     }
 
