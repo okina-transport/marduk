@@ -668,4 +668,13 @@
         </profile>
     </profiles>
 
+    <repositories>
+        <repository>
+            <!-- Also used as snapshotRepository by default -->
+            <id>conveyal-maven-repo</id>
+            <name>Conveyal Maven Repository</name>
+            <url>s3://maven.conveyal.com/</url>
+        </repository>
+    </repositories>
+
 </project>
