@@ -14,23 +14,23 @@
  *
  */
 
-package no.rutebanken.marduk.routes.admin;
+package no.rutebanken.marduk.routes.gtfs;
 
-import no.rutebanken.marduk.services.IdempotentRepositoryService;
-import org.apache.camel.builder.RouteBuilder;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
+/**
+ * RouteTypes supported in the  basic GTFS specification.
+ */
+public enum BasicRouteTypeCode {
 
-@Component
-public class ApplicationAdminRoute extends RouteBuilder {
+    TRAM(0), SUBWAY(1), RAIL(2), BUS(3), FERRY(4), CABLE_CAR(5), GONDOLA(6), FUNICULAR(7);
 
-    @Autowired
-    IdempotentRepositoryService idempotentRepositoryService;
+    private int code;
 
-    @Override
-    public void configure() throws Exception {
-        from("direct:cleanIdempotentFileStore")
-                .bean(idempotentRepositoryService, "cleanUniqueFileNameAndDigestRepo");
-
+    BasicRouteTypeCode(int code) {
+        this.code = code;
     }
+
+    public int getCode() {
+        return code;
+    }
+
 }

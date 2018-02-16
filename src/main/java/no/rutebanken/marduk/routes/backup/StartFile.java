@@ -14,23 +14,23 @@
  *
  */
 
-package no.rutebanken.marduk.routes.admin;
+package no.rutebanken.marduk.routes.backup;
 
-import no.rutebanken.marduk.services.IdempotentRepositoryService;
-import org.apache.camel.builder.RouteBuilder;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
-@Component
-public class ApplicationAdminRoute extends RouteBuilder {
+@JsonIgnoreProperties(ignoreUnknown = true)
+public class StartFile {
+	public String name;
 
-    @Autowired
-    IdempotentRepositoryService idempotentRepositoryService;
+	public StartFile(String name) {
+		this.name = name;
+	}
 
-    @Override
-    public void configure() throws Exception {
-        from("direct:cleanIdempotentFileStore")
-                .bean(idempotentRepositoryService, "cleanUniqueFileNameAndDigestRepo");
+	public String getName() {
+		return name;
+	}
 
-    }
+	public void setName(String name) {
+		this.name = name;
+	}
 }

@@ -19,7 +19,6 @@ package no.rutebanken.marduk.rest;
 import no.rutebanken.marduk.Constants;
 import no.rutebanken.marduk.domain.BlobStoreFiles;
 import no.rutebanken.marduk.domain.BlobStoreFiles.File;
-import no.rutebanken.marduk.geocoder.routes.control.GeoCoderTaskType;
 import no.rutebanken.marduk.routes.BaseRouteBuilder;
 import no.rutebanken.marduk.routes.chouette.json.JobResponse;
 import no.rutebanken.marduk.routes.chouette.json.Status;
@@ -42,10 +41,8 @@ import org.springframework.stereotype.Component;
 import javax.ws.rs.NotFoundException;
 import java.net.URLDecoder;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
-import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -126,44 +123,6 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
 
 
         String commonApiDocEndpoint = "rest:get:/services/swagger.json?bridgeEndpoint=true";
-
-
-        rest("/geocoder_admin")
-                .post("/idempotentfilter/clean")
-                .description("Clean Idempotent repo for downloads")
-                .responseMessage().code(200).endResponseMessage()
-                .responseMessage().code(500).message("Internal error").endResponseMessage()
-                .route().routeId("admin-application-clean-idempotent-download-repos")
-                .process(e -> authorizationService.verifyAtLeastOne(new AuthorizationClaim(AuthorizationConstants.ROLE_ROUTE_DATA_ADMIN)))
-                .to("direct:cleanIdempotentDownloadRepo")
-                .setBody(constant(null))
-                .endRest()
-
-                .post("/build_pipeline")
-                .param().name("task")
-                .type(RestParamType.query)
-                .allowableValues(Arrays.asList(GeoCoderTaskType.values()).stream().map(GeoCoderTaskType::name).collect(Collectors.toList()))
-                .required(Boolean.TRUE)
-                .description("Tasks to be executed")
-                .endParam()
-                .description("Update geocoder tasks")
-                .responseMessage().code(200).endResponseMessage()
-                .responseMessage().code(500).message("Internal error").endResponseMessage()
-                .route().routeId("admin-geocoder-update")
-                .process(e -> authorizationService.verifyAtLeastOne(new AuthorizationClaim(AuthorizationConstants.ROLE_ROUTE_DATA_ADMIN)))
-                .validate(header("task").isNotNull())
-                .removeHeaders("CamelHttp*")
-                .process(e -> e.getIn().setBody(geoCoderTaskTypesFromString(e.getIn().getHeader("task", Collection.class))))
-                .inOnly("direct:geoCoderStartBatch")
-                .setBody(constant(null))
-                .endRest()
-
-                .get("/swagger.json")
-                .apiDocs(false)
-                .bindingMode(RestBindingMode.off)
-                .route()
-                .to(commonApiDocEndpoint)
-                .endRest();
 
         rest("/timetable_admin")
                 .post("/idempotentfilter/clean")
@@ -376,7 +335,37 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .routeId("admin-chouette-timetable-files-get")
                 .endRest()
 
-                .post("/export/google")
+
+                .post("/export/gtfs/extended")
+                .description("Prepare and upload GTFS extened export")
+                .consumes(PLAIN)
+                .produces(PLAIN)
+                .responseMessage().code(200).endResponseMessage()
+                .responseMessage().code(500).message("Internal error").endResponseMessage()
+                .route()
+                .to("direct:authorizeRequest")
+                .log(LoggingLevel.INFO, "Triggered GTFS extended export")
+                .removeHeaders("CamelHttp*")
+                .inOnly("activemq:queue:GtfsExportMergedQueue")
+                .routeId("admin-timetable-gtfs-extended-export")
+                .endRest()
+
+
+                .post("/export/gtfs/basic")
+                .description("Prepare and upload GTFS basic export")
+                .consumes(PLAIN)
+                .produces(PLAIN)
+                .responseMessage().code(200).endResponseMessage()
+                .responseMessage().code(500).message("Internal error").endResponseMessage()
+                .route()
+                .to("direct:authorizeRequest")
+                .log(LoggingLevel.INFO, "Triggered GTFS basic export")
+                .removeHeaders("CamelHttp*")
+                .inOnly("activemq:queue:GtfsBasicExportMergedQueue")
+                .routeId("admin-timetable-gtfs-basic-export")
+                .endRest()
+
+                .post("/export/gtfs/google")
                 .description("Prepare and upload GTFS export to Google")
                 .consumes(PLAIN)
                 .produces(PLAIN)
@@ -426,22 +415,22 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .to(commonApiDocEndpoint)
                 .endRest()
 
-                .post("routing_graph/build/gtfs")
-                .description("Triggers building of the OTP graph using existing gtfs and map data")
+                .post("routing_graph/build_base")
+                .description("Triggers building of the OTP base graph using map data (osm + height)")
                 .consumes(PLAIN)
                 .produces(PLAIN)
                 .responseMessage().code(200).message("Command accepted").endResponseMessage()
                 .route()
                 .process(e -> authorizationService.verifyAtLeastOne(new AuthorizationClaim(AuthorizationConstants.ROLE_ROUTE_DATA_ADMIN)))
-                .log(LoggingLevel.INFO, "OTP build graph")
+                .log(LoggingLevel.INFO, "Triggered build of OTP base graph with map data")
                 .removeHeaders("CamelHttp*")
                 .setBody(simple(""))
-                .inOnly("activemq:queue:OtpGtfsGraphQueue")
-                .routeId("admin-build-graph")
+                .inOnly("activemq:queue:OtpBaseGraphBuildQueue")
+                .routeId("admin-build-base-graph")
                 .endRest()
 
                 .post("routing_graph/build")
-                .description("Triggers building of the OTP graph using existing NeTEx and map data")
+                .description("Triggers building of the OTP graph using existing NeTEx and and a pre-prepared base graph with map data")
                 .consumes(PLAIN)
                 .produces(PLAIN)
                 .responseMessage().code(200).message("Command accepted").endResponseMessage()
@@ -467,8 +456,6 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .to("direct:runOtpTravelSearchQA")
                 .routeId("admin-otp-travelsearch-qa")
                 .endRest();
-
-
 
 
         rest("/timetable_admin/{providerId}")
@@ -755,52 +742,6 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .to(commonApiDocEndpoint)
                 .endRest();
 
-
-        rest("/organisation_admin")
-                .post("/administrative_zones/update")
-                .description("Update administrative zones in the organisation registry")
-                .consumes(PLAIN)
-                .produces(PLAIN)
-                .responseMessage().code(200).message("Command accepted").endResponseMessage()
-                .route()
-                .process(e -> authorizationService.verifyAtLeastOne(new AuthorizationClaim(AuthorizationConstants.ROLE_ORGANISATION_EDIT)))
-                .removeHeaders("CamelHttp*")
-                .to("direct:updateAdminUnitsInOrgReg")
-                .setBody(simple("done"))
-                .routeId("admin-org-reg-import-admin-zones")
-                .endRest()
-
-                .get("/swagger.json")
-                .apiDocs(false)
-                .bindingMode(RestBindingMode.off)
-                .route()
-                .to(commonApiDocEndpoint)
-                .endRest();
-
-
-        rest("/export")
-                .post("/stop_places")
-                .description("Trigger export from Stop Place Registry (NSR) for all existing configurations")
-                .consumes(PLAIN)
-                .produces(PLAIN)
-                .responseMessage().code(200).message("Command accepted").endResponseMessage()
-                .route()
-                .process(e -> authorizationService.verifyAtLeastOne(new AuthorizationClaim(AuthorizationConstants.ROLE_ROUTE_DATA_ADMIN)))
-                .removeHeaders("CamelHttp*")
-                .removeHeaders("Authorization")
-                .to("direct:startFullTiamatPublishExport")
-                .setBody(simple("done"))
-                .routeId("admin-tiamat-publish-export-full")
-                .endRest()
-
-                .get("/swagger.json")
-                .apiDocs(false)
-                .bindingMode(RestBindingMode.off)
-                .route()
-                .to(commonApiDocEndpoint)
-                .endRest();
-
-
         from("direct:authorizeRequest")
                 .doTry()
                 .process(e -> authorizationService.verifyAtLeastOne(new AuthorizationClaim(AuthorizationConstants.ROLE_ROUTE_DATA_ADMIN),
@@ -808,10 +749,6 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .routeId("admin-authorize-request");
 
 
-    }
-
-    private Set<GeoCoderTaskType> geoCoderTaskTypesFromString(Collection<String> typeStrings) {
-        return typeStrings.stream().map(s -> GeoCoderTaskType.valueOf(s)).collect(Collectors.toSet());
     }
 
     public static class ImportFilesSplitter {

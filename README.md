@@ -19,10 +19,10 @@ marduk.shutdown.timeout=1
 
 blobstore.gcs.container.name=marduk-test
 blobstore.gcs.credential.path=/home/tomgag/.ssh/Carbon-ef49cabc6d04.json
+blobstore.gcs.project.id=carbon-1287
 blobstore.gcs.exchange.container.name=marduk-test-exchange
 blobstore.gcs.exchange.credential.path=/home/tomgag/.ssh/Carbon-ef49cabc6d04.json
 blobstore.delete.external.blobs=false
-blobstore.gcs.project.id=carbon-1287
 
 camel.springboot.name=Marduk
 chouette.export.days.back=365
@@ -53,7 +53,6 @@ logging.level.org.springframework=INFO
 logging.level.no.rutebanken.marduk.routes.otp.GraphPublishRouteBuilder=INFO
 logging.level.no.rutebanken.marduk.routes.file=DEBUG
 providers.api.url=http://baba:11601/services/providers/
-organisations.api.url=http://baba:11601/services/organisations/
 
 nri.ftp.delay=40s
 nri.ftp.folder=rutedata
@@ -90,12 +89,9 @@ otp.graph.deployment.notification.url=none
 
 idempotent.skip=false
 
-tiamat.url=http4://tiamat:1888
 babylon.url=http4://babylon:9030/rest
 
-kartverket.username=
-kartverket.password=
- 
+
 ```
 * Run with maven `mvn spring-boot:run -Dspring.profiles.active=dev`
 

@@ -33,6 +33,7 @@ public class Constants {
     public static final String CURRENT_AGGREGATED_GTFS_FILENAME = "aggregated-gtfs.zip";
     public static final String CURRENT_AGGREGATED_NETEX_FILENAME = "aggregated-netex.zip";
     public static final String GRAPH_OBJ = "Graph.obj";
+    public static final String BASE_GRAPH_OBJ = "baseGraph.obj";
 
     public static final String METADATA_DESCRIPTION = "MetadataDescription";
     public static final String METADATA_FILE = "MetadataFile";
@@ -50,30 +51,23 @@ public class Constants {
     public static final String CHOUETTE_JOB_STATUS_JOB_TYPE = "RutebankenChouetteJobStatusType";
     public static final String CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL = "RutebankenChouetteJobStatusValidationLevel";
 
-    public static final String JOB_URL = "RutebankenJobURL";
-    public static final String JOB_ID = "RutebankenJobId";
-    public static final String JOB_STATUS_ROUTING_DESTINATION = "RutebankenobStatusRoutingDestination";
-
-    public static final String KARTVERKET_DATASETID = "RutebankenKartverketDataSetId";
-    public static final String KARTVERKET_FORMAT = "RutebankenKartverketFormat";
+    public static final String JOB_ACTION = "RutebankenJobAction";
 
     public static final String BLOBSTORE_MAKE_BLOB_PUBLIC = "RutebankenBlobstoreMakeBlobPublic";
 
     public static final String SINGLETON_ROUTE_DEFINITION_GROUP_NAME = "RutebankenSingletonRouteDefinitionGroup";
 
-    public static final String CONTENT_CHANGED = "RutebankenContentChanged";
     public static final String FOLDER_NAME = "RutebankenFolderName";
     public static final String SYSTEM_STATUS = "RutebankenSystemStatus";
 
     public static final String TIMESTAMP = "RutebankenTimeStamp";
-    public static final String LOOP_COUNTER = "RutebankenLoopCounter";
 
-    public static final String QUERY_STRING = "RutebankenQueryString";
-
-    public static final String TIAMAT_EXPORT_TASKS = "RutebankenTiamatExportTasks";
     public static final String ETCD_KEY = "RutebankenEtcdKey";
 
     public static final String ET_CLIENT_NAME_HEADER = "ET-Client-Name";
     public static final String ET_CLIENT_ID_HEADER = "ET-Client-ID";
+
+    public static final String PROVIDER_BLACK_LIST = "RutebankenProviderBlackList";
+    public static final String TRANSFORMATION_ROUTING_DESTINATION = "RutebankenTransformationRoutingDestination";
 }
 
