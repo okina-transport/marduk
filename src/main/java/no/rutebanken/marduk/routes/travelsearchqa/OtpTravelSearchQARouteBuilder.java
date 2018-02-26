@@ -24,13 +24,12 @@ import org.apache.camel.LoggingLevel;
 import org.apache.camel.component.http4.HttpMethods;
 import org.apache.camel.model.dataformat.JsonLibrary;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
 
 /**
  * Triggers otp travelsearch qa job.
  * It starts a (self-contained) pod which runs the tests.
  */
-@Component
+//@Component
 public class OtpTravelSearchQARouteBuilder extends BaseRouteBuilder {
 
     @Value("${babylon.url:http4://babylon/services/local}")

@@ -26,7 +26,6 @@ import org.apache.camel.LoggingLevel;
 import org.apache.camel.component.http4.HttpMethods;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
 
 import java.io.InputStream;
 import java.util.Date;
@@ -48,7 +47,7 @@ import static no.rutebanken.marduk.Constants.FILE_HANDLE;
  *     </ul>
  * </p>
  */
-@Component
+//@Component
 public class FetchOsmRouteBuilder extends BaseRouteBuilder {
 
     private static final String NEED_TO_REFETCH = "needToRefetchMapFile";

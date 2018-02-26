@@ -23,10 +23,7 @@ import no.rutebanken.marduk.routes.status.JobEvent;
 import org.apache.activemq.command.ActiveMQMessage;
 import org.apache.camel.LoggingLevel;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
-
-import java.util.List;
 
 import static no.rutebanken.marduk.Constants.*;
 import static org.apache.camel.Exchange.FILE_PARENT;
@@ -35,7 +32,7 @@ import static org.apache.camel.builder.Builder.exceptionStackTrace;
 /**
  * Trigger OTP graph building based on NeTEx data.
  */
-@Component
+//@Component
 public class OtpNetexGraphRouteBuilder extends BaseRouteBuilder {
 
     private static final String BUILD_CONFIG_JSON = "build-config.json";

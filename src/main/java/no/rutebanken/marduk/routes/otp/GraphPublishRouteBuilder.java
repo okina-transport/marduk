@@ -29,7 +29,6 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Component;
 
 import java.io.File;
 import java.io.IOException;
@@ -37,15 +36,11 @@ import java.io.InputStream;
 import java.util.Collection;
 import java.util.Date;
 
-import static no.rutebanken.marduk.Constants.FILE_HANDLE;
-import static no.rutebanken.marduk.Constants.GRAPH_OBJ;
-import static no.rutebanken.marduk.Constants.METADATA_DESCRIPTION;
-import static no.rutebanken.marduk.Constants.METADATA_FILE;
-import static no.rutebanken.marduk.Constants.TIMESTAMP;
+import static no.rutebanken.marduk.Constants.*;
 import static org.apache.camel.Exchange.FILE_PARENT;
 import static org.apache.commons.io.FileUtils.deleteDirectory;
 
-@Component
+//@Component
 public class GraphPublishRouteBuilder extends BaseRouteBuilder {
 
     @Value("${otp.graph.deployment.notification.url:none}")
