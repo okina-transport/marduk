@@ -107,9 +107,9 @@ public class FetchOsmRouteBuilder extends BaseRouteBuilder {
                 .to("direct:uploadBlob")
                 .setBody(simple("File fetched, and blob store has been correctly updated"))
                 .setHeader(FINISHED, constant("true"))
-                .log(LoggingLevel.INFO, "Map was updated, therefore triggering OSM graph build and Geocoder POI update")
+                .log(LoggingLevel.INFO, "Map was updated, therefore triggering OSM base graph build and Geocoder POI update")
                 .setBody(constant(null))
-                .inOnly("activemq:queue:OtpNetexGraphQueue")
+                .inOnly("activemq:queue:OtpBaseGraphBuildQueue")
                 .inOnly("activemq:queue:GeoCoderOsmUpdateNotificationQueue")
                 .to("direct:notifyOsmStatus")
                 .log(LoggingLevel.DEBUG, "Processing of OSM map finished")
@@ -156,7 +156,7 @@ public class FetchOsmRouteBuilder extends BaseRouteBuilder {
                 .routeId("osm-check-for-newer-map");
 
         singletonFrom("quartz2://marduk/fetchOsmMap?cron="+cronSchedule+"&trigger.timeZone=Europe/Oslo")
-                .filter(e -> isSingletonRouteActive(e.getFromRouteId()))
+                .filter(e -> shouldQuartzRouteTrigger(e, cronSchedule))
                 .log(LoggingLevel.INFO, "Quartz triggers fetch of OSM map over Norway.")
                 .to("direct:considerToFetchOsmMapOverNorway")
                 .log(LoggingLevel.INFO,  "Quartz processing done.")
