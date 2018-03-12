@@ -14,7 +14,7 @@
     "check_interchange": "1",
     "check_lines_in_groups": "0",
     "check_line_routes": "0",
-    "check_stop_parent": "1",
+    "check_stop_parent": "0",
     "check_connection_link_on_physical": "0",
     "mode_coach": {
         "allowed_transport": "1",
