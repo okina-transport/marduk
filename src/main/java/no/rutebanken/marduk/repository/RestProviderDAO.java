@@ -49,8 +49,6 @@ public class RestProviderDAO {
     public Collection<Provider> getProviders() {
         RestTemplate restTemplate = new RestTemplate();
 
-        logger.info(">>> Providers URL : " + restServiceUrl);
-
         ResponseEntity<List<Provider>> rateResponse =
                 restTemplate.exchange(restServiceUrl,
                         HttpMethod.GET, getEntityWithAuthenticationToken(), new ParameterizedTypeReference<List<Provider>>() {
