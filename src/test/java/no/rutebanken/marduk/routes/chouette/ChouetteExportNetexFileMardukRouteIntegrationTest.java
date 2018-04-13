@@ -55,8 +55,8 @@ public class ChouetteExportNetexFileMardukRouteIntegrationTest extends MardukRou
 //	@EndpointInject(uri = "mock:OtpGraphBuildQueue")
 //	protected MockEndpoint otpNetexGraphQueue;
 
-	@EndpointInject(uri = "mock:ExportGtfsQueue")
-	protected MockEndpoint exportGtfsQueue;
+	@EndpointInject(uri = "mock:exportMergedNetex")
+	protected MockEndpoint exportMergedNetex;
 
 	@Produce(uri = "activemq:queue:ChouetteExportNetexQueue")
 	protected ProducerTemplate importTemplate;
@@ -99,7 +99,7 @@ public class ChouetteExportNetexFileMardukRouteIntegrationTest extends MardukRou
 				interceptSendToEndpoint("direct:updateStatus").skipSendToOriginalEndpoint()
 						.to("mock:updateStatus");
 //				interceptSendToEndpoint("activemq:queue:OtpGraphBuildQueue").skipSendToOriginalEndpoint().to("mock:OtpGraphBuildQueue");
-				interceptSendToEndpoint("activemq:queue:ChouetteExportGtfsQueue").skipSendToOriginalEndpoint().to("mock:ExportGtfsQueue");
+				interceptSendToEndpoint("direct:exportMergedNetex").skipSendToOriginalEndpoint().to("mock:exportMergedNetex");
 			}
 		});
 
@@ -145,7 +145,7 @@ public class ChouetteExportNetexFileMardukRouteIntegrationTest extends MardukRou
 
 
 //		otpNetexGraphQueue.expectedMessageCount(1);
-		exportGtfsQueue.expectedMessageCount(1);
+		exportMergedNetex.expectedMessageCount(1);
 
 		Map<String, Object> headers = new HashMap<>();
 		headers.put(Constants.PROVIDER_ID, "2");
@@ -163,7 +163,7 @@ public class ChouetteExportNetexFileMardukRouteIntegrationTest extends MardukRou
 		chouetteGetData.assertIsSatisfied();
 		updateStatus.assertIsSatisfied();
 //		otpNetexGraphQueue.assertIsSatisfied();
-		exportGtfsQueue.assertIsSatisfied();
+		exportMergedNetex.assertIsSatisfied();
 
 	}
 }
