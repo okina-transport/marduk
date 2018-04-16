@@ -40,7 +40,7 @@ public class CacheProviderRepository implements ProviderRepository {
     @Autowired
     RestProviderDAO restProviderService;
 
-    @Value("${marduk.provider.cache.refresh.max.size:100}")
+    @Value("${marduk.provider.cache.refresh.max.size:200}")
     private Integer cacheMaxSize;
 
     private static Cache<Long, Provider> cache;
