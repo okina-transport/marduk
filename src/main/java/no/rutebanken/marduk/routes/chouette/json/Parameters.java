@@ -76,7 +76,7 @@ public class Parameters {
     public static String getGtfsExportParameters(Provider provider) {
         try {
             ChouetteInfo chouetteInfo = provider.chouetteInfo;
-            GtfsExportParameters.GtfsExport gtfsExport = new GtfsExportParameters.GtfsExport("for journey planning",
+            GtfsExportParameters.GtfsExport gtfsExport = new GtfsExportParameters.GtfsExport("offre",
                                                                                                     chouetteInfo.xmlns, chouetteInfo.referential, chouetteInfo.organisation, chouetteInfo.user, true);
             GtfsExportParameters.Parameters parameters = new GtfsExportParameters.Parameters(gtfsExport);
             GtfsExportParameters importParameters = new GtfsExportParameters(parameters);
@@ -93,7 +93,7 @@ public class Parameters {
         try {
             ChouetteInfo chouetteInfo = provider.chouetteInfo;
             String projectionType = null;
-            NetexExportParameters.NetexExport netexExport = new NetexExportParameters.NetexExport("for journey planning", chouetteInfo.referential, chouetteInfo.organisation, chouetteInfo.user, projectionType, exportStops,chouetteInfo.xmlns);
+            NetexExportParameters.NetexExport netexExport = new NetexExportParameters.NetexExport("offre", chouetteInfo.referential, chouetteInfo.organisation, chouetteInfo.user, projectionType, exportStops,chouetteInfo.xmlns);
             NetexExportParameters.Parameters parameters = new NetexExportParameters.Parameters(netexExport);
             NetexExportParameters exportParameters = new NetexExportParameters(parameters);
             ObjectMapper mapper = new ObjectMapper();
@@ -123,7 +123,7 @@ public class Parameters {
     public static String getValidationParameters(Provider provider) {
         ChouetteInfo chouetteInfo = provider.chouetteInfo;
 
-        ValidationParameters validationParameters = ValidationParameters.create("Automatisk",
+        ValidationParameters validationParameters = ValidationParameters.create("Automatique",
                 chouetteInfo.referential, chouetteInfo.organisation, chouetteInfo.user);
         validationParameters.enableValidation = true;
         return validationParameters.toJsonString();
