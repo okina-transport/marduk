@@ -98,8 +98,8 @@ public class ChouetteExportNetexRouteBuilder extends AbstractChouetteRouteBuilde
 
 
                 // replaced gtfs queue processing by global netex export.
-//                .to("activemq:queue:ChouetteExportGtfsQueue")
-                .to("direct:exportMergedNetex")
+                .to("activemq:queue:ChouetteExportGtfsQueue")
+//                .to("direct:exportMergedNetex")
 
 
                 .endChoice()
