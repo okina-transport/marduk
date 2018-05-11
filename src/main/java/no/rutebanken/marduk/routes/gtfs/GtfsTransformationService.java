@@ -194,6 +194,10 @@ public class GtfsTransformationService {
 
         private static class RemoveShapeTransformer implements GtfsTransformStrategy {
 
+            public String getName() {
+                return this.getClass().getSimpleName();
+            }
+
             @Override
             public void run(TransformContext context, GtfsMutableRelationalDao dao) {
                 dao.clearAllEntitiesForType(ShapePoint.class);
