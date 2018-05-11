@@ -99,7 +99,7 @@ public class ChouetteExportNetexFileMardukRouteIntegrationTest extends MardukRou
 				interceptSendToEndpoint("direct:updateStatus").skipSendToOriginalEndpoint()
 						.to("mock:updateStatus");
 //				interceptSendToEndpoint("activemq:queue:OtpGraphBuildQueue").skipSendToOriginalEndpoint().to("mock:OtpGraphBuildQueue");
-				interceptSendToEndpoint("direct:exportMergedNetex").skipSendToOriginalEndpoint().to("mock:exportMergedNetex");
+//				interceptSendToEndpoint("direct:exportMergedNetex").skipSendToOriginalEndpoint().to("mock:exportMergedNetex");
 			}
 		});
 
