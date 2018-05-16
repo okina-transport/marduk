@@ -95,7 +95,7 @@ public class ChouetteStatsRouteBuilder extends AbstractChouetteRouteBuilder {
                 .setHeader(Exchange.HTTP_METHOD, constant(HttpMethods.GET))
                 .process(e -> e.getIn().setHeader("refParam", getAllReferentialsAsParam()))
                 .setProperty("chouette_url", simple(chouetteUrl + "/chouette_iev/statistics/line?days=" + days + "&" + getValidityCategories() + "${header.refParam}"))
-                .log(LoggingLevel.DEBUG, getClass().getName(), correlation() + "Calling chouette with ${property.chouette_url}")
+                .log(LoggingLevel.INFO, getClass().getName(), correlation() + "Calling chouette with ${property.chouette_url} and validity categories: " + getValidityCategories())
                 .toD("${exchangeProperty.chouette_url}")
                 .unmarshal().json(JsonLibrary.Jackson, Map.class)
                 .process(e -> e.getIn().setBody(mapReferentialToProviderId(e.getIn().getBody(Map.class))))
