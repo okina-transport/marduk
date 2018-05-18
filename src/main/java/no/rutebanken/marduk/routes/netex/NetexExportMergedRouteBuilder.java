@@ -76,9 +76,6 @@ public class NetexExportMergedRouteBuilder extends BaseRouteBuilder {
                 // Use wire tap to avoid replacing body
                 .wireTap("direct:reportExportMergedNetexOK")
 
-                // Launching GTFS exports
-                .to("activemq:queue:ChouetteExportGtfsQueue")
-
                 .log(LoggingLevel.INFO, getClass().getName(), "Completed export of merged Netex file for Norway")
                 .routeId("netex-export-merged-route");
 
