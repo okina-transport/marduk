@@ -51,7 +51,8 @@ public class NetexExportMergedRouteBuilder extends BaseRouteBuilder {
     @Value("${netex.export.stops.file.prefix:_stops}")
     private String netexExportStopsFilePrefix;
 
-
+    @Value("${google.publish.public:false}")
+    private boolean publicPublication;
 
     @Override
     public void configure() throws Exception {
@@ -125,7 +126,7 @@ public class NetexExportMergedRouteBuilder extends BaseRouteBuilder {
                 .log(LoggingLevel.DEBUG, getClass().getName(), "Merging Netex files for all providers and stop place registry.")
                 .process(e -> new File( e.getProperty(FOLDER_NAME, String.class) + "/result").mkdir())
                 .process(e -> e.getIn().setBody(ZipFileUtils.zipFilesInFolder( e.getProperty(FOLDER_NAME, String.class),  e.getProperty(FOLDER_NAME, String.class) + "/result/merged.zip")))
-                .setHeader(BLOBSTORE_MAKE_BLOB_PUBLIC, constant(true))
+                .setHeader(BLOBSTORE_MAKE_BLOB_PUBLIC, constant(publicPublication))
                 .setHeader(FILE_HANDLE, simple(BLOBSTORE_PATH_OUTBOUND + netexExportMergedFilePath))
                 .to("direct:uploadBlob")
                 .log(LoggingLevel.INFO, getClass().getName(), "Uploaded new combined Netex for Norway")

@@ -18,14 +18,16 @@ package no.rutebanken.marduk.routes.blobstore;
 
 import no.rutebanken.marduk.routes.BaseRouteBuilder;
 import org.apache.camel.LoggingLevel;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
-
-import java.io.FileOutputStream;
 
 import static no.rutebanken.marduk.Constants.*;
 
 @Component
 public class BlobStoreRoute extends BaseRouteBuilder {
+
+    @Value("${google.publish.public:false}")
+    private boolean publicPublication;
 
     @Override
     public void configure() throws Exception {
@@ -34,7 +36,7 @@ public class BlobStoreRoute extends BaseRouteBuilder {
                 .to("log:" + getClass().getName() + "?level=DEBUG&showAll=true&multiline=true")
                 .choice()
                 .when(header(BLOBSTORE_MAKE_BLOB_PUBLIC).isNull())
-                .setHeader(BLOBSTORE_MAKE_BLOB_PUBLIC, constant(false))     //defaulting to false if not specified
+                .setHeader(BLOBSTORE_MAKE_BLOB_PUBLIC, constant(publicPublication))     //defaulting to false if not specified
                 .end()
                 .bean("blobStoreService", "uploadBlob")
                 .setBody(simple(""))

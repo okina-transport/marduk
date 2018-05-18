@@ -71,6 +71,9 @@ public class FetchOsmRouteBuilder extends BaseRouteBuilder {
     @Value("${otp.graph.deployment.notification.url:none}")
     private String otpGraphDeploymentNotificationUrl;
 
+    @Value("${google.publish.public:false}")
+    private boolean publicPublication;
+
     @Override
     public void configure() throws Exception {
         super.configure();
@@ -103,7 +106,7 @@ public class FetchOsmRouteBuilder extends BaseRouteBuilder {
                 })
                 // Probably not needed: .convertBodyTo(InputStream.class)
                 .setHeader(FILE_HANDLE, simple(blobStoreSubdirectoryForOsm +"/"+"norway-latest.osm.pbf"))
-                .setHeader(BLOBSTORE_MAKE_BLOB_PUBLIC, constant(true))
+                .setHeader(BLOBSTORE_MAKE_BLOB_PUBLIC, constant(publicPublication))
                 .to("direct:uploadBlob")
                 .setBody(simple("File fetched, and blob store has been correctly updated"))
                 .setHeader(FINISHED, constant("true"))

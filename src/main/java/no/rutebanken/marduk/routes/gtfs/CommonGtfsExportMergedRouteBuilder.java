@@ -44,6 +44,9 @@ public class CommonGtfsExportMergedRouteBuilder extends BaseRouteBuilder {
     @Value("${gtfs.export.download.directory:files/gtfs/merged}")
     private String localWorkingDirectory;
 
+    @Value("${google.publish.public:false}")
+    private boolean publicPublication;
+
     @Override
     public void configure() throws Exception {
         super.configure();
@@ -105,7 +108,7 @@ public class CommonGtfsExportMergedRouteBuilder extends BaseRouteBuilder {
                 .routeId("gtfs-export-merged-transform");
 
         from("direct:uploadMergedGtfs")
-                .setHeader(BLOBSTORE_MAKE_BLOB_PUBLIC, constant(true))
+                .setHeader(BLOBSTORE_MAKE_BLOB_PUBLIC, constant(publicPublication))
                 .setHeader(FILE_HANDLE, simple(BLOBSTORE_PATH_OUTBOUND + "gtfs/${header." + FILE_NAME + "}"))
                 .to("direct:uploadBlob")
                 .log(LoggingLevel.INFO, getClass().getName(), "Uploaded new merged GTFS file: ${header." + FILE_NAME + "}")

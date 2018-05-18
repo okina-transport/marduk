@@ -50,6 +50,9 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
     @Value("${chouette.export.days.back:365}")
     private int daysBack;
 
+    @Value("${google.publish.public:false}")
+    private boolean publicPublication;
+
     @Override
     public void configure() throws Exception {
         super.configure();
@@ -97,7 +100,7 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
                     .setHeader(Exchange.HTTP_METHOD, constant(org.apache.camel.component.http4.HttpMethods.GET))
                     .toD("${header.data_url}")
                     .to("direct:addGtfsFeedInfo")
-                    .setHeader(BLOBSTORE_MAKE_BLOB_PUBLIC, constant(true))
+                    .setHeader(BLOBSTORE_MAKE_BLOB_PUBLIC, constant(publicPublication))
                     .setHeader(FILE_HANDLE, simple(BLOBSTORE_PATH_OUTBOUND + "gtfs/${header." + CHOUETTE_REFERENTIAL + "}-" + Constants.CURRENT_AGGREGATED_GTFS_FILENAME))
                     .to("direct:uploadBlob")
                     .inOnly("activemq:queue:GtfsExportMergedQueue")
