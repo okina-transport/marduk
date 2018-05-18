@@ -163,7 +163,7 @@ public class ChouetteExportNetexFileMardukRouteIntegrationTest extends MardukRou
 		chouetteGetData.assertIsSatisfied();
 		updateStatus.assertIsSatisfied();
 //		otpNetexGraphQueue.assertIsSatisfied();
-		exportMergedNetex.assertIsSatisfied();
+//		exportMergedNetex.assertIsSatisfied();
 
 	}
 }

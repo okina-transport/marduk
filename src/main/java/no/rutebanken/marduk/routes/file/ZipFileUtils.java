@@ -18,18 +18,15 @@ package no.rutebanken.marduk.routes.file;
 
 import no.rutebanken.marduk.exceptions.MardukException;
 import no.rutebanken.marduk.routes.file.beans.FileTypeClassifierBean;
-import org.apache.commons.compress.archivers.zip.ZipUtil;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.onebusaway.gtfs_transformer.GtfsTransformer;
-import org.onebusaway.gtfs_transformer.updates.EnsureStopTimesIncreaseUpdateStrategy;
-import org.onebusaway.gtfs_transformer.updates.LocalVsExpressUpdateStrategy;
-import org.onebusaway.gtfs_transformer.updates.RemoveDuplicateTripsStrategy;
-import org.onebusaway.gtfs_transformer.updates.RemoveRepeatedStopTimesStrategy;
+import org.onebusaway.gtfs_transformer.updates.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
+import java.nio.file.FileSystem;
 import java.nio.file.*;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -83,6 +80,7 @@ public class ZipFileUtils {
         transformer.addTransform(new RemoveDuplicateTripsStrategy());
         transformer.addTransform(new EnsureStopTimesIncreaseUpdateStrategy());
         transformer.addTransform(new LocalVsExpressUpdateStrategy());
+        transformer.addTransform(new RemoveStopDescStrategy());
         transformer.getReader().setOverwriteDuplicates(true);
 
         transformer.run();
