@@ -36,7 +36,7 @@ public class JobResponseTest {
             "\"type\":\"application/octet-stream\",\"method\":\"get\"},{\"rel\":\"cancel\"," +
             "\"href\":\"http://chouette:8080/chouette_iev/referentials/tds/scheduled_jobs/130\"," +
             "\"type\":\"application/json\",\"method\":\"delete\"}],\"action_parameters\":{\"object_id_prefix\":\"tds\"," +
-            "\"max_distance_for_connection_link\":0,\"max_distance_for_commercial\":0,\"ignore_end_chars\":0," +
+            "\"max_distance_for_connection_link\":0,\"max_distance_for_commercial\":10,\"ignore_end_chars\":0," +
             "\"ignore_last_word\":false,\"references_type\":\"\",\"name\":\"test\",\"user_name\":\"Chouette\"," +
             "\"organisation_name\":\"Rutebanken\",\"referential_name\":\"testDS\",\"no_save\":false,\"clean_repository\":false}}";
 
