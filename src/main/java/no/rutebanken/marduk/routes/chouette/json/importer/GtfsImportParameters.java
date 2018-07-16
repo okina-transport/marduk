@@ -45,7 +45,7 @@ public class GtfsImportParameters extends ChouetteJobParameters {
     	private String splitIdOnDot = "0";
 
     	@JsonProperty("max_distance_for_commercial")
-        public String maxDistanceForCommercial = "0";
+        public String maxDistanceForCommercial = "10";
 
         @JsonProperty("ignore_last_word")
         public String ignoreLastWord = "0";
