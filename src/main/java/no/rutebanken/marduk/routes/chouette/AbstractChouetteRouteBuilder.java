@@ -42,8 +42,8 @@ public abstract class AbstractChouetteRouteBuilder extends BaseRouteBuilder{
 			ThreadPoolBuilder poolBuilder = new ThreadPoolBuilder(getContext());
 	         allProvidersExecutorService = 
 	        		poolBuilder
-	        		.poolSize(20)
-	        		.maxPoolSize(20)
+	        		.poolSize(2)
+	        		.maxPoolSize(2)
 	        		.maxQueueSize(1000)
 	        		.build("allProvidersExecutorService");
         }
