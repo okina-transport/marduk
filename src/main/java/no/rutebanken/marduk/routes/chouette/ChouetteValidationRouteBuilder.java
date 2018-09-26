@@ -93,7 +93,7 @@ public class ChouetteValidationRouteBuilder extends AbstractChouetteRouteBuilder
                 .routeId("chouette-validate-level2-all-providers");
 
 
-        from("activemq:queue:ChouetteValidationQueue?transacted=true&maxConcurrentConsumers=2").streamCaching()
+        from("activemq:queue:ChouetteValidationQueue?transacted=true&maxConcurrentConsumers=3").streamCaching()
                 .transacted()
                 .log(LoggingLevel.INFO, correlation() + "Starting Chouette validation")
                 .process(e -> {
