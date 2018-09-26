@@ -84,7 +84,10 @@ public abstract class BaseRouteBuilder extends SpringRouteBuilder {
         } catch (ParseException pe) {
             throw new RuntimeException("Invalid cron: " + cleanCron, pe);
         }
-        return isStarted(e.getFromRouteId()) && isLeader(e.getFromRouteId()) && isScheduledQuartzFiring(e, cronExpression);
+//        return isStarted(e.getFromRouteId()) && isLeader(e.getFromRouteId()) && isScheduledQuartzFiring(e, cronExpression);
+        log.info("isLeader(e.getFromRouteId()) : " + isLeader(e.getFromRouteId()));
+        log.info("isScheduledQuartzFiring(e, cronExpression) : " + isScheduledQuartzFiring(e, cronExpression));
+        return isStarted(e.getFromRouteId()) && isScheduledQuartzFiring(e, cronExpression);
     }
 
     private boolean isScheduledQuartzFiring(Exchange exchange, CronExpression cron) {
