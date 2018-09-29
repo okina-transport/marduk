@@ -76,7 +76,7 @@ public class ZipFileUtils {
         transformer.setGtfsInputDirectories(Arrays.asList(inputFile));
 
         transformer.setOutputDirectory(outputFile);
-        transformer.addTransform(new RemoveRepeatedStopTimesStrategy());
+//        transformer.addTransform(new RemoveRepeatedStopTimesStrategy());
         transformer.addTransform(new RemoveDuplicateTripsStrategy());
         transformer.addTransform(new EnsureStopTimesIncreaseUpdateStrategy());
         transformer.addTransform(new LocalVsExpressUpdateStrategy());
