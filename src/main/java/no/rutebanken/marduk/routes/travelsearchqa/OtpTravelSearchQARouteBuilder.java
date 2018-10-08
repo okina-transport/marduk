@@ -16,6 +16,7 @@
 
 package no.rutebanken.marduk.routes.travelsearchqa;
 
+import no.rutebanken.marduk.Constants;
 import no.rutebanken.marduk.exceptions.MardukException;
 import no.rutebanken.marduk.routes.BaseRouteBuilder;
 import no.rutebanken.marduk.routes.backup.StartFile;
@@ -61,7 +62,7 @@ public class OtpTravelSearchQARouteBuilder extends BaseRouteBuilder {
                 .routeId("otp-travelsearch-qa-by-called");
 
 
-        singletonFrom("quartz2://marduk/triggerOtpTravelSearchQA?cron=" + cronSchedule + "&trigger.timeZone=Europe/Oslo")
+        singletonFrom("quartz2://marduk/triggerOtpTravelSearchQA?cron=" + cronSchedule + "&trigger.timeZone="  + Constants.TIME_ZONE)
                 .autoStartup("{{otp.travelsearch.qa.autoStartup:true}}")
                 .filter(e -> shouldQuartzRouteTrigger(e, cronSchedule))
                 .log(LoggingLevel.INFO, "Quartz triggers otp travel search.")

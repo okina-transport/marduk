@@ -16,6 +16,7 @@
 
 package no.rutebanken.marduk.routes.backup;
 
+import no.rutebanken.marduk.Constants;
 import no.rutebanken.marduk.exceptions.MardukException;
 import no.rutebanken.marduk.routes.BaseRouteBuilder;
 import org.apache.camel.Exchange;
@@ -61,7 +62,7 @@ public class BackupDatabaseRouteBuilder extends BaseRouteBuilder {
                 .routeId("backup-database-by-called");
 
 
-        singletonFrom("quartz2://marduk/triggerDatabaseBackup?cron=" + cronSchedule + "&trigger.timeZone=Europe/Oslo")
+        singletonFrom("quartz2://marduk/triggerDatabaseBackup?cron=" + cronSchedule + "&trigger.timeZone=" + Constants.TIME_ZONE)
                 .filter(e -> shouldQuartzRouteTrigger(e, cronSchedule))
                 .log(LoggingLevel.INFO, "Quartz triggers database backup.")
                 .to("direct:runDatabaseBackup")

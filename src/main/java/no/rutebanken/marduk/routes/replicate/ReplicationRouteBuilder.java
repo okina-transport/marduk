@@ -16,8 +16,8 @@
 
 package no.rutebanken.marduk.routes.replicate;
 
+import no.rutebanken.marduk.Constants;
 import no.rutebanken.marduk.exceptions.MardukException;
-
 import no.rutebanken.marduk.routes.BaseRouteBuilder;
 import no.rutebanken.marduk.routes.backup.StartFile;
 import org.apache.camel.Exchange;
@@ -64,7 +64,7 @@ public class ReplicationRouteBuilder extends BaseRouteBuilder {
                 .routeId("replication-job-called");
 
 
-        singletonFrom("quartz2://marduk/triggerReplication?cron=" + cronSchedule + "&trigger.timeZone=Europe/Oslo")
+        singletonFrom("quartz2://marduk/triggerReplication?cron=" + cronSchedule + "&trigger.timeZone=" + Constants.TIME_ZONE)
                 .filter(e -> shouldQuartzRouteTrigger(e, cronSchedule))
                 .log(LoggingLevel.INFO, "Quartz triggers replication job.")
                 .to("direct:runReplicationJob")

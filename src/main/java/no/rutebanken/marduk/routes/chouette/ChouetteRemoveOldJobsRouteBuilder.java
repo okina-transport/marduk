@@ -16,6 +16,7 @@
 
 package no.rutebanken.marduk.routes.chouette;
 
+import no.rutebanken.marduk.Constants;
 import no.rutebanken.marduk.routes.BaseRouteBuilder;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
@@ -46,7 +47,7 @@ public class ChouetteRemoveOldJobsRouteBuilder extends BaseRouteBuilder {
     public void configure() throws Exception {
         super.configure();
 
-        singletonFrom("quartz2://marduk/chouetteRemoveOldJobsQuartz?cron=" + cronSchedule + "&trigger.timeZone=Europe/Oslo")
+        singletonFrom("quartz2://marduk/chouetteRemoveOldJobsQuartz?cron=" + cronSchedule + "&trigger.timeZone=" + Constants.TIME_ZONE)
                 .autoStartup("{{chouette.remove.old.jobs.autoStartup:true}}")
                 .filter(e -> shouldQuartzRouteTrigger(e, cronSchedule))
                 .log(LoggingLevel.INFO, "Quartz triggers deletion of old jobs in Chouette.")

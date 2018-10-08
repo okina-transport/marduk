@@ -17,9 +17,9 @@
 package no.rutebanken.marduk.routes.chouette.json.exporter;
 
 
-
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import no.rutebanken.marduk.Constants;
 
 public class GtfsExportParameters {
 
@@ -50,7 +50,7 @@ public class GtfsExportParameters {
         public String referencesType = "";
 
         @JsonProperty("time_zone")
-        public String timeZone = "Europe/Oslo";
+        public String timeZone = Constants.TIME_ZONE;
 
         @JsonProperty("route_type_id_scheme")
         @JsonInclude(JsonInclude.Include.ALWAYS)

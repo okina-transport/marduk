@@ -16,6 +16,7 @@
 
 package no.rutebanken.marduk.routes.mapbox;
 
+import no.rutebanken.marduk.Constants;
 import no.rutebanken.marduk.exceptions.MardukException;
 import no.rutebanken.marduk.routes.BaseRouteBuilder;
 import no.rutebanken.marduk.routes.backup.StartFile;
@@ -59,7 +60,7 @@ public class MapboxUpdateRouteBuilder extends BaseRouteBuilder {
                 .log(LoggingLevel.INFO, "Invocation of " + mapboxUpdateJobFilename)
                 .routeId("mapbox-update-by-called");
 
-        singletonFrom("quartz2://marduk/triggerMapboxUpdate?cron=" + cronSchedule + "&trigger.timeZone=Europe/Oslo")
+        singletonFrom("quartz2://marduk/triggerMapboxUpdate?cron=" + cronSchedule + "&trigger.timeZone="  + Constants.TIME_ZONE)
                 .autoStartup("{{mapbox.update.autoStartup:true}}")
                 .filter(e -> shouldQuartzRouteTrigger(e, cronSchedule))
                 .log(LoggingLevel.INFO, "Quartz triggers " + mapboxUpdateJobFilename)
