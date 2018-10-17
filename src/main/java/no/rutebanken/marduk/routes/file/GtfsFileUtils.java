@@ -57,6 +57,9 @@ public class GtfsFileUtils {
         return mergeGtfsFiles(FileUtils.listFiles(new File(path), new String[]{"zip"}, false));
     }
 
+    public static void main(String[] args) {
+        new GtfsFileUtils().mergeGtfsFilesInDirectory("/home/mhicauber/Téléchargements/extract");
+    }
 
     public static File mergeGtfsFiles(Collection<File> files) {
 
