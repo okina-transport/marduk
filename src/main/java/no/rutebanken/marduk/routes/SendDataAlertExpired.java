@@ -62,7 +62,7 @@ public class SendDataAlertExpired {
                                 listLines.clear();
                             }
 
-                            if (id.getValue().equals("EXPIRING")) {
+                            if (id.getValue().equals("EXPIRING") && valeurs.size() != 0) {
                                 listLines.addAll(valeurs);
                                 buildMail(textNowExpired, listLines, provider);
                                 valeurs.clear();
