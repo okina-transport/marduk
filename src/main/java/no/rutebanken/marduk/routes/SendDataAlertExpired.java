@@ -8,6 +8,7 @@ import javax.mail.*;
 import javax.mail.internet.AddressException;
 import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeMessage;
+import javax.swing.*;
 import java.util.*;
 
 public class SendDataAlertExpired {
@@ -36,14 +37,14 @@ public class SendDataAlertExpired {
 
     public void prepareEmail(Map<String, Object> list) {
 
-        StringBuilder textFuturExpired = new StringBuilder("Liste des espaces de données avec des calendriers bientôt expirés: ");
-        StringBuilder textNowExpired = new StringBuilder("Liste des espaces de données avec des calendriers expirés: ");
+        StringBuilder textFuturExpired = new StringBuilder("<h2>Liste des espaces de données avec des calendriers bientôt expirés: </h2>");
+        StringBuilder textNowExpired = new StringBuilder("<h2>Liste des espaces de données avec des calendriers expirés: </h2>");
 
         HashMap<String, ?> mapValidityCategories;
         ArrayList<Map<String, ?>> arrayDetails = new ArrayList<>();
-        ArrayList<String> valeurs = new ArrayList<>();
         ArrayList<String> listLines = new ArrayList<>();
 
+        JTextPane jtp = new JTextPane();
 
         for (Map.Entry<String, Object> provider : list.entrySet()) {
             mapValidityCategories = new HashMap<>((Map<? extends String, ?>) provider.getValue());
@@ -53,23 +54,17 @@ public class SendDataAlertExpired {
                     for (Map<String, ?> listId : arrayDetails) {
                         for (Map.Entry<String, ?> id : listId.entrySet()) {
                             if(id.getKey().equals("lineNumbers")){
-                                valeurs = (ArrayList<String>) id.getValue();
+                                listLines = (ArrayList<String>) id.getValue();
                             }
-                            if (id.getValue().equals("INVALID") && valeurs.size() != 0) {
-                                listLines.addAll(valeurs);
+                            if (id.getValue().equals("EXPIRING") && listLines.size() != 0) {
                                 buildMail(textFuturExpired, listLines, provider);
-                                valeurs.clear();
-                                listLines.clear();
                             }
 
-                            if (id.getValue().equals("EXPIRING") && valeurs.size() != 0) {
-                                listLines.addAll(valeurs);
+                            if (id.getValue().equals("INVALID") && listLines.size() != 0) {
                                 buildMail(textNowExpired, listLines, provider);
-                                valeurs.clear();
-                                listLines.clear();
                             }
+                            listLines.clear();
                         }
-                        listLines.clear();
                     }
                     arrayDetails.clear();
                 }
@@ -77,24 +72,28 @@ public class SendDataAlertExpired {
             mapValidityCategories.clear();
         }
 
-
-        String text = textFuturExpired.toString() + textNowExpired.toString();
-
-        sendEmail(text);
+        String textHtml = textFuturExpired.toString() + textNowExpired.toString();
+        jtp.setText(textHtml);
+        sendEmail(jtp);
     }
 
     private void buildMail(StringBuilder text, ArrayList<String> listLines, Map.Entry<String, Object> provider) {
         if (listLines.size() != 0) {
+            text.append("</br>");
+            text.append("- ");
             text.append(provider.getKey());
-            text.append(" Lignes: ");
+            text.append(":");
+            text.append("</br>");
+            text.append("Lignes: ");
             for (String lineId : listLines) {
+                text.append("</br>");
+                text.append("- ");
                 text.append(lineId);
-                text.append(", ");
             }
         }
     }
 
-    public void sendEmail(String text) {
+    public void sendEmail(JTextPane text) {
         /* L'adresse IP de votre serveur SMTP */
         String smtpServer = "smtp.okina.fr";
 
@@ -109,10 +108,7 @@ public class SendDataAlertExpired {
         String to = "gfora@okina.fr";
 
         /* L'objet du message */
-        String objet = "Liste des espaces de données ayant des calendriers prochainement expirés ou expirés";
-
-        /* Le corps du mail */
-        String texte = "Texte du mail";
+        String objet = "Liste des espaces de donnees ayant des calendriers prochainement expires ou expires";
 
         Properties props = System.getProperties();
         props.put("mail.smtp.host", smtpServer);
@@ -138,7 +134,7 @@ public class SendDataAlertExpired {
             msg.setFrom(new InternetAddress(from));
             msg.setRecipients(Message.RecipientType.TO, InternetAddress.parse(to));
             msg.setSubject(objet);
-            msg.setText(text);
+            msg.setContent(text, "text/html; charset=utf-8");
             Transport transport = session.getTransport("smtp");
             transport.connect(smtpServer, from, password);
             Transport.send(msg);
