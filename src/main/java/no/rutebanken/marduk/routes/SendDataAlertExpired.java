@@ -74,7 +74,7 @@ public class SendDataAlertExpired {
 
         String textHtml = textFuturExpired.toString() + textNowExpired.toString();
         jtp.setText(textHtml);
-        sendEmail(jtp);
+        sendEmail(textHtml);
     }
 
     private void buildMail(StringBuilder text, ArrayList<String> listLines, Map.Entry<String, Object> provider) {
@@ -93,7 +93,7 @@ public class SendDataAlertExpired {
         }
     }
 
-    public void sendEmail(JTextPane text) {
+    public void sendEmail(String text) {
         /* L'adresse IP de votre serveur SMTP */
         String smtpServer = "smtp.okina.fr";
 
