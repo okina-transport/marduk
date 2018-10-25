@@ -21,6 +21,7 @@ import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.base.Joiner;
 import no.rutebanken.marduk.domain.Provider;
+import no.rutebanken.marduk.routes.SendDataAlertExpired;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.component.http4.HttpMethods;
@@ -53,10 +54,17 @@ public class ChouetteStatsRouteBuilder extends AbstractChouetteRouteBuilder {
     /**
      * Every ten minutes as default.
      */
-    @Value("${chouette.stats.cache.refresh.quartz.trigger:trigger.repeatInterval=600000&trigger.repeatCount=-1&fireNow=true&startDelayedSeconds=20&stateful=true}")
+    @Value("${chouette.stats.cache.refresh.quartz.trigger:trigger.repeatInterval=60000&trigger.repeatCount=-1&fireNow=true&startDelayedSeconds=20&stateful=true}")
     private String quartzTrigger;
 
     private JsonNode cache;
+
+    private SendDataAlertExpired sendDataAlertExpired = new SendDataAlertExpired();
+
+    @Value("${data.alert.expired.cron}")
+    private String dataAlertExpiredCron;
+
+    private boolean sendEmailDataAlertMail = false;
 
     @Override
     public void configure() throws Exception {
@@ -69,6 +77,12 @@ public class ChouetteStatsRouteBuilder extends AbstractChouetteRouteBuilder {
 
                 .log(LoggingLevel.DEBUG, "Quartz refresh of line stats done.")
                 .routeId("chouette-line-stats-cache-refresh-quartz");
+
+        from("quartz2://marduk/refreshLine?" + dataAlertExpiredCron)
+                .log(LoggingLevel.INFO, "Data alert expired")
+                .process(e -> sendEmailDataAlertMail = true)
+                .to("direct:chouetteRefreshStatsCache")
+                .routeId("dataAlertExpiredCron");
 
 
         from("direct:chouetteGetStatsSingleProvider")
@@ -98,7 +112,7 @@ public class ChouetteStatsRouteBuilder extends AbstractChouetteRouteBuilder {
                 .log(LoggingLevel.INFO, getClass().getName(), correlation() + "Calling chouette with ${property.chouette_url} and validity categories: " + getValidityCategories())
                 .toD("${exchangeProperty.chouette_url}")
                 .unmarshal().json(JsonLibrary.Jackson, Map.class)
-                .process(e -> e.getIn().setBody(mapReferentialToProviderId(e.getIn().getBody(Map.class))))
+                .process(e -> e.getIn().setBody(mapReferentialToProviderId((e.getIn().getBody(Map.class)), sendEmailDataAlertMail)))
                 .marshal().json(JsonLibrary.Jackson)
                 .routeId("chouette-line-stats-get-fresh");
 
@@ -113,7 +127,10 @@ public class ChouetteStatsRouteBuilder extends AbstractChouetteRouteBuilder {
     }
 
 
-    private Map<Long, Object> mapReferentialToProviderId(Map<String, Object> statsPerReferential) {
+    private Map<Long, Object> mapReferentialToProviderId(Map<String, Object> statsPerReferential, Boolean sendEmail) {
+        if(sendEmail){
+            sendDataAlertExpired.prepareEmail(statsPerReferential);
+        }
         return getProviderRepository().getProviders().stream().filter(provider -> statsPerReferential.containsKey(provider.chouetteInfo.referential))
                        .collect(Collectors.toMap(Provider::getId, provider -> statsPerReferential.get(provider.chouetteInfo.referential)));
     }
