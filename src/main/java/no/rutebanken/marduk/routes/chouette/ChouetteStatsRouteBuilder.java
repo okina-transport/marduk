@@ -102,7 +102,6 @@ public class ChouetteStatsRouteBuilder extends AbstractChouetteRouteBuilder {
                 .toD("${exchangeProperty.chouette_url}")
                 .unmarshal().json(JsonLibrary.Jackson, Map.class)
                 .process(e -> e.getIn().setBody(mapReferentialToProviderId(e.getIn().getBody(Map.class))))
-                .process(e -> sendDataAlertExpired.prepareEmail(e.getIn().getBody(Map.class)))
                 .marshal().json(JsonLibrary.Jackson)
                 .routeId("chouette-line-stats-get-fresh");
 
@@ -118,6 +117,7 @@ public class ChouetteStatsRouteBuilder extends AbstractChouetteRouteBuilder {
 
 
     private Map<Long, Object> mapReferentialToProviderId(Map<String, Object> statsPerReferential) {
+        sendDataAlertExpired.prepareEmail(statsPerReferential);
         return getProviderRepository().getProviders().stream().filter(provider -> statsPerReferential.containsKey(provider.chouetteInfo.referential))
                        .collect(Collectors.toMap(Provider::getId, provider -> statsPerReferential.get(provider.chouetteInfo.referential)));
     }
