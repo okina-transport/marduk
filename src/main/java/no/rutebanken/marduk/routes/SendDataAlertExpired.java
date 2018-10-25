@@ -51,14 +51,14 @@ public class SendDataAlertExpired {
                     arrayDetails.addAll((Collection) details.getValue());
                     for (Map<String, ArrayList> listId : arrayDetails) {
                         for (Map.Entry<String, ArrayList> id : listId.entrySet()) {
-                            if (id.getKey().equals("INVALID")) {
-                                listLines.addAll(id.getValue());
+                            if (id.getValue().equals("INVALID")) {
+                                listLines.addAll(listId.get("lineNumbers"));
                                 buildMail(textFuturExpired, listLines, provider);
                                 listLines.clear();
                             }
 
-                            if (id.getKey().equals("EXPIRING")) {
-                                listLines.addAll(id.getValue());
+                            if (id.getValue().equals("EXPIRING")) {
+                                listLines.addAll(listId.get("lineNumbers"));
                                 buildMail(textNowExpired, listLines, provider);
                                 listLines.clear();
                             }
