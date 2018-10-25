@@ -21,6 +21,7 @@ import com.fasterxml.jackson.databind.node.JsonNodeFactory;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.base.Joiner;
 import no.rutebanken.marduk.domain.Provider;
+import no.rutebanken.marduk.routes.SendDataAlertExpired;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.component.http4.HttpMethods;
@@ -57,6 +58,8 @@ public class ChouetteStatsRouteBuilder extends AbstractChouetteRouteBuilder {
     private String quartzTrigger;
 
     private JsonNode cache;
+
+    private SendDataAlertExpired sendDataAlertExpired = new SendDataAlertExpired();
 
     @Override
     public void configure() throws Exception {
@@ -99,6 +102,7 @@ public class ChouetteStatsRouteBuilder extends AbstractChouetteRouteBuilder {
                 .toD("${exchangeProperty.chouette_url}")
                 .unmarshal().json(JsonLibrary.Jackson, Map.class)
                 .process(e -> e.getIn().setBody(mapReferentialToProviderId(e.getIn().getBody(Map.class))))
+                .process(e -> sendDataAlertExpired.prepareEmail(e.getIn().getBody(Map.class)))
                 .marshal().json(JsonLibrary.Jackson)
                 .routeId("chouette-line-stats-get-fresh");
 
