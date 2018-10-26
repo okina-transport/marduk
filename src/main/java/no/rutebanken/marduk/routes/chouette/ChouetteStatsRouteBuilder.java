@@ -78,7 +78,7 @@ public class ChouetteStatsRouteBuilder extends AbstractChouetteRouteBuilder {
                 .log(LoggingLevel.DEBUG, "Quartz refresh of line stats done.")
                 .routeId("chouette-line-stats-cache-refresh-quartz");
 
-        from("quartz2://marduk/sendMailAlert?" + dataAlertExpiredCron)
+        from("quartz2://marduk/sendMailAlert?cron=" + dataAlertExpiredCron)
                 .log(LoggingLevel.INFO, "Data alert expired")
                 .process(e -> sendEmailDataAlertMail = true)
                 .to("direct:chouetteRefreshStatsCache")
