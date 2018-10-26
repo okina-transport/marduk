@@ -61,6 +61,11 @@ public class ChouetteStatsRouteBuilder extends AbstractChouetteRouteBuilder {
 
     private SendDataAlertExpired sendDataAlertExpired = new SendDataAlertExpired();
 
+    @Value("${data.alert.expired.cron}")
+    private String dataAlertExpiredCron;
+
+    private boolean sendEmailDataAlertMail = false;
+
     @Override
     public void configure() throws Exception {
         super.configure();
@@ -72,6 +77,12 @@ public class ChouetteStatsRouteBuilder extends AbstractChouetteRouteBuilder {
 
                 .log(LoggingLevel.DEBUG, "Quartz refresh of line stats done.")
                 .routeId("chouette-line-stats-cache-refresh-quartz");
+
+        from("quartz2://marduk/refreshLine?" + dataAlertExpiredCron)
+                .log(LoggingLevel.INFO, "Data alert expired")
+                .process(e -> sendEmailDataAlertMail = true)
+                .to("direct:chouetteRefreshStatsCache")
+                .routeId("dataAlertExpiredCron");
 
 
         from("direct:chouetteGetStatsSingleProvider")
@@ -101,7 +112,7 @@ public class ChouetteStatsRouteBuilder extends AbstractChouetteRouteBuilder {
                 .log(LoggingLevel.INFO, getClass().getName(), correlation() + "Calling chouette with ${property.chouette_url} and validity categories: " + getValidityCategories())
                 .toD("${exchangeProperty.chouette_url}")
                 .unmarshal().json(JsonLibrary.Jackson, Map.class)
-                .process(e -> e.getIn().setBody(mapReferentialToProviderId(e.getIn().getBody(Map.class))))
+                .process(e -> e.getIn().setBody(mapReferentialToProviderId((e.getIn().getBody(Map.class)), sendEmailDataAlertMail)))
                 .marshal().json(JsonLibrary.Jackson)
                 .routeId("chouette-line-stats-get-fresh");
 
@@ -116,8 +127,10 @@ public class ChouetteStatsRouteBuilder extends AbstractChouetteRouteBuilder {
     }
 
 
-    private Map<Long, Object> mapReferentialToProviderId(Map<String, Object> statsPerReferential) {
-        sendDataAlertExpired.prepareEmail(statsPerReferential);
+    private Map<Long, Object> mapReferentialToProviderId(Map<String, Object> statsPerReferential, Boolean sendEmail) {
+        if(sendEmail){
+            sendDataAlertExpired.prepareEmail(statsPerReferential);
+        }
         return getProviderRepository().getProviders().stream().filter(provider -> statsPerReferential.containsKey(provider.chouetteInfo.referential))
                        .collect(Collectors.toMap(Provider::getId, provider -> statsPerReferential.get(provider.chouetteInfo.referential)));
     }
