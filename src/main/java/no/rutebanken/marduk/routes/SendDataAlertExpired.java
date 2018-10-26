@@ -53,18 +53,19 @@ public class SendDataAlertExpired {
                     arrayDetails.addAll((Collection) details.getValue());
                     for (Map<String, ?> listId : arrayDetails) {
                         for (Map.Entry<String, ?> id : listId.entrySet()) {
-                            if(id.getKey().equals("lineNumbers")){
+                            if (id.getKey().equals("lineNumbers")) {
                                 listLines = (ArrayList<String>) id.getValue();
                             }
                             if (listId.get("name").equals("EXPIRING") && listLines.size() != 0) {
                                 buildMail(textFuturExpired, listLines, provider);
+                                listLines.clear();
                             }
 
                             if (listId.get("name").equals("INVALID") && listLines.size() != 0) {
                                 buildMail(textNowExpired, listLines, provider);
+                                listLines.clear();
                             }
                         }
-                        listLines.clear();
                     }
                     arrayDetails.clear();
                 }
@@ -78,17 +79,23 @@ public class SendDataAlertExpired {
     }
 
     private void buildMail(StringBuilder text, ArrayList<String> listLines, Map.Entry<String, Object> provider) {
-        if (listLines.size() != 0) {
-            text.append("</br>");
-            text.append("- ");
-            text.append(provider.getKey());
-            text.append(":");
-            text.append("</br>");
-            text.append("Lignes: ");
-            for (String lineId : listLines) {
+        if (!provider.getKey().contains("naq:")) {
+            if (listLines.size() != 0) {
                 text.append("</br>");
                 text.append("- ");
-                text.append(lineId);
+                text.append(provider.getKey());
+                text.append(":");
+                text.append("</br>");
+                text.append("Lignes: ");
+                for (String lineId : listLines) {
+                    text.append(lineId);
+                    if (listLines.get(listLines.size() - 1).equals(lineId)) {
+                        text.append(".");
+                    } else {
+                        text.append(", ");
+                    }
+
+                }
             }
         }
     }
