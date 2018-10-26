@@ -37,8 +37,8 @@ public class SendDataAlertExpired {
 
     public void prepareEmail(Map<String, Object> list) {
 
-        StringBuilder textFuturExpired = new StringBuilder("<h2>Liste des espaces de données avec des calendriers bientôt expirés: </h2>");
-        StringBuilder textNowExpired = new StringBuilder("<h2>Liste des espaces de données avec des calendriers expirés: </h2>");
+        StringBuilder textFuturExpired = new StringBuilder("<h4>Liste des espaces de données avec des calendriers bientôt expirés: </h4>");
+        StringBuilder textNowExpired = new StringBuilder("<h4>Liste des espaces de données avec des calendriers expirés: </h4>");
 
         HashMap<String, ?> mapValidityCategories;
         ArrayList<Map<String, ?>> arrayDetails = new ArrayList<>();
@@ -56,15 +56,15 @@ public class SendDataAlertExpired {
                             if(id.getKey().equals("lineNumbers")){
                                 listLines = (ArrayList<String>) id.getValue();
                             }
-                            if (id.getValue().equals("EXPIRING") && listLines.size() != 0) {
+                            if (listId.get("name").equals("EXPIRING") && listLines.size() != 0) {
                                 buildMail(textFuturExpired, listLines, provider);
                             }
 
-                            if (id.getValue().equals("INVALID") && listLines.size() != 0) {
+                            if (listId.get("name").equals("INVALID") && listLines.size() != 0) {
                                 buildMail(textNowExpired, listLines, provider);
                             }
-                            listLines.clear();
                         }
+                        listLines.clear();
                     }
                     arrayDetails.clear();
                 }
