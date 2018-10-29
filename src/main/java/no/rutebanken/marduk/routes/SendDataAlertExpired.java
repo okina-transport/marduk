@@ -1,6 +1,7 @@
 package no.rutebanken.marduk.routes;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Component;
 
 import javax.mail.*;
 import javax.mail.internet.AddressException;
@@ -8,6 +9,7 @@ import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeMessage;
 import java.util.*;
 
+@Component
 public class SendDataAlertExpired {
 
     @Value("${spring.mail.host}")
