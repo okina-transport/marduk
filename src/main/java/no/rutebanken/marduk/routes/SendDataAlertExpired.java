@@ -62,11 +62,13 @@ public class SendDataAlertExpired {
                             if (listId.get("name").equals("EXPIRING") && listLines.size() != 0) {
                                 formatMail(textFuturExpired, listLines, provider);
                                 dataExpiring = true;
+                                listLines.clear();
                             }
 
                             if (listId.get("name").equals("INVALID") && listLines.size() != 0) {
                                 formatMail(textNowExpired, listLines, provider);
                                 dataInvalid = true;
+                                listLines.clear();
                             }
                         }
                         listLines.clear();
