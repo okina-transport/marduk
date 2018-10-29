@@ -178,7 +178,7 @@ public class SendDataAlertExpired {
         producers.put("bda","COBAS");
         producers.put("vil","CA du Grand Villeneuvois");
         producers.put("lib","CA du Libournais");
-        producers.put("mar","TMA");
+        producers.put("mdm","CA du Marsan");
         producers.put("pba","CA Pays Basque");
         producers.put("gue","CA Grand Guéret");
         producers.put("bbr","CA Bocage Bressuirais");
