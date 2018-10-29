@@ -27,10 +27,10 @@ public class SendDataAlertExpired {
     @Value("${spring.mail.password}")
     private String emailPassword;
 
-    @Value("${spring.properties.mail.smtp.auth}")
+    @Value("${spring.mail.auth}")
     private boolean emailAuth;
 
-    @Value("${spring.mail.properties.mail.smtp.starttls.enable}")
+    @Value("${spring.mail.starttls.enable}")
     private boolean emailStartTlsEnable;
 
     private Map<String, String> producers = new HashMap<>();
