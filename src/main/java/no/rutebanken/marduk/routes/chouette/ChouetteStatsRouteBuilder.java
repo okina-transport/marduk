@@ -26,6 +26,7 @@ import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.component.http4.HttpMethods;
 import org.apache.camel.model.dataformat.JsonLibrary;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.util.CollectionUtils;
@@ -59,7 +60,8 @@ public class ChouetteStatsRouteBuilder extends AbstractChouetteRouteBuilder {
 
     private JsonNode cache;
 
-    private SendDataAlertExpired sendDataAlertExpired = new SendDataAlertExpired();
+    @Autowired
+    private SendDataAlertExpired sendDataAlertExpired;
 
     @Value("${data.alert.expired.cron}")
     private String dataAlertExpiredCron;
