@@ -80,12 +80,12 @@ public class SendDataAlertExpired {
         }
 
         if(!dataExpiring){
-            textFuturExpired.append("</br>");
+            textFuturExpired.append("<br></br>");
             textFuturExpired.append("Aucun calendrier prochainement expiré relevé");
         }
 
         if(!dataInvalid){
-            textNowExpired.append("</br>");
+            textNowExpired.append("<br></br>");
             textNowExpired.append("Aucun calendrier expiré");
         }
 
@@ -97,17 +97,17 @@ public class SendDataAlertExpired {
     private void formatMail(StringBuilder text, ArrayList<String> listLines, Map.Entry<String, Object> provider) {
         if (!provider.getKey().contains("naq_")) {
             if (listLines.size() != 0) {
-                text.append("</br>");
+                text.append("<br></br>");
                 text.append("- ");
                 text.append(producers.get(provider.getKey()));
                 text.append(":");
-                text.append("</br>");
+                text.append("<br></br>");
                 text.append("Lignes: ");
                 for (String lineId : listLines) {
                     text.append(lineId);
                     if (listLines.get(listLines.size() - 1).equals(lineId)) {
                         text.append(".");
-                        text.append("</br>");
+                        text.append("<br></br>");
                     } else {
                         text.append(", ");
                     }
