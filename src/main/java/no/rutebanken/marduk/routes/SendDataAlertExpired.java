@@ -38,14 +38,15 @@ public class SendDataAlertExpired {
 
     public void prepareEmail(Map<String, Object> list) {
 
-        StringBuilder textFuturExpired = new StringBuilder("<h4>Liste des espaces de données avec des calendriers bientôt expirés: </h4>");
-        StringBuilder textNowExpired = new StringBuilder("<h4>Liste des espaces de données avec des calendriers expirés: </h4>");
+        StringBuilder textFuturExpired = new StringBuilder("<p style='font-weight: bold;'>Liste des espaces de données avec des calendriers expirés dans ");
+        StringBuilder textNowExpired = new StringBuilder("<br><p style='font-weight: bold;'>Liste des espaces de données avec des calendriers expirés: </p>");
 
         HashMap<String, ?> mapValidityCategories;
         ArrayList<Map<String, ?>> arrayDetails = new ArrayList<>();
         ArrayList<String> listLines = new ArrayList<>();
         boolean dataExpiring = false;
         boolean dataInvalid = false;
+        boolean numDaysValid = false;
 
         producersNames();
 
@@ -70,6 +71,11 @@ public class SendDataAlertExpired {
                                 dataInvalid = true;
                                 listLines.clear();
                             }
+                            if(!listId.get("name").equals("EXPIRING") && !listId.get("name").equals("INVALID") && !numDaysValid){
+                                textFuturExpired.append(listId.get("name"));
+                                textFuturExpired.append(":</p>");
+                                numDaysValid = true;
+                            }
                         }
                         listLines.clear();
                     }
@@ -80,13 +86,11 @@ public class SendDataAlertExpired {
         }
 
         if(!dataExpiring){
-            textFuturExpired.append("</br>");
-            textFuturExpired.append("Aucun calendrier prochainement expiré relevé");
+            textFuturExpired.append("<p>Aucun calendrier prochainement expiré</p>");
         }
 
         if(!dataInvalid){
-            textNowExpired.append("</br>");
-            textNowExpired.append("Aucun calendrier expiré");
+            textNowExpired.append("<p>Aucun calendrier expiré</p>");
         }
 
         String textHtml = textFuturExpired.toString() + textNowExpired.toString();
@@ -97,21 +101,21 @@ public class SendDataAlertExpired {
     private void formatMail(StringBuilder text, ArrayList<String> listLines, Map.Entry<String, Object> provider) {
         if (!provider.getKey().contains("naq_")) {
             if (listLines.size() != 0) {
-                text.append("</br>");
+                text.append("<p>");
                 text.append("- ");
                 text.append(producers.get(provider.getKey()));
                 text.append(":");
-                text.append("</br>");
+                text.append("</p><p>");
                 text.append("Lignes: ");
                 for (String lineId : listLines) {
                     text.append(lineId);
                     if (listLines.get(listLines.size() - 1).equals(lineId)) {
                         text.append(".");
-                        text.append("</br>");
                     } else {
                         text.append(", ");
                     }
                 }
+                text.append("</p>");
             }
         }
     }
