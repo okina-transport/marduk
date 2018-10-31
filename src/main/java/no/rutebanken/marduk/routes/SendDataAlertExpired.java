@@ -38,7 +38,7 @@ public class SendDataAlertExpired {
 
     public void prepareEmail(Map<String, Object> list) {
 
-        StringBuilder textFuturExpired = new StringBuilder("<p style='font-weight: bold;'>Liste des espaces de données avec des calendriers expirés dans ");
+        StringBuilder textFuturExpired = new StringBuilder("<p style='font-weight: bold;'>Liste des espaces de données avec des calendriers expirés dans moins de ");
         StringBuilder textNowExpired = new StringBuilder("<br><p style='font-weight: bold;'>Liste des espaces de données avec des calendriers expirés: </p>");
 
         HashMap<String, ?> mapValidityCategories;
@@ -73,7 +73,7 @@ public class SendDataAlertExpired {
                             }
                             if(!listId.get("name").equals("EXPIRING") && !listId.get("name").equals("INVALID") && !numDaysValid){
                                 textFuturExpired.append(listId.get("name"));
-                                textFuturExpired.append(":</p>");
+                                textFuturExpired.append(" jours:</p>");
                                 numDaysValid = true;
                             }
                         }
@@ -115,7 +115,7 @@ public class SendDataAlertExpired {
                         text.append(", ");
                     }
                 }
-                text.append("</p>");
+                text.append("</p><br>");
             }
         }
     }
