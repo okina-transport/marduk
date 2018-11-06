@@ -9,6 +9,11 @@ import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeMessage;
 import java.util.*;
 
+
+/**
+ * Send mail to notify expired lines.
+ */
+
 @Component
 public class SendDataAlertExpired {
 
@@ -35,6 +40,12 @@ public class SendDataAlertExpired {
 
     private Map<String, String> producers = new HashMap<>();
 
+
+
+    /**
+     * Retrieving expiring and invalid lines from the list of data producers.
+     * @param list
+     */
 
     public void prepareEmail(Map<String, Object> list) {
 
@@ -98,6 +109,14 @@ public class SendDataAlertExpired {
         sendEmail(textHtml);
     }
 
+
+    /**
+     * Adding the number of line in the text
+     * @param text
+     * @param listLines
+     * @param provider
+     */
+
     private void formatMail(StringBuilder text, ArrayList<String> listLines, Map.Entry<String, Object> provider) {
         if (!provider.getKey().contains("naq_")) {
             if (listLines.size() != 0) {
@@ -120,9 +139,14 @@ public class SendDataAlertExpired {
         }
     }
 
+
+    /**
+     * Send mail with the information of the lines.
+     * @param text
+     */
+
     public void sendEmail(String text) {
 
-        /* L'objet du message */
         String objet = "Liste des espaces de donnees ayant des calendriers prochainement expires ou expires";
 
         Properties props = System.getProperties();
@@ -157,6 +181,10 @@ public class SendDataAlertExpired {
             e.printStackTrace();
         }
     }
+
+    /**
+     * List of identifiers and names of producers of data for display in the mail.
+     */
 
     private void producersNames(){
 
