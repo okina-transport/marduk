@@ -49,59 +49,41 @@ public class SendDataAlertExpired {
 
     public void prepareEmail(Map<String, Object> list) {
 
-        StringBuilder textFuturExpired = new StringBuilder("<p style='font-weight: bold;'>Liste des espaces de données avec des calendriers expirés dans moins de ");
+        StringBuilder textFuturExpired = new StringBuilder("<p style='font-weight: bold;'>Liste des espaces de données avec des calendriers expirés dans moins de 30 jours: <p>");
         StringBuilder textNowExpired = new StringBuilder("<br><p style='font-weight: bold;'>Liste des espaces de données avec des calendriers expirés: </p>");
 
-        HashMap<String, ?> mapValidityCategories;
-        ArrayList<Map<String, ?>> arrayDetails = new ArrayList<>();
-        ArrayList<String> listLines = new ArrayList<>();
+        HashMap<String, ?> mapValidity;
+
         boolean dataExpiring = false;
         boolean dataInvalid = false;
-        boolean numDaysValid = false;
 
         producersNames();
 
         for (Map.Entry<String, Object> provider : list.entrySet()) {
-            mapValidityCategories = new HashMap<>((Map<? extends String, ?>) provider.getValue());
-            for (Map.Entry<String, ?> details : mapValidityCategories.entrySet()) {
-                if (details.getKey().equals("validityCategories")) {
-                    arrayDetails.addAll((Collection) details.getValue());
-                    for (Map<String, ?> listId : arrayDetails) {
-                        for (Map.Entry<String, ?> id : listId.entrySet()) {
-                            if (id.getKey().equals("lineNumbers")) {
-                                listLines = (ArrayList<String>) id.getValue();
-                            }
-                            if (listId.get("name").equals("EXPIRING") && listLines.size() != 0) {
-                                formatMail(textFuturExpired, listLines, provider);
-                                dataExpiring = true;
-                                listLines.clear();
-                            }
-
-                            if (listId.get("name").equals("INVALID") && listLines.size() != 0) {
-                                formatMail(textNowExpired, listLines, provider);
-                                dataInvalid = true;
-                                listLines.clear();
-                            }
-                            if(!listId.get("name").equals("EXPIRING") && !listId.get("name").equals("INVALID") && !numDaysValid){
-                                textFuturExpired.append(listId.get("name"));
-                                textFuturExpired.append(" jours:</p>");
-                                numDaysValid = true;
-                            }
-                        }
-                        listLines.clear();
+            mapValidity = new HashMap<>((Map<? extends String, ?>) provider.getValue());
+            for (Map.Entry<String, ?> details : mapValidity.entrySet()) {
+                if (details.getKey().equals("invalid")) {
+                    if(details.getValue().equals(true)) {
+                        formatMail(textNowExpired, provider);
+                        dataInvalid = true;
                     }
-                    arrayDetails.clear();
+                }
+                else if (details.getKey().equals("expiring")){
+                    if(details.getValue().equals(true)){
+                        formatMail(textFuturExpired, provider);
+                        dataExpiring = true;
+                    }
                 }
             }
-            mapValidityCategories.clear();
+            mapValidity.clear();
         }
 
         if(!dataExpiring){
-            textFuturExpired.append("<p>Aucun calendrier prochainement expiré</p>");
+            textFuturExpired.append("<p>Aucun producteur avec des calendriers expirés sous 30 jours.</p>");
         }
 
         if(!dataInvalid){
-            textNowExpired.append("<p>Aucun calendrier expiré</p>");
+            textNowExpired.append("<p>Aucun producteur avec des calendriers expirés.</p>");
         }
 
         String textHtml = textFuturExpired.toString() + textNowExpired.toString();
@@ -113,29 +95,15 @@ public class SendDataAlertExpired {
     /**
      * Adding the number of line in the text
      * @param text
-     * @param listLines
      * @param provider
      */
 
-    private void formatMail(StringBuilder text, ArrayList<String> listLines, Map.Entry<String, Object> provider) {
+    private void formatMail(StringBuilder text, Map.Entry<String, Object> provider) {
         if (!provider.getKey().contains("naq_")) {
-            if (listLines.size() != 0) {
                 text.append("<p>");
                 text.append("- ");
                 text.append(producers.get(provider.getKey()));
-                text.append(":");
-                text.append("</p><p>");
-                text.append("Lignes: ");
-                for (String lineId : listLines) {
-                    text.append(lineId);
-                    if (listLines.get(listLines.size() - 1).equals(lineId)) {
-                        text.append(".");
-                    } else {
-                        text.append(", ");
-                    }
-                }
-                text.append("</p><br>");
-            }
+                text.append("</p>");
         }
     }
 
@@ -199,12 +167,12 @@ public class SendDataAlertExpired {
         producers.put("nio","CA du Niortais");
         producers.put("pau","CA Pau Béarn Pyrénées");
         producers.put("roc","CA Rochefort Océan");
-        producers.put("roy","Ca Royan Atlantique");
+        producers.put("car","Ca Royan Atlantique");
         producers.put("tut","CA Tulle");
         producers.put("cou","CA Grand Dax");
         producers.put("per","CA Grand Périgueux");
         producers.put("vit","Grand Poitiers");
-        producers.put("mac","MACS");
+        producers.put("yeg","MACS");
         producers.put("ber","CA Bergeracoise");
         producers.put("age","CA Agen");
         producers.put("vdg","CA Val de Garonne");
