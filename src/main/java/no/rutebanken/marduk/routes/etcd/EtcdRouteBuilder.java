@@ -28,7 +28,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
-import static no.rutebanken.marduk.Utils.getHttp4;
+import static no.rutebanken.marduk.Utils.Utils.getHttp4;
 
 
 /**

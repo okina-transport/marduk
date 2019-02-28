@@ -33,7 +33,7 @@ import java.io.PrintWriter;
 import java.util.UUID;
 
 import static no.rutebanken.marduk.Constants.*;
-import static no.rutebanken.marduk.Utils.getLastPathElementOfUrl;
+import static no.rutebanken.marduk.Utils.Utils.getLastPathElementOfUrl;
 
 /**
  * Exports gtfs files from Chouette
@@ -137,7 +137,6 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
                 })
                 .routeId("chouette-process-export-gtfs-feedinfo");
     }
-
 
 }
 

@@ -29,7 +29,7 @@ import org.springframework.stereotype.Component;
 import java.util.UUID;
 
 import static no.rutebanken.marduk.Constants.*;
-import static no.rutebanken.marduk.Utils.getLastPathElementOfUrl;
+import static no.rutebanken.marduk.Utils.Utils.getLastPathElementOfUrl;
 
 /**
  * Runs validation in Chouette

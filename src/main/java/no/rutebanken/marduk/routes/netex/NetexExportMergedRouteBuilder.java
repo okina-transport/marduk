@@ -129,7 +129,7 @@ public class NetexExportMergedRouteBuilder extends BaseRouteBuilder {
                 .setHeader(BLOBSTORE_MAKE_BLOB_PUBLIC, constant(publicPublication))
                 .setHeader(FILE_HANDLE, simple(BLOBSTORE_PATH_OUTBOUND + netexExportMergedFilePath))
                 .to("direct:uploadBlob")
-                .log(LoggingLevel.INFO, getClass().getName(), "Uploaded new combined Netex for Norway")
+                .log(LoggingLevel.INFO, getClass().getName(), "Uploaded new combined Netex for Naq")
                 .routeId("netex-export-merge-file");
 
     }
@@ -156,5 +156,4 @@ public class NetexExportMergedRouteBuilder extends BaseRouteBuilder {
             throw new MardukException("Failed to copy/rename stop files from NSR: " + ioe.getMessage(), ioe);
         }
     }
-
 }
