@@ -30,8 +30,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import static no.rutebanken.marduk.Constants.*;
-import static no.rutebanken.marduk.Utils.getHttp4;
-import static no.rutebanken.marduk.Utils.getLastPathElementOfUrl;
+import static no.rutebanken.marduk.Utils.Utils.getHttp4;
+import static no.rutebanken.marduk.Utils.Utils.getLastPathElementOfUrl;
 
 /**
  * Submits files to Chouette

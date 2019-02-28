@@ -14,7 +14,7 @@
  *
  */
 
-package no.rutebanken.marduk;
+package no.rutebanken.marduk.Utils;
 
 import org.opentripplanner.common.MavenVersion;
 

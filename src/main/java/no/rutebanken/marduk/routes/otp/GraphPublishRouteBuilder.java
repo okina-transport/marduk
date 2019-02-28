@@ -17,7 +17,7 @@
 package no.rutebanken.marduk.routes.otp;
 
 import no.rutebanken.marduk.Constants;
-import no.rutebanken.marduk.Utils;
+import no.rutebanken.marduk.Utils.Utils;
 import no.rutebanken.marduk.exceptions.MardukException;
 import no.rutebanken.marduk.routes.BaseRouteBuilder;
 import no.rutebanken.marduk.routes.status.JobEvent;

@@ -96,4 +96,13 @@ public class BlobStoreService {
 		repository.uploadBlob(name, inputStream, makePublic);
 	}
 
+	public BlobStoreFiles listBlobsInFolders(String path){
+		return repository.listBlobs(path);
+	}
+
+	public InputStream getBlob(String name){
+		return repository.getBlob(name);
+	}
+
+
 }

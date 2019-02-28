@@ -131,7 +131,7 @@ public class ChouetteStatsRouteBuilder extends AbstractChouetteRouteBuilder {
 
     private Map<Long, Object> mapReferentialToProviderId(Map<String, Object> statsPerReferential, Boolean sendEmail) {
         if(sendEmail){
-            sendDataAlertExpired.prepareEmail(statsPerReferential);
+            sendDataAlertExpired.prepareEmailDataAlertExpired(statsPerReferential);
             sendEmailDataAlertMail = false;
         }
         return getProviderRepository().getProviders().stream().filter(provider -> statsPerReferential.containsKey(provider.chouetteInfo.referential))
