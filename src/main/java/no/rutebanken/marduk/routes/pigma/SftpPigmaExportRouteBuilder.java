@@ -138,14 +138,14 @@ public class SftpPigmaExportRouteBuilder extends BaseRouteBuilder {
             }
         }
 
-        ArrayList<File> filesMail = new ArrayList<>();
-        for(File fileMail : files){
-            if(fileMail.getName().equals("naq-stops-netex-metadonnes.csv")){
-                filesMail.add(fileMail);
-            }
-        }
-
-        sendMail.sendEmail("Test", "Envoie de fichiers test", filesMail);
+//        ArrayList<File> filesMail = new ArrayList<>();
+//        for(File fileMail : files){
+//            if(fileMail.getName().equals("naq-stops-netex-metadonnes.csv")){
+//                filesMail.add(fileMail);
+//            }
+//        }
+//
+//        sendMail.sendEmail("Test", "Envoie de fichiers test", filesMail);
 
         uploadFiles(files);
     }
