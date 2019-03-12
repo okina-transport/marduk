@@ -68,8 +68,8 @@ public class SftpPigmaExportRouteBuilder extends BaseRouteBuilder {
         super.configure();
 
         //TODO activer le cron en activant le singleton ci dessous, en poussant les properties de marduk prod et activer le sftp channel
-//        singletonFrom("quartz2://marduk/uploadPigma?cron=" + uploadPigmaCron)
-        from("direct:uploadPigma")
+//        from("direct:uploadPigma")
+        singletonFrom("quartz2://marduk/uploadPigma?cron=" + uploadPigmaCron)
                 .process(e -> sendFilesToPigmaPlatform())
                 .routeId("uploadPigma");
 
@@ -147,7 +147,7 @@ public class SftpPigmaExportRouteBuilder extends BaseRouteBuilder {
 
         sendMail.sendEmail("Test", "Envoie de fichiers test", filesMail);
 
-//        uploadFiles(files);
+        uploadFiles(files);
     }
 
 
