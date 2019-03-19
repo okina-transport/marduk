@@ -176,7 +176,8 @@ public class SftpPigmaExportRouteBuilder extends BaseRouteBuilder {
             }
             log.info("File transfered successfully to host.");
         } catch (Exception ex) {
-            log.error("Exception found while transfer the response.", ex);
+            ex.printStackTrace();
+            log.error("Exception found while transfer the response.", ex.getMessage());
             slackNotification.sendSlackNotificationTitleAndMessage(SlackNotification.NOTIFICATION_CHANNEL, "Erreur upload des fichiers sur la plateforme Pigma", "Les fichiers n'ont pas pu être exportés sur la plateforme Pigma.");
             sendMail.sendEmail("Erreur upload des fichiers sur la plateforme Pigma", "Les fichiers n'ont pas pu être exportés sur la plateforme Pigma.", null);
 
