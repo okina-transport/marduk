@@ -159,7 +159,60 @@ public class SftpPigmaExportRouteBuilder extends BaseRouteBuilder {
 
         try {
             JSch jsch = new JSch();
-            jsch.addIdentity(sftpPrivateKey, sftpPassphrase);
+            jsch.addIdentity("-----BEGIN RSA PRIVATE KEY-----\n" +
+                    "Proc-Type: 4,ENCRYPTED\n" +
+                    "DEK-Info: AES-128-CBC,05F7C291BD28485FBCA96E237F8D86EF\n" +
+                    "\n" +
+                    "A9T8uXPCgDbwWOrAPV+wrcwc0ZzoJJM6Cxp0T36OJB8nwj3eowafU9oFn6wXwxNV\n" +
+                    "0EfEuy1UuwFoBVqkdyekDDwxbd92MRiO7P+qpgiNx9MDUjXBVRWQRWLYy4fEYOTY\n" +
+                    "x7/Ovv/Xvm0zDFKPAaK9PX9ykndRd8KOdxE1rP4Zugr+9kLHGrOJpgYw68MXyJhR\n" +
+                    "+BN7mUf4J50tnA4UPt57F9iqM60qQ8XKAOI5Pfv2LXJpM2OigR4fTwJIC984M6JH\n" +
+                    "EMgDs6V8ZnjaypTekZLNmuTdFbHsugIGjgOyDixl199naw4VxS3ibofvFWAzqMfV\n" +
+                    "UJOB+cRLRcmUkQ4XG0C5CRrpT8KU2IPnWxd1JTWYC7LNA1RvLr4hYllqPKQ2pw1r\n" +
+                    "RejmFvfc7nG5Z4FD83//gbzp/GLjMeG91Zr+eOLPNQINaFBUi7gT/TXyD4uTb4IK\n" +
+                    "dVG+oKtjDpRA3pWfa34IbhxG2zKG9RFkRrRW93RtYHG0dyTqys75c/Npt9BlKqeD\n" +
+                    "YnhN8VUb2zRvbX9KTCj2OB25TMI+9pX4ONW/3HfRona9ZgkUzP1DO64seY02Tboo\n" +
+                    "L276JhQRkbwApl6dCz7SMiP2PF8Lk1iW2GGlgiYevkJSh4abpExWxEfFp+Df5tIK\n" +
+                    "29RkTgpoVUdnOWTYKvBIYqOWUVrAjwb6rVYusqHM/fe8DbzRALQ1hdNlLsnNI03F\n" +
+                    "ZyqTA1GxgIIF2zOBmRubQrZCvyltzJGvPueQpyHbEh0JmdS4DY8uoUZv2ebH3GyA\n" +
+                    "MdYpGKZcpj/Yhhu+WhB5t6/6as5Z2DfTp7J78WF4Hqx6vzW0vcTTw3cMWo81EDvq\n" +
+                    "UTufJL+xclNZh6t8CV9xhZ0KDpKXfkoMmIEzLUH3f8l09DgllwAIujhbMD8NyIYw\n" +
+                    "cR1eJLB0yZME/qqqfAZ46JAwplRdGG5Torr9AdYfWQmmWDPIB0mZ4iTIw26kAXEa\n" +
+                    "fZE8YRTa+cUauXeT+kWWOzlOhk8qFy1QCNcSwiEivsucvZ6rPZ4T5PdnrQ74VWxx\n" +
+                    "PtL/mp55YmvJOuHPDDXG6320Ti7r2sVadg/oVBiIAo2PvYlRVx3S5KG2hisbZews\n" +
+                    "JROvK/5HrRmLNxHQnX6YIyUzw4RT8wPbq/7NBjuiDINOLDUXlkIPkp6ABD5eCwZq\n" +
+                    "iJ9JbVRmMsDjnvjK/5f1fhcHgqFN7hWsBKYslqsB5gsmGGeKJfwx+fMi4xoPt4/u\n" +
+                    "aqidYJd5+tFS21pUWK5XuMOr22jglyjrNuMRm7l/blZySnDgB14VJ+E21YP60hTk\n" +
+                    "HyQGhIRdPSaqJea1H2bq7bG8/1Y63bklMGXX1B01L4S7eMrgmbQdihoR20oeTo20\n" +
+                    "UMcVzg7E7ZttHnbk6q+5sJg/06tl+LEyDFieXVQmbzQlAuZuobmoEKselnQnX6/S\n" +
+                    "oq3IjnSY7SoobEOdyPSSXVLBKwab9cCCiep0oIvtW2NMIdMvIikx5QachezNmW65\n" +
+                    "ICDNFqY1adjc0fc62OfS6+lUp8miQ65yGQcEiWp229zTLjY8ZAeIeyCkbCf9yNwV\n" +
+                    "OmI3+aMIXVnznh2A32n+hROPcVIRDVS5ZYplCBKg+86HZn0t2jVuhY4mNpdJhW1X\n" +
+                    "x+e7u/Ekf3FJBoxvefBS7qtdDxGiQywYohztOixeoBlPM53NDA5KEzoBJBN12fZP\n" +
+                    "v00FJBYAxG9zBunJo8c3p4WmxOeihxQbU5oiRmZC5nH/G7q5Jb6OAQZaf5z80K95\n" +
+                    "Kr/NOLKr9YiSvhuhFzEOMcmH4sEjphhfhyyXHJXBjWiVMRYtCMdRgLOhwH4gOCPA\n" +
+                    "bXrG/xngQ4f4kME95v3rdTtlmpzTdrjMY/2DoCHi9+VBlSsQGFn5bqVqtgzJC9Vo\n" +
+                    "L1w8Q9Kg8BgTj/25zduX338ovq7WfNzGsdnEvkmKWC3F3xZUcWv0wGrllBZ7l38E\n" +
+                    "d1kKV46WsXANimlpiuc9e+Ez5asHNzN6y1eGC5ywbNap3llBX0GZ3kXMSQwb7wlR\n" +
+                    "t8h3Ls9yy2SJ10ylKic3b9fJgqsSS+/4jboZ3uRg93ydPPmcDWPhlrpactgg2V4h\n" +
+                    "vla1Bz9XmBr8T/Rw1Cr5NwlsyJ8qvXnbsZk842pMaXkSDIEPv2W66mihS+DwamNG\n" +
+                    "6eWDoqzTt6ZT9qz9LSV7telt+iPYVRxPPcMtjZ+h9T5J3qvLmEUzNrmMPx139tGh\n" +
+                    "SGnMxtlxeEYJcPt7Ec/RMcc9LysdMNUh9dsw1nn6FfSUE+/mcCDcRYycwTecOo1h\n" +
+                    "uDsjC7PxuZgcNISFwCcbMXUpTyLsUyPTOlhy++NK++bM3E9s0ALige+d/FTXDWgM\n" +
+                    "CZlNucFBOrlx8XwSeBapSc+KXpMkvNWcQge7dMO/XP7jX0u5qZYlbvfDdtKT5BEC\n" +
+                    "SCbEeIQgCCLFrfelNEB5TLecd3tpA7ODGizJ8fNEJqxM7tMVjR03h02hXzguicFq\n" +
+                    "RLOAV0bkwXy9a3CUCmcekHNc6E5qCjoZj/WzH1ZtXK4rlPtmZ7DwZ9oaWtOOzBRl\n" +
+                    "DPhIWFl7VoiT3EHQnj6HyOwleMheXsOO9HgJLgby57IOTHBVniC7SpNIv6qMbo3J\n" +
+                    "bnFdvhtS0XrnXAy71FWGTL0uGBwOGejstuBJg2MLoOqS6gZCH6V1M+vfcs06hcF7\n" +
+                    "LRJ9DoJ3oyupxLE+67aBouEO8AsPg2JLH9WmzJXKMo8nyuVXzLDeDDiDnRro1sc5\n" +
+                    "MdyKkT8KeT6yhu0IHavxd1rqZnXqR0XPo64IOhLLAhOo4y3KnU2mysMk+KItQipp\n" +
+                    "quHoxj1wOc025bhl+lYDyHdmuMJvzYhbDDMaNWr/8KUHojalFi4D/+nkAzLgAc8w\n" +
+                    "r2sz9+kG4UwTLShuthLY0J8f+cDNGZsz/8OpJcUwDk+lqhBMzqISUYAXuOzXLAad\n" +
+                    "3LqFtkyYv9ZPyMwVizZg4bEmRAzC+EPXQFkv7sGOtbj/sfLVHPevuoKQoZbENLCZ\n" +
+                    "UqIxLZe/bye3S+q/uZcNZ7U6R9zAew50gg/b/fyjdg9WOPvQpIper/IXEWC3PZus\n" +
+                    "NoPBF3LF2UH5hUTSPSCdtByeuwCFkaBDYl9FiEcXLq2126rI55+2+jDAwj89kBoq\n" +
+                    "lGq2oZtpKSeR0NQqVnMS1vatiI0GXB7SSFbCtPOSRpiKPvh6bj32sI5Ytx3ZFDvE\n" +
+                    "-----END RSA PRIVATE KEY-----\n", sftpPassphrase);
             session = jsch.getSession(sftpUser, sftpHost, sftpPort);
             java.util.Properties config = new java.util.Properties();
             config.put("StrictHostKeyChecking", "no");
