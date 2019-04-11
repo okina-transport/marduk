@@ -29,7 +29,7 @@ public class SlackNotification {
     final String service = "https://hooks.slack.com/services/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";
     final int timeout = 5000;
 
-    public static final String NOTIFICATION_CHANNEL = "test";
+    public static final String NOTIFICATION_CHANNEL = "notifications";
 
     /**
      * Envoyer une notification slack respectant le format JSON demandé
