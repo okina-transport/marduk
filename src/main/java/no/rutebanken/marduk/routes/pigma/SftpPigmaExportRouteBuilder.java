@@ -54,7 +54,7 @@ public class SftpPigmaExportRouteBuilder extends BaseRouteBuilder {
     private SlackNotification slackNotification;
 
     @Autowired
-    private CreateMetadataFile createMetadataFile;
+    private MetadataFile metadataFile;
 
     @Autowired
     private BlobStoreService blobStoreService;
@@ -114,11 +114,7 @@ public class SftpPigmaExportRouteBuilder extends BaseRouteBuilder {
 
 
         //Create a metadata file for each file
-        for(BlobStoreFiles.File blobStoreFile : listBlobStoreFiles){
-            getBlobFileAndCreateMetadataFile(metadataFiles, blobStoreFile);
-        }
-
-        files.addAll(metadataFiles);
+        files.add(metadataFile.createMetadataFile("naq-metadonnes.csv", listBlobStoreFiles));
 
         for(BlobStoreFiles.File file : listBlobStoreFiles){
             InputStream inputStream = blobStoreService.getBlob(file.getName());
@@ -140,7 +136,7 @@ public class SftpPigmaExportRouteBuilder extends BaseRouteBuilder {
 
 //        ArrayList<File> filesMail = new ArrayList<>();
 //        for(File fileMail : files){
-//            if(fileMail.getName().equals("naq-stops-netex-metadonnes.csv")){
+//            if(fileMail.getName().equals("naq-metadonnes.csv")){
 //                filesMail.add(fileMail);
 //            }
 //        }
@@ -188,23 +184,6 @@ public class SftpPigmaExportRouteBuilder extends BaseRouteBuilder {
             log.info("Channel disconnected.");
             session.disconnect();
             log.info("Host Session disconnected.");
-        }
-    }
-
-
-    private void getBlobFileAndCreateMetadataFile(ArrayList<File> metadataFiles, BlobStoreFiles.File blobStoreFile) {
-        String nameMetadataFile;
-        if(blobStoreFile.getFileNameOnly().equals("naq-aggregated-netex.zip")){
-            nameMetadataFile = "naq-aggregated-netex-metadonnes.csv";
-            metadataFiles.add(createMetadataFile.createMetadataFile(blobStoreFile.getFileNameOnly(), nameMetadataFile, blobStoreFile.getReferential()));
-        }
-        else if(blobStoreFile.getFileNameOnly().equals("naq-aggregated-gtfs.zip")){
-            nameMetadataFile = "naq-aggregated-gtfs-metadonnes.csv";
-            metadataFiles.add(createMetadataFile.createMetadataFile(blobStoreFile.getFileNameOnly(), nameMetadataFile, blobStoreFile.getReferential()));
-        }
-        else{
-            nameMetadataFile = blobStoreFile.getReferential() + "-metadonnes.csv";
-            metadataFiles.add(createMetadataFile.createMetadataFile(blobStoreFile.getFileNameOnly(), nameMetadataFile, blobStoreFile.getReferential()));
         }
     }
 }
