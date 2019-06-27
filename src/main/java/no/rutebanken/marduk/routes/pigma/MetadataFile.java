@@ -63,7 +63,7 @@ public class MetadataFile {
         ArrayList<String[]> rows = new ArrayList<>();
 
         for(BlobStoreFiles.File blobStoreFile : listBlobStoreFiles){
-            if(blobStoreFile.getFileNameOnly().equals("naq-aggregated-gtfs.zip") || blobStoreFile.getFileNameOnly().equals("naq-aggregated-netex.zip")){
+            if(!blobStoreFile.getFileNameOnly().equals("CurrentAndFuture_latest.zip") && blobStoreFile.getReferential() == null){
                 data = FILE_ROW_PRINTER_GENERAL;
                 rows.add(data);
             }
