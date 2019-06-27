@@ -22,7 +22,7 @@ public class MetadataFile {
     private static final String[] FILE_HEADER_PRINTER = new String[]{"Titre", "Description", "Mots clés", "Frequence de mise à jour", "Licence", "Granularité", "Contact", "Titre du fichier", "Nom fichier GTFS", "Nom fichier Netex"};
 
     private static final String[] FILE_ROW_PRINTER_GENERAL = new String[]{
-            "Arrêts, horaires et parcours théoriques des réseaux de transport public des membres du syndicat Nouvelle-Aquitaine Mobilités.",
+            "Arrêts horaires et parcours théoriques des réseaux de transport public des membres du syndicat Nouvelle-Aquitaine Mobilités.",
             "Ce jeu de données contient la liste des arrêts, des horaires et des parcours théoriques des réseaux de transport public des membres du syndicat Nouvelle-Aquitaine Mobilités.",
             "#NETEX#GTFS#données-ouvertes",
             "hebdomadaire",
@@ -35,8 +35,8 @@ public class MetadataFile {
     };
 
     private static final String[] FILE_ROW_PRINTER_PRODUCER = new String[]{
-            "Arrêts horaires et parcours théoriques des bus du réseau des transports publics",
-            "Ce jeu de données contient la liste des arrêts, des horaires et des parcours théoriques du réseau des transports publics",
+            "Arrêts horaires et parcours théoriques des bus du réseau de transport public",
+            "Ce jeu de données contient la liste des arrêts des horaires et des parcours théoriques du réseau de transport public",
             "#NETEX#GTFS#données-ouvertes",
             "hebdomadaire",
             "Open Data Commons Open Database License (OdbL)",
@@ -63,11 +63,11 @@ public class MetadataFile {
         ArrayList<String[]> rows = new ArrayList<>();
 
         for(BlobStoreFiles.File blobStoreFile : listBlobStoreFiles){
-            if(!nameFile.equals("CurrentAndFuture_latest.zip") && blobStoreFile.getReferential() == null){
+            if(blobStoreFile.getFileNameOnly().equals("naq-aggregated-gtfs.zip") || blobStoreFile.getFileNameOnly().equals("naq-aggregated-netex.zip")){
                 data = FILE_ROW_PRINTER_GENERAL;
                 rows.add(data);
             }
-            else if (nameFile.equals("CurrentAndFuture_latest.zip")){
+            else if (blobStoreFile.getFileNameOnly().equals("CurrentAndFuture_latest.zip")){
                 data = FILE_ROW_PRINTER_STOPS;
                 rows.add(data);
             }
@@ -76,8 +76,8 @@ public class MetadataFile {
                 String producerName = producers.producersListName().get(prefixParts[1]);
                 String type = producers.producersTransportTypeList().get(prefixParts[1]);
 
-                String title = FILE_ROW_PRINTER_PRODUCER[0] + type + " de " + producerName;
-                String description = FILE_ROW_PRINTER_PRODUCER[1] + type + " de " + producerName;
+                String title = FILE_ROW_PRINTER_PRODUCER[0] + " " + type + " de " + producerName;
+                String description = FILE_ROW_PRINTER_PRODUCER[1] + " " + type + " de " + producerName;
                 String granularite = producers.producersGranulariteList().get(prefixParts[1]);
                 String contact = "contact@nouvelle-aquitaine-mobilites.fr";
                 String titleFile = FILE_ROW_PRINTER_PRODUCER[5] + producerName;
