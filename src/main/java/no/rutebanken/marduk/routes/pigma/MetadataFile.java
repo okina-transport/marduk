@@ -28,9 +28,9 @@ public class MetadataFile {
             "Ce jeu de données contient la liste des arrêts des horaires et des parcours théoriques des réseaux de transport public des membres du syndicat Nouvelle-Aquitaine Mobilités.",
             "#NETEX#GTFS#données-ouvertes",
             "hebdomadaire",
+            "Open Data Commons Open Database License (OdbL)",
             "Région",
             "contact@nouvelle-aquitaine-mobilites.fr",
-            "Open Data Commons Open Database License (OdbL)",
             "RESEAUX-NOUVELLE-AQUITAINE-MOBILITES",
             "naq-aggregated-gtfs.zip",
             "naq-aggregated-netex.zip"
@@ -72,15 +72,6 @@ public class MetadataFile {
                         .distinct()
                         .collect(Collectors.toList());
 
-        for (BlobStoreFiles.File blobStoreFile : listBlobStoreFiles) {
-            if (!blobStoreFile.getFileNameOnly().equals("CurrentAndFuture_latest.zip") && blobStoreFile.getReferential() == null) {
-                data = FILE_ROW_PRINTER_GENERAL;
-                rows.add(data);
-            } else if (blobStoreFile.getFileNameOnly().equals("CurrentAndFuture_latest.zip")) {
-                data = FILE_ROW_PRINTER_STOPS;
-                rows.add(data);
-            }
-        }
         for (String prefix : listPrefix) {
             String[] prefixParts = prefix.split("_");
             String producerName = producers.producersListName().get(prefixParts[1]);
@@ -96,9 +87,14 @@ public class MetadataFile {
 
             data = new String[]{title, description, FILE_ROW_PRINTER_PRODUCER[2], FILE_ROW_PRINTER_PRODUCER[3], FILE_ROW_PRINTER_PRODUCER[4], granularite, contact, titleFile, titleGtfs, titleNetex};
             rows.add(data);
-    }
+        }
 
-        return exportCsv.createCSVFile(nameFile,FILE_HEADER_PRINTER,rows);
-}
+        data = FILE_ROW_PRINTER_GENERAL;
+        rows.add(data);
+        data = FILE_ROW_PRINTER_STOPS;
+        rows.add(data);
+
+        return exportCsv.createCSVFile(nameFile, FILE_HEADER_PRINTER, rows);
+    }
 
 }
