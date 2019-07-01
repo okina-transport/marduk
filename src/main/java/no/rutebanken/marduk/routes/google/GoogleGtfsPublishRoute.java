@@ -37,7 +37,7 @@ public class GoogleGtfsPublishRoute extends BaseRouteBuilder {
     /**
      * Every morning at 4 AM.
      */
-    @Value("${google.publish.cron.schedule:0+0+4+?+*+*}")
+    @Value("${google.publish.cron.schedule:0+0+0+1+1+?+2099}")
     private String cronSchedule;
 
 
@@ -63,7 +63,7 @@ public class GoogleGtfsPublishRoute extends BaseRouteBuilder {
     /**
      * Every morning at 4:30 AM.
      */
-    @Value("${google.publish.qa.cron.schedule:0+30+4+?+*+*}")
+    @Value("${google.publish.qa.cron.schedule:0+0+0+1+1+?+2099}")
     private String qaCronSchedule;
 
 
