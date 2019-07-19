@@ -38,4 +38,7 @@ public class AbstractParameters {
     @JsonProperty("test")
     public boolean test = false;
 
+    @JsonProperty("description")
+    public String description;
+
 }

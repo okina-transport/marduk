@@ -29,6 +29,8 @@ public class Constants {
     public static final String JSON_PART = "RutebankenJsonPart";
     public static final String OTP_GRAPH_DIR = "RutebankenOtpGraphDirectory";
     public static final String FILE_NAME = "RutebankenFileName";
+    public static final String USER = "RutebankenUser";
+    public static final String DESCRIPTION = "RutebankenDescription";
 
     public static final String CURRENT_AGGREGATED_GTFS_FILENAME = "aggregated-gtfs.zip";
     public static final String CURRENT_AGGREGATED_NETEX_FILENAME = "aggregated-netex.zip";

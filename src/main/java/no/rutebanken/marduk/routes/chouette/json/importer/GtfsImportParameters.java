@@ -70,13 +70,14 @@ public class GtfsImportParameters extends ChouetteJobParameters {
     public static GtfsImportParameters create(String name, String objectIdPrefix, String referentialName, String organisationName,
                                                      String userName, boolean cleanRepository, boolean enableValidation,
                                                      boolean allowCreateMissingStopPlace, boolean enableStopPlaceIdMapping,
-                                                     Set<String> generateMissingRouteSectionsForModes) {
+                                                     Set<String> generateMissingRouteSectionsForModes, String description) {
         Gtfs gtfsImport = new Gtfs();
         gtfsImport.name = name;
         gtfsImport.objectIdPrefix = objectIdPrefix;
         gtfsImport.referentialName = referentialName;
         gtfsImport.organisationName = organisationName;
         gtfsImport.userName = userName;
+        gtfsImport.description = description;
         gtfsImport.cleanRepository = cleanRepository ? "1" : "0";
         gtfsImport.stopAreaRemoteIdMapping = enableStopPlaceIdMapping;
         gtfsImport.generateMissingRouteSectionsForModes = generateMissingRouteSectionsForModes;

@@ -32,11 +32,11 @@ import java.io.StringWriter;
 
 public class Parameters {
 
-    public static String createImportParameters(String fileName, String fileType, Provider provider) {
+    public static String createImportParameters(String fileName, String fileType, Provider provider, String user, String description) {
         if (FileType.REGTOPP.name().equals(fileType)) {
             return getRegtoppImportParameters(fileName, provider);
         } else if (FileType.GTFS.name().equals(fileType)) {
-            return getGtfsImportParameters(fileName, provider);
+            return getGtfsImportParameters(fileName, provider, user, description);
         } else if (FileType.NETEXPROFILE.name().equals(fileType)) {
             return getNetexImportParameters(fileName, provider);
         } else {
@@ -57,11 +57,11 @@ public class Parameters {
         return regtoppImportParameters.toJsonString();
     }
 
-    static String getGtfsImportParameters(String importName, Provider provider) {
+    static String getGtfsImportParameters(String importName, Provider provider, String user, String description) {
         ChouetteInfo chouetteInfo = provider.chouetteInfo;
         GtfsImportParameters gtfsImportParameters = GtfsImportParameters.create(importName, chouetteInfo.xmlns,
-                chouetteInfo.referential, chouetteInfo.organisation, chouetteInfo.user, chouetteInfo.enableCleanImport,
-                chouetteInfo.enableValidation, chouetteInfo.allowCreateMissingStopPlace, chouetteInfo.enableStopPlaceIdMapping, chouetteInfo.generateMissingServiceLinksForModes);
+                chouetteInfo.referential, chouetteInfo.organisation, user, chouetteInfo.enableCleanImport,
+                chouetteInfo.enableValidation, chouetteInfo.allowCreateMissingStopPlace, chouetteInfo.enableStopPlaceIdMapping, chouetteInfo.generateMissingServiceLinksForModes, description);
         return gtfsImportParameters.toJsonString();
     }
 

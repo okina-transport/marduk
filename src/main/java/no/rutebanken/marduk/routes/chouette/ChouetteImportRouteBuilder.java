@@ -133,9 +133,11 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
         from("direct:addImportParameters")
                 .process(e -> {
                     String fileName = e.getIn().getHeader(FILE_NAME, String.class);
-                    String fileType = e.getIn().getHeader(Constants.FILE_TYPE, String.class);
+                    String fileType = e.getIn().getHeader(FILE_TYPE, String.class);
                     Long providerId = e.getIn().getHeader(PROVIDER_ID, Long.class);
-                    e.getIn().setHeader(JSON_PART, getImportParameters(fileName, fileType, providerId));
+                    String user = e.getIn().getHeader(USER, String.class);
+                    String description = e.getIn().getHeader(DESCRIPTION, String.class);
+                    e.getIn().setHeader(JSON_PART, getImportParameters(fileName, fileType, providerId, user, description));
                 }) //Using header to addToExchange json data
                 .log(LoggingLevel.DEBUG, correlation() + "import parameters: " + header(JSON_PART))
                 .to("direct:sendImportJobRequest")
@@ -220,9 +222,9 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
 
     }
 
-    private String getImportParameters(String fileName, String fileType, Long providerId) {
+    private String getImportParameters(String fileName, String fileType, Long providerId, String user, String description) {
         Provider provider = getProviderRepository().getProvider(providerId);
-        return Parameters.createImportParameters(fileName, fileType, provider);
+        return Parameters.createImportParameters(fileName, fileType, provider, user, description);
     }
 
 }
