@@ -26,28 +26,28 @@ import java.util.List;
 public class SftpPigmaExportRouteBuilder extends BaseRouteBuilder {
 
 
-    @Value("${upload.pigma.cron}")
+    @Value("${upload.pigma.cron:0+0+0+1+1+?+2099}")
     private String uploadPigmaCron;
 
-    @Value("${sftp.pigma.host}")
+    @Value("${sftp.pigma.host:test}")
     private String sftpHost;
 
-    @Value("${sftp.pigma.login}")
+    @Value("${sftp.pigma.login:test}")
     private String sftpUser;
 
-    @Value("${sftp.pigma.port}")
+    @Value("${sftp.pigma.port:12}")
     private Integer sftpPort;
 
-    @Value("${sftp.pigma.protocol}")
+    @Value("${sftp.pigma.protocol:test}")
     private String sftpProtocol;
 
-    @Value("${sftp.pigma.privateKey}")
+    @Value("${sftp.pigma.privateKey:test}")
     private String sftpPrivateKey;
 
-    @Value("${sftp.pigma.passphrase}")
+    @Value("${sftp.pigma.passphrase:test}")
     private String sftpPassphrase;
 
-    @Value("${sftp.pigma.path}")
+    @Value("${sftp.pigma.path:test}")
     private String sftpPath;
 
     @Autowired
