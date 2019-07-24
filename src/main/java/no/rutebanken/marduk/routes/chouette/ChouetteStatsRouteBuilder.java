@@ -63,7 +63,7 @@ public class ChouetteStatsRouteBuilder extends AbstractChouetteRouteBuilder {
     @Autowired
     private SendDataAlertExpired sendDataAlertExpired;
 
-    @Value("${data.alert.expired.cron}")
+    @Value("${data.alert.expired.cron:0+0+0+1+1+?+2099}")
     private String dataAlertExpiredCron;
 
     private boolean sendEmailDataAlertMail = false;

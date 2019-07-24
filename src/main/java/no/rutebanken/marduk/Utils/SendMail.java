@@ -24,25 +24,25 @@ import java.util.Properties;
 
 @Component
 public class SendMail {
-    @Value("${spring.mail.host}")
+    @Value("${spring.mail.host:test}")
     private String emailHost;
 
-    @Value("${spring.mail.username}")
+    @Value("${spring.mail.username:test}")
     private String emailFrom;
 
-    @Value("${spring.mail.to}")
+    @Value("${spring.mail.to:test}")
     private String emailTo;
 
-    @Value("${spring.mail.port}")
+    @Value("${spring.mail.port:12}")
     private String emailPort;
 
-    @Value("${spring.mail.password}")
+    @Value("${spring.mail.password:test}")
     private String emailPassword;
 
-    @Value("${spring.mail.auth}")
+    @Value("${spring.mail.auth:test}")
     private boolean emailAuth;
 
-    @Value("${spring.mail.starttls.enable}")
+    @Value("${spring.mail.starttls.enable:test}")
     private boolean emailStartTlsEnable;
 
 
