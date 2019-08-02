@@ -56,6 +56,10 @@ public class JobEvent {
 
     public String referential;
 
+    public String username;
+
+    public String description;
+
     private JobEvent() {
     }
 
@@ -154,6 +158,16 @@ public class JobEvent {
             return this;
         }
 
+        public Builder username(String username) {
+            jobEvent.username = username;
+            return this;
+        }
+
+        public Builder description(String description) {
+            jobEvent.description = description;
+            return this;
+        }
+
         public JobEvent build() {
             if (JobDomain.TIMETABLE.equals(jobEvent.domain) && jobEvent.providerId == null) {
                 throw new IllegalArgumentException("No provider id");
@@ -192,6 +206,8 @@ public class JobEvent {
             jobEvent.correlationId = exchange.getIn().getHeader(CORRELATION_ID, String.class);
             jobEvent.externalId = exchange.getIn().getHeader(CHOUETTE_JOB_ID, Long.class);
             jobEvent.referential = exchange.getIn().getHeader(CHOUETTE_REFERENTIAL, String.class);
+            jobEvent.username = exchange.getIn().getHeader(USER, String.class);
+            jobEvent.description = exchange.getIn().getHeader(DESCRIPTION, String.class);
             return this;
         }
 
