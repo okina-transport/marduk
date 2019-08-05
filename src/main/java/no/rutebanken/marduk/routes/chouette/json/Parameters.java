@@ -60,7 +60,7 @@ public class Parameters {
     static String getGtfsImportParameters(String importName, Provider provider, String user, String description) {
         ChouetteInfo chouetteInfo = provider.chouetteInfo;
         GtfsImportParameters gtfsImportParameters = GtfsImportParameters.create(importName, chouetteInfo.xmlns,
-                chouetteInfo.referential, chouetteInfo.organisation, user, chouetteInfo.enableCleanImport,
+                provider.name, chouetteInfo.organisation, user, chouetteInfo.enableCleanImport,
                 chouetteInfo.enableValidation, chouetteInfo.allowCreateMissingStopPlace, chouetteInfo.enableStopPlaceIdMapping, chouetteInfo.generateMissingServiceLinksForModes, description);
         return gtfsImportParameters.toJsonString();
     }
