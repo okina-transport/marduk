@@ -112,7 +112,7 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
                 .transacted()
                 .log(LoggingLevel.INFO, correlation() + "Starting Chouette import")
                 .removeHeader(Constants.CHOUETTE_JOB_ID)
-                .process(e -> JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.IMPORT).state(State.PENDING).build())
+                .process(e -> JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.IMPORT).state(State.PENDING).type(e.getIn().getHeader(FILE_TYPE, String.class)).build())
                 .to("direct:updateStatus")
                 .to("direct:getBlob")
                 .choice()
