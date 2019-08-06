@@ -60,6 +60,8 @@ public class JobEvent {
 
     public String description;
 
+    public String type;
+
     private JobEvent() {
     }
 
@@ -168,6 +170,11 @@ public class JobEvent {
             return this;
         }
 
+        public Builder type(String type) {
+            jobEvent.type = type;
+            return this;
+        }
+
         public JobEvent build() {
             if (JobDomain.TIMETABLE.equals(jobEvent.domain) && jobEvent.providerId == null) {
                 throw new IllegalArgumentException("No provider id");
@@ -208,6 +215,7 @@ public class JobEvent {
             jobEvent.referential = exchange.getIn().getHeader(CHOUETTE_REFERENTIAL, String.class);
             jobEvent.username = exchange.getIn().getHeader(USER, String.class);
             jobEvent.description = exchange.getIn().getHeader(DESCRIPTION, String.class);
+            jobEvent.type = exchange.getIn().getHeader(FILE_TYPE, String.class);
             return this;
         }
 
