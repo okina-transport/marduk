@@ -16,14 +16,12 @@
 
 package no.rutebanken.marduk.routes.file;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import no.rutebanken.marduk.Constants;
 import no.rutebanken.marduk.exceptions.MardukException;
 import no.rutebanken.marduk.routes.BaseRouteBuilder;
 import no.rutebanken.marduk.routes.status.JobEvent;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
-import org.apache.camel.Message;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.input.CloseShieldInputStream;
 import org.apache.tomcat.util.http.fileupload.FileItem;
@@ -41,7 +39,11 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.UUID;
 
-import static no.rutebanken.marduk.Constants.*;
+import static no.rutebanken.marduk.Constants.CHOUETTE_REFERENTIAL;
+import static no.rutebanken.marduk.Constants.DESCRIPTION;
+import static no.rutebanken.marduk.Constants.FILE_HANDLE;
+import static no.rutebanken.marduk.Constants.FILE_NAME;
+import static no.rutebanken.marduk.Constants.USER;
 
 /**
  * Upload file to blob store and trigger import pipeline.
@@ -95,20 +97,24 @@ public class FileUploadRouteBuilder extends BaseRouteBuilder {
         String informations = new String(bytes);
 
         int indexOfUser = informations.lastIndexOf("Content-Disposition: form-data; name=\"user\"");
-        String user = informations.substring(indexOfUser);
-        indexOfUser = user.indexOf("------WebKitFormBoundary");
-        user = user.substring(0, indexOfUser);
-        user = user.substring(user.lastIndexOf('"') + 1);
-        user = user.trim();
-        e.getIn().setHeader(USER, user);
+        if (indexOfUser != -1) {
+            String user = informations.substring(indexOfUser);
+            indexOfUser = user.indexOf("------WebKitFormBoundary");
+            user = user.substring(0, indexOfUser);
+            user = user.substring(user.lastIndexOf('"') + 1);
+            user = user.trim();
+            e.getIn().setHeader(USER, user);
+        }
 
         int indexOfDescription = informations.lastIndexOf("Content-Disposition: form-data; name=\"description\"");
-        String description = informations.substring(indexOfDescription);
-        indexOfDescription = description.indexOf("------WebKitFormBoundary");
-        description = description.substring(0, indexOfDescription);
-        description = description.substring(description.lastIndexOf('"') + 1);
-        description = description.trim();
-        e.getIn().setHeader(DESCRIPTION, description);
+        if (indexOfDescription != -1) {
+            String description = informations.substring(indexOfDescription);
+            indexOfDescription = description.indexOf("------WebKitFormBoundary");
+            description = description.substring(0, indexOfDescription);
+            description = description.substring(description.lastIndexOf('"') + 1);
+            description = description.trim();
+            e.getIn().setHeader(DESCRIPTION, description);
+        }
 
         convertBodyToFileItems(e, bytes);
     }
