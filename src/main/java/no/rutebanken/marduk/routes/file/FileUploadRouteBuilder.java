@@ -16,29 +16,14 @@
 
 package no.rutebanken.marduk.routes.file;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
 import no.rutebanken.marduk.Constants;
-import no.rutebanken.marduk.exceptions.MardukException;
 import no.rutebanken.marduk.routes.BaseRouteBuilder;
 import no.rutebanken.marduk.routes.status.JobEvent;
-import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
-import org.apache.camel.Message;
-import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.input.CloseShieldInputStream;
 import org.apache.tomcat.util.http.fileupload.FileItem;
-import org.apache.tomcat.util.http.fileupload.FileItemFactory;
-import org.apache.tomcat.util.http.fileupload.UploadContext;
-import org.apache.tomcat.util.http.fileupload.disk.DiskFileItemFactory;
-import org.apache.tomcat.util.http.fileupload.servlet.ServletFileUpload;
 import org.springframework.stereotype.Component;
 
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
-import java.util.List;
 import java.util.UUID;
 
 import static no.rutebanken.marduk.Constants.*;
@@ -57,8 +42,7 @@ public class FileUploadRouteBuilder extends BaseRouteBuilder {
 
 
         from("direct:uploadFilesAndStartImport")
-                .process(this::getObjectUpload)
-//                .process(e -> convertBodyToFileItems(e))
+                .process(FileInformations::getObjectUpload)
                 .split().body()
                 .process(e -> e.getIn().setHeader(Constants.CORRELATION_ID, e.getIn().getHeader(Constants.CORRELATION_ID, UUID.randomUUID().toString())))
                 .setHeader(FILE_NAME, simple("${body.name}"))
@@ -83,80 +67,5 @@ public class FileUploadRouteBuilder extends BaseRouteBuilder {
                 .process(e -> JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.FILE_TRANSFER).state(JobEvent.State.FAILED).build()).inOnly("direct:updateStatus")
                 .end()
                 .routeId("file-upload-and-start-import");
-    }
-
-    private void getObjectUpload(Exchange e) {
-        byte[] bytes;
-        try {
-            bytes = IOUtils.toByteArray(e.getIn().getBody(InputStream.class));
-        } catch (Exception ex) {
-            throw new MardukException("Failed to parse multipart content: " + ex.getMessage());
-        }
-        String informations = new String(bytes);
-
-        int indexOfUser = informations.lastIndexOf("Content-Disposition: form-data; name=\"user\"");
-        String user = informations.substring(indexOfUser);
-        indexOfUser = user.indexOf("------WebKitFormBoundary");
-        user = user.substring(0, indexOfUser);
-        user = user.substring(user.lastIndexOf('"') + 1);
-        user = user.trim();
-        e.getIn().setHeader(USER, user);
-
-        int indexOfDescription = informations.lastIndexOf("Content-Disposition: form-data; name=\"description\"");
-        String description = informations.substring(indexOfDescription);
-        indexOfDescription = description.indexOf("------WebKitFormBoundary");
-        description = description.substring(0, indexOfDescription);
-        description = description.substring(description.lastIndexOf('"') + 1);
-        description = description.trim();
-        e.getIn().setHeader(DESCRIPTION, description);
-
-        convertBodyToFileItems(e, bytes);
-    }
-
-    private void convertBodyToFileItems(Exchange e, byte[] byteArray) {
-        FileItemFactory factory = new DiskFileItemFactory();
-        ServletFileUpload upload = new ServletFileUpload(factory);
-        List<FileItem> fileItems;
-
-        try {
-            fileItems = upload.parseRequest(new SimpleUploadContext(StandardCharsets.UTF_8, e.getIn().getHeader(Exchange.CONTENT_TYPE, String.class), byteArray));
-            fileItems.removeIf(fileItem -> fileItem.getName() == null);
-            e.getIn().setBody(fileItems);
-        } catch (Exception ex) {
-            throw new MardukException("Failed to parse File multipart content: " + ex.getMessage());
-        }
-    }
-
-
-    /**
-     * Wrapper class for passing form multipart body to ServletFileUpload parser.
-     */
-    public class SimpleUploadContext implements UploadContext {
-        private final Charset charset;
-        private final String contentType;
-        private final byte[] content;
-
-        public SimpleUploadContext(Charset charset, String contentType, byte[] content) {
-            this.charset = charset;
-            this.contentType = contentType;
-            this.content = content;
-        }
-
-        public String getCharacterEncoding() {
-            return charset.displayName();
-        }
-
-        public String getContentType() {
-            return contentType;
-        }
-
-        @Override
-        public long contentLength() {
-            return content.length;
-        }
-
-        public InputStream getInputStream() throws IOException {
-            return new ByteArrayInputStream(content);
-        }
     }
 }
