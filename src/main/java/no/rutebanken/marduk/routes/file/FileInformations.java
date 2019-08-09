@@ -31,20 +31,24 @@ public class FileInformations {
         String informations = new String(bytes);
 
         int indexOfUser = informations.lastIndexOf("Content-Disposition: form-data; name=\"user\"");
-        String user = informations.substring(indexOfUser);
-        indexOfUser = user.indexOf("------WebKitFormBoundary");
-        user = user.substring(0, indexOfUser);
-        user = user.substring(user.lastIndexOf('"') + 1);
-        user = user.trim();
-        e.getIn().setHeader(USER, user);
+        if (indexOfUser != -1) {
+            String user = informations.substring(indexOfUser);
+            indexOfUser = user.indexOf("------WebKitFormBoundary");
+            user = user.substring(0, indexOfUser);
+            user = user.substring(user.lastIndexOf('"') + 1);
+            user = user.trim();
+            e.getIn().setHeader(USER, user);
+        }
 
         int indexOfDescription = informations.lastIndexOf("Content-Disposition: form-data; name=\"description\"");
-        String description = informations.substring(indexOfDescription);
-        indexOfDescription = description.indexOf("------WebKitFormBoundary");
-        description = description.substring(0, indexOfDescription);
-        description = description.substring(description.lastIndexOf('"') + 1);
-        description = description.trim();
-        e.getIn().setHeader(DESCRIPTION, description);
+        if (indexOfDescription != -1) {
+            String description = informations.substring(indexOfDescription);
+            indexOfDescription = description.indexOf("------WebKitFormBoundary");
+            description = description.substring(0, indexOfDescription);
+            description = description.substring(description.lastIndexOf('"') + 1);
+            description = description.trim();
+            e.getIn().setHeader(DESCRIPTION, description);
+        }
 
         convertBodyToFileItems(e, bytes);
     }
