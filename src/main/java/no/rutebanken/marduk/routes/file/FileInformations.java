@@ -12,6 +12,8 @@ import org.apache.tomcat.util.http.fileupload.servlet.ServletFileUpload;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.UnsupportedEncodingException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
@@ -21,14 +23,22 @@ import static no.rutebanken.marduk.Constants.USER;
 
 public class FileInformations {
 
-    public static void getObjectUpload(Exchange e) {
+    public static void getObjectUpload(Exchange e) throws IOException {
         byte[] bytes;
         try {
             bytes = IOUtils.toByteArray(e.getIn().getBody(InputStream.class));
         } catch (Exception ex) {
             throw new MardukException("Failed to parse multipart content: " + ex.getMessage());
         }
-        String informations = new String(bytes);
+
+        String informations = "";
+
+        try {
+            InputStream inputStream = new ByteArrayInputStream(bytes);
+            informations = IOUtils.toString(inputStream, "UTF-8");
+        } catch (UnsupportedEncodingException ex) {
+            ex.printStackTrace();
+        }
 
         int indexOfUser = informations.lastIndexOf("Content-Disposition: form-data; name=\"user\"");
         if (indexOfUser != -1) {
