@@ -77,7 +77,7 @@ public class Parameters {
         try {
             ChouetteInfo chouetteInfo = provider.chouetteInfo;
             GtfsExportParameters.GtfsExport gtfsExport = new GtfsExportParameters.GtfsExport("offre",
-                                                                                                    chouetteInfo.xmlns, chouetteInfo.referential, chouetteInfo.organisation, chouetteInfo.user, true);
+                                                                                                    chouetteInfo.xmlns, chouetteInfo.referential, chouetteInfo.organisation, chouetteInfo.user, false);
             GtfsExportParameters.Parameters parameters = new GtfsExportParameters.Parameters(gtfsExport);
             GtfsExportParameters importParameters = new GtfsExportParameters(parameters);
             ObjectMapper mapper = new ObjectMapper();

@@ -17,6 +17,7 @@
 package no.rutebanken.marduk.routes.chouette;
 
 import no.rutebanken.marduk.Constants;
+import no.rutebanken.marduk.domain.Provider;
 import no.rutebanken.marduk.routes.chouette.json.Parameters;
 import no.rutebanken.marduk.routes.file.ZipFileUtils;
 import no.rutebanken.marduk.routes.status.JobEvent;
@@ -120,7 +121,19 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
                 .log(LoggingLevel.INFO, correlation() + "Adding feed_info.txt to GTFS file")
                 .process(e -> {
                     // Add feed info
-                    String feedInfoContent = "feed_id,feed_publisher_name,feed_publisher_url,feed_lang\nRB,Rutebanken,http://www.rutebanken.org,no";
+                    Provider provider = getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class));
+                    provider.getChouetteInfo();
+
+                    String feedInfoContent = "feed_publisher_name,feed_publisher_url,feed_lang,feed_start_date,feed_end_date,feed_version,feed_contact_email,feed_contact_url\n";
+
+                    feedInfoContent += "MOSAIC_A_CORRIGER" + ",";                     // feed_publisher_name
+                    feedInfoContent += "https://www.ratpdev.com/#A_CORRIGER" + ",";   // feed_publisher_url
+                    feedInfoContent += "fr-FR" + ",";                                 // feed_lang
+                    feedInfoContent += ",";   // feed_start_date
+                    feedInfoContent += ",";   // feed_end_date
+                    feedInfoContent += ",";   // feed_version
+                    feedInfoContent += ",";   // feed_contact_email
+                    feedInfoContent += ",";   // feed_contact_url
 
                     File tmpFolder = new File(System.getProperty("java.io.tmpdir"));
                     File tmpFolder2 = new File(tmpFolder, UUID.randomUUID().toString());
