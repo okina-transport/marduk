@@ -126,7 +126,7 @@ public class GcsBlobStoreRepository implements BlobStoreRepository {
         Provider provider = null;
         if (file.getName().contains("graphs/")) {
             file.setFormat(BlobStoreFiles.File.Format.GRAPH);
-        } else if (file.getName().contains("/netex/")) {
+        } else if (file.getName().contains("/netex/") || file.getName().contains("tiamat/")) {
             file.setFormat(BlobStoreFiles.File.Format.NETEX);
             provider = parseProviderFromFileName(file.getName());
         } else if (file.getName().contains("/gtfs/")) {
