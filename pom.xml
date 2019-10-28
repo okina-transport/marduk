@@ -715,10 +715,6 @@
             <id>ECC</id>
             <url>https://github.com/ElectronicChartCentre/ecc-mvn-repo/raw/master/releases</url>
         </repository>
-        <repository>
-            <id>opensource.kantega.no</id>
-            <url>http://opensource.kantega.no/nexus/content/repositories/releases</url>
-        </repository>
     </repositories>
 
 </project>
