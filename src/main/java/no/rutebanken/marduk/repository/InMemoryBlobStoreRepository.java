@@ -18,6 +18,7 @@ package no.rutebanken.marduk.repository;
 
 import com.google.cloud.storage.Storage;
 import no.rutebanken.marduk.domain.BlobStoreFiles;
+import no.rutebanken.marduk.domain.Provider;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.output.ByteArrayOutputStream;
 import org.slf4j.Logger;
@@ -47,6 +48,16 @@ public class InMemoryBlobStoreRepository implements BlobStoreRepository {
     @Override
     public BlobStoreFiles listBlobs(String prefix) {
         return listBlobs(Arrays.asList(prefix));
+    }
+
+    @Override
+    public BlobStoreFiles listBlobsForProvider(String prefix, Long providerId) {
+        return listBlobs(Arrays.asList(prefix));
+    }
+
+    @Override
+    public BlobStoreFiles listBlobsForProvider(Collection<String> prefixes, Long providerId) {
+        return listBlobs(prefixes);
     }
 
     @Override
@@ -115,5 +126,17 @@ public class InMemoryBlobStoreRepository implements BlobStoreRepository {
     public boolean deleteAllFilesInFolder(String folder) {
         listBlobs(folder).getFiles().forEach(file -> delete(file.getName()));
         return true;
+    }
+
+    public Provider parseProviderFromFileName(CacheProviderRepository providerRepository, String fileName) {
+        if (fileName == null) {
+            return null;
+        }
+
+        String[] fileParts = fileName.split("/");
+        String potentialRef = fileParts[fileParts.length - 1].split("-")[0];
+
+
+        return providerRepository.getProviders().stream().filter(provider -> potentialRef.equalsIgnoreCase((provider.chouetteInfo.referential))).findFirst().orElse(null);
     }
 }

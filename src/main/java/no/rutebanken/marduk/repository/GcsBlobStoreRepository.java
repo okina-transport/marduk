@@ -65,10 +65,26 @@ public class GcsBlobStoreRepository implements BlobStoreRepository {
     public BlobStoreFiles listBlobs(Collection<String> prefixes) {
         BlobStoreFiles blobStoreFiles = new BlobStoreFiles();
 
-
         for (String prefix : prefixes) {
             Iterator<Blob> blobIterator = BlobStoreHelper.listAllBlobsRecursively(storage, containerName, prefix);
             blobIterator.forEachRemaining(blob -> blobStoreFiles.add(toBlobStoreFile(blob, blob.getName())));
+        }
+
+        return blobStoreFiles;
+    }
+
+    @Override
+    public BlobStoreFiles listBlobsForProvider(Collection<String> prefixes, Long providerId) {
+        BlobStoreFiles blobStoreFiles = new BlobStoreFiles();
+
+        for (String prefix : prefixes) {
+            Iterator<Blob> blobIterator = BlobStoreHelper.listAllBlobsRecursively(storage, containerName, prefix);
+            blobIterator.forEachRemaining(blob -> {
+                BlobStoreFiles.File blobFile = toBlobStoreFile(blob, blob.getName());
+                if (blobFile.getProviderId().equals(providerId)) {
+                    blobStoreFiles.add(blobFile);
+                }
+            });
         }
 
         return blobStoreFiles;
@@ -79,6 +95,10 @@ public class GcsBlobStoreRepository implements BlobStoreRepository {
         return listBlobs(Arrays.asList(prefix));
     }
 
+    @Override
+    public BlobStoreFiles listBlobsForProvider(String prefix, Long providerId) {
+        return listBlobsForProvider(Arrays.asList(prefix), providerId);
+    }
 
     @Override
     public BlobStoreFiles listBlobsFlat(String prefix) {

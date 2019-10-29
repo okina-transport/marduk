@@ -27,14 +27,14 @@ import org.apache.commons.io.IOUtils;
 import org.junit.Before;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 
 import java.io.FileReader;
 import java.io.IOException;
-import java.util.Collections;
+import java.util.ArrayList;
+import java.util.List;
 
 import static org.mockito.Mockito.when;
 @RunWith(CamelSpringRunner.class)
@@ -51,11 +51,13 @@ public class MardukRouteBuilderIntegrationTestBase {
     @Before
     public void setUp() throws IOException {
 
-        when(providerRepository.getProviders()).thenReturn(Collections.singletonList(Provider.create(IOUtils.toString(new FileReader(
-						"src/test/resources/no/rutebanken/marduk/providerRepository/provider2.json")))));
+        List<Provider> providers = new ArrayList<>();
+        providers.add(Provider.create(IOUtils.toString(new FileReader("src/test/resources/no/rutebanken/marduk/providerRepository/provider2.json"))));
+        providers.add(Provider.create(IOUtils.toString(new FileReader("src/test/resources/no/rutebanken/marduk/providerRepository/provider3.json"))));
 
-        when(providerRepository.getProvider(2L)).thenReturn(Provider.create(IOUtils.toString(new FileReader(
-                "src/test/resources/no/rutebanken/marduk/providerRepository/provider2.json"))));
+        when(providerRepository.getProviders()).thenReturn(providers);
+        when(providerRepository.getProvider(2L)).thenReturn(providers.get(0));
+        when(providerRepository.getProvider(3L)).thenReturn(providers.get(1));
 
     }
 

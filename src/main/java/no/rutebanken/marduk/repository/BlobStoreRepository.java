@@ -18,7 +18,6 @@ package no.rutebanken.marduk.repository;
 
 import com.google.cloud.storage.Storage;
 import no.rutebanken.marduk.domain.BlobStoreFiles;
-import org.springframework.util.CollectionUtils;
 
 import java.io.InputStream;
 import java.util.Collection;
@@ -28,6 +27,10 @@ public interface BlobStoreRepository {
     BlobStoreFiles listBlobs(Collection<String> prefixes);
 
     BlobStoreFiles listBlobs(String prefix);
+
+    BlobStoreFiles listBlobsForProvider(String prefix, Long providerId);
+
+    BlobStoreFiles listBlobsForProvider(Collection<String> prefixes, Long providerId);
 
     BlobStoreFiles listBlobsFlat(String prefix);
 

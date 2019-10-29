@@ -74,6 +74,14 @@ public class BlobStoreRoute extends BaseRouteBuilder {
                 .log(LoggingLevel.INFO, correlation() + "Returning from fetching file list from blob store for multiple folders.")
                 .routeId("blobstore-list-in-folders");
 
+        from("direct:listBlobsInFoldersByProvider")
+                .to("log:" + getClass().getName() + "?level=DEBUG&showAll=true&multiline=true")
+                .process(e -> e.getIn().setHeader(CHOUETTE_REFERENTIAL, getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)).chouetteInfo.referential))
+                .bean("blobStoreService", "listBlobsInFoldersByProvider")
+                .to("log:" + getClass().getName() + "?level=DEBUG&showAll=true&multiline=true")
+                .log(LoggingLevel.INFO, correlation() + "Returning from fetching file list from blob store.")
+                .routeId("blobstore-list-in-folders-by-provider");
+
 
     }
 }

@@ -20,6 +20,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import no.rutebanken.marduk.Constants;
 import no.rutebanken.marduk.MardukRouteBuilderIntegrationTestBase;
 import no.rutebanken.marduk.domain.BlobStoreFiles;
+import no.rutebanken.marduk.domain.Provider;
 import no.rutebanken.marduk.repository.InMemoryBlobStoreRepository;
 import org.apache.camel.CamelExecutionException;
 import org.apache.camel.EndpointInject;
@@ -45,7 +46,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static no.rutebanken.marduk.Constants.*;
+import static no.rutebanken.marduk.Constants.BLOBSTORE_PATH_INBOUND;
+import static no.rutebanken.marduk.Constants.FILE_HANDLE;
+import static no.rutebanken.marduk.Constants.PROVIDER_ID;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.when;
 
@@ -82,6 +85,9 @@ public class AdminRestMardukRouteBuilderIntegrationTest extends MardukRouteBuild
 
     @Produce(uri = "http4:localhost:28080/services/timetable_admin/export/files")
     protected ProducerTemplate listExportFilesTemplate;
+
+    @Produce(uri = "http4:localhost:28080/services/timetable_admin/export/files/3")
+    protected ProducerTemplate listExportFilesProviderTemplate;
 
 
     @Value("#{'${timetable.export.blob.prefixes:outbound/gtfs/,outbound/netex/}'.split(',')}")
@@ -232,7 +238,7 @@ public class AdminRestMardukRouteBuilderIntegrationTest extends MardukRouteBuild
 
     @Test
     public void getBlobStoreExportFiles() throws Exception {
-        String testFileName = "testFile";
+        String testFileName = "rut-testFile";
         //populate fake blob repo
         for (String prefix : exportFileStaticPrefixes) {
             inMemoryBlobStoreRepository.uploadBlob(prefix + testFileName, new FileInputStream(new File( "src/test/resources/no/rutebanken/marduk/routes/chouette/empty_regtopp.zip")), false);
@@ -251,7 +257,41 @@ public class AdminRestMardukRouteBuilderIntegrationTest extends MardukRouteBuild
         BlobStoreFiles rsp = mapper.readValue(s, BlobStoreFiles.class);
         Assert.assertEquals(exportFileStaticPrefixes.size(), rsp.getFiles().size());
         exportFileStaticPrefixes.forEach(prefix -> rsp.getFiles().stream().anyMatch(file -> (prefix + testFileName).equals(file.getName())));
+
+        Provider provider = inMemoryBlobStoreRepository.parseProviderFromFileName(providerRepository, testFileName);
+        Assert.assertEquals(provider.chouetteInfo.referential, "rut");
+        Assert.assertEquals(provider.id, new Long(2L));
     }
 
+
+    @Test
+    public void getBlobStoreExportFilesForProvider() throws Exception {
+        String testFileName = "rut3-testFile";
+        //populate fake blob repo
+        for (String prefix : exportFileStaticPrefixes) {
+            inMemoryBlobStoreRepository.uploadBlob(prefix + testFileName, new FileInputStream(new File( "src/test/resources/no/rutebanken/marduk/routes/chouette/empty_regtopp.zip")), false);
+        }
+        camelContext.start();
+
+        // Do rest call
+        Map<String, Object> headers = new HashMap<String, Object>();
+        headers.put(Exchange.HTTP_METHOD, "GET");
+        headers.put(Constants.PROVIDER_ID, 3);
+        InputStream response = (InputStream) listExportFilesProviderTemplate.requestBodyAndHeaders(null, headers);
+        // Parse response
+
+        String s = new String(IOUtils.toByteArray(response));
+
+        ObjectMapper mapper = new ObjectMapper();
+        BlobStoreFiles rsp = mapper.readValue(s, BlobStoreFiles.class);
+        Assert.assertEquals(exportFileStaticPrefixes.size(), rsp.getFiles().size());
+        exportFileStaticPrefixes.forEach(prefix -> rsp.getFiles().stream().anyMatch(file -> (prefix + testFileName).equals(file.getName())));
+
+        rsp.getFiles().forEach(f -> {
+            Provider provider = inMemoryBlobStoreRepository.parseProviderFromFileName(providerRepository, f.getFileNameOnly());
+            Assert.assertEquals(provider.chouetteInfo.referential, "rut3");
+            Assert.assertEquals(provider.id, new Long(3L));
+        });
+    }
 
 }

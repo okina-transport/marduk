@@ -50,6 +50,11 @@ public class TimetableGetExportBlobRouteBuilder extends BaseRouteBuilder {
                 .process(e -> e.getIn().setHeader(Constants.FILE_PARENT_COLLECTION, calculatePrefixes()))
                 .to("direct:listBlobsInFolders")
                 .routeId("timetable-get-export-blobs");
+
+        from("direct:listTimetableExportAndGraphBlobsByProvider")
+                .process(e -> e.getIn().setHeader(Constants.FILE_PARENT_COLLECTION, calculatePrefixes()))
+                .to("direct:listBlobsInFoldersByProvider")
+                .routeId("timetable-get-export-blobs-by-provider");
     }
 
     private Set<String> calculatePrefixes() {

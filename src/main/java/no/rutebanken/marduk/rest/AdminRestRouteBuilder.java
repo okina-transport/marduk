@@ -335,6 +335,23 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .routeId("admin-chouette-timetable-files-get")
                 .endRest()
 
+                .get("/export/files/{providerId}")
+                .description("List files containing exported time table data and graphs for specified providerId")
+                .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the nabu service").dataType("integer").endParam()
+                .outType(BlobStoreFiles.class)
+                .consumes(PLAIN)
+                .produces(JSON)
+                .responseMessage().code(200).endResponseMessage()
+                .responseMessage().code(500).message("Internal error").endResponseMessage()
+                .route()
+                .to("direct:authorizeRequest")
+                .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
+                .log(LoggingLevel.INFO, correlation() + "get time table and graph files")
+                .removeHeaders("CamelHttp*")
+                .to("direct:listTimetableExportAndGraphBlobsByProvider")
+                .routeId("admin-chouette-timetable-files-get-provider")
+                .endRest()
+
 
                 .post("/export/gtfs/extended")
                 .description("Prepare and upload GTFS extened export")
@@ -522,7 +539,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
 
                 .get("/files")
                 .description("List files available for reimport into Chouette")
-                .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the nabu service").dataType("integer").endParam()
+                .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the baba service").dataType("integer").endParam()
                 .outType(BlobStoreFiles.class)
                 .consumes(PLAIN)
                 .produces(JSON)

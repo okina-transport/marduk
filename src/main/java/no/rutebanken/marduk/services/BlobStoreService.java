@@ -60,6 +60,11 @@ public class BlobStoreService {
 		return repository.listBlobs(folders);
 	}
 
+	public BlobStoreFiles listBlobsInFoldersByProvider(@Header(value = Constants.FILE_PARENT_COLLECTION) Collection<String> folders, @Header(value = Constants.PROVIDER_ID) String providerId, Exchange exchange) {
+		ExchangeUtils.addHeadersAndAttachments(exchange);
+		return repository.listBlobs(folders);
+	}
+
 
 	public BlobStoreFiles listBlobs(@Header(value = Constants.CHOUETTE_REFERENTIAL) String referential, Exchange exchange) {
 		ExchangeUtils.addHeadersAndAttachments(exchange);
