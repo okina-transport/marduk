@@ -261,6 +261,11 @@ public class AdminRestMardukRouteBuilderIntegrationTest extends MardukRouteBuild
         Provider provider = inMemoryBlobStoreRepository.parseProviderFromFileName(providerRepository, testFileName);
         Assert.assertEquals(provider.chouetteInfo.referential, "rut");
         Assert.assertEquals(provider.id, new Long(2L));
+
+        // Clean up files for further tests
+        for (String prefix : exportFileStaticPrefixes) {
+            inMemoryBlobStoreRepository.delete(prefix + testFileName);
+        }
     }
 
 
@@ -292,6 +297,11 @@ public class AdminRestMardukRouteBuilderIntegrationTest extends MardukRouteBuild
             Assert.assertEquals(provider.chouetteInfo.referential, "rut3");
             Assert.assertEquals(provider.id, new Long(3L));
         });
+
+        // Clean up files for further tests
+        for (String prefix : exportFileStaticPrefixes) {
+            inMemoryBlobStoreRepository.delete(prefix + testFileName);
+        }
     }
 
 }
