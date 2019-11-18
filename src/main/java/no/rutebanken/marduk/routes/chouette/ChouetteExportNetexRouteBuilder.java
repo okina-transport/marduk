@@ -102,7 +102,8 @@ public class ChouetteExportNetexRouteBuilder extends AbstractChouetteRouteBuilde
                     .setBody(constant(null))
                     .process(e -> JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.BUILD_GRAPH).state(JobEvent.State.PENDING).build())
                     .to("direct:exportMergedNetex")
-                    .to("activemq:queue:ChouetteExportGtfsQueue")
+//                TODO désactivation temporaire de l'export GTFS
+//                    .to("activemq:queue:ChouetteExportGtfsQueue")
                     .endChoice()
                 .when(simple("${header.action_report_result} == 'NOK'"))
                     .log(LoggingLevel.WARN, correlation() + "Netex export failed")
