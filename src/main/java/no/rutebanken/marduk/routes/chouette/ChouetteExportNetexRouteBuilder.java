@@ -100,7 +100,7 @@ public class ChouetteExportNetexRouteBuilder extends AbstractChouetteRouteBuilde
                     .to("direct:updateStatus")
                     .removeHeader(Constants.CHOUETTE_JOB_ID)
                     .setBody(constant(null))
-                    .process(e -> JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.BUILD_GRAPH).state(JobEvent.State.PENDING).build())
+//                    .process(e -> JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.BUILD_GRAPH).state(JobEvent.State.PENDING).build())
 //                    .to("direct:exportMergedNetex")
                     .to("activemq:queue:ChouetteExportGtfsQueue")
                     .endChoice()
