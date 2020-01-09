@@ -86,6 +86,7 @@ public abstract class AbstractChouetteRouteBuilder extends BaseRouteBuilder{
 	    exchange.getOut().setBody(entityBuilder.build());
 	    exchange.getOut().setHeaders(exchange.getIn().getHeaders());
 	    exchange.getOut().setHeader(Exchange.CONTENT_TYPE, simple("multipart/form-data"));
+	    exchange.getOut().setHeader("Accept", "application/json");
 	}
 	
 	
