@@ -716,7 +716,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .log(LoggingLevel.INFO, correlation() + "Chouette start export")
                 .removeHeaders("CamelHttp*")
                 .inOnly("activemq:queue:ChouetteExportNetexQueue")
-                .routeId("admin-chouette-export")
+                .routeId("admin-chouette-export-netex")
                 .endRest()
 
                 .post("/validate")
