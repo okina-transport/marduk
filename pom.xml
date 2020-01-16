@@ -514,7 +514,7 @@
         <dependency>
             <groupId>org.onebusaway</groupId>
             <artifactId>onebusaway-gtfs-merge</artifactId>
-            <version>1.3.35-SNAPSHOT</version>
+            <version>${onebusaway.gtfs.modules}</version>
         </dependency>
         <dependency>
             <groupId>no.jskdata</groupId>
