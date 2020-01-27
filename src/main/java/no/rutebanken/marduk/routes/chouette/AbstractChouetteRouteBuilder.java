@@ -24,6 +24,7 @@ import org.apache.camel.Exchange;
 import org.apache.camel.builder.ThreadPoolBuilder;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.mime.MultipartEntityBuilder;
+import org.springframework.beans.factory.annotation.Value;
 
 import java.io.InputStream;
 import java.util.concurrent.ExecutorService;
@@ -31,17 +32,21 @@ import java.util.concurrent.ExecutorService;
 import static no.rutebanken.marduk.Constants.FILE_NAME;
 import static no.rutebanken.marduk.Constants.JSON_PART;
 
-public abstract class AbstractChouetteRouteBuilder extends BaseRouteBuilder{
+public abstract class AbstractChouetteRouteBuilder extends BaseRouteBuilder {
+
+	@Value("${rutebanken.autotransferdata.enabled}")
+	private boolean autoTransferData;
 
 	protected ExecutorService allProvidersExecutorService;
+
 	@Override
 	public synchronized void configure() throws Exception {
 		super.configure();
 
-        if(allProvidersExecutorService == null) {
+		if (allProvidersExecutorService == null) {
 			ThreadPoolBuilder poolBuilder = new ThreadPoolBuilder(getContext());
-	         allProvidersExecutorService = 
-	        		poolBuilder
+			allProvidersExecutorService =
+					poolBuilder
 	        		.poolSize(20)
 	        		.maxPoolSize(20)
 	        		.maxQueueSize(1000)
@@ -91,8 +96,18 @@ public abstract class AbstractChouetteRouteBuilder extends BaseRouteBuilder{
 	
 	
 	public boolean shouldTransferData(Exchange exchange) {
-		Provider currentProvider = getProviderRepository().getProvider(exchange.getIn().getHeader(Constants.PROVIDER_ID,Long.class));
+
+		if (!isAutoTransferData()) {
+			return false;
+		}
+
+		Provider currentProvider = getProviderRepository().getProvider(exchange.getIn().getHeader(Constants.PROVIDER_ID, Long.class));
 		return currentProvider.chouetteInfo.migrateDataToProvider != null;
+	}
+
+	public boolean isAutoTransferData() {
+
+		return autoTransferData;
 	}
 
 }

@@ -213,7 +213,7 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
                 .when(method(getClass(), "shouldTransferData").isEqualTo(true))
                 .log(LoggingLevel.INFO, correlation() + "Import ok, transfering data to next dataspace")
                 .to("activemq:queue:ChouetteTransferExportQueue")
-                .otherwise()
+                .when(method(getClass(), "isAutoTransferData").isEqualTo(true))
                 .log(LoggingLevel.INFO, correlation() + "Import ok, triggering export")
                 .to("activemq:queue:ChouetteExportNetexQueue")
                 .end()

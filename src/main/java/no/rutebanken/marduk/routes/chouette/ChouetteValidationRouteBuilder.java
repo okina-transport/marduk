@@ -163,7 +163,7 @@ public class ChouetteValidationRouteBuilder extends AbstractChouetteRouteBuilder
                 .when(method(getClass(), "shouldTransferData").isEqualTo(true))
                 .log(LoggingLevel.INFO, correlation() + "Validation ok, transfering data to next dataspace")
                 .to("activemq:queue:ChouetteTransferExportQueue")
-                .otherwise()
+                .when(method(getClass(), "isAutoTransferData").isEqualTo(true))
                 .log(LoggingLevel.INFO, correlation() + "Validation ok, triggering GTFS export.")
                 .setBody(constant(""))
                 .to("activemq:queue:ChouetteExportNetexQueue") // Check on provider if should trigger transfer
