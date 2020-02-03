@@ -19,6 +19,7 @@ package no.rutebanken.marduk.routes.chouette.json;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import no.rutebanken.marduk.domain.ChouetteInfo;
 import no.rutebanken.marduk.domain.Provider;
+import no.rutebanken.marduk.routes.chouette.json.exporter.ConcertoExportParameters;
 import no.rutebanken.marduk.routes.chouette.json.exporter.GtfsExportParameters;
 import no.rutebanken.marduk.routes.chouette.json.exporter.NetexExportParameters;
 import no.rutebanken.marduk.routes.chouette.json.exporter.TransferExportParameters;
@@ -99,6 +100,20 @@ public class Parameters {
             ObjectMapper mapper = new ObjectMapper();
             StringWriter writer = new StringWriter();
             mapper.writeValue(writer, exportParameters);
+            return writer.toString();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static String getConcertoExportParameters(Provider provider) {
+        try {
+            ConcertoExportParameters.ConcertoExport concertoExport = new ConcertoExportParameters.ConcertoExport();
+            ConcertoExportParameters.Parameters parameters = new ConcertoExportParameters.Parameters(concertoExport);
+            ConcertoExportParameters importParameters = new ConcertoExportParameters(parameters);
+            ObjectMapper mapper = new ObjectMapper();
+            StringWriter writer = new StringWriter();
+            mapper.writeValue(writer, importParameters);
             return writer.toString();
         } catch (IOException e) {
             throw new RuntimeException(e);
