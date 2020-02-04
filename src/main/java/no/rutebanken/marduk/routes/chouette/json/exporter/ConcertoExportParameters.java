@@ -46,13 +46,17 @@ public class ConcertoExportParameters {
 
         @JsonProperty("references_type")
         @JsonInclude(JsonInclude.Include.ALWAYS)
-        public String referencesType = "concerto";
+        public String referencesType = "";
 
         @JsonProperty("start_date")
         @JsonFormat(shape=JsonFormat.Shape.STRING, pattern="yyyy-MM-dd", timezone="CET")
         public Date startDate;
 
-        public ConcertoExport() {
+        public ConcertoExport(String name, String referentialName, String organisationName, String userName) {
+            this.name = name;
+            this.referentialName = referentialName;
+            this.organisationName = organisationName;
+            this.userName = userName;
             this.startDate = new Date();
         }
 

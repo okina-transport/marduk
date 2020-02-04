@@ -108,7 +108,9 @@ public class Parameters {
 
     public static String getConcertoExportParameters(Provider provider) {
         try {
-            ConcertoExportParameters.ConcertoExport concertoExport = new ConcertoExportParameters.ConcertoExport();
+            ChouetteInfo chouetteInfo = provider.chouetteInfo;
+            ConcertoExportParameters.ConcertoExport concertoExport = new ConcertoExportParameters.ConcertoExport("offre",
+                    chouetteInfo.referential, chouetteInfo.organisation, chouetteInfo.user);
             ConcertoExportParameters.Parameters parameters = new ConcertoExportParameters.Parameters(concertoExport);
             ConcertoExportParameters importParameters = new ConcertoExportParameters(parameters);
             ObjectMapper mapper = new ObjectMapper();
