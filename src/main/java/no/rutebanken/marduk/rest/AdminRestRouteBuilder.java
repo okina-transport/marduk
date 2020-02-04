@@ -518,6 +518,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .route()
                 .removeHeaders("CamelHttp*")
                 .setHeader(PROVIDER_ID, header("providerId"))
+                .setHeader(IMPORT, constant(true))
                 .to("direct:authorizeRequest")
                 .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
                 .split(method(ImportFilesSplitter.class, "splitFiles"))
