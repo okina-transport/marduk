@@ -567,6 +567,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .route()
                 .streamCaching()
                 .setHeader(PROVIDER_ID, header("providerId"))
+                .setHeader(IMPORT, constant(true))
                 .to("direct:authorizeRequest")
                 .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
                 .process(e -> e.getIn().setHeader(CHOUETTE_REFERENTIAL, getProviderRepository().getReferential(e.getIn().getHeader(PROVIDER_ID, Long.class))))
