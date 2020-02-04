@@ -19,16 +19,22 @@ package no.rutebanken.marduk.routes.chouette;
 import no.rutebanken.marduk.Constants;
 import no.rutebanken.marduk.routes.chouette.json.Parameters;
 import no.rutebanken.marduk.routes.status.JobEvent;
-import no.rutebanken.marduk.routes.status.JobEvent.TimetableAction;
 import no.rutebanken.marduk.routes.status.JobEvent.State;
+import no.rutebanken.marduk.routes.status.JobEvent.TimetableAction;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
+import org.apache.camel.builder.PredicateBuilder;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.util.UUID;
 
-import static no.rutebanken.marduk.Constants.*;
+import static no.rutebanken.marduk.Constants.CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL;
+import static no.rutebanken.marduk.Constants.CHOUETTE_REFERENTIAL;
+import static no.rutebanken.marduk.Constants.CORRELATION_ID;
+import static no.rutebanken.marduk.Constants.IMPORT;
+import static no.rutebanken.marduk.Constants.JSON_PART;
+import static no.rutebanken.marduk.Constants.PROVIDER_ID;
 import static no.rutebanken.marduk.Utils.Utils.getLastPathElementOfUrl;
 
 /**
@@ -160,7 +166,7 @@ public class ChouetteValidationRouteBuilder extends AbstractChouetteRouteBuilder
                 .choice()
                 .when().jsonpath("$.*[?(@.status == 'SCHEDULED')].status")
                 .log(LoggingLevel.INFO, correlation() + "Validation ok, skipping export as there are more import jobs active")
-                .when(method(getClass(), "shouldTransferData").isEqualTo(true))
+                .when(PredicateBuilder.or(method(getClass(), "shouldTransferData").isEqualTo(true), constant(null).isEqualTo(header(IMPORT))))
                 .log(LoggingLevel.INFO, correlation() + "Validation ok, transfering data to next dataspace")
                 .to("activemq:queue:ChouetteTransferExportQueue")
                 .when(method(getClass(), "isAutoTransferData").isEqualTo(true))
