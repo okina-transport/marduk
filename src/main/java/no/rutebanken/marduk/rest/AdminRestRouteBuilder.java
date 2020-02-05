@@ -872,10 +872,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
     private String getUserNameFromHeaders(Exchange e) {
         Map headers = (Map) e.getIn().getBody(Map.class).get("headers");
         if (headers != null) {
-            String user = (String) headers.get(USER);
-            if (user != null) {
-                return user;
-            }
+            return (String) headers.get(USER);
         }
         return null;
     }
