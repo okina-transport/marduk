@@ -43,11 +43,20 @@ import java.net.URLDecoder;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
 import static javax.ws.rs.core.MediaType.MULTIPART_FORM_DATA;
-import static no.rutebanken.marduk.Constants.*;
+import static no.rutebanken.marduk.Constants.CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL;
+import static no.rutebanken.marduk.Constants.CHOUETTE_REFERENTIAL;
+import static no.rutebanken.marduk.Constants.CORRELATION_ID;
+import static no.rutebanken.marduk.Constants.FILE_HANDLE;
+import static no.rutebanken.marduk.Constants.IMPORT;
+import static no.rutebanken.marduk.Constants.NO_GTFS_EXPORT;
+import static no.rutebanken.marduk.Constants.PROVIDER_ID;
+import static no.rutebanken.marduk.Constants.PROVIDER_IDS;
+import static no.rutebanken.marduk.Constants.USER;
 
 /**
  * REST interface for backdoor triggering of messages
@@ -717,6 +726,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
                 .log(LoggingLevel.INFO, correlation() + "Chouette start export Netex")
                 .removeHeaders("CamelHttp*")
+                .process(e -> e.getIn().setHeader(USER, getUserNameFromHeaders(e)))
                 .inOnly("activemq:queue:ChouetteExportNetexQueue")
                 .routeId("admin-chouette-export-netex")
                 .endRest()
@@ -733,6 +743,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
                 .log(LoggingLevel.INFO, correlation() + "Chouette start export GTFS")
                 .removeHeaders("CamelHttp*")
+                .process(e -> e.getIn().setHeader(USER, getUserNameFromHeaders(e)))
                 .inOnly("activemq:queue:ChouetteExportGtfsQueue")
                 .routeId("admin-chouette-export-gtfs")
                 .endRest()
@@ -749,6 +760,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
                 .log(LoggingLevel.INFO, correlation() + "Chouette start export Concerto")
                 .removeHeaders("CamelHttp*")
+                .process(e -> e.getIn().setHeader(USER, getUserNameFromHeaders(e)))
                 .inOnly("activemq:queue:ChouetteExportConcertoQueue")
                 .routeId("admin-chouette-export-concerto")
                 .endRest()
@@ -771,6 +783,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .otherwise()
                 .setHeader(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL, constant(JobEvent.TimetableAction.VALIDATION_LEVEL_1.name()))
                 .end()
+                .process(e -> e.getIn().setHeader(USER, getUserNameFromHeaders(e)))
                 .inOnly("activemq:queue:ChouetteValidationQueue")
                 .routeId("admin-chouette-validate")
                 .endRest()
@@ -854,6 +867,14 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
         public List<String> splitFiles(@Body BlobStoreFiles files) {
             return files.getFiles().stream().map(File::getName).collect(Collectors.toList());
         }
+    }
+
+    private String getUserNameFromHeaders(Exchange e) {
+        Map headers = (Map) e.getIn().getBody(Map.class).get("headers");
+        if (headers != null) {
+            return (String) headers.get(USER);
+        }
+        return null;
     }
 }
 

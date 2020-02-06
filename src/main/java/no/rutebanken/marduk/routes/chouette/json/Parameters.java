@@ -74,11 +74,11 @@ public class Parameters {
         return netexImportParameters.toJsonString();
     }
 
-    public static String getGtfsExportParameters(Provider provider) {
+    public static String getGtfsExportParameters(Provider provider, String user) {
         try {
             ChouetteInfo chouetteInfo = provider.chouetteInfo;
             GtfsExportParameters.GtfsExport gtfsExport = new GtfsExportParameters.GtfsExport("offre",
-                                                                                                    chouetteInfo.xmlns, chouetteInfo.referential, chouetteInfo.organisation, chouetteInfo.user, true);
+                                                                                                    chouetteInfo.xmlns, chouetteInfo.referential, chouetteInfo.organisation, user, true);
             GtfsExportParameters.Parameters parameters = new GtfsExportParameters.Parameters(gtfsExport);
             GtfsExportParameters importParameters = new GtfsExportParameters(parameters);
             ObjectMapper mapper = new ObjectMapper();
@@ -90,11 +90,11 @@ public class Parameters {
         }
     }
 
-    public static String getNetexExportProvider(Provider provider, boolean exportStops) {
+    public static String getNetexExportProvider(Provider provider, boolean exportStops, String user) {
         try {
             ChouetteInfo chouetteInfo = provider.chouetteInfo;
             String projectionType = null;
-            NetexExportParameters.NetexExport netexExport = new NetexExportParameters.NetexExport("offre", chouetteInfo.referential, chouetteInfo.organisation, chouetteInfo.user, projectionType, exportStops,chouetteInfo.xmlns);
+            NetexExportParameters.NetexExport netexExport = new NetexExportParameters.NetexExport("offre", chouetteInfo.referential, chouetteInfo.organisation, user, projectionType, exportStops,chouetteInfo.xmlns);
             NetexExportParameters.Parameters parameters = new NetexExportParameters.Parameters(netexExport);
             NetexExportParameters exportParameters = new NetexExportParameters(parameters);
             ObjectMapper mapper = new ObjectMapper();
@@ -106,11 +106,11 @@ public class Parameters {
         }
     }
 
-    public static String getConcertoExportParameters(Provider provider) {
+    public static String getConcertoExportParameters(Provider provider, String user) {
         try {
             ChouetteInfo chouetteInfo = provider.chouetteInfo;
             ConcertoExportParameters.ConcertoExport concertoExport = new ConcertoExportParameters.ConcertoExport("offre",
-                    chouetteInfo.referential, chouetteInfo.organisation, chouetteInfo.user);
+                    chouetteInfo.referential, chouetteInfo.organisation, user);
             ConcertoExportParameters.Parameters parameters = new ConcertoExportParameters.Parameters(concertoExport);
             ConcertoExportParameters importParameters = new ConcertoExportParameters(parameters);
             ObjectMapper mapper = new ObjectMapper();
@@ -137,11 +137,11 @@ public class Parameters {
         }
     }
 
-    public static String getValidationParameters(Provider provider) {
+    public static String getValidationParameters(Provider provider, String user) {
         ChouetteInfo chouetteInfo = provider.chouetteInfo;
 
         ValidationParameters validationParameters = ValidationParameters.create("Automatique",
-                chouetteInfo.referential, chouetteInfo.organisation, chouetteInfo.user);
+                chouetteInfo.referential, chouetteInfo.organisation, user);
         validationParameters.enableValidation = true;
         return validationParameters.toJsonString();
     }
