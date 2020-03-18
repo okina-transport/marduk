@@ -48,12 +48,14 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import static javax.ws.rs.core.MediaType.MULTIPART_FORM_DATA;
+import static no.rutebanken.marduk.Constants.CHOUETTE_JOB_ID;
 import static no.rutebanken.marduk.Constants.CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL;
 import static no.rutebanken.marduk.Constants.CHOUETTE_REFERENTIAL;
 import static no.rutebanken.marduk.Constants.CORRELATION_ID;
 import static no.rutebanken.marduk.Constants.FILE_HANDLE;
 import static no.rutebanken.marduk.Constants.IMPORT;
 import static no.rutebanken.marduk.Constants.NO_GTFS_EXPORT;
+import static no.rutebanken.marduk.Constants.OKINA_REFERENTIAL;
 import static no.rutebanken.marduk.Constants.PROVIDER_ID;
 import static no.rutebanken.marduk.Constants.PROVIDER_IDS;
 import static no.rutebanken.marduk.Constants.USER;
@@ -610,6 +612,51 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .routeId("admin-chouette-file-download")
                 .endRest()
 
+                .get("/files/stop-places")
+                .description("Download stop places export file")
+                .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the nabu service").dataType("integer").endParam()
+                .consumes(PLAIN)
+                .produces(X_OCTET_STREAM)
+                .responseMessage().code(200).endResponseMessage()
+                .responseMessage().code(500).message("Invalid providerId").endResponseMessage()
+                .route()
+                .setHeader(PROVIDER_ID, header("providerId"))
+                .to("direct:authorizeRequest")
+                .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
+                .removeHeaders("CamelHttp*")
+                .to("direct:getStopPlacesFile")
+                .choice().when(simple("${body} == null")).setHeader(Exchange.HTTP_RESPONSE_CODE, constant(404)).endChoice()
+                .routeId("admin-stop-places-file-download")
+                .endRest()
+
+                .get("/files/offer/{jobId}")
+                .description("Download offer export file")
+                .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the nabu service").dataType("integer").endParam()
+                .param().name("jobId").type(RestParamType.path).description("Job id").dataType("integer").endParam()
+                .consumes(PLAIN)
+                .produces(X_OCTET_STREAM)
+                .responseMessage().code(200).endResponseMessage()
+                .responseMessage().code(500).message("Invalid providerId or jobId").endResponseMessage()
+                .route()
+                .setHeader(PROVIDER_ID, header("providerId"))
+                .setHeader(CHOUETTE_JOB_ID, header("jobId"))
+                .to("direct:authorizeRequest")
+                .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
+                .process(e -> {
+                    String ref = e.getIn().getHeader(OKINA_REFERENTIAL, String.class);
+                    if(!ref.contains("mosaic_")) {
+                        e.getIn().setHeader(OKINA_REFERENTIAL, "mosaic_" + ref);
+                    }
+                    else {
+                        e.getIn().setHeader(OKINA_REFERENTIAL, ref);
+                    }
+                })
+                .removeHeaders("CamelHttp*")
+                .to("direct:getOfferFile")
+                .choice().when(simple("${body} == null")).setHeader(Exchange.HTTP_RESPONSE_CODE, constant(404)).endChoice()
+                .routeId("admin-offer-file-download")
+                .endRest()
+
                 .get("/line_statistics")
                 .description("List stats about data in chouette for a given provider")
                 .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the nabu service").dataType("integer").endParam()
@@ -689,7 +736,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .setHeader(PROVIDER_ID, header("providerId"))
                 .to("direct:authorizeRequest")
                 .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
-                .setHeader(Constants.CHOUETTE_JOB_ID, header("jobId"))
+                .setHeader(CHOUETTE_JOB_ID, header("jobId"))
                 .log(LoggingLevel.INFO, correlation() + "Cancel chouette job")
                 .removeHeaders("CamelHttp*")
                 .to("direct:chouetteCancelJob")
