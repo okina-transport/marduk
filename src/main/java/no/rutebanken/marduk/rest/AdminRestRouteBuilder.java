@@ -613,7 +613,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .endRest()
 
                 .get("/files/stop-places")
-                .description("Download stop places export file")
+                .description("Download stop places export file (NeTEx stop places)")
                 .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the nabu service").dataType("integer").endParam()
                 .consumes(PLAIN)
                 .produces(X_OCTET_STREAM)
@@ -630,7 +630,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .endRest()
 
                 .get("/files/offer/{jobId}")
-                .description("Download offer export file")
+                .description("Download offer export file (GTFS, NeTEx or Concerto")
                 .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the nabu service").dataType("integer").endParam()
                 .param().name("jobId").type(RestParamType.path).description("Job id").dataType("integer").endParam()
                 .consumes(PLAIN)
