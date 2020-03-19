@@ -79,5 +79,7 @@ public class Constants {
     public static final String OTP_BASE_GRAPH_BUILD = "RutebankenOtpBaseGraphBuild";
 
     public static final String TIME_ZONE = "Europe/Paris";
+
+    public static final String OKINA_REFERENTIAL = "x-okina-referential";
 }
 
