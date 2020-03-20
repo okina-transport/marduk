@@ -1,5 +1,6 @@
 package no.rutebanken.marduk.services;
 
+import no.rutebanken.marduk.IDFMNetexIdentifiants;
 import org.apache.camel.Exchange;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.FileSystemResource;
@@ -28,13 +29,15 @@ public class FileSystemService {
     public File getLatestStopPlacesFile(Exchange exchange) throws ParseException {
         ExchangeUtils.addHeadersAndAttachments(exchange);
         FileSystemResource fileSystemResource = new FileSystemResource(tiamatStoragePath);
+        String referential = exchange.getIn().getHeader(OKINA_REFERENTIAL, String.class).toUpperCase().replace("MOSAIC_", "");
+        String idSite = IDFMNetexIdentifiants.getIdSite(referential);
 
         List<File> zipFiles = new ArrayList<File>();
         File[] files = fileSystemResource.getFile().listFiles();
 
         if (files != null) {
             for (final File file : files) {
-                if (file.getName().toLowerCase().endsWith(".zip")) {
+                if (file.getName().toLowerCase().endsWith(".zip") && file.getName().toUpperCase().startsWith("ARRET_" + idSite)) {
                     zipFiles.add(file);
                 }
             }
