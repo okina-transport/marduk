@@ -623,6 +623,15 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .setHeader(PROVIDER_ID, header("providerId"))
                 .to("direct:authorizeRequest")
                 .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
+                .process(e -> {
+                    String ref = e.getIn().getHeader(OKINA_REFERENTIAL, String.class);
+                    if(!ref.contains("mosaic_")) {
+                        e.getIn().setHeader(OKINA_REFERENTIAL, "mosaic_" + ref);
+                    }
+                    else {
+                        e.getIn().setHeader(OKINA_REFERENTIAL, ref);
+                    }
+                })
                 .removeHeaders("CamelHttp*")
                 .to("direct:getStopPlacesFile")
                 .choice().when(simple("${body} == null")).setHeader(Exchange.HTTP_RESPONSE_CODE, constant(404)).endChoice()
