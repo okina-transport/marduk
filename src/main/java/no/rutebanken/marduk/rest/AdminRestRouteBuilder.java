@@ -53,6 +53,7 @@ import static no.rutebanken.marduk.Constants.CHOUETTE_JOB_STATUS_JOB_VALIDATION_
 import static no.rutebanken.marduk.Constants.CHOUETTE_REFERENTIAL;
 import static no.rutebanken.marduk.Constants.CORRELATION_ID;
 import static no.rutebanken.marduk.Constants.FILE_HANDLE;
+import static no.rutebanken.marduk.Constants.FILE_NAME;
 import static no.rutebanken.marduk.Constants.IMPORT;
 import static no.rutebanken.marduk.Constants.NO_GTFS_EXPORT;
 import static no.rutebanken.marduk.Constants.OKINA_REFERENTIAL;
@@ -621,6 +622,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .responseMessage().code(500).message("Invalid providerId").endResponseMessage()
                 .route()
                 .setHeader(PROVIDER_ID, header("providerId"))
+                .setHeader("Access-Control-Expose-Headers", simple(FILE_NAME))
                 .to("direct:authorizeRequest")
                 .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
                 .process(e -> {
@@ -649,6 +651,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .route()
                 .setHeader(PROVIDER_ID, header("providerId"))
                 .setHeader(CHOUETTE_JOB_ID, header("jobId"))
+                .setHeader("Access-Control-Expose-Headers", simple(FILE_NAME))
                 .to("direct:authorizeRequest")
                 .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
                 .process(e -> {
