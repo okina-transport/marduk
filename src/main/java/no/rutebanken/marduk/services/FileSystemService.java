@@ -26,7 +26,7 @@ public class FileSystemService {
     @Value("${chouette.storage.path:/srv/docker-data/data/chouette}")
     private String chouetteStoragePath;
 
-    public File getLatestStopPlacesFile(Exchange exchange) throws ParseException {
+    public File getLatestStopPlacesFile(Exchange exchange) {
         ExchangeUtils.addHeadersAndAttachments(exchange);
         FileSystemResource fileSystemResource = new FileSystemResource(tiamatStoragePath);
         String referential = exchange.getIn().getHeader(OKINA_REFERENTIAL, String.class).toUpperCase().replace("MOSAIC_", "");
@@ -52,11 +52,14 @@ public class FileSystemService {
             String[] splitTimestamp = zipFile.getName().split("_");
             String strTimestamp = splitTimestamp[splitTimestamp.length - 1].replaceAll("[a-zA-Z.]", "");
 
-            Date currentDate = sdf.parse(strTimestamp);
+            try {
+                Date currentDate = sdf.parse(strTimestamp);
 
-            if (latestDate == null || currentDate.after(latestDate)) {
-                latestFile = zipFile;
-                latestDate = currentDate;
+                if (latestDate == null || currentDate.after(latestDate)) {
+                    latestFile = zipFile;
+                    latestDate = currentDate;
+                }
+            } catch (ParseException ignored) {
             }
         }
 
