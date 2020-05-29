@@ -585,7 +585,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .setHeader(IMPORT, constant(true))
                 .process(e -> log.info("logggggggg 3"))
                 .to("direct:authorizeRequest")
-                .process(e -> log.info("logggggggg 4"))
+                .process(e -> log.info("logggggggg 4 >> " + e.getIn().getHeader(PROVIDER_ID, Long.class)))
                 .process(e -> {
                     log.info("=================");
                     log.info("Providers list : ");
