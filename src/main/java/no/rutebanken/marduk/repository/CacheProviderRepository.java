@@ -52,7 +52,7 @@ public class CacheProviderRepository implements ProviderRepository {
         cache = CacheBuilder.newBuilder().maximumSize(cacheMaxSize).build();
     }
 
-    @Scheduled(fixedRateString = "${marduk.provider.cache.refresh.interval:300000}")
+    @Scheduled(fixedRateString = "${marduk.provider.cache.refresh.interval:15000}")
     public void populate() {
         try {
             Collection<Provider> newProviders = restProviderService.getProviders();
