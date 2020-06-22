@@ -1,11 +1,15 @@
 package no.rutebanken.marduk.services;
 
 import no.rutebanken.marduk.IDFMNetexIdentifiants;
+import no.rutebanken.marduk.domain.Provider;
+import no.rutebanken.marduk.repository.CacheProviderRepository;
 import org.apache.camel.Exchange;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.stereotype.Service;
 
+import javax.inject.Inject;
 import java.io.File;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -26,11 +30,19 @@ public class FileSystemService {
     @Value("${chouette.storage.path:/srv/docker-data/data/chouette}")
     private String chouetteStoragePath;
 
+    @Autowired
+    CacheProviderRepository providerRepository;
+
+
     public File getLatestStopPlacesFile(Exchange exchange) {
         ExchangeUtils.addHeadersAndAttachments(exchange);
         FileSystemResource fileSystemResource = new FileSystemResource(tiamatStoragePath);
         String referential = exchange.getIn().getHeader(OKINA_REFERENTIAL, String.class).toUpperCase().replace("MOSAIC_", "");
-        String idSite = IDFMNetexIdentifiants.getIdSite(referential);
+
+
+        Provider provider = providerRepository.getByReferential(referential).orElseThrow(() -> new RuntimeException("Aucun provider correspondant au referential " + referential));;
+        String idSite = provider.getChouetteInfo().getCodeIdfm();
+//        String idSite = IDFMNetexIdentifiants.getIdSite(referential);
 
         List<File> zipFiles = new ArrayList<File>();
         File[] files = fileSystemResource.getFile().listFiles();
