@@ -4,6 +4,7 @@ import no.rutebanken.marduk.IDFMNetexIdentifiants;
 import no.rutebanken.marduk.domain.Provider;
 import no.rutebanken.marduk.repository.CacheProviderRepository;
 import org.apache.camel.Exchange;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -40,16 +41,15 @@ public class FileSystemService {
     public File getLatestStopPlacesFile(Exchange exchange) {
         ExchangeUtils.addHeadersAndAttachments(exchange);
         FileSystemResource fileSystemResource = new FileSystemResource(tiamatStoragePath);
-        String referential = exchange.getIn().getHeader(OKINA_REFERENTIAL, String.class).toUpperCase().replace("MOSAIC_", "");
-
+        String referential = exchange.getIn().getHeader(OKINA_REFERENTIAL, String.class).replace("MOSAIC_", "").replace("mosaic_", "");
         logger.info("------ referential : " + referential);
 
         Provider provider = providerRepository.getByReferential(referential).orElseThrow(() -> new RuntimeException("Aucun provider correspondant au referential " + referential));;
+        logger.info("------ provider: " + provider.name + " with code idfm/filiale => " + ((provider.getChouetteInfo() != null)? provider.getChouetteInfo().getCodeIdfm() : "no code idfm found" ));
         String idSite = provider.getChouetteInfo().getCodeIdfm();
-//        String idSite = IDFMNetexIdentifiants.getIdSite(referential);
 
         logger.info("------ idsite : " + idSite);
-        logger.info("------ filname a peu presque : ARRET_" + idSite + ".zip");
+        logger.info("------ filename a peu presque : ARRET_" + idSite + ".zip");
 
         List<File> zipFiles = new ArrayList<File>();
         File[] files = fileSystemResource.getFile().listFiles();
