@@ -55,8 +55,10 @@ public class FileSystemService {
         File[] files = fileSystemResource.getFile().listFiles();
 
         if (files != null) {
+            String filename = null;
             for (final File file : files) {
-                if (file.getName().toLowerCase().endsWith(".zip") && file.getName().toUpperCase().startsWith("ARRET_" + idSite)) {
+                filename = file.getName().toLowerCase();
+                if (filename.endsWith(".zip") && filename.startsWith("arret_" + idSite.toLowerCase())) {
                     zipFiles.add(file);
                 }
             }
