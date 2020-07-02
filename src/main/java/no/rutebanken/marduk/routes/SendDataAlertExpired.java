@@ -55,7 +55,7 @@ public class SendDataAlertExpired {
                     }
                 }
                 else if (details.getKey().equals("publicLines")){
-                    if(details.getValue().equals(0)) {
+                    if(((ArrayList) details.getValue()).size() == 0) {
                         formatMail(textEmpty, provider);
                         dataEmpty = true;
                     }
@@ -76,7 +76,7 @@ public class SendDataAlertExpired {
             textEmpty.append("<p>Aucun producteur vide.</p>");
         }
 
-        String textHtml = textFuturExpired.toString() + textNowExpired.toString();
+        String textHtml = textFuturExpired.toString() + textNowExpired.toString() + textEmpty.toString();
 
         String mailObject = "Liste des espaces de donnees ayant des calendriers prochainement expires ou expires";
 
