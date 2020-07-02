@@ -30,11 +30,13 @@ public class SendDataAlertExpired {
 
         StringBuilder textFuturExpired = new StringBuilder("<p style='font-weight: bold;'>Liste des espaces de données avec des calendriers expirés dans moins de 30 jours: <p>");
         StringBuilder textNowExpired = new StringBuilder("<br><p style='font-weight: bold;'>Liste des espaces de données avec des calendriers expirés: </p>");
+        StringBuilder textEmpty = new StringBuilder("<br><p style='font-weight: bold;'>Liste des espaces de données vides: </p>");
 
         HashMap<String, ?> mapValidity;
 
         boolean dataExpiring = false;
         boolean dataInvalid = false;
+        boolean dataEmpty = false;
 
 
         for (Map.Entry<String, Object> provider : list.entrySet()) {
@@ -52,6 +54,12 @@ public class SendDataAlertExpired {
                         dataExpiring = true;
                     }
                 }
+                else if (details.getKey().equals("publicLines")){
+                    if(details.getValue().equals(0)) {
+                        formatMail(textEmpty, provider);
+                        dataEmpty = true;
+                    }
+                }
             }
             mapValidity.clear();
         }
@@ -62,6 +70,10 @@ public class SendDataAlertExpired {
 
         if(!dataInvalid){
             textNowExpired.append("<p>Aucun producteur avec des calendriers expirés.</p>");
+        }
+
+        if(!dataEmpty){
+            textEmpty.append("<p>Aucun producteur vide.</p>");
         }
 
         String textHtml = textFuturExpired.toString() + textNowExpired.toString();
