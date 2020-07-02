@@ -62,6 +62,7 @@ public class Producers {
         producers.put("fai","Aix-Fouras");
         producers.put("snc","SNCF");
 
+        producers.put("alr", "Aéroport La Rochelle");
 
         return producers;
     }
