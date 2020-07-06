@@ -819,6 +819,25 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .routeId("admin-chouette-export-gtfs")
                 .endRest()
 
+
+//                .post("/export/all")
+//                .description("Triggers all exports process in Chouette.")
+//                .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the nabu service").dataType("integer").endParam()
+//                .consumes(PLAIN)
+//                .produces(PLAIN)
+//                .responseMessage().code(200).message("Command for all exports accepted").endResponseMessage()
+//                .route()
+//                .setHeader(PROVIDER_ID, header("providerId"))
+//                .to("direct:authorizeRequest")
+//                .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
+//                .log(LoggingLevel.INFO, correlation() + "Chouette start all export process")
+//                .removeHeaders("CamelHttp*")
+//                .process(e -> e.getIn().setHeader(USER, getUserNameFromHeaders(e)))
+//                .inOnly("activemq:queue:ChouetteExportAllQueue")
+//                .routeId("admin-chouette-export-all")
+//                .endRest()
+
+
                 .post("/export/concerto")
                 .description("Triggers the Concerto export process in Chouette. Note that NO validation is performed before export, and that the data must be guaranteed to be error free")
                 .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the nabu service").dataType("integer").endParam()
@@ -841,13 +860,15 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the nabu service").dataType("integer").endParam()
                 .consumes(PLAIN)
                 .produces(PLAIN)
-                .responseMessage().code(200).message("Command accepted").endResponseMessage()
+                .responseMessage().code(200).message("Validate command accepted").endResponseMessage()
                 .route()
                 .setHeader(PROVIDER_ID, header("providerId"))
                 .to("direct:authorizeRequest")
                 .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
                 .log(LoggingLevel.INFO, correlation() + "Chouette start validation")
                 .removeHeaders("CamelHttp*")
+
+                .inOnly("direct:chouetteExportAll")
 
                 .choice().when(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)).chouetteInfo.migrateDataToProvider == null)
                 .setHeader(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL, constant(JobEvent.TimetableAction.VALIDATION_LEVEL_2.name()))
