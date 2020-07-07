@@ -17,8 +17,8 @@ public class ExportTemplateDAO extends RestDAO<ExportTemplate> {
     private String exportTemplatesUrl;
 
 
-    public List<ExportTemplate> getAll(String providerSchema) {
-        return super.getEntities(this.exportTemplatesUrl);
+    public List<ExportTemplate> getAll(String providerReferential) {
+        return super.getEntities(this.exportTemplatesUrl, providerReferential);
     }
 
 
