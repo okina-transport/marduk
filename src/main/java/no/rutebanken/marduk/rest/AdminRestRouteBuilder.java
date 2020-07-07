@@ -867,15 +867,15 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
                 .log(LoggingLevel.INFO, correlation() + "Chouette start validation")
                 .removeHeaders("CamelHttp*")
-
-                .inOnly("direct:chouetteExportAll")
-
                 .choice().when(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)).chouetteInfo.migrateDataToProvider == null)
                 .setHeader(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL, constant(JobEvent.TimetableAction.VALIDATION_LEVEL_2.name()))
                 .otherwise()
                 .setHeader(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL, constant(JobEvent.TimetableAction.VALIDATION_LEVEL_1.name()))
                 .end()
                 .process(e -> e.getIn().setHeader(USER, getUserNameFromHeaders(e)))
+
+                .inOnly("direct:chouetteExportAll")
+
                 .inOnly("activemq:queue:ChouetteValidationQueue")
                 .routeId("admin-chouette-validate")
                 .endRest()

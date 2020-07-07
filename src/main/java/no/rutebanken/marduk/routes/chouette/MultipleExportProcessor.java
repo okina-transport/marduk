@@ -1,6 +1,7 @@
 package no.rutebanken.marduk.routes.chouette;
 
 import no.rutebanken.marduk.domain.ExportTemplate;
+import no.rutebanken.marduk.domain.ExportType;
 import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
 import org.apache.camel.ProducerTemplate;
@@ -25,7 +26,16 @@ public class MultipleExportProcessor implements Processor {
     @Override
     public void process(Exchange exchange) throws Exception {
         List<ExportTemplate> exports = (List<ExportTemplate>) exchange.getIn().getBody();
-        exports.stream().forEach(e -> log.info("Multiple export : export " + e.getId() + "/" + e.getName()));
-
+        exports.stream().forEach(e -> {
+            log.info("Multiple export : export => " + e.getId() + "/" + e.getName());
+            if (ExportType.NETEX.equals(e.getType())) {
+                log.info("Routing to NETEX export => " + e.getId() + "/" + e.getName());
+                producer.send((Exchange ex) -> {
+                    producer.send("activemq:queue:ChouetteExportNetexQueue", ex);
+                });
+            } else {
+                log.info("Routing not supported yet for => " + e.getId() + "/" + e.getName() + "/" + e.getType());
+            }
+        });
     }
 }
