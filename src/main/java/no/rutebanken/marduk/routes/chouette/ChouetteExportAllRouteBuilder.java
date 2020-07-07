@@ -6,6 +6,8 @@ import no.rutebanken.marduk.domain.Provider;
 import no.rutebanken.marduk.repository.ExportTemplateDAO;
 import no.rutebanken.marduk.repository.ProviderRepository;
 import org.apache.camel.LoggingLevel;
+import org.apache.camel.Producer;
+import org.apache.camel.ProducerTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -19,6 +21,10 @@ import static no.rutebanken.marduk.Constants.PROVIDER_ID;
 public class ChouetteExportAllRouteBuilder extends AbstractChouetteRouteBuilder {
 
     @Autowired
+    private MultipleExportProcessor multipleExportProcessor;
+
+
+    @Autowired
     private ProviderRepository providerRepository;
 
     @Autowired
@@ -29,20 +35,23 @@ public class ChouetteExportAllRouteBuilder extends AbstractChouetteRouteBuilder 
         super.configure();
 
         from("direct:chouetteExportAll").streamCaching()
-            .transacted()
-            .log(LoggingLevel.INFO, getClass().getName(), "Starting Chouette all export for provider with id ${header." + PROVIDER_ID + "}")
-            .process(e -> {
-                // Add correlation id only if missing
-                e.getIn().setHeader(Constants.CORRELATION_ID, e.getIn().getHeader(Constants.CORRELATION_ID, UUID.randomUUID().toString()));
-                e.getIn().removeHeader(Constants.CHOUETTE_JOB_ID);
-                Provider provider = providerRepository.getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class));
-                List<ExportTemplate> exports = exportTemplateDAO.getAll(provider.getChouetteInfo().getReferential());
-                log.info("Found export templates " + exports.size());
-            })
-            .to("activemq:queue:ChouettePollStatusQueue")
-            .routeId("chouette-send-export-all-job");
+                .transacted()
+                .log(LoggingLevel.INFO, getClass().getName(), "Starting Chouette all export for provider with id ${header." + PROVIDER_ID + "}")
+                .process(e -> {
+                    // Add correlation id only if missing
+                    e.getIn().setHeader(Constants.CORRELATION_ID, e.getIn().getHeader(Constants.CORRELATION_ID, UUID.randomUUID().toString()));
+                    e.getIn().removeHeader(Constants.CHOUETTE_JOB_ID);
+                    Provider provider = providerRepository.getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class));
+                    e.getIn().setHeader("provider", provider);
+                    List<ExportTemplate> exports = exportTemplateDAO.getAll(provider.getChouetteInfo().getReferential());
+                    log.info("Found export templates " + exports.size());
+                    e.getOut().setBody(exports);
+                    e.getOut().setHeaders(e.getIn().getHeaders());
+                })
+                .process(multipleExportProcessor)
+                .to("activemq:queue:ChouettePollStatusQueue")
+                .routeId("chouette-send-export-all-job");
     }
-
 
 
 }

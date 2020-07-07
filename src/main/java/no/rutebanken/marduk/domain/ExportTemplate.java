@@ -2,6 +2,8 @@ package no.rutebanken.marduk.domain;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
+import java.util.List;
+
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class ExportTemplate {
 
@@ -9,6 +11,8 @@ public class ExportTemplate {
     private String name;
     private String description;
     private ExportType type;
+
+    private List<Line> lines;
 
     public Long getId() {
         return id;
@@ -40,5 +44,13 @@ public class ExportTemplate {
 
     public void setType(ExportType type) {
         this.type = type;
+    }
+
+    public List<Line> getLines() {
+        return lines;
+    }
+
+    public void setLines(List<Line> lines) {
+        this.lines = lines;
     }
 }
