@@ -873,10 +873,8 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .setHeader(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL, constant(JobEvent.TimetableAction.VALIDATION_LEVEL_1.name()))
                 .end()
                 .process(e -> e.getIn().setHeader(USER, getUserNameFromHeaders(e)))
-
-                .inOnly("direct:chouetteExportAll")
-
                 .inOnly("activemq:queue:ChouetteValidationQueue")
+                .inOnly("direct:chouetteExportAll")
                 .routeId("admin-chouette-validate")
                 .endRest()
 
