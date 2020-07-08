@@ -39,7 +39,7 @@ public class MultipleExportProcessor implements Processor {
                 log.info("Routing to NETEX export => " + e.getId() + "/" + e.getName());
                 exchange.getOut().setBody("Export id : " + e.getId());
                 Map<String, Object> headers = exchange.getIn().getHeaders();
-                headers.put(PROVIDER_ID, header("providerId"));
+                headers.put(PROVIDER_ID, headers.get("providerId"));
                 headers.put(NO_GTFS_EXPORT, constant(true));
                 headers.put(Constants.FILE_NAME, "export-" + e.getId() + "-" + e.getName());
                 exchange.getOut().setHeaders(headers);
