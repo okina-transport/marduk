@@ -2,10 +2,11 @@ package no.rutebanken.marduk.domain;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
+import java.io.Serializable;
 import java.util.List;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class ExportTemplate {
+public class ExportTemplate implements Serializable {
 
     private Long id;
     private String name;

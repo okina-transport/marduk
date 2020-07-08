@@ -2,8 +2,10 @@ package no.rutebanken.marduk.domain;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
+import java.io.Serializable;
+
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class Line {
+public class Line implements Serializable {
 
     protected Long id;
     private String name;
