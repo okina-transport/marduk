@@ -14,6 +14,8 @@ import java.util.List;
 
 import static no.rutebanken.marduk.Constants.NO_GTFS_EXPORT;
 import static no.rutebanken.marduk.Constants.PROVIDER_ID;
+import static org.apache.camel.builder.Builder.constant;
+import static org.apache.camel.builder.Builder.header;
 
 /**
  * Handles multiple exports
@@ -29,12 +31,15 @@ public class MultipleExportProcessor implements Processor {
     @Override
     public void process(Exchange exchange) throws Exception {
         List<ExportTemplate> exports = (List<ExportTemplate>) exchange.getIn().getBody();
+        exchange.getIn().setBody(null);
         exports.stream().forEach(e -> {
             log.info("Multiple export : export => " + e.getId() + "/" + e.getName());
             if (ExportType.NETEX.equals(e.getType())) {
                 log.info("Routing to NETEX export => " + e.getId() + "/" + e.getName());
                 exchange.getOut().setBody("Export id : " + e.getId());
                 exchange.getOut().setHeaders(exchange.getIn().getHeaders());
+                exchange.getOut().setHeader(PROVIDER_ID, header("providerId"));
+                exchange.getOut().setHeader(NO_GTFS_EXPORT, constant(true));
                 producer.send("activemq:queue:ChouetteExportNetexQueue", exchange);
             } else {
                 log.info("Routing not supported yet for => " + e.getId() + "/" + e.getName() + "/" + e.getType());
