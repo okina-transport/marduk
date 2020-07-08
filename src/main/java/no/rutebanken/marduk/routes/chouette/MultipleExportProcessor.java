@@ -1,5 +1,6 @@
 package no.rutebanken.marduk.routes.chouette;
 
+import no.rutebanken.marduk.Constants;
 import no.rutebanken.marduk.domain.ExportTemplate;
 import no.rutebanken.marduk.domain.ExportType;
 import org.apache.camel.Exchange;
@@ -11,9 +12,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.Map;
 
-import static no.rutebanken.marduk.Constants.NO_GTFS_EXPORT;
-import static no.rutebanken.marduk.Constants.PROVIDER_ID;
+import static no.rutebanken.marduk.Constants.*;
 import static org.apache.camel.builder.Builder.constant;
 import static org.apache.camel.builder.Builder.header;
 
@@ -37,9 +38,11 @@ public class MultipleExportProcessor implements Processor {
             if (ExportType.NETEX.equals(e.getType())) {
                 log.info("Routing to NETEX export => " + e.getId() + "/" + e.getName());
                 exchange.getOut().setBody("Export id : " + e.getId());
-                exchange.getOut().setHeaders(exchange.getIn().getHeaders());
-                exchange.getOut().setHeader(PROVIDER_ID, header("providerId"));
-                exchange.getOut().setHeader(NO_GTFS_EXPORT, constant(true));
+                Map<String, Object> headers = exchange.getIn().getHeaders();
+                headers.put(PROVIDER_ID, header("providerId"));
+                headers.put(NO_GTFS_EXPORT, constant(true));
+                headers.put(Constants.FILE_NAME, "export-" + e.getId() + "-" + e.getName());
+                exchange.getOut().setHeaders(headers);
                 producer.send("activemq:queue:ChouetteExportNetexQueue", exchange);
             } else {
                 log.info("Routing not supported yet for => " + e.getId() + "/" + e.getName() + "/" + e.getType());
