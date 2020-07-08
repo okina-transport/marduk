@@ -22,8 +22,7 @@ public class ExportTemplateDAO extends RestDAO<ExportTemplate> {
 
 
     public List<ExportTemplate> getAll(String providerReferential) {
-        final ObjectMapper mapper = new ObjectMapper();
-        return super.getEntities(this.exportTemplatesUrl, providerReferential).stream().map(e -> mapper.convertValue(e, ExportTemplate.class)).collect(toList());
+        return super.getEntities(this.exportTemplatesUrl, providerReferential, ExportTemplate.class);
     }
 
 
