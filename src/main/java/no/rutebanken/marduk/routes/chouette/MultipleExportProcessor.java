@@ -30,9 +30,7 @@ public class MultipleExportProcessor implements Processor {
             log.info("Multiple export : export => " + e.getId() + "/" + e.getName());
             if (ExportType.NETEX.equals(e.getType())) {
                 log.info("Routing to NETEX export => " + e.getId() + "/" + e.getName());
-                producer.send((Exchange ex) -> {
-                    producer.send("activemq:queue:ChouetteExportNetexQueue", ex);
-                });
+                producer.send("activemq:queue:ChouetteExportNetexQueue", exchange);
             } else {
                 log.info("Routing not supported yet for => " + e.getId() + "/" + e.getName() + "/" + e.getType());
             }
