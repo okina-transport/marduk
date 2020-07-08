@@ -42,7 +42,7 @@ public class ChouetteExportAllRouteBuilder extends AbstractChouetteRouteBuilder 
                     e.getIn().setHeader(Constants.CORRELATION_ID, e.getIn().getHeader(Constants.CORRELATION_ID, UUID.randomUUID().toString()));
                     e.getIn().removeHeader(Constants.CHOUETTE_JOB_ID);
                     Provider provider = providerRepository.getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class));
-                    e.getIn().setHeader("provider", provider);
+//                    e.getIn().setHeader("provider", provider);
                     List<ExportTemplate> exports = exportTemplateDAO.getAll(provider.getChouetteInfo().getReferential());
                     log.info("Found export templates " + exports.size());
                     e.getOut().setBody(exports);
