@@ -874,7 +874,9 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .end()
                 .process(e -> e.getIn().setHeader(USER, getUserNameFromHeaders(e)))
                 .inOnly("activemq:queue:ChouetteValidationQueue")
-                .inOnly("direct:chouetteExportAll")
+                .onCompletion().onCompleteOnly()
+                    .inOnly("direct:chouetteExportAll")
+                .end()
                 .routeId("admin-chouette-validate")
                 .endRest()
 
