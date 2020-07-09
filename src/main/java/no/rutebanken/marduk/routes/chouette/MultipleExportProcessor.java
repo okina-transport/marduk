@@ -44,9 +44,9 @@ public class MultipleExportProcessor implements Processor {
                 headers.put(PROVIDER_ID, headers.get("providerId"));
                 headers.put(NO_GTFS_EXPORT, constant(true));
                 headers.put(Constants.FILE_NAME, "export-" + export.getId() + "-" + export.getName());
-                headers.put(Constants.CHOUETTE_JOB_STATUS_ROUTING_DESTINATION, constant("direct:processNetexExportResult"));
-                headers.put(Constants.CHOUETTE_JOB_STATUS_JOB_TYPE, constant(JobEvent.TimetableAction.EXPORT_NETEX.name()));
-                headers.put(CHOUETTE_JOB_STATUS_URL, exchange.getIn().getHeader("Location").toString().replaceFirst("http", "http4"));
+//                headers.put(Constants.CHOUETTE_JOB_STATUS_ROUTING_DESTINATION, constant("direct:processNetexExportResult"));
+//                headers.put(Constants.CHOUETTE_JOB_STATUS_JOB_TYPE, constant(JobEvent.TimetableAction.EXPORT_NETEX.name()));
+//                headers.put(CHOUETTE_JOB_STATUS_URL, exchange.getIn().getHeader("Location").toString().replaceFirst("http", "http4"));
                 headers.put(Constants.CHOUETTE_JOB_ID, getLastPathElementOfUrl(exchange.getIn().getHeader("Location", String.class)));
                 exchange.getOut().setHeaders(headers);
                 producer.send("activemq:queue:ChouetteExportNetexQueue", exchange);

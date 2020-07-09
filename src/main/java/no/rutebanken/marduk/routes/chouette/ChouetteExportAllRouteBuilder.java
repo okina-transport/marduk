@@ -51,7 +51,7 @@ public class ChouetteExportAllRouteBuilder extends AbstractChouetteRouteBuilder 
                     e.getOut().getHeaders().put(CHOUETTE_REFERENTIAL, provider.chouetteInfo.getReferential());
                 })
                 .process(multipleExportProcessor)
-                .to("activemq:queue:ChouettePollStatusQueue")
+//                .to("activemq:queue:ChouettePollStatusQueue")
                 .routeId("chouette-send-export-all-job");
     }
 
