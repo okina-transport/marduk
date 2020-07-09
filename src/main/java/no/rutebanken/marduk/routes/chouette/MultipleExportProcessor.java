@@ -38,22 +38,37 @@ public class MultipleExportProcessor implements Processor {
         exports.stream().forEach(export -> {
             log.info("Multiple export : export => " + export.getId() + "/" + export.getName());
             if (ExportType.NETEX.equals(export.getType())) {
-                log.info("Routing to NETEX export => " + export.getId() + "/" + export.getName());
-                exchange.getIn().getHeaders().put(NO_GTFS_EXPORT, true);
-                exchange.getOut().setBody("Export id : " + export.getId());
-                Map<String, Object> headers = exchange.getIn().getHeaders();
-                headers.put(PROVIDER_ID, headers.get("providerId"));
-                headers.put(NO_GTFS_EXPORT, true);
-                headers.put(Constants.FILE_NAME, "export-" + export.getId() + "-" + export.getName());
-//                headers.put(Constants.CHOUETTE_JOB_STATUS_ROUTING_DESTINATION, constant("direct:processNetexExportResult"));
-//                headers.put(Constants.CHOUETTE_JOB_STATUS_JOB_TYPE, constant(JobEvent.TimetableAction.EXPORT_NETEX.name()));
-//                headers.put(CHOUETTE_JOB_STATUS_URL, exchange.getIn().getHeader("Location").toString().replaceFirst("http", "http4"));
-//                headers.put(Constants.CHOUETTE_JOB_ID, getLastPathElementOfUrl(exchange.getIn().getHeader("Location", String.class)));
-                exchange.getOut().setHeaders(headers);
-                producer.send("activemq:queue:ChouetteExportNetexQueue", exchange);
+                toNetexExport(export, exchange);
+            } else if (ExportType.GTFS == export.getType()) {
+                toGtfsExport(export, exchange);
             } else {
                 log.info("Routing not supported yet for => " + export.getId() + "/" + export.getName() + "/" + export.getType());
             }
         });
+    }
+
+
+    private void toNetexExport(ExportTemplate export, Exchange exchange) {
+        log.info("Routing to NETEX export => " + export.getId() + "/" + export.getName());
+        prepareHeadersForExport(exchange, export);
+        producer.send("activemq:queue:ChouetteExportNetexQueue", exchange);
+    }
+
+    private void toGtfsExport(ExportTemplate export, Exchange exchange) {
+        log.info("Routing to GTFS export => " + export.getId() + "/" + export.getName());
+        prepareHeadersForExport(exchange, export);
+        producer.send("activemq:queue:ChouetteExportGtfsQueue", exchange);
+    }
+
+
+    private void prepareHeadersForExport(Exchange exchange, ExportTemplate export) {
+        boolean noGtfs = export.getType() != ExportType.GTFS;
+        exchange.getIn().getHeaders().put(NO_GTFS_EXPORT, noGtfs);
+        exchange.getOut().setBody("Export id : " + export.getId());
+        Map<String, Object> headers = exchange.getIn().getHeaders();
+        headers.put(PROVIDER_ID, headers.get("providerId"));
+        headers.put(NO_GTFS_EXPORT, noGtfs);
+        headers.put(Constants.FILE_NAME, "export-" + export.getId() + "-" + export.getName());
+        exchange.getOut().setHeaders(headers);
     }
 }
