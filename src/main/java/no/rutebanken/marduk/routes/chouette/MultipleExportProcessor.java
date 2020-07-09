@@ -43,7 +43,7 @@ public class MultipleExportProcessor implements Processor {
                 exchange.getOut().setBody("Export id : " + export.getId());
                 Map<String, Object> headers = exchange.getIn().getHeaders();
                 headers.put(PROVIDER_ID, headers.get("providerId"));
-                headers.put(NO_GTFS_EXPORT, constant(true));
+                headers.put(NO_GTFS_EXPORT, true);
                 headers.put(Constants.FILE_NAME, "export-" + export.getId() + "-" + export.getName());
 //                headers.put(Constants.CHOUETTE_JOB_STATUS_ROUTING_DESTINATION, constant("direct:processNetexExportResult"));
 //                headers.put(Constants.CHOUETTE_JOB_STATUS_JOB_TYPE, constant(JobEvent.TimetableAction.EXPORT_NETEX.name()));
