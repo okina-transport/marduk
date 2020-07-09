@@ -28,6 +28,8 @@ public class MultipleExportProcessor implements Processor {
 
     Logger log = LoggerFactory.getLogger(this.getClass());
 
+    public static final String MOSAIC_REFERENTIAL = "MOSAIC_REFERENTIAL";
+
     @Autowired
     ProducerTemplate producer;
 
