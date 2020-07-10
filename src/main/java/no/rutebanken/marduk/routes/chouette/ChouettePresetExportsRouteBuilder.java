@@ -19,7 +19,7 @@ import static no.rutebanken.marduk.Constants.CHOUETTE_REFERENTIAL;
 import static no.rutebanken.marduk.Constants.PROVIDER_ID;
 
 @Component
-public class ChouetteExportAllRouteBuilder extends AbstractChouetteRouteBuilder {
+public class ChouettePresetExportsRouteBuilder extends AbstractChouetteRouteBuilder {
 
     @Autowired
     private MultipleExportProcessor multipleExportProcessor;

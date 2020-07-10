@@ -10,6 +10,7 @@ import org.apache.camel.ProducerTemplate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -30,6 +31,9 @@ public class MultipleExportProcessor implements Processor {
 
     public static final String MOSAIC_REFERENTIAL = "MOSAIC_REFERENTIAL";
 
+    @Value("${stop-places-export.api.url}")
+    private String stopPlacesExportUrl;
+
     @Autowired
     ProducerTemplate producer;
 
@@ -43,6 +47,8 @@ public class MultipleExportProcessor implements Processor {
                 toNetexExport(export, exchange);
             } else if (ExportType.GTFS == export.getType()) {
                 toGtfsExport(export, exchange);
+            } else if (ExportType.ARRET == export.getType()) {
+                toStopPlacesExport(export, exchange);
             } else {
                 log.info("Routing not supported yet for => " + export.getId() + "/" + export.getName() + "/" + export.getType());
             }
@@ -60,6 +66,13 @@ public class MultipleExportProcessor implements Processor {
         log.info("Routing to GTFS export => " + export.getId() + "/" + export.getName());
         prepareHeadersForExport(exchange, export);
         producer.send("activemq:queue:ChouetteExportGtfsQueue", exchange);
+    }
+
+    private void toStopPlacesExport(ExportTemplate export, Exchange exchange) {
+        log.info("Routing to GTFS export => " + export.getId() + "/" + export.getName());
+        prepareHeadersForExport(exchange, export);
+        String url = stopPlacesExportUrl + "?providerId=" + exchange.getIn().getHeaders().get("providerId");
+        producer.sendBody(url, exchange);
     }
 
 
