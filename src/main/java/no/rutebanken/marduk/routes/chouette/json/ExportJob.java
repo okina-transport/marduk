@@ -11,10 +11,10 @@ public class ExportJob {
     private String jobUrl;
     private String fileName;
     private String subFolder;
-    private String message;
-    private Instant started;
-    private Instant finished;
-    private JobStatus status;
+//    private String message;
+//    private Instant started;
+//    private Instant finished;
+//    private JobStatus status;
 
     public Long getId() {
         return id;
@@ -48,35 +48,35 @@ public class ExportJob {
         this.subFolder = subFolder;
     }
 
-    public String getMessage() {
-        return message;
-    }
-
-    public void setMessage(String message) {
-        this.message = message;
-    }
-
-    public Instant getStarted() {
-        return started;
-    }
-
-    public void setStarted(Instant started) {
-        this.started = started;
-    }
-
-    public Instant getFinished() {
-        return finished;
-    }
-
-    public void setFinished(Instant finished) {
-        this.finished = finished;
-    }
-
-    public JobStatus getStatus() {
-        return status;
-    }
-
-    public void setStatus(JobStatus status) {
-        this.status = status;
-    }
+//    public String getMessage() {
+//        return message;
+//    }
+//
+//    public void setMessage(String message) {
+//        this.message = message;
+//    }
+//
+//    public Instant getStarted() {
+//        return started;
+//    }
+//
+//    public void setStarted(Instant started) {
+//        this.started = started;
+//    }
+//
+//    public Instant getFinished() {
+//        return finished;
+//    }
+//
+//    public void setFinished(Instant finished) {
+//        this.finished = finished;
+//    }
+//
+//    public JobStatus getStatus() {
+//        return status;
+//    }
+//
+//    public void setStatus(JobStatus status) {
+//        this.status = status;
+//    }
 }
