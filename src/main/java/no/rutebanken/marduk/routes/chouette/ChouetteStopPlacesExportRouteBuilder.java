@@ -1,10 +1,13 @@
 package no.rutebanken.marduk.routes.chouette;
 
+import no.rutebanken.marduk.Constants;
 import org.apache.camel.LoggingLevel;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import static no.rutebanken.marduk.Constants.CHOUETTE_JOB_STATUS_URL;
 import static no.rutebanken.marduk.Constants.PROVIDER_ID;
+import static no.rutebanken.marduk.Utils.Utils.getLastPathElementOfUrl;
 
 
 /**
@@ -29,6 +32,9 @@ public class ChouetteStopPlacesExportRouteBuilder extends AbstractChouetteRouteB
                     log.info("chouetteStopPlacesExport : processing export ....");
                 })
                 .toD(stopPlacesExportUrl + "?providerId=${header.providerIdLong}")
+                .process(e -> {
+                    log.info("chouetteStopPlacesExport : tiamat export response ....");
+                })
                 .routeId("chouette-stop-places-export-job");
     }
 
