@@ -69,6 +69,8 @@ public class MultipleExportProcessor implements Processor {
     private void toStopPlacesExport(ExportTemplate export, Exchange exchange) {
         log.info("Routing to GTFS export => " + export.getId() + "/" + export.getName());
         prepareHeadersForExport(exchange, export);
+        Long providerId = Long.valueOf(exchange.getIn().getHeaders().get("providerId").toString());
+        exchange.getIn().getHeaders().put("providerIdLong", providerId);
         producer.send("direct:chouetteStopPlacesExport", exchange);
 //        String url = stopPlacesExportUrl + "?providerId=" + exchange.getIn().getHeaders().get("providerId");
 //        producer.sendBody(url, exchange);

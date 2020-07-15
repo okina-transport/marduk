@@ -24,9 +24,11 @@ public class ChouetteStopPlacesExportRouteBuilder extends AbstractChouetteRouteB
                 .transacted()
                 .log(LoggingLevel.INFO, getClass().getName(), "Starting Chouette export stop places for provider with id ${header." + PROVIDER_ID + "}")
                 .process(e -> {
+                    Object providerIdS = e.getIn().getHeaders().get("providerId");
+                    Object providerIdL = e.getIn().getHeaders().get("providerIdLong");
                     log.info("chouetteStopPlacesExport : processing export ....");
                 })
-                .toD(stopPlacesExportUrl + "?providerId= ${header." + PROVIDER_ID + "}")
+                .toD(stopPlacesExportUrl + "?providerId=${header.providerIdLong}")
                 .routeId("chouette-stop-places-export-job");
     }
 
