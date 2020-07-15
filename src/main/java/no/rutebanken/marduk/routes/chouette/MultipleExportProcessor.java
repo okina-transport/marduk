@@ -3,7 +3,6 @@ package no.rutebanken.marduk.routes.chouette;
 import no.rutebanken.marduk.Constants;
 import no.rutebanken.marduk.domain.ExportTemplate;
 import no.rutebanken.marduk.domain.ExportType;
-import no.rutebanken.marduk.routes.status.JobEvent;
 import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
 import org.apache.camel.ProducerTemplate;
@@ -16,10 +15,8 @@ import org.springframework.stereotype.Component;
 import java.util.List;
 import java.util.Map;
 
-import static no.rutebanken.marduk.Constants.*;
-import static no.rutebanken.marduk.Utils.Utils.getLastPathElementOfUrl;
-import static org.apache.camel.builder.Builder.constant;
-import static org.apache.camel.builder.Builder.header;
+import static no.rutebanken.marduk.Constants.NO_GTFS_EXPORT;
+import static no.rutebanken.marduk.Constants.PROVIDER_ID;
 
 /**
  * Handles multiple exports
@@ -36,6 +33,7 @@ public class MultipleExportProcessor implements Processor {
 
     @Autowired
     ProducerTemplate producer;
+
 
     @Override
     public void process(Exchange exchange) throws Exception {
@@ -71,12 +69,19 @@ public class MultipleExportProcessor implements Processor {
     private void toStopPlacesExport(ExportTemplate export, Exchange exchange) {
         log.info("Routing to GTFS export => " + export.getId() + "/" + export.getName());
         prepareHeadersForExport(exchange, export);
-        String url = stopPlacesExportUrl + "?providerId=" + exchange.getIn().getHeaders().get("providerId");
-        producer.sendBody(url, exchange);
+        producer.send("direct:chouetteStopPlacesExport", exchange);
+//        String url = stopPlacesExportUrl + "?providerId=" + exchange.getIn().getHeaders().get("providerId");
+//        producer.sendBody(url, exchange);
+
     }
 
 
-    private void prepareHeadersForExport(Exchange exchange, ExportTemplate export) {
+    /**
+     * Sets headers for export jobs
+     * @param exchange
+     * @param export
+     */
+    public void prepareHeadersForExport(Exchange exchange, ExportTemplate export) {
         boolean noGtfs = export.getType() != ExportType.GTFS;
         exchange.getIn().getHeaders().put(NO_GTFS_EXPORT, noGtfs);
         exchange.getOut().setBody("Export id : " + export.getId());
