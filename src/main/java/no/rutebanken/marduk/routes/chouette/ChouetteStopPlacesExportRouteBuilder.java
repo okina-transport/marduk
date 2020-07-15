@@ -1,7 +1,9 @@
 package no.rutebanken.marduk.routes.chouette;
 
 import no.rutebanken.marduk.Constants;
+import no.rutebanken.marduk.routes.chouette.json.ExportJob;
 import org.apache.camel.LoggingLevel;
+import org.apache.camel.model.dataformat.JsonLibrary;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -34,6 +36,10 @@ public class ChouetteStopPlacesExportRouteBuilder extends AbstractChouetteRouteB
                 .toD(stopPlacesExportUrl + "?providerId=${header.providerIdLong}")
                 .process(e -> {
                     log.info("chouetteStopPlacesExport : tiamat export response ....");
+                })
+                .unmarshal().json(JsonLibrary.Jackson, ExportJob.class)
+                .process(e -> {
+                    log.info("chouetteStopPlacesExport : tiamat export response unmarshalled....");
                 })
                 .routeId("chouette-stop-places-export-job");
     }
