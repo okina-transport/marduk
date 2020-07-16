@@ -35,19 +35,10 @@ public class ChouetteStopPlacesExportRouteBuilder extends AbstractChouetteRouteB
                     log.info("chouetteStopPlacesExport : processing export ....");
                 })
                 .toD(stopPlacesExportUrl + "?providerId=${header.providerIdLong}")
-                .onCompletion()
-                    .process(e -> {
-                        log.info("chouetteStopPlacesExport callback : tiamat export response received ....");
-                    })
-                    .unmarshal().json(JsonLibrary.Jackson, ExportJob.class)
-                    .process(e -> {
-                        log.info("chouetteStopPlacesExport callback : tiamat export parsed");
-                        ExportJob exportJob = e.getIn().getBody(ExportJob.class);
-                        log.info("chouetteStopPlacesExport callback : tiamat export parsed => " + exportJob.getId() + " : " + exportJob.getJobUrl());
-                    })
-                .end()
                 .process(e -> {
                     log.info("chouetteStopPlacesExport : tiamat export launched ....");
+                    String res = e.getIn().getBody(String.class);
+                    log.info("chouetteStopPlacesExport : tiamat export launched 2....");
                 })
                 .unmarshal().json(JsonLibrary.Jackson, ExportJob.class)
                 .process(e -> {
