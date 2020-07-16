@@ -1,10 +1,11 @@
 package no.rutebanken.marduk.routes.chouette.json;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlRootElement;
 
-import java.time.Instant;
-
-@JsonIgnoreProperties(ignoreUnknown = true)
+@XmlRootElement(name = "exportJob")
+@XmlAccessorType(XmlAccessType.FIELD)
 public class ExportJob {
 
     private Long id;

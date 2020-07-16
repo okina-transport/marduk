@@ -3,9 +3,12 @@ package no.rutebanken.marduk.routes.chouette;
 import no.rutebanken.marduk.Constants;
 import no.rutebanken.marduk.routes.chouette.json.ExportJob;
 import org.apache.camel.LoggingLevel;
+import org.apache.camel.converter.jaxb.JaxbDataFormat;
 import org.apache.camel.model.dataformat.JsonLibrary;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+
+import javax.xml.bind.JAXBContext;
 
 import static no.rutebanken.marduk.Constants.CHOUETTE_JOB_STATUS_URL;
 import static no.rutebanken.marduk.Constants.PROVIDER_ID;
@@ -25,6 +28,11 @@ public class ChouetteStopPlacesExportRouteBuilder extends AbstractChouetteRouteB
     public void configure() throws Exception {
         super.configure();
 
+        // XML Data Format
+        JaxbDataFormat xmlDataFormat = new JaxbDataFormat();
+        JAXBContext con = JAXBContext.newInstance(ExportJob.class);
+        xmlDataFormat.setContext(con);
+
 
         from("direct:chouetteStopPlacesExport").streamCaching()
                 .transacted()
@@ -40,7 +48,7 @@ public class ChouetteStopPlacesExportRouteBuilder extends AbstractChouetteRouteB
                     String res = e.getIn().getBody(String.class);
                     log.info("chouetteStopPlacesExport : tiamat export launched 2....");
                 })
-                .unmarshal().json(JsonLibrary.Jackson, ExportJob.class)
+                .unmarshal(xmlDataFormat)
                 .process(e -> {
                     log.info("chouetteStopPlacesExport : tiamat export parsed");
                     ExportJob exportJob = e.getIn().getBody(ExportJob.class);
