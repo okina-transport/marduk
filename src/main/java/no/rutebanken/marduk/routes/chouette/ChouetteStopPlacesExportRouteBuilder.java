@@ -25,6 +25,7 @@ public class ChouetteStopPlacesExportRouteBuilder extends AbstractChouetteRouteB
     public void configure() throws Exception {
         super.configure();
 
+
         from("direct:chouetteStopPlacesExport").streamCaching()
                 .transacted()
                 .log(LoggingLevel.INFO, getClass().getName(), "Starting Chouette export stop places for provider with id ${header." + PROVIDER_ID + "}")
@@ -34,8 +35,19 @@ public class ChouetteStopPlacesExportRouteBuilder extends AbstractChouetteRouteB
                     log.info("chouetteStopPlacesExport : processing export ....");
                 })
                 .toD(stopPlacesExportUrl + "?providerId=${header.providerIdLong}")
+                .onCompletion()
+                    .process(e -> {
+                        log.info("chouetteStopPlacesExport callback : tiamat export response received ....");
+                    })
+                    .unmarshal().json(JsonLibrary.Jackson, ExportJob.class)
+                    .process(e -> {
+                        log.info("chouetteStopPlacesExport callback : tiamat export parsed");
+                        ExportJob exportJob = e.getIn().getBody(ExportJob.class);
+                        log.info("chouetteStopPlacesExport callback : tiamat export parsed => " + exportJob.getId() + " : " + exportJob.getJobUrl());
+                    })
+                .end()
                 .process(e -> {
-                    log.info("chouetteStopPlacesExport : tiamat export response ....");
+                    log.info("chouetteStopPlacesExport : tiamat export launched ....");
                 })
                 .unmarshal().json(JsonLibrary.Jackson, ExportJob.class)
                 .process(e -> {
