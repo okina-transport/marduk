@@ -14,8 +14,6 @@ public class ExportJob {
     private String fileName;
     private String subFolder;
     private String message;
-    private Instant started;
-    private Instant finished;
     private JobStatus status;
 
     public Long getId() {
@@ -56,22 +54,6 @@ public class ExportJob {
 
     public void setMessage(String message) {
         this.message = message;
-    }
-
-    public Instant getStarted() {
-        return started;
-    }
-
-    public void setStarted(Instant started) {
-        this.started = started;
-    }
-
-    public Instant getFinished() {
-        return finished;
-    }
-
-    public void setFinished(Instant finished) {
-        this.finished = finished;
     }
 
     public JobStatus getStatus() {

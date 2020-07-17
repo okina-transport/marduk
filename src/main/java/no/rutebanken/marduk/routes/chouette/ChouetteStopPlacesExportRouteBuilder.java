@@ -44,11 +44,6 @@ public class ChouetteStopPlacesExportRouteBuilder extends AbstractChouetteRouteB
                     log.info("chouetteStopPlacesExport : processing export ....");
                 })
                 .toD(stopPlacesExportUrl + "?providerId=${header.providerIdLong}")
-                .process(e -> {
-                    log.info("chouetteStopPlacesExport : tiamat export launched ....");
-                    String res = e.getIn().getBody(String.class);
-                    log.info("chouetteStopPlacesExport : tiamat export launched 2....");
-                })
                 .unmarshal(xmlDataFormat)
                 .process(e -> {
                     log.info("chouetteStopPlacesExport : tiamat export parsed");
