@@ -45,10 +45,18 @@ public class ChouettePresetExportsRouteBuilder extends AbstractChouetteRouteBuil
 //                    e.getIn().removeHeader(Constants.CHOUETTE_JOB_ID);
                     Provider provider = providerRepository.getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class));
                     List<ExportTemplate> exports = exportTemplateDAO.getAll(provider.getChouetteInfo().getReferential());
+
+                    // get the matching migration mosaic provider to target export
+                    Long mosaicProviderId = provider.getChouetteInfo().getMigrateDataToProvider();
+                    Provider mosaicProvider = providerRepository.getProvider(mosaicProviderId);
+
+
                     log.info("Found export templates " + exports.size());
                     e.getOut().setBody(exports);
                     e.getOut().setHeaders(e.getIn().getHeaders());
-                    e.getOut().getHeaders().put(CHOUETTE_REFERENTIAL, provider.chouetteInfo.getReferential());
+                    e.getOut().getHeaders().put(CHOUETTE_REFERENTIAL, mosaicProvider.chouetteInfo.getReferential());
+                    e.getOut().getHeaders().put(PROVIDER_ID, mosaicProvider.getId());
+                    e.getOut().getHeaders().put("providerId", mosaicProvider.getId());
                 })
                 .process(multipleExportProcessor)
 //                .to("activemq:queue:ChouettePollStatusQueue")

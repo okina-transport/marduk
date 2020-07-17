@@ -2,6 +2,7 @@ package no.rutebanken.marduk.routes.chouette;
 
 import no.rutebanken.marduk.Constants;
 import no.rutebanken.marduk.routes.chouette.json.ExportJob;
+import no.rutebanken.marduk.routes.status.JobEvent;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.converter.jaxb.JaxbDataFormat;
 import org.apache.camel.model.dataformat.JsonLibrary;
@@ -53,9 +54,8 @@ public class ChouetteStopPlacesExportRouteBuilder extends AbstractChouetteRouteB
                     log.info("chouetteStopPlacesExport : tiamat export parsed");
                     ExportJob exportJob = e.getIn().getBody(ExportJob.class);
                     log.info("chouetteStopPlacesExport : tiamat export parsed => " + exportJob.getId() + " : " + exportJob.getJobUrl());
-
                 })
-                .routeId("chouette-stop-places-export-job");
+                .routeId("tiamat-stop-places-export-job");
     }
 
 }
