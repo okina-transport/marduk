@@ -65,7 +65,7 @@ public class MultipleExportProcessor implements Processor {
     private void toGtfsExport(ExportTemplate export, Exchange exchange) {
         log.info("Routing to GTFS export => " + export.getId() + "/" + export.getName());
         prepareHeadersForExport(exchange, export);
-        String linesIds = export.getLines() != null ? StringUtils.join(export.getLines().stream().map(Line::getId).toArray()) : "";
+        String linesIds = export.getLines() != null ? StringUtils.join(export.getLines().stream().map(Line::getId).toArray(), ",") : "";
         exchange.getIn().getHeaders().put(LINES_IDS, linesIds);
         producer.send("activemq:queue:ChouetteExportGtfsQueue", exchange);
     }
