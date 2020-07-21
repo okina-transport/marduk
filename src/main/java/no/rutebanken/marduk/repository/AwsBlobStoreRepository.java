@@ -16,15 +16,15 @@
 
 package no.rutebanken.marduk.repository;
 
+import com.amazonaws.AmazonClientException;
 import com.amazonaws.services.s3.AmazonS3;
-import com.google.cloud.storage.Acl;
-import com.google.cloud.storage.Blob;
-import com.google.cloud.storage.BlobId;
+import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.google.cloud.storage.Storage;
+import com.okina.helper.aws.BlobStoreHelper;
 import no.rutebanken.marduk.domain.BlobStoreFiles;
 import no.rutebanken.marduk.domain.Provider;
+import no.rutebanken.marduk.exceptions.MardukException;
 import org.apache.commons.lang3.StringUtils;
-import org.rutebanken.helper.gcp.BlobStoreHelper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,34 +32,34 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Repository;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.Date;
-import java.util.Iterator;
+import java.util.List;
 
 @Repository
-@Profile("gcs-blobstore")
+@Profile("aws-blobstore")
 @Scope("prototype")
-public class GcsBlobStoreRepository implements BlobStoreRepository {
+public class AwsBlobStoreRepository implements BlobStoreRepository {
 
     private Logger logger = LoggerFactory.getLogger(this.getClass());
-
-    private Storage storage;
 
     private String containerName;
 
     @Autowired
     private ProviderRepository providerRepository;
 
+    private AmazonS3 amazonS3Client;
+
     @Override
     public void setStorage(Storage storage) {
-        this.storage = storage;
+        // dummy
     }
 
     @Override
     public void setAmazonS3Client(AmazonS3 amazonS3Client) {
-        // dummy
+        this.amazonS3Client = amazonS3Client;
     }
 
     @Override
@@ -69,11 +69,12 @@ public class GcsBlobStoreRepository implements BlobStoreRepository {
 
     @Override
     public BlobStoreFiles listBlobs(Collection<String> prefixes) {
+
         BlobStoreFiles blobStoreFiles = new BlobStoreFiles();
 
         for (String prefix : prefixes) {
-            Iterator<Blob> blobIterator = BlobStoreHelper.listAllBlobsRecursively(storage, containerName, prefix);
-            blobIterator.forEachRemaining(blob -> blobStoreFiles.add(toBlobStoreFile(blob, blob.getName())));
+            List<S3ObjectSummary> s3ObjectSummaries = BlobStoreHelper.listAllBlobsRecursively(amazonS3Client, containerName, prefix);
+            BlobStoreHelper.listAllBlobsRecursively(amazonS3Client, containerName, prefix).forEach(blob -> blobStoreFiles.add(toBlobStoreFile(amazonS3Client, containerName, blob)));
         }
 
         return blobStoreFiles;
@@ -84,9 +85,9 @@ public class GcsBlobStoreRepository implements BlobStoreRepository {
         BlobStoreFiles blobStoreFiles = new BlobStoreFiles();
 
         for (String prefix : prefixes) {
-            Iterator<Blob> blobIterator = BlobStoreHelper.listAllBlobsRecursively(storage, containerName, prefix);
-            blobIterator.forEachRemaining(blob -> {
-                BlobStoreFiles.File blobFile = toBlobStoreFile(blob, blob.getName());
+            List<S3ObjectSummary> s3ObjectSummaries = BlobStoreHelper.listAllBlobsRecursively(amazonS3Client, containerName, prefix);
+            s3ObjectSummaries.forEach(blob -> {
+                BlobStoreFiles.File blobFile = toBlobStoreFile(amazonS3Client, containerName, blob);
                 if (blobFile.getProviderId().equals(providerId)) {
                     blobStoreFiles.add(blobFile);
                 }
@@ -108,47 +109,56 @@ public class GcsBlobStoreRepository implements BlobStoreRepository {
 
     @Override
     public BlobStoreFiles listBlobsFlat(String prefix) {
-        Iterator<Blob> blobIterator = BlobStoreHelper.listAllBlobsRecursively(storage, containerName, prefix);
+        List<S3ObjectSummary> blobs = BlobStoreHelper.listAllBlobsRecursively(amazonS3Client, containerName, prefix);
         BlobStoreFiles blobStoreFiles = new BlobStoreFiles();
-        while (blobIterator.hasNext()) {
-            Blob blob = blobIterator.next();
-            String fileName = blob.getName().replace(prefix, "");
+        blobs.forEach(blob -> {
+            String fileName = blob.getKey().replace(prefix, "");
             if (!StringUtils.isEmpty(fileName)) {
-                blobStoreFiles.add(toBlobStoreFile(blob, fileName));
+                blobStoreFiles.add(toBlobStoreFile(amazonS3Client, containerName, blob));
             }
-        }
+        });
 
         return blobStoreFiles;
     }
 
     @Override
     public InputStream getBlob(String name) {
-        return BlobStoreHelper.getBlob(storage, containerName, name);
+        return BlobStoreHelper.getBlob(amazonS3Client, containerName, name);
     }
 
     @Override
     public void uploadBlob(String name, InputStream inputStream, boolean makePublic) {
-        BlobStoreHelper.uploadBlobWithRetry(storage, containerName, name, inputStream, makePublic);
+        try {
+            BlobStoreHelper.uploadBlob(amazonS3Client, containerName, name, inputStream);
+        } catch (InterruptedException | IOException e) {
+            throw new MardukException("error while uploading blob", e);
+        }
     }
 
     @Override
     public void uploadBlob(String name, InputStream inputStream, boolean makePublic, String contentType) {
-        BlobStoreHelper.uploadBlobWithRetry(storage, containerName, name, inputStream, makePublic, contentType);
+        uploadBlob(name, inputStream, false);
     }
 
     @Override
     public boolean delete(String objectName) {
-        return BlobStoreHelper.delete(storage, BlobId.of(containerName, objectName));
+        try {
+            BlobStoreHelper.delete(amazonS3Client, containerName, objectName);
+        } catch (AmazonClientException e) {
+            return false;
+        }
+        return true;
     }
 
     @Override
     public boolean deleteAllFilesInFolder(String folder) {
-        return BlobStoreHelper.deleteBlobsByPrefix(storage, containerName, folder);
+        return BlobStoreHelper.deleteBlobsByPrefix(amazonS3Client, containerName, folder);
     }
 
 
-    private BlobStoreFiles.File toBlobStoreFile(Blob blob, String fileName) {
-        BlobStoreFiles.File file = new BlobStoreFiles.File(fileName, new Date(blob.getCreateTime()), new Date(blob.getUpdateTime()), blob.getSize());
+    private BlobStoreFiles.File toBlobStoreFile(AmazonS3 client, String containerName, S3ObjectSummary blobSummary) {
+        BlobStoreHelper.getBlob(client, containerName, blobSummary.getKey());
+        BlobStoreFiles.File file = new BlobStoreFiles.File(blobSummary.getKey(), blobSummary.getLastModified(), blobSummary.getLastModified(), blobSummary.getSize());
         Provider provider = null;
         if (file.getName().contains("graphs/")) {
             file.setFormat(BlobStoreFiles.File.Format.GRAPH);
@@ -167,11 +177,6 @@ public class GcsBlobStoreRepository implements BlobStoreRepository {
             file.setReferential(provider.chouetteInfo.referential);
         }
 
-        if (blob.getAcl() != null) {
-            if (blob.getAcl().stream().anyMatch(acl -> Acl.User.ofAllUsers().equals(acl.getEntity()) && acl.getRole() != null)) {
-                file.setUrl(blob.getMediaLink());
-            }
-        }
         return file;
     }
 

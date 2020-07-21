@@ -16,6 +16,8 @@
 
 package no.rutebanken.marduk.Utils;
 
+import no.rutebanken.marduk.domain.Provider;
+import no.rutebanken.marduk.repository.CacheProviderRepository;
 import org.opentripplanner.common.MavenVersion;
 
 public class Utils {
@@ -40,5 +42,17 @@ public class Utils {
 
     public static String getOtpVersion() {
         return MavenVersion.VERSION.version;
+    }
+
+    public static Provider parseProviderFromFileName(CacheProviderRepository providerRepository, String fileName) {
+        if (fileName == null) {
+            return null;
+        }
+
+        String[] fileParts = fileName.split("/");
+        String potentialRef = fileParts[fileParts.length - 1].split("-")[0];
+
+
+        return providerRepository.getProviders().stream().filter(provider -> potentialRef.equalsIgnoreCase((provider.chouetteInfo.referential))).findFirst().orElse(null);
     }
 }

@@ -35,8 +35,8 @@ public class BlobStoreRoute extends BaseRouteBuilder {
         from("direct:uploadBlob")
                 .to("log:" + getClass().getName() + "?level=DEBUG&showAll=true&multiline=true")
                 .choice()
-                .when(header(BLOBSTORE_MAKE_BLOB_PUBLIC).isNull())
-                .setHeader(BLOBSTORE_MAKE_BLOB_PUBLIC, constant(publicPublication))     //defaulting to false if not specified
+                    .when(header(BLOBSTORE_MAKE_BLOB_PUBLIC).isNull())
+                    .setHeader(BLOBSTORE_MAKE_BLOB_PUBLIC, constant(publicPublication))     //defaulting to false if not specified
                 .end()
                 .bean("blobStoreService", "uploadBlob")
                 .setBody(simple(""))

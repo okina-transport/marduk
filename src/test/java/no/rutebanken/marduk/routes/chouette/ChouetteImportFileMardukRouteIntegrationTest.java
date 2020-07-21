@@ -18,24 +18,20 @@ package no.rutebanken.marduk.routes.chouette;
 
 import no.rutebanken.marduk.Constants;
 import no.rutebanken.marduk.MardukRouteBuilderIntegrationTestBase;
-import no.rutebanken.marduk.repository.InMemoryBlobStoreRepository;
+import no.rutebanken.marduk.repository.BlobStoreRepository;
 import no.rutebanken.marduk.routes.file.ZipFileUtils;
 import org.apache.camel.*;
 import org.apache.camel.builder.AdviceWithRouteBuilder;
 import org.apache.camel.component.mock.MockEndpoint;
 import org.apache.camel.model.ModelCamelContext;
 import org.apache.camel.model.language.SimpleExpression;
-import org.apache.camel.test.spring.CamelSpringRunner;
-import org.apache.camel.test.spring.UseAdviceWith;
 import org.apache.commons.io.IOUtils;
 import org.junit.Before;
 import org.junit.Test;
-import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.annotation.DirtiesContext;
-import org.springframework.test.context.ActiveProfiles;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -54,7 +50,7 @@ public class ChouetteImportFileMardukRouteIntegrationTest extends MardukRouteBui
     private ModelCamelContext context;
 
     @Autowired
-    private InMemoryBlobStoreRepository inMemoryBlobStoreRepository;
+    private BlobStoreRepository blobStoreRepository;
 
     @EndpointInject(uri = "mock:chouetteCreateImport")
     protected MockEndpoint chouetteCreateImport;
@@ -108,7 +104,7 @@ public class ChouetteImportFileMardukRouteIntegrationTest extends MardukRouteBui
         String pathname = "src/test/resources/no/rutebanken/marduk/routes/chouette/empty_regtopp.zip";
 
         //populate fake blob repo
-        inMemoryBlobStoreRepository.uploadBlob("rut/" + filename, new FileInputStream(new File(pathname)), false);
+        blobStoreRepository.uploadBlob("rut/" + filename, new FileInputStream(new File(pathname)), false);
 
         // Mock initial call to Chouette to import job
         context.getRouteDefinition("chouette-send-import-job").adviceWith(context, new AdviceWithRouteBuilder() {
@@ -183,7 +179,7 @@ public class ChouetteImportFileMardukRouteIntegrationTest extends MardukRouteBui
         String pathname = "src/test/resources/no/rutebanken/marduk/routes/file/beans/gtfs-folder.zip";
 
         //populate fake blob repo
-        inMemoryBlobStoreRepository.uploadBlob(filename, new FileInputStream(new File(pathname)), false);
+        blobStoreRepository.uploadBlob(filename, new FileInputStream(new File(pathname)), false);
 
         // Mock initial call to Chouette to import job
         context.getRouteDefinition("chouette-send-import-job").adviceWith(context, new AdviceWithRouteBuilder() {
@@ -235,7 +231,7 @@ public class ChouetteImportFileMardukRouteIntegrationTest extends MardukRouteBui
         headers.put(Constants.CORRELATION_ID, "corr_id");
         headers.put(Constants.FILE_HANDLE, filename);
 
-        assertTrue("Testing invalid file, but file is not invalid.", ZipFileUtils.zipFileContainsSingleFolder(IOUtils.toByteArray(inMemoryBlobStoreRepository.getBlob(filename))));
+        assertTrue("Testing invalid file, but file is not invalid.", ZipFileUtils.zipFileContainsSingleFolder(IOUtils.toByteArray(blobStoreRepository.getBlob(filename))));
         importTemplate.sendBodyAndHeaders(null, headers);
 
         chouetteCreateImport.assertIsSatisfied();
@@ -249,7 +245,7 @@ public class ChouetteImportFileMardukRouteIntegrationTest extends MardukRouteBui
         checkScheduledJobsBeforeTriggeringNextAction.assertIsSatisfied();
         updateStatus.assertIsSatisfied();
 
-        assertFalse("Invalid file has not been replaced during import.", ZipFileUtils.zipFileContainsSingleFolder(IOUtils.toByteArray(inMemoryBlobStoreRepository.getBlob(filename))));
+        assertFalse("Invalid file has not been replaced during import.", ZipFileUtils.zipFileContainsSingleFolder(IOUtils.toByteArray(blobStoreRepository.getBlob(filename))));
     }
 
 

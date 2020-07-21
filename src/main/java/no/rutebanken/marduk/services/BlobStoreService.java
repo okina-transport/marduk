@@ -16,7 +16,7 @@
 
 package no.rutebanken.marduk.services;
 
-import com.google.cloud.storage.Storage;
+import com.amazonaws.services.s3.AmazonS3;
 import no.rutebanken.marduk.Constants;
 import no.rutebanken.marduk.domain.BlobStoreFiles;
 import no.rutebanken.marduk.repository.BlobStoreRepository;
@@ -39,14 +39,14 @@ public class BlobStoreService {
 	BlobStoreRepository repository;
 
 	@Autowired
-	Storage storage;
+	AmazonS3 client;
 
-	@Value("${blobstore.gcs.container.name}")
+	@Value("${blobstore.aws.container.name}")
 	String containerName;
 
 	@PostConstruct
 	public void init() {
-		repository.setStorage(storage);
+		repository.setAmazonS3Client(client);
 		repository.setContainerName(containerName);
 	}
 

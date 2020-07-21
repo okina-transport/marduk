@@ -19,9 +19,10 @@ package no.rutebanken.marduk.rest;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import no.rutebanken.marduk.Constants;
 import no.rutebanken.marduk.MardukRouteBuilderIntegrationTestBase;
+import no.rutebanken.marduk.Utils.Utils;
 import no.rutebanken.marduk.domain.BlobStoreFiles;
 import no.rutebanken.marduk.domain.Provider;
-import no.rutebanken.marduk.repository.InMemoryBlobStoreRepository;
+import no.rutebanken.marduk.repository.BlobStoreRepository;
 import org.apache.camel.CamelExecutionException;
 import org.apache.camel.EndpointInject;
 import org.apache.camel.Exchange;
@@ -49,6 +50,7 @@ import java.util.Map;
 import static no.rutebanken.marduk.Constants.BLOBSTORE_PATH_INBOUND;
 import static no.rutebanken.marduk.Constants.FILE_HANDLE;
 import static no.rutebanken.marduk.Constants.PROVIDER_ID;
+import static no.rutebanken.marduk.Utils.Utils.parseProviderFromFileName;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.when;
 
@@ -59,7 +61,7 @@ public class AdminRestMardukRouteBuilderIntegrationTest extends MardukRouteBuild
     ModelCamelContext camelContext;
 
     @Autowired
-    private InMemoryBlobStoreRepository inMemoryBlobStoreRepository;
+    private BlobStoreRepository blobStoreRepository;
 
     @EndpointInject(uri = "mock:chouetteImportQueue")
     protected MockEndpoint importQueue;
@@ -180,8 +182,8 @@ public class AdminRestMardukRouteBuilderIntegrationTest extends MardukRouteBuild
         String pathname = "src/test/resources/no/rutebanken/marduk/routes/chouette/empty_regtopp.zip";
 
         //populate fake blob repo
-        inMemoryBlobStoreRepository.uploadBlob(fileStorePath + filename, new FileInputStream(new File(pathname)), false);
-//		BlobStoreFiles blobStoreFiles = inMemoryBlobStoreRepository.listBlobs(fileStorePath);
+        blobStoreRepository.uploadBlob(fileStorePath + filename, new FileInputStream(new File(pathname)), false);
+		BlobStoreFiles blobStoreFiles = blobStoreRepository.listBlobs(fileStorePath);
 
         camelContext.start();
 
@@ -209,7 +211,7 @@ public class AdminRestMardukRouteBuilderIntegrationTest extends MardukRouteBuild
         String pathname = "src/test/resources/no/rutebanken/marduk/routes/chouette/empty_regtopp.zip";
         FileInputStream testFileStream = new FileInputStream(new File(pathname));
         //populate fake blob repo
-        inMemoryBlobStoreRepository.uploadBlob(fileStorePath + filename, testFileStream, false);
+        blobStoreRepository.uploadBlob(fileStorePath + filename, testFileStream, false);
 
 
         camelContext.start();
@@ -241,7 +243,7 @@ public class AdminRestMardukRouteBuilderIntegrationTest extends MardukRouteBuild
         String testFileName = "rut-testFile";
         //populate fake blob repo
         for (String prefix : exportFileStaticPrefixes) {
-            inMemoryBlobStoreRepository.uploadBlob(prefix + testFileName, new FileInputStream(new File( "src/test/resources/no/rutebanken/marduk/routes/chouette/empty_regtopp.zip")), false);
+            blobStoreRepository.uploadBlob(prefix + testFileName, new FileInputStream(new File( "src/test/resources/no/rutebanken/marduk/routes/chouette/empty_regtopp.zip")), false);
         }
         camelContext.start();
 
@@ -258,13 +260,13 @@ public class AdminRestMardukRouteBuilderIntegrationTest extends MardukRouteBuild
         Assert.assertEquals(exportFileStaticPrefixes.size(), rsp.getFiles().size());
         exportFileStaticPrefixes.forEach(prefix -> rsp.getFiles().stream().anyMatch(file -> (prefix + testFileName).equals(file.getName())));
 
-        Provider provider = inMemoryBlobStoreRepository.parseProviderFromFileName(providerRepository, testFileName);
+        Provider provider = parseProviderFromFileName(providerRepository, testFileName);
         Assert.assertEquals(provider.chouetteInfo.referential, "rut");
         Assert.assertEquals(provider.id, new Long(2L));
 
         // Clean up files for further tests
         for (String prefix : exportFileStaticPrefixes) {
-            inMemoryBlobStoreRepository.delete(prefix + testFileName);
+            blobStoreRepository.delete(prefix + testFileName);
         }
     }
 
@@ -274,7 +276,7 @@ public class AdminRestMardukRouteBuilderIntegrationTest extends MardukRouteBuild
         String testFileName = "rut3-testFile";
         //populate fake blob repo
         for (String prefix : exportFileStaticPrefixes) {
-            inMemoryBlobStoreRepository.uploadBlob(prefix + testFileName, new FileInputStream(new File( "src/test/resources/no/rutebanken/marduk/routes/chouette/empty_regtopp.zip")), false);
+            blobStoreRepository.uploadBlob(prefix + testFileName, new FileInputStream(new File( "src/test/resources/no/rutebanken/marduk/routes/chouette/empty_regtopp.zip")), false);
         }
         camelContext.start();
 
@@ -293,14 +295,14 @@ public class AdminRestMardukRouteBuilderIntegrationTest extends MardukRouteBuild
         exportFileStaticPrefixes.forEach(prefix -> rsp.getFiles().stream().anyMatch(file -> (prefix + testFileName).equals(file.getName())));
 
         rsp.getFiles().forEach(f -> {
-            Provider provider = inMemoryBlobStoreRepository.parseProviderFromFileName(providerRepository, f.getFileNameOnly());
+            Provider provider = Utils.parseProviderFromFileName(providerRepository, f.getFileNameOnly());
             Assert.assertEquals(provider.chouetteInfo.referential, "rut3");
             Assert.assertEquals(provider.id, new Long(3L));
         });
 
         // Clean up files for further tests
         for (String prefix : exportFileStaticPrefixes) {
-            inMemoryBlobStoreRepository.delete(prefix + testFileName);
+            blobStoreRepository.delete(prefix + testFileName);
         }
     }
 

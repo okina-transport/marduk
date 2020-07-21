@@ -17,11 +17,10 @@
 package no.rutebanken.marduk.routes.netex;
 
 import no.rutebanken.marduk.MardukRouteBuilderIntegrationTestBase;
-import no.rutebanken.marduk.repository.InMemoryBlobStoreRepository;
+import no.rutebanken.marduk.repository.BlobStoreRepository;
 import org.apache.camel.EndpointInject;
 import org.apache.camel.Produce;
 import org.apache.camel.ProducerTemplate;
-import org.apache.camel.builder.AdviceWithRouteBuilder;
 import org.apache.camel.component.mock.MockEndpoint;
 import org.apache.camel.model.ModelCamelContext;
 import org.junit.Assert;
@@ -41,7 +40,7 @@ public class NetexExportMergedRouteIntegrationTest extends MardukRouteBuilderInt
 
 
     @Autowired
-    private InMemoryBlobStoreRepository inMemoryBlobStoreRepository;
+    private BlobStoreRepository blobStoreRepository;
 
     @Produce(uri = "direct:exportMergedNetex")
     protected ProducerTemplate startRoute;
@@ -69,16 +68,16 @@ public class NetexExportMergedRouteIntegrationTest extends MardukRouteBuilderInt
 
 
         // Create stop file in in memory blob store
-        inMemoryBlobStoreRepository.uploadBlob(stopPlaceExportBlobPath, new FileInputStream(new File("src/test/resources/no/rutebanken/marduk/routes/netex/stops.zip")), false);
+        blobStoreRepository.uploadBlob(stopPlaceExportBlobPath, new FileInputStream(new File("src/test/resources/no/rutebanken/marduk/routes/netex/stops.zip")), false);
 
         // Create provider netex export in in memory blob store
-        inMemoryBlobStoreRepository.uploadBlob(BLOBSTORE_PATH_OUTBOUND + "netex/rb_rut-aggregated-netex.zip", new FileInputStream(new File("src/test/resources/no/rutebanken/marduk/routes/file/beans/netex.zip")), false);
+        blobStoreRepository.uploadBlob(BLOBSTORE_PATH_OUTBOUND + "netex/rb_rut-aggregated-netex.zip", new FileInputStream(new File("src/test/resources/no/rutebanken/marduk/routes/file/beans/netex.zip")), false);
 
         startRoute.requestBody(null);
 
         mockEndpoint.expectedMessageCount(1);
 
-        Assert.assertNotNull("Expected merged netex file to have been uploaded", inMemoryBlobStoreRepository.getBlob(BLOBSTORE_PATH_OUTBOUND + netexExportMergedFilePath));
+        Assert.assertNotNull("Expected merged netex file to have been uploaded", blobStoreRepository.getBlob(BLOBSTORE_PATH_OUTBOUND + netexExportMergedFilePath));
     }
 
 }

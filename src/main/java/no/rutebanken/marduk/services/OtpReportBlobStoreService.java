@@ -16,7 +16,7 @@
 
 package no.rutebanken.marduk.services;
 
-import com.google.cloud.storage.Storage;
+import com.amazonaws.services.s3.AmazonS3;
 import no.rutebanken.marduk.repository.BlobStoreRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -32,14 +32,14 @@ public class OtpReportBlobStoreService {
     private BlobStoreRepository repository;
 
     @Autowired
-    private Storage otpReportStorage;
+    private AmazonS3 amazonS3;
 
     @Value("${blobstore.gcs.otpreport.container.name}")
     private String containerName;
 
     @PostConstruct
     public void init() {
-        repository.setStorage(otpReportStorage);
+        repository.setAmazonS3Client(amazonS3);
         repository.setContainerName(containerName);
     }
 

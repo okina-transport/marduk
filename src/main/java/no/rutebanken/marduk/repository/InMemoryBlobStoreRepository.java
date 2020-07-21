@@ -16,6 +16,7 @@
 
 package no.rutebanken.marduk.repository;
 
+import com.amazonaws.services.s3.AmazonS3;
 import com.google.cloud.storage.Storage;
 import no.rutebanken.marduk.domain.BlobStoreFiles;
 import no.rutebanken.marduk.domain.Provider;
@@ -114,7 +115,12 @@ public class InMemoryBlobStoreRepository implements BlobStoreRepository {
 
     @Override
     public void setStorage(Storage storage) {
+        // dummy
+    }
 
+    @Override
+    public void setAmazonS3Client(AmazonS3 amazonS3Client) {
+        // dummy
     }
 
     @Override
