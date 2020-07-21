@@ -25,14 +25,20 @@ import no.rutebanken.marduk.routes.status.JobEvent.TimetableAction;
 import no.rutebanken.marduk.routes.status.JobEvent.State;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
+import org.codehaus.plexus.util.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.io.File;
 import java.io.InputStream;
 import java.io.PrintWriter;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
+import static java.util.stream.Collectors.*;
 import static no.rutebanken.marduk.Constants.*;
 import static no.rutebanken.marduk.Utils.Utils.getLastPathElementOfUrl;
 
@@ -72,7 +78,12 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
 //                .process(e -> e.getIn().setHeader(CHOUETTE_REFERENTIAL, "mosaic_" + getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)).chouetteInfo.referential))
                 .process(e -> {
                     String user = e.getIn().getHeader(USER, String.class);
-                    e.getIn().setHeader(JSON_PART, Parameters.getGtfsExportParameters(getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)), user));
+                    List<Long> linesIds = null;
+                    if (e.getIn().getHeader(LINES_IDS) != null) {
+                        String linesIdsS = e.getIn().getHeader(LINES_IDS, String.class);
+                        linesIds = Arrays.stream(StringUtils.split(linesIdsS, ",")).map(s -> Long.valueOf(s)).collect(toList());
+                    }
+                    e.getIn().setHeader(JSON_PART, Parameters.getGtfsExportParameters(getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)), user, linesIds));
                 }) //Using header to addToExchange json data
                 .log(LoggingLevel.INFO, correlation() + "Creating multipart request")
                 .to("log:" + getClass().getName() + "?level=DEBUG&showAll=true&multiline=true")

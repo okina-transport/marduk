@@ -22,7 +22,8 @@ public class Constants {
     public static final String FILE_PARENT_COLLECTION = "RutebankenFileParentCollection";
     public static final String PROVIDER_ID = "RutebankenProviderId";
     public static final String PROVIDER_IDS = "RutebankenProviderIds";
-    public static final String ORIGINAL_PROVIDER_ID = "RutebankenOriginalProviderId"; // The original provider id that started this chain of events 
+    public static final String ORIGINAL_PROVIDER_ID = "RutebankenOriginalProviderId"; // The original provider id that started this chain of events
+    public static final String LINES_IDS = "LINES_IDS";
     // (providerId can change during the process when transferring data from one referential to another
     public static final String CORRELATION_ID = "RutebankenCorrelationId";
     public static final String CHOUETTE_REFERENTIAL = "RutebankenChouetteReferential";

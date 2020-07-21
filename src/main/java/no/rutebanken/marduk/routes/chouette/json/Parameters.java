@@ -30,6 +30,7 @@ import no.rutebanken.marduk.routes.file.FileType;
 
 import java.io.IOException;
 import java.io.StringWriter;
+import java.util.List;
 
 public class Parameters {
 
@@ -74,11 +75,12 @@ public class Parameters {
         return netexImportParameters.toJsonString();
     }
 
-    public static String getGtfsExportParameters(Provider provider, String user) {
+    public static String getGtfsExportParameters(Provider provider, String user, List<Long> linesIds) {
         try {
             ChouetteInfo chouetteInfo = provider.chouetteInfo;
             GtfsExportParameters.GtfsExport gtfsExport = new GtfsExportParameters.GtfsExport("offre",
                                                                                                     chouetteInfo.xmlns, chouetteInfo.referential, chouetteInfo.organisation, user, true);
+            gtfsExport.ids = linesIds;
             GtfsExportParameters.Parameters parameters = new GtfsExportParameters.Parameters(gtfsExport);
             GtfsExportParameters importParameters = new GtfsExportParameters(parameters);
             ObjectMapper mapper = new ObjectMapper();
