@@ -150,7 +150,7 @@ public class ChouetteValidationRouteBuilder extends AbstractChouetteRouteBuilder
                 .to("log:" + getClass().getName() + "?level=DEBUG&showAll=true&multiline=true")
                 .setBody(constant(""))
                 .choice()
-                .when(simple("${header.action_report_result} == 'OK' and ${header.validation_report_result} == 'OK'"))
+                .when(simple("${header.action_report_result} == 'OK' and ${header.validation_report_result} == 'OK' and ${header.RutebankenChouetteJobStatusValidationLevel} == 'VALIDATION_LEVEL_1'"))
                 .to("direct:checkScheduledJobsBeforeTriggeringExport")
                 .process(e -> JobEvent.providerJobBuilder(e).timetableAction(e.getIn().getHeader(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL, TimetableAction.class)).state(State.OK).build())
                 .when(simple("${header.action_report_result} == 'OK' and ${header.validation_report_result} == 'NOK'"))
