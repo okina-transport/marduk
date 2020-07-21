@@ -15,8 +15,7 @@ import org.springframework.stereotype.Component;
 import java.util.List;
 import java.util.Map;
 
-import static no.rutebanken.marduk.Constants.NO_GTFS_EXPORT;
-import static no.rutebanken.marduk.Constants.PROVIDER_ID;
+import static no.rutebanken.marduk.Constants.*;
 
 /**
  * Handles multiple exports
@@ -69,11 +68,10 @@ public class MultipleExportProcessor implements Processor {
     private void toStopPlacesExport(ExportTemplate export, Exchange exchange) {
         log.info("Routing to GTFS export => " + export.getId() + "/" + export.getName());
         prepareHeadersForExport(exchange, export);
-        Long providerId = Long.valueOf(exchange.getIn().getHeaders().get("providerId").toString());
-        exchange.getIn().getHeaders().put("providerIdLong", providerId);
-        producer.send("direct:chouetteStopPlacesExport", exchange);
-//        String url = stopPlacesExportUrl + "?providerId=" + exchange.getIn().getHeaders().get("providerId");
-//        producer.sendBody(url, exchange);
+        // tiamat export is based on original referential (not the mosaic one)
+        Long tiamatProviderId = Long.valueOf(exchange.getIn().getHeaders().get(ORIGINAL_PROVIDER_ID).toString());
+        exchange.getIn().getHeaders().put("tiamatProviderId", tiamatProviderId);
+        producer.send("direct:tiamatStopPlacesExport", exchange);
 
     }
 

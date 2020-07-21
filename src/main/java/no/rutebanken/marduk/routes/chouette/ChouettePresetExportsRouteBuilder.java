@@ -15,8 +15,7 @@ import org.springframework.stereotype.Component;
 import java.util.List;
 import java.util.UUID;
 
-import static no.rutebanken.marduk.Constants.CHOUETTE_REFERENTIAL;
-import static no.rutebanken.marduk.Constants.PROVIDER_ID;
+import static no.rutebanken.marduk.Constants.*;
 
 @Component
 public class ChouettePresetExportsRouteBuilder extends AbstractChouetteRouteBuilder {
@@ -57,6 +56,8 @@ public class ChouettePresetExportsRouteBuilder extends AbstractChouetteRouteBuil
                     e.getOut().getHeaders().put(CHOUETTE_REFERENTIAL, mosaicProvider.chouetteInfo.getReferential());
                     e.getOut().getHeaders().put(PROVIDER_ID, mosaicProvider.getId());
                     e.getOut().getHeaders().put("providerId", mosaicProvider.getId());
+
+                    e.getOut().getHeaders().put(ORIGINAL_PROVIDER_ID, provider.getId());
                 })
                 .process(multipleExportProcessor)
 //                .to("activemq:queue:ChouettePollStatusQueue")

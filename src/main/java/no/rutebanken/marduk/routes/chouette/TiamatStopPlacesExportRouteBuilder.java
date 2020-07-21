@@ -20,7 +20,7 @@ import static no.rutebanken.marduk.Utils.Utils.getLastPathElementOfUrl;
  * Exports stop places for specific provider
  */
 @Component
-public class ChouetteStopPlacesExportRouteBuilder extends AbstractChouetteRouteBuilder {
+public class TiamatStopPlacesExportRouteBuilder extends AbstractChouetteRouteBuilder {
 
     @Value("${stop-places-export.api.url}")
     private String stopPlacesExportUrl;
@@ -35,20 +35,18 @@ public class ChouetteStopPlacesExportRouteBuilder extends AbstractChouetteRouteB
         xmlDataFormat.setContext(con);
 
 
-        from("direct:chouetteStopPlacesExport").streamCaching()
+        from("direct:tiamatStopPlacesExport").streamCaching()
                 .transacted()
-                .log(LoggingLevel.INFO, getClass().getName(), "Starting Chouette export stop places for provider with id ${header." + PROVIDER_ID + "}")
+                .log(LoggingLevel.INFO, getClass().getName(), "Starting Tiamat export stop places for provider with id ${header.tiamatProviderId}")
                 .process(e -> {
-                    Object providerIdS = e.getIn().getHeaders().get("providerId");
-                    Object providerIdL = e.getIn().getHeaders().get("providerIdLong");
-                    log.info("chouetteStopPlacesExport : processing export ....");
+                    Object tiamatProviderId = e.getIn().getHeaders().get("tiamatProviderId");
+                    log.info("Tiamat Stop Places Export : launching export for provider " + tiamatProviderId.toString());
                 })
-                .toD(stopPlacesExportUrl + "?providerId=${header.providerIdLong}")
+                .toD(stopPlacesExportUrl + "?providerId=${header.tiamatProviderId}")
                 .unmarshal(xmlDataFormat)
                 .process(e -> {
-                    log.info("chouetteStopPlacesExport : tiamat export parsed");
                     ExportJob exportJob = e.getIn().getBody(ExportJob.class);
-                    log.info("chouetteStopPlacesExport : tiamat export parsed => " + exportJob.getId() + " : " + exportJob.getJobUrl());
+                    log.info("Tiamat Stop Places Export  : export parsed => " + exportJob.getId() + " : " + exportJob.getJobUrl());
                 })
                 .routeId("tiamat-stop-places-export-job");
     }
