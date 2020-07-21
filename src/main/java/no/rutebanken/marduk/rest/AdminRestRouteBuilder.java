@@ -860,7 +860,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the nabu service").dataType("integer").endParam()
                 .consumes(PLAIN)
                 .produces(PLAIN)
-                .responseMessage().code(200).message("Validate command accepted").endResponseMessage()
+                .responseMessage().code(200).message("Command accepted").endResponseMessage()
                 .route()
                 .setHeader(PROVIDER_ID, header("providerId"))
                 .to("direct:authorizeRequest")
@@ -872,8 +872,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .otherwise()
                 .setHeader(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL, constant(JobEvent.TimetableAction.VALIDATION_LEVEL_1.name()))
                 .end()
-                .process(e -> e.getIn().setHeader(USER, getUserNameFromHeaders(e)))
-                .inOut().to("activemq:queue:ChouetteValidationQueue")
+                .inOnly("activemq:queue:ChouetteValidationQueue")
                 .routeId("admin-chouette-validate")
                 .endRest()
 
