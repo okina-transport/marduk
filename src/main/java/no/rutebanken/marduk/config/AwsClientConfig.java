@@ -27,10 +27,10 @@ import org.springframework.context.annotation.Profile;
 @Profile("aws-blobstore")
 public class AwsClientConfig {
 
-    @Value("${blobstore.aws.key}")
+    @Value("${blobstore.aws.access.key}")
     private String key;
 
-    @Value("${blobstore.aws.secret}")
+    @Value("${blobstore.aws.access.secret}")
     private String secret;
 
     @Bean
