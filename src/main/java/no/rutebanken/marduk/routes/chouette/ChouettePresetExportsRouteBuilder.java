@@ -6,10 +6,7 @@ import no.rutebanken.marduk.domain.Provider;
 import no.rutebanken.marduk.repository.ExportTemplateDAO;
 import no.rutebanken.marduk.repository.ProviderRepository;
 import org.apache.camel.LoggingLevel;
-import org.apache.camel.Producer;
-import org.apache.camel.ProducerTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -41,14 +38,12 @@ public class ChouettePresetExportsRouteBuilder extends AbstractChouetteRouteBuil
                     log.info("chouetteExportAll : starting predefined exports");
                     // Add correlation id only if missing
                     e.getIn().setHeader(Constants.CORRELATION_ID, e.getIn().getHeader(Constants.CORRELATION_ID, UUID.randomUUID().toString()));
-//                    e.getIn().removeHeader(Constants.CHOUETTE_JOB_ID);
                     Provider provider = providerRepository.getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class));
                     List<ExportTemplate> exports = exportTemplateDAO.getAll(provider.getChouetteInfo().getReferential());
 
                     // get the matching migration mosaic provider to target export
                     Long mosaicProviderId = provider.getChouetteInfo().getMigrateDataToProvider();
                     Provider mosaicProvider = providerRepository.getProvider(mosaicProviderId);
-
 
                     log.info("Found export templates " + exports.size());
                     e.getOut().setBody(exports);
@@ -60,7 +55,6 @@ public class ChouettePresetExportsRouteBuilder extends AbstractChouetteRouteBuil
                     e.getOut().getHeaders().put(ORIGINAL_PROVIDER_ID, provider.getId());
                 })
                 .process(multipleExportProcessor)
-//                .to("activemq:queue:ChouettePollStatusQueue")
                 .routeId("chouette-send-export-all-job");
     }
 

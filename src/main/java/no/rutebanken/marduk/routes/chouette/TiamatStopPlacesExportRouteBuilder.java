@@ -1,19 +1,12 @@
 package no.rutebanken.marduk.routes.chouette;
 
-import no.rutebanken.marduk.Constants;
 import no.rutebanken.marduk.routes.chouette.json.ExportJob;
-import no.rutebanken.marduk.routes.status.JobEvent;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.converter.jaxb.JaxbDataFormat;
-import org.apache.camel.model.dataformat.JsonLibrary;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import javax.xml.bind.JAXBContext;
-
-import static no.rutebanken.marduk.Constants.CHOUETTE_JOB_STATUS_URL;
-import static no.rutebanken.marduk.Constants.PROVIDER_ID;
-import static no.rutebanken.marduk.Utils.Utils.getLastPathElementOfUrl;
 
 
 /**
@@ -33,7 +26,6 @@ public class TiamatStopPlacesExportRouteBuilder extends AbstractChouetteRouteBui
         JaxbDataFormat xmlDataFormat = new JaxbDataFormat();
         JAXBContext con = JAXBContext.newInstance(ExportJob.class);
         xmlDataFormat.setContext(con);
-
 
         from("direct:tiamatStopPlacesExport").streamCaching()
                 .transacted()
