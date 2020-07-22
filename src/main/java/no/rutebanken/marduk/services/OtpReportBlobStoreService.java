@@ -34,7 +34,7 @@ public class OtpReportBlobStoreService {
     @Autowired
     private AmazonS3 amazonS3;
 
-    @Value("${blobstore.gcs.otpreport.container.name}")
+    @Value("${blobstore.aws.otpreport.container.name}")
     private String containerName;
 
     @PostConstruct

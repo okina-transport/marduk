@@ -39,7 +39,7 @@ public class ExchangeBlobStoreService {
     @Autowired
     private AmazonS3 amazonS3;
 
-    @Value("${blobstore.gcs.exchange.container.name}")
+    @Value("${blobstore.aws.exchange.container.name}")
     private String containerName;
 
     @PostConstruct

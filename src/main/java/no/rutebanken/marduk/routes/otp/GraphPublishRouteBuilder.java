@@ -55,7 +55,7 @@ public class GraphPublishRouteBuilder extends BaseRouteBuilder {
     @Value("${otp.graph.blobstore.public.report.folder:report}")
     private String blobStorePublicReportFolder;
 
-    @Value("${blobstore.gcs.otpreport.container.name}")
+    @Value("${blobstore.aws.otpreport.container.name}")
     String otpReportContainerName;
 
     @Autowired
