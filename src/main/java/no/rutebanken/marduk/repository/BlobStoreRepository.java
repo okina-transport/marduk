@@ -16,6 +16,7 @@
 
 package no.rutebanken.marduk.repository;
 
+import com.amazonaws.services.s3.AmazonS3;
 import com.google.cloud.storage.Storage;
 import no.rutebanken.marduk.domain.BlobStoreFiles;
 
@@ -41,6 +42,8 @@ public interface BlobStoreRepository {
     void uploadBlob(String objectName, InputStream inputStream, boolean makePublic, String contentType);
 
     void setStorage(Storage storage);
+
+    void setAmazonS3Client(AmazonS3 amazonS3Client);
 
     void setContainerName(String containerName);
 

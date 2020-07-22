@@ -22,7 +22,7 @@ import com.jayway.jsonpath.spi.json.JacksonJsonProvider;
 import com.jayway.jsonpath.spi.json.JsonProvider;
 import com.jayway.jsonpath.spi.mapper.JacksonMappingProvider;
 import com.jayway.jsonpath.spi.mapper.MappingProvider;
-import no.rutebanken.marduk.config.GcsStorageConfig;
+import no.rutebanken.marduk.config.AwsClientConfig;
 import no.rutebanken.marduk.config.IdempotentRepositoryConfig;
 import no.rutebanken.marduk.config.TransactionManagerConfig;
 import no.rutebanken.marduk.repository.CacheProviderRepository;
@@ -44,7 +44,7 @@ import java.util.Set;
  */
 @SpringBootApplication
 @EnableScheduling
-@Import({GcsStorageConfig.class, TransactionManagerConfig.class, IdempotentRepositoryConfig.class})
+@Import({AwsClientConfig.class, TransactionManagerConfig.class, IdempotentRepositoryConfig.class})
 public class App extends RouteBuilder {
 
 	@Value("${marduk.shutdown.timeout:300}")

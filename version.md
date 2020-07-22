@@ -10,3 +10,6 @@
 
 # 1.0.3
 - 6908 : Fix Exports NeTex Arrêts
+
+#1.0.4
+- Migration AWS

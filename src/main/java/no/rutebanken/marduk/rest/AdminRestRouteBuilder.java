@@ -579,24 +579,13 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .responseMessage().code(500).message("Invalid providerId").endResponseMessage()
                 .route()
                 .streamCaching()
-                .process(e -> log.info("logggggggg 1"))
                 .setHeader(PROVIDER_ID, header("providerId"))
-                .process(e -> log.info("logggggggg 2 : header providerId = " + header(PROVIDER_ID)))
-                .setHeader(IMPORT, constant(true))
-                .process(e -> log.info("logggggggg 3"))
                 .to("direct:authorizeRequest")
-                .process(e -> log.info("logggggggg 4 >> " + e.getIn().getHeader(PROVIDER_ID, Long.class)))
-                .process(e -> {
-                    log.info("=================");
-                    log.info("Providers list : ");
-                    getProviderRepository().getProviders().forEach(provider -> log.info(provider.toString()));
-                })
+                .process(e -> log.info("Authorized request passed"))
                 .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
-                .process(e -> log.info("logggggggg 5"))
+                .process(e -> log.info("validation passed"))
                 .process(e -> e.getIn().setHeader(CHOUETTE_REFERENTIAL, getProviderRepository().getReferential(e.getIn().getHeader(PROVIDER_ID, Long.class))))
-                .process(e -> log.info("logggggggg 6"))
                 .log(LoggingLevel.INFO, correlation() + "upload files and start import pipeline")
-                .process(e -> log.info("logggggggg 7"))
                 .removeHeaders("CamelHttp*")
                 .to("direct:uploadFilesAndStartImport")
                 .routeId("admin-chouette-upload-file")

@@ -17,7 +17,7 @@
 package no.rutebanken.marduk.routes.gtfs;
 
 import no.rutebanken.marduk.MardukRouteBuilderIntegrationTestBase;
-import no.rutebanken.marduk.repository.InMemoryBlobStoreRepository;
+import no.rutebanken.marduk.repository.BlobStoreRepository;
 import no.rutebanken.marduk.routes.file.ZipFileUtils;
 import org.apache.camel.Produce;
 import org.apache.camel.ProducerTemplate;
@@ -45,7 +45,7 @@ public class GtfsExtendedExportRouteIntegrationTest  extends MardukRouteBuilderI
 
 
     @Autowired
-    private InMemoryBlobStoreRepository inMemoryBlobStoreRepository;
+    private BlobStoreRepository blobStoreRepository;
 
     @Produce(uri = "direct:exportGtfsExtendedMerged")
     protected ProducerTemplate startRoute;
@@ -68,11 +68,11 @@ public class GtfsExtendedExportRouteIntegrationTest  extends MardukRouteBuilderI
         String pathname = "src/test/resources/no/rutebanken/marduk/routes/gtfs/extended_gtfs.zip";
 
         //populate fake blob repo
-        inMemoryBlobStoreRepository.uploadBlob(BLOBSTORE_PATH_OUTBOUND + "gtfs/rb_rut-aggregated-gtfs.zip", new FileInputStream(new File(pathname)), false);
-        inMemoryBlobStoreRepository.uploadBlob(BLOBSTORE_PATH_OUTBOUND + "gtfs/rb_avi-aggregated-gtfs.zip", new FileInputStream(new File(pathname)), false);
+        blobStoreRepository.uploadBlob(BLOBSTORE_PATH_OUTBOUND + "gtfs/rb_rut-aggregated-gtfs.zip", new FileInputStream(new File(pathname)), false);
+        blobStoreRepository.uploadBlob(BLOBSTORE_PATH_OUTBOUND + "gtfs/rb_avi-aggregated-gtfs.zip", new FileInputStream(new File(pathname)), false);
         startRoute.requestBody(null);
 
-        InputStream mergedIS = inMemoryBlobStoreRepository.getBlob(BLOBSTORE_PATH_OUTBOUND + "gtfs/" + exportFileName);
+        InputStream mergedIS = blobStoreRepository.getBlob(BLOBSTORE_PATH_OUTBOUND + "gtfs/" + exportFileName);
         Assert.assertNotNull("Expected transformed gtfs file to have been uploaded", mergedIS);
 
         File mergedFile = File.createTempFile("mergedID", "tmp");
