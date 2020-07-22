@@ -81,6 +81,9 @@ public class Parameters {
             GtfsExportParameters.GtfsExport gtfsExport = new GtfsExportParameters.GtfsExport("offre",
                                                                                                     chouetteInfo.xmlns, chouetteInfo.referential, chouetteInfo.organisation, user, true);
             gtfsExport.ids = linesIds;
+            if (linesIds != null && !linesIds.isEmpty()) {
+                gtfsExport.referencesType = "line";
+            }
             GtfsExportParameters.Parameters parameters = new GtfsExportParameters.Parameters(gtfsExport);
             GtfsExportParameters importParameters = new GtfsExportParameters(parameters);
             ObjectMapper mapper = new ObjectMapper();
