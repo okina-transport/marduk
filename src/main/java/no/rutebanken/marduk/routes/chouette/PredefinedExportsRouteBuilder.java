@@ -15,7 +15,7 @@ import java.util.UUID;
 import static no.rutebanken.marduk.Constants.*;
 
 @Component
-public class ChouettePresetExportsRouteBuilder extends AbstractChouetteRouteBuilder {
+public class PredefinedExportsRouteBuilder extends AbstractChouetteRouteBuilder {
 
     @Autowired
     private MultipleExportProcessor multipleExportProcessor;
@@ -31,11 +31,11 @@ public class ChouettePresetExportsRouteBuilder extends AbstractChouetteRouteBuil
     public void configure() throws Exception {
         super.configure();
 
-        from("direct:chouetteExportAll").streamCaching()
+        from("direct:predefinedExports").streamCaching()
                 .transacted()
                 .log(LoggingLevel.INFO, getClass().getName(), "Starting Chouette all export for provider with id ${header." + PROVIDER_ID + "}")
                 .process(e -> {
-                    log.info("chouetteExportAll : starting predefined exports");
+                    log.info("predefinedExports : starting predefined exports");
                     // Add correlation id only if missing
                     e.getIn().setHeader(Constants.CORRELATION_ID, e.getIn().getHeader(Constants.CORRELATION_ID, UUID.randomUUID().toString()));
                     Provider provider = providerRepository.getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class));

@@ -16,10 +16,16 @@
 
 package no.rutebanken.marduk.rest;
 
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import no.rutebanken.marduk.Constants;
 import no.rutebanken.marduk.domain.BlobStoreFiles;
 import no.rutebanken.marduk.domain.BlobStoreFiles.File;
+import no.rutebanken.marduk.domain.ExportTemplate;
 import no.rutebanken.marduk.routes.BaseRouteBuilder;
+import no.rutebanken.marduk.routes.chouette.json.ExportJob;
 import no.rutebanken.marduk.routes.chouette.json.JobResponse;
 import no.rutebanken.marduk.routes.chouette.json.Status;
 import no.rutebanken.marduk.routes.status.JobEvent;
@@ -28,6 +34,7 @@ import no.rutebanken.marduk.security.AuthorizationService;
 import org.apache.camel.Body;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
+import org.apache.camel.model.dataformat.JsonLibrary;
 import org.apache.camel.model.rest.RestBindingMode;
 import org.apache.camel.model.rest.RestParamType;
 import org.apache.camel.model.rest.RestPropertyDefinition;
@@ -822,7 +829,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .log(LoggingLevel.INFO, correlation() + "Chouette start all export process")
                 .removeHeaders("CamelHttp*")
                 .process(e -> e.getIn().setHeader(USER, getUserNameFromHeaders(e)))
-                .inOnly("direct:chouetteExportAll")
+                .inOnly("direct:predefinedExports")
                 .routeId("admin-chouette-export-all")
                 .endRest()
 
@@ -847,11 +854,28 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .post("/validate")
                 .description("Triggers the validate->export process in Chouette")
                 .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the nabu service").dataType("integer").endParam()
-                .consumes(PLAIN)
+                .consumes(JSON)
                 .produces(PLAIN)
                 .responseMessage().code(200).message("Command accepted").endResponseMessage()
                 .route()
                 .setHeader(PROVIDER_ID, header("providerId"))
+                .process(e -> {
+                    log.info("Validate-> export process: before exports parsing");
+                    ObjectMapper mapper = new ObjectMapper();
+                    mapper.configure(JsonParser.Feature.ALLOW_UNQUOTED_FIELD_NAMES, true);
+                    String json = mapper.writeValueAsString(e.getIn().getBody());
+                    List<ExportTemplate> exports = mapper.readValue(json, new TypeReference<List<ExportTemplate>>() { });
+//                    e.getIn().setBody(exports);
+                    e.getIn().setHeader("JSON_EXPORTS", json);
+                    e.getIn().setBody(json);
+                    log.info("Validate-> export process: received  " + exports.size() + " exports");
+                })
+//                .process(e -> {
+//                    List<ExportTemplate> exports = e.getIn().getBody(List.class);
+//                    e.getOut().setBody(null);
+//                    String tmp = "dumb";
+//                    log.info("Validate-> export process: received  " + exports.size() + " exports");
+//                })
                 .to("direct:authorizeRequest")
                 .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
                 .log(LoggingLevel.INFO, correlation() + "Chouette start validation")
