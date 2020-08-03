@@ -12,7 +12,9 @@
 
     <groupId>no.rutebanken.marduk</groupId>
     <artifactId>marduk</artifactId>
-    <version>1.0.4-SNAPSHOT</version>
+    <version>1.0.4</version>
+<!--    <version>local-paul</version>-->
+
 
     <name>marduk</name>
     <description>Backend integration</description>
