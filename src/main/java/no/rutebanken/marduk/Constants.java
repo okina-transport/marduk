@@ -23,7 +23,10 @@ public class Constants {
     public static final String PROVIDER_ID = "RutebankenProviderId";
     public static final String PROVIDER_IDS = "RutebankenProviderIds";
     public static final String ORIGINAL_PROVIDER_ID = "RutebankenOriginalProviderId"; // The original provider id that started this chain of events
-    public static final String LINES_IDS = "LINES_IDS";
+    public static final String EXPORT_LINES_IDS = "EXPORT_LINES_IDS";
+    public static final String EXPORT_START_DATE = "EXPORT_START_DATE";
+    public static final String EXPORT_END_DATE = "EXPORT_END_DATE";
+
     // (providerId can change during the process when transferring data from one referential to another
     public static final String CORRELATION_ID = "RutebankenCorrelationId";
     public static final String CHOUETTE_REFERENTIAL = "RutebankenChouetteReferential";

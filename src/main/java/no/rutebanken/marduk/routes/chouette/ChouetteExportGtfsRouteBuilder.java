@@ -32,11 +32,11 @@ import org.springframework.stereotype.Component;
 import java.io.File;
 import java.io.InputStream;
 import java.io.PrintWriter;
-import java.util.ArrayList;
+import java.time.LocalDateTime;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.List;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.*;
 import static no.rutebanken.marduk.Constants.*;
@@ -76,12 +76,19 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
                 .to("direct:updateStatus")
                 .process(e -> {
                     String user = e.getIn().getHeader(USER, String.class);
-                    List<Long> linesIds = null;
-                    if (e.getIn().getHeader(LINES_IDS) != null) {
-                        String linesIdsS = e.getIn().getHeader(LINES_IDS, String.class);
-                        linesIds = Arrays.stream(StringUtils.split(linesIdsS, ",")).map(s -> Long.valueOf(s)).collect(toList());
+
+                    String gtfsParams = null;
+                    if (e.getIn().getHeader(EXPORT_LINES_IDS) != null) {
+                        String linesIdsS = e.getIn().getHeader(EXPORT_LINES_IDS, String.class);
+                        List<Long> linesIds = Arrays.stream(StringUtils.split(linesIdsS, ",")).map(s -> Long.valueOf(s)).collect(toList());
+                        Date startDate = (Date) e.getIn().getHeaders().put(EXPORT_START_DATE, Date.class);
+                        Date endDate = (Date) e.getIn().getHeaders().put(EXPORT_END_DATE, Date.class);
+                        gtfsParams = Parameters.getGtfsExportParameters(getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)), user, linesIds, startDate, endDate);
+                    } else {
+                        gtfsParams = Parameters.getGtfsExportParameters(getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)), user);
                     }
-                    e.getIn().setHeader(JSON_PART, Parameters.getGtfsExportParameters(getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)), user, linesIds));
+
+                    e.getIn().setHeader(JSON_PART, gtfsParams);
                 }) //Using header to addToExchange json data
                 .log(LoggingLevel.INFO, correlation() + "Creating multipart request")
                 .to("log:" + getClass().getName() + "?level=DEBUG&showAll=true&multiline=true")

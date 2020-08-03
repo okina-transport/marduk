@@ -30,6 +30,8 @@ import no.rutebanken.marduk.routes.file.FileType;
 
 import java.io.IOException;
 import java.io.StringWriter;
+import java.time.LocalDate;
+import java.util.Date;
 import java.util.List;
 
 public class Parameters {
@@ -75,15 +77,16 @@ public class Parameters {
         return netexImportParameters.toJsonString();
     }
 
-    public static String getGtfsExportParameters(Provider provider, String user, List<Long> linesIds) {
+    public static String getGtfsExportParameters(Provider provider, String user, List<Long> linesIds, Date startDate, Date endDate) {
         try {
             ChouetteInfo chouetteInfo = provider.chouetteInfo;
             GtfsExportParameters.GtfsExport gtfsExport = new GtfsExportParameters.GtfsExport("offre",
-                                                                                                    chouetteInfo.xmlns, chouetteInfo.referential, chouetteInfo.organisation, user, true);
+                                                                                                    chouetteInfo.xmlns, chouetteInfo.referential, chouetteInfo.organisation, user, true, startDate, endDate);
             gtfsExport.ids = linesIds;
             if (linesIds != null && !linesIds.isEmpty()) {
                 gtfsExport.referencesType = "line";
             }
+
             GtfsExportParameters.Parameters parameters = new GtfsExportParameters.Parameters(gtfsExport);
             GtfsExportParameters importParameters = new GtfsExportParameters(parameters);
             ObjectMapper mapper = new ObjectMapper();
@@ -94,6 +97,11 @@ public class Parameters {
             throw new RuntimeException(e);
         }
     }
+
+    public static String getGtfsExportParameters(Provider provider, String user) {
+        return getGtfsExportParameters(provider, user, null, null, null);
+    }
+
 
     public static String getNetexExportProvider(Provider provider, boolean exportStops, String user) {
         try {

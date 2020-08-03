@@ -21,6 +21,8 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import no.rutebanken.marduk.Constants;
 
+import java.util.Date;
+
 public class GtfsExportParameters {
 
     public Parameters parameters;
@@ -63,15 +65,19 @@ public class GtfsExportParameters {
         public boolean useTpegHvt = false;
 
 
-        public GtfsExport(String name, String objectIdPrefix, String referentialName, String organisationName, String userName, boolean keepOriginalId) {
+        public GtfsExport(String name, String objectIdPrefix, String referentialName, String organisationName, String userName, boolean keepOriginalId, Date startDate, Date endDate) {
             this.name = name;
             this.objectIdPrefix = objectIdPrefix;
             this.referentialName = referentialName;
             this.organisationName = organisationName;
             this.userName = userName;
-            this.startDate = DateUtils.startDateFor(2L);
-            this.endDate = DateUtils.endDateFor(365);
+            this.startDate = (startDate != null) ? startDate : DateUtils.startDateFor(2L);
+            this.endDate = (endDate != null) ? endDate : DateUtils.endDateFor(365);
             this.keepOriginalId = keepOriginalId;
+        }
+
+        public GtfsExport(String name, String objectIdPrefix, String referentialName, String organisationName, String userName, boolean keepOriginalId) {
+            this(name, objectIdPrefix, referentialName, organisationName, userName, keepOriginalId, null, null);
         }
 
     }
