@@ -83,9 +83,9 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
                     if (e.getIn().getHeader(EXPORT_LINES_IDS) != null) {
                         String linesIdsS = e.getIn().getHeader(EXPORT_LINES_IDS, String.class);
                         List<Long> linesIds = Arrays.stream(StringUtils.split(linesIdsS, ",")).map(s -> Long.valueOf(s)).collect(toList());
-                        Long start = (Long) e.getIn().getHeaders().put(EXPORT_START_DATE, Long.class);
+                        Long start = (Long) e.getIn().getHeader(EXPORT_START_DATE, Long.class);
                         Date startDate = (start != null) ? Date.from(Instant.ofEpochSecond(start)) : null;
-                        Long end = (Long) e.getIn().getHeaders().put(EXPORT_END_DATE, Long.class);
+                        Long end = (Long) e.getIn().getHeader(EXPORT_END_DATE, Long.class);
                         Date endDate = (end != null) ? Date.from(Instant.ofEpochSecond(end)) : null;
 
                         gtfsParams = Parameters.getGtfsExportParameters(getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)), user, linesIds, startDate, endDate);
