@@ -70,8 +70,8 @@ public class MultipleExportProcessor implements Processor {
         String linesIds = export.getLines() != null ? StringUtils.join(export.getLines().stream().map(Line::getId).toArray(), ",") : "";
         exchange.getIn().getHeaders().put(EXPORT_LINES_IDS, linesIds);
 
-        exchange.getIn().getHeaders().put(EXPORT_START_DATE, Timestamp.valueOf(export.getStartDate()).getTime());
-        exchange.getIn().getHeaders().put(EXPORT_END_DATE, Timestamp.valueOf(export.getEndDate()).getTime());
+        exchange.getIn().getHeaders().put(EXPORT_START_DATE, Timestamp.valueOf(export.getStartDate()).getTime() / 1000);
+        exchange.getIn().getHeaders().put(EXPORT_END_DATE, Timestamp.valueOf(export.getEndDate()).getTime() / 1000);
         producer.send("activemq:queue:ChouetteExportGtfsQueue", exchange);
     }
 
