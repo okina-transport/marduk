@@ -14,6 +14,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import java.sql.Timestamp;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
 
@@ -66,8 +69,9 @@ public class MultipleExportProcessor implements Processor {
         prepareHeadersForExport(exchange, export);
         String linesIds = export.getLines() != null ? StringUtils.join(export.getLines().stream().map(Line::getId).toArray(), ",") : "";
         exchange.getIn().getHeaders().put(EXPORT_LINES_IDS, linesIds);
-        exchange.getIn().getHeaders().put(EXPORT_START_DATE, export.getStartDate());
-        exchange.getIn().getHeaders().put(EXPORT_END_DATE, export.getEndDate());
+
+        exchange.getIn().getHeaders().put(EXPORT_START_DATE, Timestamp.valueOf(export.getStartDate()).getTime());
+        exchange.getIn().getHeaders().put(EXPORT_END_DATE, Timestamp.valueOf(export.getEndDate()).getTime());
         producer.send("activemq:queue:ChouetteExportGtfsQueue", exchange);
     }
 

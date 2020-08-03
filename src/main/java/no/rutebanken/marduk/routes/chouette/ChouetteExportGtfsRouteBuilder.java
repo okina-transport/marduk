@@ -32,6 +32,8 @@ import org.springframework.stereotype.Component;
 import java.io.File;
 import java.io.InputStream;
 import java.io.PrintWriter;
+import java.sql.Timestamp;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.Date;
@@ -81,8 +83,11 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
                     if (e.getIn().getHeader(EXPORT_LINES_IDS) != null) {
                         String linesIdsS = e.getIn().getHeader(EXPORT_LINES_IDS, String.class);
                         List<Long> linesIds = Arrays.stream(StringUtils.split(linesIdsS, ",")).map(s -> Long.valueOf(s)).collect(toList());
-                        Date startDate = (Date) e.getIn().getHeaders().put(EXPORT_START_DATE, Date.class);
-                        Date endDate = (Date) e.getIn().getHeaders().put(EXPORT_END_DATE, Date.class);
+                        Long start = (Long) e.getIn().getHeaders().put(EXPORT_START_DATE, Long.class);
+                        Date startDate = (start != null) ? Date.from(Instant.ofEpochSecond(start)) : null;
+                        Long end = (Long) e.getIn().getHeaders().put(EXPORT_END_DATE, Long.class);
+                        Date endDate = (end != null) ? Date.from(Instant.ofEpochSecond(end)) : null;
+
                         gtfsParams = Parameters.getGtfsExportParameters(getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)), user, linesIds, startDate, endDate);
                     } else {
                         gtfsParams = Parameters.getGtfsExportParameters(getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)), user);
