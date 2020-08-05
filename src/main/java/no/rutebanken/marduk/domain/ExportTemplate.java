@@ -20,19 +20,18 @@ public class ExportTemplate implements Serializable {
     private String description;
     private ExportType type;
 
-//    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSSZ")
     @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME, pattern = "yyyy-MM-dd'T'HH:mm:ss.SSSZ")
     @JsonSerialize(using = LocalDateTimeSerializer.class)
     @JsonDeserialize(using = LocalDateTimeDeserializer.class)
     private LocalDateTime startDate;
 
-//    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSSZ")
     @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME, pattern = "yyyy-MM-dd'T'HH:mm:ss.SSSZ")
     @JsonSerialize(using = LocalDateTimeSerializer.class)
     @JsonDeserialize(using = LocalDateTimeDeserializer.class)
     private LocalDateTime endDate;
 
     private List<Line> lines;
+    private List<Consumer> consumers;
 
     public Long getId() {
         return id;
@@ -89,5 +88,13 @@ public class ExportTemplate implements Serializable {
 
     public void setEndDate(LocalDateTime endDate) {
         this.endDate = endDate;
+    }
+
+    public List<Consumer> getConsumers() {
+        return consumers;
+    }
+
+    public void setConsumers(List<Consumer> consumers) {
+        this.consumers = consumers;
     }
 }

@@ -96,7 +96,11 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
         corsAllowedHeaders.setKey("Access-Control-Allow-Headers");
         corsAllowedHeaders.setValue("Origin, Accept, X-Requested-With, Content-Type, Access-Control-Request-Method, Access-Control-Request-Headers, Authorization, x-okina-referential, RutebankenUser, RutebankenDescription");
 
-        restConfiguration().setCorsHeaders(Collections.singletonList(corsAllowedHeaders));
+        RestPropertyDefinition corsAllowedOrigin = new RestPropertyDefinition();
+        corsAllowedOrigin.setKey("Access-Control-Allow-Origin");
+        corsAllowedOrigin.setValue("http://localhost:9000");
+
+        restConfiguration().setCorsHeaders(Arrays.asList(corsAllowedHeaders, corsAllowedOrigin));
 
 
         onException(AccessDeniedException.class)
