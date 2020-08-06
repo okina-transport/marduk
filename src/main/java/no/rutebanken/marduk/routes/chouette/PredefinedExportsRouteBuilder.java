@@ -60,7 +60,6 @@ public class PredefinedExportsRouteBuilder extends AbstractChouetteRouteBuilder 
                     e.getOut().getHeaders().put(ORIGINAL_PROVIDER_ID, provider.getId());
                 })
                 .process(multipleExportProcessor)
-                .to("direct:exportsToConsumers")
                 .routeId("chouette-send-export-all-job");
     }
 

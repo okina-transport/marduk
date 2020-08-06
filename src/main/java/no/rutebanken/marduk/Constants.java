@@ -26,6 +26,7 @@ public class Constants {
     public static final String EXPORT_LINES_IDS = "EXPORT_LINES_IDS";
     public static final String EXPORT_START_DATE = "EXPORT_START_DATE";
     public static final String EXPORT_END_DATE = "EXPORT_END_DATE";
+    public static final String CURRENT_EXPORT = "CURRENT_EXPORT";
 
     // (providerId can change during the process when transferring data from one referential to another
     public static final String CORRELATION_ID = "RutebankenCorrelationId";

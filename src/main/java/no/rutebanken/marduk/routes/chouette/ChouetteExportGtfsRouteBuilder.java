@@ -17,6 +17,7 @@
 package no.rutebanken.marduk.routes.chouette;
 
 import no.rutebanken.marduk.Constants;
+import no.rutebanken.marduk.domain.ExportTemplate;
 import no.rutebanken.marduk.domain.Provider;
 import no.rutebanken.marduk.routes.chouette.json.Parameters;
 import no.rutebanken.marduk.routes.file.ZipFileUtils;
@@ -26,6 +27,7 @@ import no.rutebanken.marduk.routes.status.JobEvent.State;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.codehaus.plexus.util.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -61,6 +63,9 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
 
     @Value("${google.publish.public:false}")
     private boolean publicPublication;
+
+    @Autowired
+    ExportToConsumersProcessor exportToConsumersProcessor;
 
     @Override
     public void configure() throws Exception {
@@ -131,6 +136,11 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
                     .to("direct:uploadBlob")
                     .inOnly("activemq:queue:GtfsExportMergedQueue")
                     .process(e -> JobEvent.providerJobBuilder(e).timetableAction(TimetableAction.EXPORT).state(State.OK).build())
+                    .process(e -> {
+                        log.info("Before gtfs export to consumers");
+                    })
+                    .process(exportToConsumersProcessor)
+
                 .when(simple("${header.action_report_result} == 'NOK'"))
                     .log(LoggingLevel.WARN, correlation() + "Export failed")
                     .process(e -> JobEvent.providerJobBuilder(e).timetableAction(TimetableAction.EXPORT).state(State.FAILED).build())

@@ -38,33 +38,40 @@ public class MultipleExportProcessor implements Processor {
     @Autowired
     ProducerTemplate producer;
 
+    @Autowired
+    ExportJsonMapper exportJsonMapper;
 
     @Override
     public void process(Exchange exchange) throws Exception {
         List<ExportTemplate> exports = (List<ExportTemplate>) exchange.getIn().getBody();
         exchange.getIn().setBody(null);
         exports.stream().forEach(export -> {
+
             log.info("Multiple export : export => " + export.getId() + "/" + export.getName());
-            if (ExportType.NETEX.equals(export.getType())) {
-                toNetexExport(export, exchange);
-            } else if (ExportType.GTFS == export.getType()) {
-                toGtfsExport(export, exchange);
-            } else if (ExportType.ARRET == export.getType()) {
-                toStopPlacesExport(export, exchange);
-            } else {
-                log.info("Routing not supported yet for => " + export.getId() + "/" + export.getName() + "/" + export.getType());
+            try {
+                if (ExportType.NETEX.equals(export.getType())) {
+                    toNetexExport(export, exchange);
+                } else if (ExportType.GTFS == export.getType()) {
+                    toGtfsExport(export, exchange);
+                } else if (ExportType.ARRET == export.getType()) {
+                    toStopPlacesExport(export, exchange);
+                } else {
+                    log.info("Routing not supported yet for => " + export.getId() + "/" + export.getName() + "/" + export.getType());
+                }
+            } catch(Exception e) {
+                log.error("Error while processing export " + export.getId() + "/" + export.getName(), e);
             }
         });
     }
 
 
-    private void toNetexExport(ExportTemplate export, Exchange exchange) {
+    private void toNetexExport(ExportTemplate export, Exchange exchange) throws Exception {
         log.info("Routing to NETEX export => " + export.getId() + "/" + export.getName());
         prepareHeadersForExport(exchange, export);
         producer.send("activemq:queue:ChouetteExportNetexQueue", exchange);
     }
 
-    private void toGtfsExport(ExportTemplate export, Exchange exchange) {
+    private void toGtfsExport(ExportTemplate export, Exchange exchange) throws Exception {
         log.info("Routing to GTFS export => " + export.getId() + "/" + export.getName());
         prepareHeadersForExport(exchange, export);
         String linesIds = export.getLines() != null ? StringUtils.join(export.getLines().stream().map(Line::getId).toArray(), ",") : "";
@@ -75,7 +82,7 @@ public class MultipleExportProcessor implements Processor {
         producer.send("activemq:queue:ChouetteExportGtfsQueue", exchange);
     }
 
-    private void toStopPlacesExport(ExportTemplate export, Exchange exchange) {
+    private void toStopPlacesExport(ExportTemplate export, Exchange exchange) throws Exception {
         log.info("Routing to GTFS export => " + export.getId() + "/" + export.getName());
         prepareHeadersForExport(exchange, export);
         // tiamat export is based on original referential (not the mosaic one)
@@ -91,7 +98,7 @@ public class MultipleExportProcessor implements Processor {
      * @param exchange
      * @param export
      */
-    public void prepareHeadersForExport(Exchange exchange, ExportTemplate export) {
+    public void prepareHeadersForExport(Exchange exchange, ExportTemplate export) throws Exception {
         boolean noGtfs = export.getType() != ExportType.GTFS;
         exchange.getIn().getHeaders().put(NO_GTFS_EXPORT, noGtfs);
         exchange.getOut().setBody("Export id : " + export.getId());
@@ -99,6 +106,7 @@ public class MultipleExportProcessor implements Processor {
         headers.put(PROVIDER_ID, headers.get("providerId"));
         headers.put(NO_GTFS_EXPORT, noGtfs);
         headers.put(Constants.FILE_NAME, "export-" + export.getId() + "-" + export.getName());
+        headers.put(Constants.CURRENT_EXPORT, exportJsonMapper.toJson(export));
         exchange.getOut().setHeaders(headers);
     }
 }
