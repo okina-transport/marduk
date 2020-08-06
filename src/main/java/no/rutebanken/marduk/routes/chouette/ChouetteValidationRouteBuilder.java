@@ -182,11 +182,28 @@ public class ChouetteValidationRouteBuilder extends AbstractChouetteRouteBuilder
                 .process(e -> JobEvent.providerJobBuilder(e).timetableAction(e.getIn().getHeader(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL, TimetableAction.class)).state(State.FAILED).build())
                 .end()
                 .to("direct:updateStatus")
+                .choice()
+                    .when(simple("${header.action_report_result} == 'OK' and ${header.validation_report_result} == 'OK'"))
+                        .process(e -> {
+                            log.info("processValidationResult: before exports parsing");
+                            String jsonExports = (String) e.getIn().getHeader("JSON_EXPORTS");
+                            ObjectMapper mapper = new ObjectMapper();
+                            mapper.configure(JsonParser.Feature.ALLOW_UNQUOTED_FIELD_NAMES, true);
+                            Object json = e.getIn().getBody();
+                            List<ExportTemplate> exports = mapper.readValue(jsonExports, new TypeReference<List<ExportTemplate>>() { });
+                            e.getIn().setBody(exports);
+                            log.info("processValidationResult-> export parsing: after exports parsing");
+                        })
+                        .process(multipleExportProcessor)
+                .end()
                 .routeId("chouette-process-validation-status");
 
         // Check that no other import jobs in status SCHEDULED exists for this referential. If so, do not trigger export
         from("direct:checkScheduledJobsBeforeTriggeringExport")
                 .setProperty("job_status_url", simple("{{chouette.url}}/chouette_iev/referentials/${header." + CHOUETTE_REFERENTIAL + "}/jobs?timetableAction=importer&status=SCHEDULED&status=STARTED"))
+                .process(e -> {
+                    log.info("Triggering export of data from one space to another");
+                })
                 .toD("${exchangeProperty.job_status_url}")
                 .choice()
                 .when().jsonpath("$.*[?(@.status == 'SCHEDULED')].status")
@@ -197,7 +214,7 @@ public class ChouetteValidationRouteBuilder extends AbstractChouetteRouteBuilder
                 .when(method(getClass(), "isAutoTransferData").isEqualTo(true))
                 .log(LoggingLevel.INFO, correlation() + "Validation ok, triggering GTFS export.")
                 .setBody(constant(""))
-                .to("activemq:queue:ChouetteExportNetexQueue") // Check on provider if should trigger transfer
+//                .to("activemq:queue:ChouetteExportNetexQueue") // Check on provider if should trigger transfer
                 .end()
                 .routeId("chouette-process-job-list-after-validation");
 
