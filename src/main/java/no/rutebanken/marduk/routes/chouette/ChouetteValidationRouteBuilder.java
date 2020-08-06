@@ -141,24 +141,18 @@ public class ChouetteValidationRouteBuilder extends AbstractChouetteRouteBuilder
                 })
                 .removeHeader("loopCounter")
                 .to("activemq:queue:ChouettePollStatusQueue")
-//                .inOnly("direct:predefinedExports")
-                .process(e -> {
-                    log.info("Validate-> export parsing: before exports parsing");
-                    String jsonExports = (String) e.getIn().getHeader("JSON_EXPORTS");
-
-                    ObjectMapper mapper = new ObjectMapper();
-                    mapper.configure(JsonParser.Feature.ALLOW_UNQUOTED_FIELD_NAMES, true);
-//                    String json = mapper.writeValueAsString(e.getIn().getBody());
-                    Object json = e.getIn().getBody();
-                    List<ExportTemplate> exports = mapper.readValue(jsonExports, new TypeReference<List<ExportTemplate>>() { });
-
-
+//                .process(e -> {
+//                    log.info("Validate-> export parsing: before exports parsing");
+//                    String jsonExports = (String) e.getIn().getHeader("JSON_EXPORTS");
 //                    ObjectMapper mapper = new ObjectMapper();
-//                    List<ExportTemplate> exports = mapper.readValue((String) e.getIn().getBody().toString(), new TypeReference<List<ExportTemplate>>() { });
-                    e.getIn().setBody(exports);
-                    log.info("Validate-> export parsing: after exports parsing");
-                })
-                .process(multipleExportProcessor)
+//                    mapper.configure(JsonParser.Feature.ALLOW_UNQUOTED_FIELD_NAMES, true);
+////                    String json = mapper.writeValueAsString(e.getIn().getBody());
+//                    Object json = e.getIn().getBody();
+//                    List<ExportTemplate> exports = mapper.readValue(jsonExports, new TypeReference<List<ExportTemplate>>() { });
+//                    e.getIn().setBody(exports);
+//                    log.info("Validate-> export parsing: after exports parsing");
+//                })
+//                .process(multipleExportProcessor)
 
                 .routeId("chouette-send-validation-job");
 

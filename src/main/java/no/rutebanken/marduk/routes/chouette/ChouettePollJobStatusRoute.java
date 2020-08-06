@@ -16,8 +16,12 @@
 
 package no.rutebanken.marduk.routes.chouette;
 
+import com.fasterxml.jackson.core.JsonParser;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import no.rutebanken.marduk.Constants;
+import no.rutebanken.marduk.domain.ExportTemplate;
 import no.rutebanken.marduk.routes.chouette.json.ActionReportWrapper;
 import no.rutebanken.marduk.routes.chouette.json.JobResponse;
 import no.rutebanken.marduk.routes.chouette.json.JobResponseWithLinks;
@@ -32,6 +36,7 @@ import org.apache.camel.builder.PredicateBuilder;
 import org.apache.camel.component.http4.HttpMethods;
 import org.apache.camel.model.dataformat.JsonLibrary;
 import org.apache.http.client.utils.URIBuilder;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -55,6 +60,9 @@ public class ChouettePollJobStatusRoute extends AbstractChouetteRouteBuilder {
 
     @Value("${chouette.url}")
     private String chouetteUrl;
+
+    @Autowired
+    private MultipleExportProcessor multipleExportProcessor;
 
     private int maxConsumers = 5;
 
@@ -310,6 +318,18 @@ public class ChouettePollJobStatusRoute extends AbstractChouetteRouteBuilder {
                 .end()
                 .log(LoggingLevel.DEBUG, correlation() + "action_report_result=${header.action_report_result} validation_report_result=${header.validation_report_result}")
                 .toD("${header." + Constants.CHOUETTE_JOB_STATUS_ROUTING_DESTINATION + "}")
+                .process(e -> {
+                    log.info("Validate-> export parsing: before exports parsing");
+                    String jsonExports = (String) e.getIn().getHeader("JSON_EXPORTS");
+                    ObjectMapper mapper = new ObjectMapper();
+                    mapper.configure(JsonParser.Feature.ALLOW_UNQUOTED_FIELD_NAMES, true);
+//                    String json = mapper.writeValueAsString(e.getIn().getBody());
+                    Object json = e.getIn().getBody();
+                    List<ExportTemplate> exports = mapper.readValue(jsonExports, new TypeReference<List<ExportTemplate>>() { });
+                    e.getIn().setBody(exports);
+                    log.info("Validate-> export parsing: after exports parsing");
+                })
+                .process(multipleExportProcessor)
                 .routeId("chouette-process-validation-report");
 
 
