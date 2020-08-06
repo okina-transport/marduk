@@ -319,23 +319,24 @@ public class ChouettePollJobStatusRoute extends AbstractChouetteRouteBuilder {
                 .log(LoggingLevel.DEBUG, correlation() + "action_report_result=${header.action_report_result} validation_report_result=${header.validation_report_result}")
                 .toD("${header." + Constants.CHOUETTE_JOB_STATUS_ROUTING_DESTINATION + "}")
                 .choice()
-                .when(simple("${header.validation_report_result} == 'OK'"))
-                    .process(e -> {
-                        log.info("Validate-> export parsing: before exports parsing");
-                        String jsonExports = (String) e.getIn().getHeader("JSON_EXPORTS");
-                        ObjectMapper mapper = new ObjectMapper();
-                        mapper.configure(JsonParser.Feature.ALLOW_UNQUOTED_FIELD_NAMES, true);
-    //                    String json = mapper.writeValueAsString(e.getIn().getBody());
-                        Object json = e.getIn().getBody();
-                        List<ExportTemplate> exports = mapper.readValue(jsonExports, new TypeReference<List<ExportTemplate>>() { });
-                        e.getIn().setBody(exports);
-                        log.info("Validate-> export parsing: after exports parsing");
-                    })
-                    .process(multipleExportProcessor)
-                .otherwise()
-                    .process(e -> {
-                        log.info("Validation report NOK !!!!!!");
-                    })
+                    .when(simple("${header.validation_report_result} == 'OK' && ${header.JSON_EXPORTS} != null"))
+                        .process(e -> {
+                            log.info("Validate-> export parsing: before exports parsing");
+                            String jsonExports = (String) e.getIn().getHeader("JSON_EXPORTS");
+                            ObjectMapper mapper = new ObjectMapper();
+                            mapper.configure(JsonParser.Feature.ALLOW_UNQUOTED_FIELD_NAMES, true);
+        //                    String json = mapper.writeValueAsString(e.getIn().getBody());
+                            Object json = e.getIn().getBody();
+                            List<ExportTemplate> exports = mapper.readValue(jsonExports, new TypeReference<List<ExportTemplate>>() { });
+                            e.getIn().setBody(exports);
+                            log.info("Validate-> export parsing: after exports parsing");
+                        })
+                        .removeHeader("JSON_EXPORTS")
+                        .process(multipleExportProcessor)
+                    .otherwise()
+                        .process(e -> {
+                            log.info("Validation report NOK !!!!!!");
+                        })
                 .end()
                 .routeId("chouette-process-validation-report");
 
