@@ -194,6 +194,7 @@ public class ChouetteValidationRouteBuilder extends AbstractChouetteRouteBuilder
                             e.getIn().setBody(exports);
                             log.info("processValidationResult-> export parsing: after exports parsing");
                         })
+                        .removeHeader("JSON_EXPORTS")
                         .process(multipleExportProcessor)
                 .end()
                 .routeId("chouette-process-validation-status");
