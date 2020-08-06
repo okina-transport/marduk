@@ -131,16 +131,17 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
                     .setBody(simple(""))
                     .setHeader(Exchange.HTTP_METHOD, constant(org.apache.camel.component.http4.HttpMethods.GET))
                     .toD("${header.data_url}")
+                    .process(e -> {
+                        log.info("Before gtfs export to consumers");
+                    })
+                    .process(exportToConsumersProcessor)
                     .to("direct:addGtfsFeedInfo")
                     .setHeader(BLOBSTORE_MAKE_BLOB_PUBLIC, constant(publicPublication))
                     .setHeader(FILE_HANDLE, simple(BLOBSTORE_PATH_OUTBOUND + "gtfs/${header." + CHOUETTE_REFERENTIAL + "}-" + Constants.CURRENT_AGGREGATED_GTFS_FILENAME))
                     .to("direct:uploadBlob")
                     .inOnly("activemq:queue:GtfsExportMergedQueue")
                     .process(e -> JobEvent.providerJobBuilder(e).timetableAction(TimetableAction.EXPORT).state(State.OK).build())
-                    .process(e -> {
-                        log.info("Before gtfs export to consumers");
-                    })
-                    .process(exportToConsumersProcessor)
+
 
                 .when(simple("${header.action_report_result} == 'NOK'"))
                     .log(LoggingLevel.WARN, correlation() + "Export failed")
