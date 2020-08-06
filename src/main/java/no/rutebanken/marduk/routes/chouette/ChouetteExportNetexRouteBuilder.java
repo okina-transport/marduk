@@ -21,6 +21,7 @@ import no.rutebanken.marduk.routes.chouette.json.Parameters;
 import no.rutebanken.marduk.routes.status.JobEvent;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -45,6 +46,9 @@ public class ChouetteExportNetexRouteBuilder extends AbstractChouetteRouteBuilde
 
     @Value("${google.publish.public:false}")
     private boolean publicPublication;
+
+    @Autowired
+    ExportToConsumersProcessor exportToConsumersProcessor;
 
     @Override
     public void configure() throws Exception {
@@ -103,6 +107,11 @@ public class ChouetteExportNetexRouteBuilder extends AbstractChouetteRouteBuilde
                     .to("direct:uploadBlob")
                     .process(e -> JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.EXPORT_NETEX).state(JobEvent.State.OK).build())
                     .to("direct:updateStatus")
+                    .process(e -> {
+                        log.info("Before gtfs export to consumers");
+                    })
+                    .process(exportToConsumersProcessor)
+
                     .removeHeader(Constants.CHOUETTE_JOB_ID)
                     .setBody(constant(null))
 //                    .process(e -> JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.BUILD_GRAPH).state(JobEvent.State.PENDING).build())
