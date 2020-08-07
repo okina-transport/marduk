@@ -7,11 +7,13 @@ import no.rutebanken.marduk.services.FileSystemService;
 import org.apache.camel.LoggingLevel;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.FileSystemResource;
 import org.springframework.stereotype.Component;
 
 import java.io.File;
 
 import static no.rutebanken.marduk.Constants.CHOUETTE_JOB_STATUS_URL;
+import static no.rutebanken.marduk.Constants.CHOUETTE_REFERENTIAL;
 
 
 /**
@@ -28,15 +30,12 @@ public class TiamatStopPlacesExportRouteBuilder extends AbstractChouetteRouteBui
     @Autowired
     FileSystemService fileSystemService;
 
+    @Autowired
+    ExportToConsumersProcessor exportToConsumersProcessor;
+
     @Override
     public void configure() throws Exception {
         super.configure();
-
-//        // XML Data Format
-//        JaxbDataFormat xmlDataFormat = new JaxbDataFormat();
-//        JAXBContext con = JAXBContext.newInstance(ExportJob.class);
-//        xmlDataFormat.setContext(con);
-
         from("direct:tiamatStopPlacesExport").streamCaching()
                 .transacted()
                 .log(LoggingLevel.INFO, getClass().getName(), "Starting Tiamat export stop places for provider with id ${header.tiamatProviderId}")
@@ -70,8 +69,13 @@ public class TiamatStopPlacesExportRouteBuilder extends AbstractChouetteRouteBui
                     ExportJob exportJob = e.getIn().getBody(ExportJob.class);
                     File file = fileSystemService.getTiamatFile(exportJob.getFileName());
                     log.info("Tiamat Stop Places Export  : export parsed => " + exportJob.getId() + " : " + exportJob.getJobUrl() + " file => " + file + " => " + file.exists());
+                    FileSystemResource fsr = new FileSystemResource(file);
+                    e.getIn().setBody(fsr.getOutputStream());
                 })
-                ;
+//                .toD("${header.data_url}")
+                .setHeader("datedVersionFileName", simple("${header." + CHOUETTE_REFERENTIAL + "}-${date:now:yyyyMMddHHmmss}.zip"))
+                .process(exportToConsumersProcessor)
+                .routeId("tiamat-stop-places-export-result-job");
     }
 
 }

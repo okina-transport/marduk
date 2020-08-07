@@ -19,6 +19,7 @@ package no.rutebanken.marduk.routes.chouette;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import no.rutebanken.marduk.Constants;
 import no.rutebanken.marduk.routes.chouette.json.ActionReportWrapper;
+import no.rutebanken.marduk.routes.chouette.json.ExportJob;
 import no.rutebanken.marduk.routes.chouette.json.JobResponse;
 import no.rutebanken.marduk.routes.chouette.json.JobResponseWithLinks;
 import no.rutebanken.marduk.routes.chouette.mapping.ProviderAndJobsMapper;
@@ -196,12 +197,10 @@ public class ChouettePollJobStatusRoute extends AbstractChouetteRouteBuilder {
                 .toD("${exchangeProperty.url}")
                 .choice()
                     .when(simple("${header.SKIP_JOB_REPORTS} != null "))
-                        .process(e -> {
-                            log.info("POLLING TIAMAT JOB STATUS");
-                        })
                         .unmarshal(ExportJobXmlParser.newInstance())
                         .process(e -> {
                             log.info("POLLING TIAMAT JOB STATUS END");
+                            ExportJob exportJob = e.getIn().getBody(ExportJob.class);
                         })
                         .toD("${header." + Constants.CHOUETTE_JOB_STATUS_ROUTING_DESTINATION + "}")
                         .stop()
