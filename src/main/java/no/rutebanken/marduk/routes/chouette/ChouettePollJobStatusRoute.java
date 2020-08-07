@@ -195,18 +195,27 @@ public class ChouettePollJobStatusRoute extends AbstractChouetteRouteBuilder {
                 .setBody(constant(""))
                 .setHeader(Exchange.HTTP_METHOD, constant(org.apache.camel.component.http4.HttpMethods.GET))
                 .toD("${exchangeProperty.url}")
+
                 .choice()
                     .when(simple("${header.SKIP_JOB_REPORTS} != null "))
                         .unmarshal(ExportJobXmlParser.newInstance())
                         .process(e -> {
                             log.info("POLLING TIAMAT JOB STATUS END");
                             ExportJob exportJob = e.getIn().getBody(ExportJob.class);
+                            e.getProperties().put("TIAMAT_STATUS", exportJob.getStatus().name());
                         })
-                        .toD("${header." + Constants.CHOUETTE_JOB_STATUS_ROUTING_DESTINATION + "}")
+//                        .toD("${header." + Constants.CHOUETTE_JOB_STATUS_ROUTING_DESTINATION + "}")
+//                        .stop()
+                        .choice()
+                            .when(simple("${exchangeProperty.TIAMAT_STATUS} == 'FINISHED'"))
+                                .toD("${header." + Constants.CHOUETTE_JOB_STATUS_ROUTING_DESTINATION + "}")
+                            .otherwise()
+                                .to("direct:rescheduleJob")
+                        .endChoice()
                         .stop()
                     .otherwise()
                         .unmarshal().json(JsonLibrary.Jackson, JobResponseWithLinks.class)
-                .end()
+                .endChoice()
 
 
                 .setProperty("current_status", simple("${body.status}"))
