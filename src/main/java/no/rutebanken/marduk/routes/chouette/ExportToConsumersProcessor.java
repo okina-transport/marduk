@@ -2,6 +2,7 @@ package no.rutebanken.marduk.routes.chouette;
 
 import no.rutebanken.marduk.domain.ExportTemplate;
 import no.rutebanken.marduk.services.FtpService;
+import no.rutebanken.marduk.services.RestUploadService;
 import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
 import org.slf4j.Logger;
@@ -25,6 +26,9 @@ public class ExportToConsumersProcessor implements Processor {
     @Autowired
     FtpService ftpService;
 
+    @Autowired
+    RestUploadService restUploadService;
+
     @Override
     public void process(Exchange exchange) throws Exception {
         String jsonExport = (String) exchange.getIn().getHeaders().get(CURRENT_EXPORT);
@@ -44,7 +48,7 @@ public class ExportToConsumersProcessor implements Processor {
                         ftpService.uploadStream(streamToUpload, consumer.getServiceUrl(), consumer.getLogin(), consumer.getPassword(), filePath);
                         break;
                     case REST:
-                        log.info("No REST consumer processing for now for " + consumer.getName());
+                        restUploadService.uploadStream(streamToUpload, filePath, consumer.getLogin(), consumer.getSecretKey());
                         break;
                 }
             } catch (Exception e) {

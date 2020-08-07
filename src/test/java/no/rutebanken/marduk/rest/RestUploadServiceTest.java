@@ -1,6 +1,6 @@
 package no.rutebanken.marduk.rest;
 
-import org.junit.Assert;
+import no.rutebanken.marduk.services.RestUploadService;
 import org.junit.Test;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.http.HttpEntity;
@@ -11,19 +11,21 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.web.client.RestTemplate;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.InputStream;
 import java.util.Base64;
-import java.util.HashMap;
 import java.util.Map;
 
 import static org.junit.Assert.*;
 
-public class RestExportTest {
+public class RestUploadServiceTest {
 
+    private RestUploadService restUploadService = new RestUploadService();
 
     private static final String REST_IMPORT_URL = "https://iboo-preprod.enroute.mobi/api/v1/workbenches/60/imports.json";
 
     @Test
-    public void restExportUpload() throws Exception {
+    public void restExportUpload() {
         String authStr = "60:2c6f2c6b7aeba7f6f4d9dc667f0c58aa";
         String base64Creds = Base64.getEncoder().encodeToString(authStr.getBytes());
 
@@ -41,5 +43,12 @@ public class RestExportTest {
         ResponseEntity<Map> uploadResp = rest.postForEntity(REST_IMPORT_URL, request, Map.class);
 
         assertNotNull(uploadResp);
+    }
+
+    @Test
+    public void restStreamUpload() throws Exception {
+        InputStream stream = new FileInputStream(new File("/tmp/export_gtfs_371.zip"));
+        boolean uploaded = restUploadService.uploadStream(stream, "Testupload-export-file.zip", "60", "2c6f2c6b7aeba7f6f4d9dc667f0c58aa");
+        assertTrue(uploaded);
     }
 }
