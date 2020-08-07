@@ -30,7 +30,7 @@ public class ExportToConsumersProcessor implements Processor {
         String jsonExport = (String) exchange.getIn().getHeaders().get(CURRENT_EXPORT);
         ExportTemplate export = exportJsonMapper.fromJson(jsonExport);
         log.info("Found " + export.getConsumers().size() + " for export " + export.getId() + "/" + export.getName());
-        String filePath = (String) exchange.getIn().getHeaders().get(FILE_HANDLE);
+        String filePath = (String) exchange.getIn().getHeaders().get("datedVersionFileName");
 
         InputStream streamToUpload = (InputStream) exchange.getIn().getBody();
 //        File fileToUpload = new File(filePath);
