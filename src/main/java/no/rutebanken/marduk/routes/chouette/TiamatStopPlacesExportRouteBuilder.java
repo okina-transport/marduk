@@ -50,8 +50,9 @@ public class TiamatStopPlacesExportRouteBuilder extends AbstractChouetteRouteBui
                     File file = fileSystemService.getTiamatFile(exportJob.getFileName());
                     // required to skip chouette reports parsing when polling job status
                     e.getIn().setHeader(Constants.SKIP_JOB_REPORTS, "true");
-                    setExportPollingHeaders(e, exportJob.getId().toString(), exportJob.getJobUrl(), TIAMAT_EXPORT_ROUTING_DESTINATION);
-                    log.info("Tiamat Stop Places Export  : export parsed => " + exportJob.getId() + " : " + exportJob.getJobUrl() + " file => " + file + " => " + file.exists());
+                    String tiamatJobStatusUrl = stopPlacesExportUrl + exportJob.getJobUrl().replace("export", "");
+                    setExportPollingHeaders(e, exportJob.getId().toString(), tiamatJobStatusUrl, TIAMAT_EXPORT_ROUTING_DESTINATION);
+                    log.info("Tiamat Stop Places Export  : export parsed => " + exportJob.getId() + " : " + tiamatJobStatusUrl + " file => " + file + " => " + file.exists());
                 })
                 .removeHeader("loopCounter")
                 .to("activemq:queue:ChouettePollStatusQueue")
