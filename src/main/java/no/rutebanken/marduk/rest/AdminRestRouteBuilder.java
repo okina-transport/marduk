@@ -870,6 +870,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                     String json = mapper.writeValueAsString(e.getIn().getBody());
                     List<ExportTemplate> exports = mapper.readValue(json, new TypeReference<List<ExportTemplate>>() { });
 //                    e.getIn().setBody(exports);
+                    // keep json form for now to prevent activemq serialize errors on unhandled classes
                     e.getIn().setHeader("JSON_EXPORTS", json);
                     e.getIn().setBody(json);
                     log.info("Validate-> export process: received  " + exports.size() + " exports");

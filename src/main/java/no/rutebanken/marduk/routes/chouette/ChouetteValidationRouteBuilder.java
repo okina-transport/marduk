@@ -172,7 +172,19 @@ public class ChouetteValidationRouteBuilder extends AbstractChouetteRouteBuilder
                 .setBody(constant(""))
                 .choice()
                 .when(simple("${header.action_report_result} == 'OK' and ${header.validation_report_result} == 'OK'"))
-                .to("direct:checkScheduledJobsBeforeTriggeringExport")
+                    .process(e -> {
+                        log.info("processValidationResult: before exports parsing");
+                        String jsonExports = (String) e.getIn().getHeader("JSON_EXPORTS");
+                        ObjectMapper mapper = new ObjectMapper();
+                        mapper.configure(JsonParser.Feature.ALLOW_UNQUOTED_FIELD_NAMES, true);
+                        Object json = e.getIn().getBody();
+                        List<ExportTemplate> exports = mapper.readValue(jsonExports, new TypeReference<List<ExportTemplate>>() { });
+                        e.getIn().setBody(exports);
+                        log.info("processValidationResult-> export parsing: after exports parsing");
+                    })
+                    .removeHeader("JSON_EXPORTS")
+                    .process(multipleExportProcessor)
+                    .to("direct:checkScheduledJobsBeforeTriggeringExport")
                 .process(e -> JobEvent.providerJobBuilder(e).timetableAction(e.getIn().getHeader(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL, TimetableAction.class)).state(State.OK).build())
                 .when(simple("${header.action_report_result} == 'OK' and ${header.validation_report_result} == 'NOK'"))
                 .log(LoggingLevel.INFO, correlation() + "Validation failed (processed ok, but timetable data is faulty)")
@@ -182,21 +194,21 @@ public class ChouetteValidationRouteBuilder extends AbstractChouetteRouteBuilder
                 .process(e -> JobEvent.providerJobBuilder(e).timetableAction(e.getIn().getHeader(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL, TimetableAction.class)).state(State.FAILED).build())
                 .end()
                 .to("direct:updateStatus")
-                .choice()
-                    .when(simple("${header.action_report_result} == 'OK' and ${header.validation_report_result} == 'OK'"))
-                        .process(e -> {
-                            log.info("processValidationResult: before exports parsing");
-                            String jsonExports = (String) e.getIn().getHeader("JSON_EXPORTS");
-                            ObjectMapper mapper = new ObjectMapper();
-                            mapper.configure(JsonParser.Feature.ALLOW_UNQUOTED_FIELD_NAMES, true);
-                            Object json = e.getIn().getBody();
-                            List<ExportTemplate> exports = mapper.readValue(jsonExports, new TypeReference<List<ExportTemplate>>() { });
-                            e.getIn().setBody(exports);
-                            log.info("processValidationResult-> export parsing: after exports parsing");
-                        })
-                        .removeHeader("JSON_EXPORTS")
-                        .process(multipleExportProcessor)
-                .end()
+//                .choice()
+//                    .when(simple("${header.action_report_result} == 'OK' and ${header.validation_report_result} == 'OK'"))
+//                        .process(e -> {
+//                            log.info("processValidationResult: before exports parsing");
+//                            String jsonExports = (String) e.getIn().getHeader("JSON_EXPORTS");
+//                            ObjectMapper mapper = new ObjectMapper();
+//                            mapper.configure(JsonParser.Feature.ALLOW_UNQUOTED_FIELD_NAMES, true);
+//                            Object json = e.getIn().getBody();
+//                            List<ExportTemplate> exports = mapper.readValue(jsonExports, new TypeReference<List<ExportTemplate>>() { });
+//                            e.getIn().setBody(exports);
+//                            log.info("processValidationResult-> export parsing: after exports parsing");
+//                        })
+//                        .removeHeader("JSON_EXPORTS")
+//                        .process(multipleExportProcessor)
+//                .end()
                 .routeId("chouette-process-validation-status");
 
         // Check that no other import jobs in status SCHEDULED exists for this referential. If so, do not trigger export
