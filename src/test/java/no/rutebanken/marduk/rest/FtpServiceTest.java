@@ -5,8 +5,8 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URL;
 import java.net.URLConnection;
@@ -51,6 +51,13 @@ public class FtpServiceTest {
     public void uploadFileInvalidFtpUrl() throws Exception {
         File file = new File(FILE_TO_UPLOAD_PATH);
         ftpService.uploadFile(file, "http:////localhost", USER, PASSWORD);
+    }
+
+    @Test
+    public void uploadStream() throws Exception {
+        FileInputStream fis = new FileInputStream(new File(FILE_TO_UPLOAD_PATH));
+        boolean uploaded = ftpService.uploadStream(fis, "ftp://localhost", USER, PASSWORD, "remotefilenameXX.zip");
+        Assert.assertTrue(uploaded);
     }
 
 }
