@@ -48,7 +48,7 @@ public class RestUploadServiceTest {
     @Test
     public void restStreamUpload() throws Exception {
         InputStream stream = new FileInputStream(new File("/tmp/export_gtfs_371.zip"));
-        boolean uploaded = restUploadService.uploadStream(stream, "Testupload-export-file.zip", "60", "2c6f2c6b7aeba7f6f4d9dc667f0c58aa");
+        boolean uploaded = restUploadService.uploadStream(stream, REST_IMPORT_URL, "Testupload-export-file.zip", "60", "2c6f2c6b7aeba7f6f4d9dc667f0c58aa");
         assertTrue(uploaded);
     }
 }

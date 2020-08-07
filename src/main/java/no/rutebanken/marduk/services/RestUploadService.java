@@ -17,9 +17,7 @@ import java.util.Map;
 @Component
 public class RestUploadService {
 
-    private static final String REST_IMPORT_URL_PATTERN = "https://iboo-preprod.enroute.mobi/api/v1/workbenches/%s/imports.json";
-
-    public boolean uploadStream(InputStream stream, String filename, String key, String secret) {
+    public boolean uploadStream(InputStream stream, String restUrl, String filename, String key, String secret) {
 //        String authStr = "60:2c6f2c6b7aeba7f6f4d9dc667f0c58aa";
 //        String base64Creds = Base64.getEncoder().encodeToString(authStr.getBytes());
 
@@ -35,13 +33,12 @@ public class RestUploadService {
 
         RestTemplate rest = new RestTemplate();
         HttpEntity<Map> request = new HttpEntity<>(body, headers);
-        String uploadUrl = String.format(REST_IMPORT_URL_PATTERN, key);
-        ResponseEntity<Map> uploadResp = rest.postForEntity(uploadUrl, request, Map.class);
+        ResponseEntity<Map> uploadResp = rest.postForEntity(restUrl, request, Map.class);
         return HttpStatus.CREATED.equals(uploadResp.getStatusCode());
     }
 
     /**
-     * Useful to upload directly InputStream rather than FileSystemResource
+     * Useful to upload directly InputStream rather than file based FileSystemResource
      */
     private class MultipartFileResource extends InputStreamResource {
 

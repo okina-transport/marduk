@@ -44,11 +44,10 @@ public class ExportToConsumersProcessor implements Processor {
             try {
                 switch (consumer.getType()) {
                     case FTP:
-//                        ftpService.uploadFile(fileToUpload, consumer.getServiceUrl(), consumer.getLogin(), consumer.getPassword());
                         ftpService.uploadStream(streamToUpload, consumer.getServiceUrl(), consumer.getLogin(), consumer.getPassword(), filePath);
                         break;
                     case REST:
-                        restUploadService.uploadStream(streamToUpload, filePath, consumer.getLogin(), consumer.getSecretKey());
+                        restUploadService.uploadStream(streamToUpload, consumer.getServiceUrl(), filePath, consumer.getLogin(), consumer.getSecretKey());
                         break;
                 }
             } catch (Exception e) {

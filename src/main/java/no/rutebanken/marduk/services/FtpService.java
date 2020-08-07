@@ -53,7 +53,8 @@ public class FtpService {
         ftpClient.setFileType(FTP.BINARY_FILE_TYPE);
 
         String ftpFilePath = parseFilePathFromFtpUrl(ftpUrl);
-        return ftpClient.storeFile(ftpFilePath + "/" + ftpFileName, uploadStream);
+        boolean uploaded = ftpClient.storeFile(ftpFilePath + "/" + ftpFileName, uploadStream);
+        return uploaded;
     }
 
 
