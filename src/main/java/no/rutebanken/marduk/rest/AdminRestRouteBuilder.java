@@ -55,18 +55,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import static javax.ws.rs.core.MediaType.MULTIPART_FORM_DATA;
-import static no.rutebanken.marduk.Constants.CHOUETTE_JOB_ID;
-import static no.rutebanken.marduk.Constants.CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL;
-import static no.rutebanken.marduk.Constants.CHOUETTE_REFERENTIAL;
-import static no.rutebanken.marduk.Constants.CORRELATION_ID;
-import static no.rutebanken.marduk.Constants.FILE_HANDLE;
-import static no.rutebanken.marduk.Constants.FILE_NAME;
-import static no.rutebanken.marduk.Constants.IMPORT;
-import static no.rutebanken.marduk.Constants.NO_GTFS_EXPORT;
-import static no.rutebanken.marduk.Constants.OKINA_REFERENTIAL;
-import static no.rutebanken.marduk.Constants.PROVIDER_ID;
-import static no.rutebanken.marduk.Constants.PROVIDER_IDS;
-import static no.rutebanken.marduk.Constants.USER;
+import static no.rutebanken.marduk.Constants.*;
 
 /**
  * REST interface for backdoor triggering of messages
@@ -871,7 +860,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                     List<ExportTemplate> exports = mapper.readValue(json, new TypeReference<List<ExportTemplate>>() { });
 //                    e.getIn().setBody(exports);
                     // keep json form for now to prevent activemq serialize errors on unhandled classes
-                    e.getIn().setHeader("JSON_EXPORTS", json);
+                    e.getIn().setHeader(JSON_EXPORTS, json);
                     e.getIn().setBody(json);
                     log.info("Validate-> export process: received  " + exports.size() + " exports");
                 })

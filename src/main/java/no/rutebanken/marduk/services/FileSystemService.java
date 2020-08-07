@@ -38,6 +38,11 @@ public class FileSystemService {
 
     private Logger logger = LoggerFactory.getLogger(this.getClass());
 
+
+    public File getTiamatFile(String filename) {
+        return new File(tiamatStoragePath + "/" + filename);
+    }
+
     public File getLatestStopPlacesFile(Exchange exchange) {
         ExchangeUtils.addHeadersAndAttachments(exchange);
         FileSystemResource fileSystemResource = new FileSystemResource(tiamatStoragePath);

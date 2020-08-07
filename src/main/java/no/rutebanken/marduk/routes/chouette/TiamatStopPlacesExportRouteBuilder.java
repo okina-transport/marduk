@@ -1,12 +1,15 @@
 package no.rutebanken.marduk.routes.chouette;
 
 import no.rutebanken.marduk.routes.chouette.json.ExportJob;
+import no.rutebanken.marduk.services.FileSystemService;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.converter.jaxb.JaxbDataFormat;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import javax.xml.bind.JAXBContext;
+import java.io.File;
 
 
 /**
@@ -17,6 +20,9 @@ public class TiamatStopPlacesExportRouteBuilder extends AbstractChouetteRouteBui
 
     @Value("${stop-places-export.api.url}")
     private String stopPlacesExportUrl;
+
+    @Autowired
+    FileSystemService fileSystemService;
 
     @Override
     public void configure() throws Exception {
@@ -38,9 +44,19 @@ public class TiamatStopPlacesExportRouteBuilder extends AbstractChouetteRouteBui
                 .unmarshal(xmlDataFormat)
                 .process(e -> {
                     ExportJob exportJob = e.getIn().getBody(ExportJob.class);
-                    log.info("Tiamat Stop Places Export  : export parsed => " + exportJob.getId() + " : " + exportJob.getJobUrl());
+                    File file = fileSystemService.getTiamatFile(exportJob.getFileName());
+                    log.info("Tiamat Stop Places Export  : export parsed => " + exportJob.getId() + " : " + exportJob.getJobUrl() + " file => " + file + " => " + file.exists());
                 })
                 .routeId("tiamat-stop-places-export-job");
+
+        from("direct:processTiamatExportResult").streamCaching()
+                .log(LoggingLevel.INFO, getClass().getName(), "Tiamat process export results for provider with id ${header.tiamatProviderId}")
+                .process(e -> {
+                    ExportJob exportJob = e.getIn().getBody(ExportJob.class);
+                    File file = fileSystemService.getTiamatFile(exportJob.getFileName());
+                    log.info("Tiamat Stop Places Export  : export parsed => " + exportJob.getId() + " : " + exportJob.getJobUrl() + " file => " + file + " => " + file.exists());
+                })
+                ;
     }
 
 }

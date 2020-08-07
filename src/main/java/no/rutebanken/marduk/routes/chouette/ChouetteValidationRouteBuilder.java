@@ -35,13 +35,7 @@ import org.springframework.stereotype.Component;
 import java.util.List;
 import java.util.UUID;
 
-import static no.rutebanken.marduk.Constants.CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL;
-import static no.rutebanken.marduk.Constants.CHOUETTE_REFERENTIAL;
-import static no.rutebanken.marduk.Constants.CORRELATION_ID;
-import static no.rutebanken.marduk.Constants.IMPORT;
-import static no.rutebanken.marduk.Constants.JSON_PART;
-import static no.rutebanken.marduk.Constants.PROVIDER_ID;
-import static no.rutebanken.marduk.Constants.USER;
+import static no.rutebanken.marduk.Constants.*;
 import static no.rutebanken.marduk.Utils.Utils.getLastPathElementOfUrl;
 
 /**
@@ -171,10 +165,10 @@ public class ChouetteValidationRouteBuilder extends AbstractChouetteRouteBuilder
                 .to("log:" + getClass().getName() + "?level=DEBUG&showAll=true&multiline=true")
                 .setBody(constant(""))
                 .choice()
-                .when(simple("${header.action_report_result} == 'OK' and ${header.validation_report_result} == 'OK'"))
+                .when(simple("${header.action_report_result} == 'OK' and ${header.validation_report_result} == 'OK' and ${header.JSON_EXPORTS} != null"))
                     .process(e -> {
                         log.info("processValidationResult: before exports parsing");
-                        String jsonExports = (String) e.getIn().getHeader("JSON_EXPORTS");
+                        String jsonExports = (String) e.getIn().getHeader(JSON_EXPORTS);
                         ObjectMapper mapper = new ObjectMapper();
                         mapper.configure(JsonParser.Feature.ALLOW_UNQUOTED_FIELD_NAMES, true);
                         Object json = e.getIn().getBody();
@@ -182,7 +176,7 @@ public class ChouetteValidationRouteBuilder extends AbstractChouetteRouteBuilder
                         e.getIn().setBody(exports);
                         log.info("processValidationResult-> export parsing: after exports parsing");
                     })
-                    .removeHeader("JSON_EXPORTS")
+                    .removeHeader(JSON_EXPORTS)
                     .process(multipleExportProcessor)
                     .to("direct:checkScheduledJobsBeforeTriggeringExport")
                 .process(e -> JobEvent.providerJobBuilder(e).timetableAction(e.getIn().getHeader(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL, TimetableAction.class)).state(State.OK).build())
@@ -194,21 +188,6 @@ public class ChouetteValidationRouteBuilder extends AbstractChouetteRouteBuilder
                 .process(e -> JobEvent.providerJobBuilder(e).timetableAction(e.getIn().getHeader(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL, TimetableAction.class)).state(State.FAILED).build())
                 .end()
                 .to("direct:updateStatus")
-//                .choice()
-//                    .when(simple("${header.action_report_result} == 'OK' and ${header.validation_report_result} == 'OK'"))
-//                        .process(e -> {
-//                            log.info("processValidationResult: before exports parsing");
-//                            String jsonExports = (String) e.getIn().getHeader("JSON_EXPORTS");
-//                            ObjectMapper mapper = new ObjectMapper();
-//                            mapper.configure(JsonParser.Feature.ALLOW_UNQUOTED_FIELD_NAMES, true);
-//                            Object json = e.getIn().getBody();
-//                            List<ExportTemplate> exports = mapper.readValue(jsonExports, new TypeReference<List<ExportTemplate>>() { });
-//                            e.getIn().setBody(exports);
-//                            log.info("processValidationResult-> export parsing: after exports parsing");
-//                        })
-//                        .removeHeader("JSON_EXPORTS")
-//                        .process(multipleExportProcessor)
-//                .end()
                 .routeId("chouette-process-validation-status");
 
         // Check that no other import jobs in status SCHEDULED exists for this referential. If so, do not trigger export
