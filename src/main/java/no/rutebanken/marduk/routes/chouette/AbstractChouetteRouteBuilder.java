@@ -20,6 +20,7 @@ import com.google.common.base.Strings;
 import no.rutebanken.marduk.Constants;
 import no.rutebanken.marduk.domain.Provider;
 import no.rutebanken.marduk.routes.BaseRouteBuilder;
+import no.rutebanken.marduk.routes.status.JobEvent;
 import org.apache.camel.Exchange;
 import org.apache.camel.builder.ThreadPoolBuilder;
 import org.apache.http.entity.ContentType;
@@ -27,10 +28,12 @@ import org.apache.http.entity.mime.MultipartEntityBuilder;
 import org.springframework.beans.factory.annotation.Value;
 
 import java.io.InputStream;
+import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 
-import static no.rutebanken.marduk.Constants.FILE_NAME;
-import static no.rutebanken.marduk.Constants.JSON_PART;
+import static no.rutebanken.marduk.Constants.*;
+import static no.rutebanken.marduk.Utils.Utils.getLastPathElementOfUrl;
+import static org.apache.camel.builder.Builder.constant;
 
 public abstract class AbstractChouetteRouteBuilder extends BaseRouteBuilder {
 
@@ -108,6 +111,22 @@ public abstract class AbstractChouetteRouteBuilder extends BaseRouteBuilder {
 	public boolean isAutoTransferData() {
 
 		return autoTransferData;
+	}
+
+
+	/**
+	 * Sets headers required by job status polling queue (cf ChouettePollJobStatusRoute)
+	 * @param e
+	 * @param jobId
+	 * @param jobStatusUrl
+	 * @param routingDestination
+	 */
+	public void setExportPollingHeaders(Exchange e, String jobId, String jobStatusUrl, String routingDestination) {
+		e.getIn().setHeader(Constants.CORRELATION_ID, e.getIn().getHeader(Constants.CORRELATION_ID, UUID.randomUUID().toString()));
+		e.getIn().setHeader(CHOUETTE_JOB_STATUS_URL, jobStatusUrl);
+		e.getIn().setHeader(Constants.CHOUETTE_JOB_ID, jobId);
+		e.getIn().setHeader(Constants.CHOUETTE_JOB_STATUS_ROUTING_DESTINATION, constant(routingDestination));
+		e.getIn().setHeader(Constants.CHOUETTE_JOB_STATUS_JOB_TYPE, constant(JobEvent.TimetableAction.EXPORT.name()));
 	}
 
 }

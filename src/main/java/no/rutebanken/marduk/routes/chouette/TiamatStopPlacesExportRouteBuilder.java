@@ -1,5 +1,6 @@
 package no.rutebanken.marduk.routes.chouette;
 
+import no.rutebanken.marduk.Constants;
 import no.rutebanken.marduk.routes.chouette.json.ExportJob;
 import no.rutebanken.marduk.services.FileSystemService;
 import org.apache.camel.LoggingLevel;
@@ -17,6 +18,8 @@ import java.io.File;
  */
 @Component
 public class TiamatStopPlacesExportRouteBuilder extends AbstractChouetteRouteBuilder {
+
+    private static final String TIAMAT_EXPORT_ROUTING_DESTINATION = "direct:processTiamatExportResult";
 
     @Value("${stop-places-export.api.url}")
     private String stopPlacesExportUrl;
@@ -40,16 +43,20 @@ public class TiamatStopPlacesExportRouteBuilder extends AbstractChouetteRouteBui
                     Object tiamatProviderId = e.getIn().getHeaders().get("tiamatProviderId");
                     log.info("Tiamat Stop Places Export : launching export for provider " + tiamatProviderId.toString());
                 })
-                .toD(stopPlacesExportUrl + "?providerId=${header.tiamatProviderId}")
+                .toD(stopPlacesExportUrl + "/initiate?providerId=${header.tiamatProviderId}")
                 .unmarshal(xmlDataFormat)
                 .process(e -> {
                     ExportJob exportJob = e.getIn().getBody(ExportJob.class);
                     File file = fileSystemService.getTiamatFile(exportJob.getFileName());
+                    // required to skip chouette reports parsing when polling job status
+                    e.getIn().setHeader(Constants.SKIP_JOB_REPORTS, "true");
+                    setExportPollingHeaders(e, exportJob.getId().toString(), exportJob.getJobUrl(), "direct:processTiamatExportResult");
                     log.info("Tiamat Stop Places Export  : export parsed => " + exportJob.getId() + " : " + exportJob.getJobUrl() + " file => " + file + " => " + file.exists());
                 })
+
                 .routeId("tiamat-stop-places-export-job");
 
-        from("direct:processTiamatExportResult").streamCaching()
+        from(TIAMAT_EXPORT_ROUTING_DESTINATION).streamCaching()
                 .log(LoggingLevel.INFO, getClass().getName(), "Tiamat process export results for provider with id ${header.tiamatProviderId}")
                 .process(e -> {
                     ExportJob exportJob = e.getIn().getBody(ExportJob.class);

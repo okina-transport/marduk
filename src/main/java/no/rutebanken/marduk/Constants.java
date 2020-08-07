@@ -29,6 +29,9 @@ public class Constants {
     public static final String CURRENT_EXPORT = "CURRENT_EXPORT";
     public static final String JSON_EXPORTS = "JSON_EXPORTS";
 
+    // skip export job reports parsing
+    public static final String SKIP_JOB_REPORTS = "SKIP_JOB_REPORTS";
+
     // (providerId can change during the process when transferring data from one referential to another
     public static final String CORRELATION_ID = "RutebankenCorrelationId";
     public static final String CHOUETTE_REFERENTIAL = "RutebankenChouetteReferential";
