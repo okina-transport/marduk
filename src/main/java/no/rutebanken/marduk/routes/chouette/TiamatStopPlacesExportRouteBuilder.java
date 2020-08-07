@@ -5,16 +5,13 @@ import no.rutebanken.marduk.routes.chouette.json.ExportJob;
 import no.rutebanken.marduk.routes.status.JobEvent;
 import no.rutebanken.marduk.services.FileSystemService;
 import org.apache.camel.LoggingLevel;
-import org.apache.camel.converter.jaxb.JaxbDataFormat;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import javax.xml.bind.JAXBContext;
 import java.io.File;
 
 import static no.rutebanken.marduk.Constants.CHOUETTE_JOB_STATUS_URL;
-import static no.rutebanken.marduk.Utils.Utils.getLastPathElementOfUrl;
 
 
 /**
@@ -35,10 +32,10 @@ public class TiamatStopPlacesExportRouteBuilder extends AbstractChouetteRouteBui
     public void configure() throws Exception {
         super.configure();
 
-        // XML Data Format
-        JaxbDataFormat xmlDataFormat = new JaxbDataFormat();
-        JAXBContext con = JAXBContext.newInstance(ExportJob.class);
-        xmlDataFormat.setContext(con);
+//        // XML Data Format
+//        JaxbDataFormat xmlDataFormat = new JaxbDataFormat();
+//        JAXBContext con = JAXBContext.newInstance(ExportJob.class);
+//        xmlDataFormat.setContext(con);
 
         from("direct:tiamatStopPlacesExport").streamCaching()
                 .transacted()
@@ -48,7 +45,7 @@ public class TiamatStopPlacesExportRouteBuilder extends AbstractChouetteRouteBui
                     log.info("Tiamat Stop Places Export : launching export for provider " + tiamatProviderId.toString());
                 })
                 .toD(stopPlacesExportUrl + "/initiate?providerId=${header.tiamatProviderId}")
-                .unmarshal(xmlDataFormat)
+                .unmarshal(ExportJobXmlParser.newInstance())
                 .process(e -> {
                     ExportJob exportJob = e.getIn().getBody(ExportJob.class);
                     File file = fileSystemService.getTiamatFile(exportJob.getFileName());

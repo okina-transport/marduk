@@ -16,14 +16,9 @@
 
 package no.rutebanken.marduk.routes.chouette;
 
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonMappingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import no.rutebanken.marduk.Constants;
-import no.rutebanken.marduk.domain.ExportTemplate;
 import no.rutebanken.marduk.routes.chouette.json.ActionReportWrapper;
-import no.rutebanken.marduk.routes.chouette.json.ExportJob;
 import no.rutebanken.marduk.routes.chouette.json.JobResponse;
 import no.rutebanken.marduk.routes.chouette.json.JobResponseWithLinks;
 import no.rutebanken.marduk.routes.chouette.mapping.ProviderAndJobsMapper;
@@ -204,7 +199,7 @@ public class ChouettePollJobStatusRoute extends AbstractChouetteRouteBuilder {
                         .process(e -> {
                             log.info("POLLING TIAMAT JOB STATUS");
                         })
-                        .unmarshal().json(JsonLibrary.Jackson, ExportJob.class)
+                        .unmarshal(ExportJobXmlParser.newInstance())
                         .process(e -> {
                             log.info("POLLING TIAMAT JOB STATUS END");
                         })
