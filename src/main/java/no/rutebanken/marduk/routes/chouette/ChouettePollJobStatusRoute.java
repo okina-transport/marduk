@@ -215,7 +215,7 @@ public class ChouettePollJobStatusRoute extends AbstractChouetteRouteBuilder {
                         .stop()
                     .otherwise()
                         .unmarshal().json(JsonLibrary.Jackson, JobResponseWithLinks.class)
-                .endChoice()
+                .end()
 
 
                 .setProperty("current_status", simple("${body.status}"))
