@@ -8,6 +8,7 @@ public class Consumer {
     private Long id;
     private String name;
     private ConsumerType type;
+    private String serviceUrl;
     private String s3Url;
     private String login;
     private String secretKey;
@@ -67,5 +68,17 @@ public class Consumer {
 
     public void setPassword(String password) {
         this.password = password;
+    }
+
+    public String getServiceUrl() {
+        return serviceUrl;
+    }
+
+    public void setServiceUrl(String serviceUrl) {
+        this.serviceUrl = serviceUrl;
+    }
+
+    public String toString() {
+        return String.format("%d / %s / %s", getId(), getName(), getServiceUrl());
     }
 }
