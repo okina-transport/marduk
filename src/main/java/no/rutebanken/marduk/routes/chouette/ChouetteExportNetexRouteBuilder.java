@@ -104,6 +104,9 @@ public class ChouetteExportNetexRouteBuilder extends AbstractChouetteRouteBuilde
 //                    .to("direct:uploadPigma")
                     .process(exportToConsumersProcessor)
                     .to("direct:uploadBlob")
+                    .process(e -> {
+                        log.info("Upload to consumers and blob store completed");
+                    })
 
                     .process(e -> JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.EXPORT_NETEX).state(JobEvent.State.OK).build())
                     .to("direct:updateStatus")
