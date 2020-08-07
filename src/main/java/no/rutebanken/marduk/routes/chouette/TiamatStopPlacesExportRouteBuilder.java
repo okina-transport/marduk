@@ -53,7 +53,8 @@ public class TiamatStopPlacesExportRouteBuilder extends AbstractChouetteRouteBui
                     setExportPollingHeaders(e, exportJob.getId().toString(), exportJob.getJobUrl(), TIAMAT_EXPORT_ROUTING_DESTINATION);
                     log.info("Tiamat Stop Places Export  : export parsed => " + exportJob.getId() + " : " + exportJob.getJobUrl() + " file => " + file + " => " + file.exists());
                 })
-
+                .removeHeader("loopCounter")
+                .to("activemq:queue:ChouettePollStatusQueue")
                 .routeId("tiamat-stop-places-export-job");
 
         from(TIAMAT_EXPORT_ROUTING_DESTINATION).streamCaching()
