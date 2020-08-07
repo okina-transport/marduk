@@ -182,7 +182,7 @@ public class ChouettePollJobStatusRoute extends AbstractChouetteRouteBuilder {
         from("activemq:queue:ChouettePollStatusQueue?transacted=true&maxConcurrentConsumers=" + maxConsumers)
                 .transacted()
                 .validate(header(Constants.CORRELATION_ID).isNotNull())
-                .validate(header(Constants.PROVIDER_ID).isNotNull())
+//                .validate(header(Constants.PROVIDER_ID).isNotNull())
                 .validate(header(Constants.CHOUETTE_JOB_STATUS_ROUTING_DESTINATION).isNotNull())
                 .validate(header(Constants.CHOUETTE_JOB_STATUS_URL).isNotNull())
                 .validate(header(Constants.CHOUETTE_JOB_STATUS_JOB_TYPE).isNotNull())
