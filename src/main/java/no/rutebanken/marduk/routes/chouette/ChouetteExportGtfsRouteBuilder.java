@@ -183,7 +183,7 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
 
 
 //                    InputStream indeb = ZipFileUtils.addFilesToZip(e.getIn().getBody(InputStream.class), new File[]{feedInfoFile});
-                    e.getIn().setBody(ZipFileUtils.addFilesToZip(e.getIn().getBody(InputStream.class), new File[]{feedInfoFile}));
+//                    e.getIn().setBody(ZipFileUtils.addFilesToZip(e.getIn().getBody(InputStream.class), new File[]{feedInfoFile}));
 
                     feedInfoFile.delete();
                     tmpFolder2.delete();
