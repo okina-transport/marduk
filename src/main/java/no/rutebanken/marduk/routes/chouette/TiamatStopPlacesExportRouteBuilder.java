@@ -43,7 +43,7 @@ public class TiamatStopPlacesExportRouteBuilder extends AbstractChouetteRouteBui
                     Object tiamatProviderId = e.getIn().getHeaders().get("tiamatProviderId");
                     log.info("Tiamat Stop Places Export : launching export for provider " + tiamatProviderId.toString());
                 })
-                .toD(stopPlacesExportUrl + "?providerId=${header.tiamatProviderId}")
+                .toD(stopPlacesExportUrl + "/initiate?providerId=${header.tiamatProviderId}")
                 .unmarshal(xmlDataFormat)
                 .process(e -> {
                     ExportJob exportJob = e.getIn().getBody(ExportJob.class);

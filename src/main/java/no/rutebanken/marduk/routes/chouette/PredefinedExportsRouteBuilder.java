@@ -32,11 +32,6 @@ public class PredefinedExportsRouteBuilder extends AbstractChouetteRouteBuilder 
         super.configure();
 
         from("direct:predefinedExports").streamCaching()
-                .onCompletion()
-                .process(e -> {
-                    log.info("predefinedExports route completed !!!");
-                })
-                .end()
                 .transacted()
                 .log(LoggingLevel.INFO, getClass().getName(), "Starting Chouette all export for provider with id ${header." + PROVIDER_ID + "}")
                 .process(e -> {
