@@ -25,6 +25,7 @@ import no.rutebanken.marduk.domain.BlobStoreFiles;
 import no.rutebanken.marduk.domain.BlobStoreFiles.File;
 import no.rutebanken.marduk.domain.ExportTemplate;
 import no.rutebanken.marduk.routes.BaseRouteBuilder;
+import no.rutebanken.marduk.routes.chouette.ExportJsonMapper;
 import no.rutebanken.marduk.routes.chouette.json.ExportJob;
 import no.rutebanken.marduk.routes.chouette.json.JobResponse;
 import no.rutebanken.marduk.routes.chouette.json.Status;
@@ -76,6 +77,9 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
 
     @Autowired
     private AuthorizationService authorizationService;
+
+    @Autowired
+    private ExportJsonMapper exportJsonMapper;
 
     @Override
     public void configure() throws Exception {
@@ -853,23 +857,12 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .route()
                 .setHeader(PROVIDER_ID, header("providerId"))
                 .process(e -> {
-                    log.info("Validate-> export process: before exports parsing");
-                    ObjectMapper mapper = new ObjectMapper();
-                    mapper.configure(JsonParser.Feature.ALLOW_UNQUOTED_FIELD_NAMES, true);
-                    String json = mapper.writeValueAsString(e.getIn().getBody());
-                    List<ExportTemplate> exports = mapper.readValue(json, new TypeReference<List<ExportTemplate>>() { });
-//                    e.getIn().setBody(exports);
-                    // keep json form for now to prevent activemq serialize errors on unhandled classes
+                    log.info("Validate-> export process: exports parsing");
+                    String json = exportJsonMapper.toJson(e.getIn().getBody());
+                    // keep a JSON form for now to prevent activemq serialize errors on unhandled classes
                     e.getIn().setHeader(JSON_EXPORTS, json);
                     e.getIn().setBody(json);
-                    log.info("Validate-> export process: received  " + exports.size() + " exports");
                 })
-//                .process(e -> {
-//                    List<ExportTemplate> exports = e.getIn().getBody(List.class);
-//                    e.getOut().setBody(null);
-//                    String tmp = "dumb";
-//                    log.info("Validate-> export process: received  " + exports.size() + " exports");
-//                })
                 .to("direct:authorizeRequest")
                 .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
                 .log(LoggingLevel.INFO, correlation() + "Chouette start validation")

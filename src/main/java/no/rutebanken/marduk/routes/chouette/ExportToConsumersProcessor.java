@@ -37,6 +37,7 @@ public class ExportToConsumersProcessor implements Processor {
      */
     @Override
     public void process(Exchange exchange) throws Exception {
+        // get the json export string:
         String jsonExport = (String) exchange.getIn().getHeaders().get(CURRENT_EXPORT);
         if (StringUtils.isNotBlank(jsonExport)) {
             ExportTemplate export = exportJsonMapper.fromJson(jsonExport);

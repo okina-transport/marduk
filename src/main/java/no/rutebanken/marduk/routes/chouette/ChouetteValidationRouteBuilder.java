@@ -28,6 +28,7 @@ import no.rutebanken.marduk.routes.status.JobEvent.TimetableAction;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.builder.PredicateBuilder;
+import org.apache.camel.component.mock.AssertionClause;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -48,10 +49,16 @@ public class ChouetteValidationRouteBuilder extends AbstractChouetteRouteBuilder
 
     @Value("${chouette.validate.level2.cron.schedule:0+30+21+?+*+MON-FRI}")
     private String level2CronSchedule;
+
+    @Value("${marduk.validate.auto.exports:true}")
+    private boolean autoExportsOnValidate;
+
     @Value("${chouette.url}")
     private String chouetteUrl;
     @Autowired
     private MultipleExportProcessor multipleExportProcessor;
+    @Autowired
+    ExportJsonMapper exportJsonMapper;
 
     @Override
     public void configure() throws Exception {
@@ -135,19 +142,6 @@ public class ChouetteValidationRouteBuilder extends AbstractChouetteRouteBuilder
                 })
                 .removeHeader("loopCounter")
                 .to("activemq:queue:ChouettePollStatusQueue")
-//                .process(e -> {
-//                    log.info("Validate-> export parsing: before exports parsing");
-//                    String jsonExports = (String) e.getIn().getHeader("JSON_EXPORTS");
-//                    ObjectMapper mapper = new ObjectMapper();
-//                    mapper.configure(JsonParser.Feature.ALLOW_UNQUOTED_FIELD_NAMES, true);
-////                    String json = mapper.writeValueAsString(e.getIn().getBody());
-//                    Object json = e.getIn().getBody();
-//                    List<ExportTemplate> exports = mapper.readValue(jsonExports, new TypeReference<List<ExportTemplate>>() { });
-//                    e.getIn().setBody(exports);
-//                    log.info("Validate-> export parsing: after exports parsing");
-//                })
-//                .process(multipleExportProcessor)
-
                 .routeId("chouette-send-validation-job");
 
         from("direct:assertHeadersForChouetteValidation")
@@ -166,46 +160,29 @@ public class ChouetteValidationRouteBuilder extends AbstractChouetteRouteBuilder
                 .setBody(constant(""))
                 .choice()
                 .when(simple("${header.action_report_result} == 'OK' and ${header.validation_report_result} == 'OK'"))
-                .to("direct:checkScheduledJobsBeforeTriggeringExport")
-                .process(e -> JobEvent.providerJobBuilder(e).timetableAction(e.getIn().getHeader(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL, TimetableAction.class)).state(State.OK).build())
+                    .to("direct:checkScheduledJobsBeforeTriggeringExport")
+                    .process(e -> JobEvent.providerJobBuilder(e).timetableAction(e.getIn().getHeader(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL, TimetableAction.class)).state(State.OK).build())
+                    .choice()
+                        .when(PredicateBuilder.and(PredicateBuilder.constant(autoExportsOnValidate), simple("${header.JSON_EXPORTS} != null")))
+                        .process(e -> {
+                            log.info("processValidationResult: exports parsing");
+                            String jsonExports = (String) e.getIn().getHeader(JSON_EXPORTS);
+                            List<ExportTemplate> exports = exportJsonMapper.fromJsonArray(jsonExports);
+                            e.getIn().setBody(exports);
+                        })
+                        .removeHeader(JSON_EXPORTS)
+                        .process(multipleExportProcessor)
+                        .stop()
+                    .endChoice()
                 .when(simple("${header.action_report_result} == 'OK' and ${header.validation_report_result} == 'NOK'"))
-                .log(LoggingLevel.INFO, correlation() + "Validation failed (processed ok, but timetable data is faulty)")
-                .process(e -> JobEvent.providerJobBuilder(e).timetableAction(e.getIn().getHeader(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL, TimetableAction.class)).state(State.FAILED).build())
+                    .log(LoggingLevel.INFO, correlation() + "Validation failed (processed ok, but timetable data is faulty)")
+                    .process(e -> JobEvent.providerJobBuilder(e).timetableAction(e.getIn().getHeader(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL, TimetableAction.class)).state(State.FAILED).build())
                 .otherwise()
-                .log(LoggingLevel.ERROR, correlation() + "Validation went wrong")
-                .process(e -> JobEvent.providerJobBuilder(e).timetableAction(e.getIn().getHeader(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL, TimetableAction.class)).state(State.FAILED).build())
+                    .log(LoggingLevel.ERROR, correlation() + "Validation went wrong")
+                    .process(e -> JobEvent.providerJobBuilder(e).timetableAction(e.getIn().getHeader(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL, TimetableAction.class)).state(State.FAILED).build())
                 .end()
                 .to("direct:updateStatus")
                 .routeId("chouette-process-validation-status");
-
-//        from("direct:processValidationResult")
-//                .to("log:" + getClass().getName() + "?level=DEBUG&showAll=true&multiline=true")
-//                .setBody(constant(""))
-//                .choice()
-//                .when(simple("${header.action_report_result} == 'OK' and ${header.validation_report_result} == 'OK' and ${header.JSON_EXPORTS} != null"))
-//                    .process(e -> {
-//                        log.info("processValidationResult: before exports parsing");
-//                        String jsonExports = (String) e.getIn().getHeader(JSON_EXPORTS);
-//                        ObjectMapper mapper = new ObjectMapper();
-//                        mapper.configure(JsonParser.Feature.ALLOW_UNQUOTED_FIELD_NAMES, true);
-//                        Object json = e.getIn().getBody();
-//                        List<ExportTemplate> exports = mapper.readValue(jsonExports, new TypeReference<List<ExportTemplate>>() { });
-//                        e.getIn().setBody(exports);
-//                        log.info("processValidationResult-> export parsing: after exports parsing");
-//                    })
-//                    .removeHeader(JSON_EXPORTS)
-//                    .process(multipleExportProcessor)
-//                    .to("direct:checkScheduledJobsBeforeTriggeringExport")
-//                .process(e -> JobEvent.providerJobBuilder(e).timetableAction(e.getIn().getHeader(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL, TimetableAction.class)).state(State.OK).build())
-//                .when(simple("${header.action_report_result} == 'OK' and ${header.validation_report_result} == 'NOK'"))
-//                .log(LoggingLevel.INFO, correlation() + "Validation failed (processed ok, but timetable data is faulty)")
-//                .process(e -> JobEvent.providerJobBuilder(e).timetableAction(e.getIn().getHeader(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL, TimetableAction.class)).state(State.FAILED).build())
-//                .otherwise()
-//                .log(LoggingLevel.ERROR, correlation() + "Validation went wrong")
-//                .process(e -> JobEvent.providerJobBuilder(e).timetableAction(e.getIn().getHeader(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL, TimetableAction.class)).state(State.FAILED).build())
-//                .end()
-//                .to("direct:updateStatus")
-//                .routeId("chouette-process-validation-status");
 
         // Check that no other import jobs in status SCHEDULED exists for this referential. If so, do not trigger export
         from("direct:checkScheduledJobsBeforeTriggeringExport")
@@ -225,23 +202,6 @@ public class ChouetteValidationRouteBuilder extends AbstractChouetteRouteBuilder
                 .setBody(constant(""))
 //                .to("activemq:queue:ChouetteExportNetexQueue") // Check on provider if should trigger transfer
                 .end()
-
-                .choice()
-                    .when(simple("${header.action_report_result} == 'OK' and ${header.validation_report_result} == 'OK' and ${header.JSON_EXPORTS} != null"))
-                    .process(e -> {
-                        log.info("processValidationResult: before exports parsing");
-                        String jsonExports = (String) e.getIn().getHeader(JSON_EXPORTS);
-                        ObjectMapper mapper = new ObjectMapper();
-                        mapper.configure(JsonParser.Feature.ALLOW_UNQUOTED_FIELD_NAMES, true);
-                        Object json = e.getIn().getBody();
-                        List<ExportTemplate> exports = mapper.readValue(jsonExports, new TypeReference<List<ExportTemplate>>() { });
-                        e.getIn().setBody(exports);
-                        log.info("processValidationResult-> export parsing: after exports parsing");
-                    })
-                    .removeHeader(JSON_EXPORTS)
-                    .process(multipleExportProcessor)
-                .end()
-
 
                 .routeId("chouette-process-job-list-after-validation");
 
