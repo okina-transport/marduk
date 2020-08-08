@@ -171,7 +171,7 @@ public class ChouetteValidationRouteBuilder extends AbstractChouetteRouteBuilder
                             e.getIn().setBody(exports);
                         })
                         .removeHeader(JSON_EXPORTS)
-                        .process(multipleExportProcessor)
+                        .to("direct:multipleExports")
                         .stop()
                     .endChoice()
                 .when(simple("${header.action_report_result} == 'OK' and ${header.validation_report_result} == 'NOK'"))
