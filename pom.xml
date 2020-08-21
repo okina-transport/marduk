@@ -27,7 +27,7 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
-        <okina-helpers.version>1.0.23-SNAPSHOT</okina-helpers.version>
+        <okina-helpers.version>1.0.23</okina-helpers.version>
 
         <docker.maven.plugin.version>0.21.0</docker.maven.plugin.version>
         <spring-boot-plugin.version>2.0.3.RELEASE</spring-boot-plugin.version>
