@@ -132,7 +132,7 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
                     .toD("${header.data_url}")
                     .setHeader("datedVersionFileName", simple("${header." + CHOUETTE_REFERENTIAL + "}-${date:now:yyyyMMddHHmmss}.zip"))
                     .process(exportToConsumersProcessor)
-                    .to("direct:addGtfsFeedInfo")
+//                    .to("direct:addGtfsFeedInfo")
                     .setHeader(BLOBSTORE_MAKE_BLOB_PUBLIC, constant(publicPublication))
                     .setHeader(FILE_HANDLE, simple(BLOBSTORE_PATH_OUTBOUND + "gtfs/${header." + CHOUETTE_REFERENTIAL + "}-" + Constants.CURRENT_AGGREGATED_GTFS_FILENAME))
                     .to("direct:uploadBlob")
