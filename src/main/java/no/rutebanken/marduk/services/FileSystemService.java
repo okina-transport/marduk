@@ -17,6 +17,7 @@ import java.io.File;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
 
@@ -69,29 +70,9 @@ public class FileSystemService {
             }
         }
 
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMddhhmmss");
-        File latestFile = null;
-        Date latestDate = null;
-
-        for (File zipFile : zipFiles) {
-
-            String[] splitTimestamp = zipFile.getName().split("_");
-            String strTimestamp = splitTimestamp[splitTimestamp.length - 1].replaceAll("[a-zA-Z.]", "");
-
-            try {
-                Date currentDate = sdf.parse(strTimestamp);
-
-                if (latestDate == null || currentDate.after(latestDate)) {
-                    latestFile = zipFile;
-                    latestDate = currentDate;
-                }
-            } catch (ParseException ignored) {
-            }
-        }
-
-        if (latestFile != null) {
-            exchange.getIn().setHeader(FILE_NAME, latestFile.getName());
-        }
+        zipFiles.sort(Comparator.comparing(File::getName));
+        File latestFile = zipFiles.get(zipFiles.size()-1);
+        exchange.getIn().setHeader(FILE_NAME, latestFile.getName());
 
         return latestFile;
     }
