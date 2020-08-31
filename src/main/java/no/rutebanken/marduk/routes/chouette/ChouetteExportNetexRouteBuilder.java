@@ -19,15 +19,25 @@ package no.rutebanken.marduk.routes.chouette;
 import no.rutebanken.marduk.Constants;
 import no.rutebanken.marduk.routes.chouette.json.Parameters;
 import no.rutebanken.marduk.routes.status.JobEvent;
+import no.rutebanken.marduk.services.FileSystemService;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import java.io.File;
 import java.util.UUID;
 
-import static no.rutebanken.marduk.Constants.*;
+import static no.rutebanken.marduk.Constants.BLOBSTORE_MAKE_BLOB_PUBLIC;
+import static no.rutebanken.marduk.Constants.BLOBSTORE_PATH_OUTBOUND;
+import static no.rutebanken.marduk.Constants.CHOUETTE_JOB_STATUS_URL;
+import static no.rutebanken.marduk.Constants.CHOUETTE_REFERENTIAL;
+import static no.rutebanken.marduk.Constants.FILE_HANDLE;
+import static no.rutebanken.marduk.Constants.JSON_PART;
+import static no.rutebanken.marduk.Constants.NO_GTFS_EXPORT;
+import static no.rutebanken.marduk.Constants.PROVIDER_ID;
+import static no.rutebanken.marduk.Constants.USER;
 import static no.rutebanken.marduk.Utils.Utils.getLastPathElementOfUrl;
 
 @Component
@@ -49,6 +59,9 @@ public class ChouetteExportNetexRouteBuilder extends AbstractChouetteRouteBuilde
 
     @Autowired
     ExportToConsumersProcessor exportToConsumersProcessor;
+
+    @Autowired
+    FileSystemService fileSystemService;
 
     @Override
     public void configure() throws Exception {
@@ -94,7 +107,10 @@ public class ChouetteExportNetexRouteBuilder extends AbstractChouetteRouteBuilde
                 .setBody(simple(""))
                 .setHeader(Exchange.HTTP_METHOD, constant(org.apache.camel.component.http4.HttpMethods.GET))
                 .toD("${header.data_url}")
-                .setHeader("datedVersionFileName", simple("${header." + CHOUETTE_REFERENTIAL + "}-${date:now:yyyyMMddHHmmss}.zip"))
+                .process(e -> {
+                    File file = fileSystemService.getOfferFile(e);
+                    e.getIn().setHeader("fileName", file.getName());
+                })
                 .process(exportToConsumersProcessor)
                 .choice().when(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)).chouetteInfo.generateDatedServiceJourneyIds)
                 .to("direct:uploadDatedExport")

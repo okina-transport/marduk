@@ -39,11 +39,19 @@ public class PredefinedExportsRouteBuilder extends AbstractChouetteRouteBuilder 
                     // Add correlation id only if missing
                     e.getIn().setHeader(Constants.CORRELATION_ID, e.getIn().getHeader(Constants.CORRELATION_ID, UUID.randomUUID().toString()));
                     Provider provider = providerRepository.getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class));
-                    List<ExportTemplate> exports = exportTemplateDAO.getAll(provider.getChouetteInfo().getReferential());
+                    Provider mosaicProvider;
+
+                    if(provider.name.contains("mosaic")) {
+                        mosaicProvider = provider;
+                        provider = providerRepository.findByName(provider.name.replace("mosaic_", ""));
+                    }
+                    else {
+                        Long mosaicProviderId = provider.getChouetteInfo().getMigrateDataToProvider();
+                        mosaicProvider = providerRepository.getProvider(mosaicProviderId);
+                    }
 
                     // get the matching migration mosaic provider to target export
-                    Long mosaicProviderId = provider.getChouetteInfo().getMigrateDataToProvider();
-                    Provider mosaicProvider = providerRepository.getProvider(mosaicProviderId);
+                    List<ExportTemplate> exports = exportTemplateDAO.getAll(provider.getChouetteInfo().getReferential());
 
                     log.info("Found export templates " + exports.size());
                     e.getOut().setBody(exports);

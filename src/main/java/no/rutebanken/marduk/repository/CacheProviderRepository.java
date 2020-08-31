@@ -105,6 +105,16 @@ public class CacheProviderRepository implements ProviderRepository {
         return getProvider(id).chouetteInfo.referential;
     }
 
+    @Override
+    public Provider findByName(String name) {
+        for(Provider provider : cache.asMap().values()) {
+            if(provider.name.equals(name)) {
+                return provider;
+            }
+        }
+        return null;
+    }
+
     public Optional<Provider> getByReferential(String referential) {
         return StringUtils.isNotBlank(referential) ? cache.asMap().values().stream().filter(p -> referential.equalsIgnoreCase(p.getChouetteInfo().getReferential())).findAny() : Optional.empty();
     }

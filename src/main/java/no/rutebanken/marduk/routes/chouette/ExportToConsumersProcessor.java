@@ -14,7 +14,6 @@ import org.springframework.stereotype.Component;
 import java.io.InputStream;
 
 import static no.rutebanken.marduk.Constants.CURRENT_EXPORT;
-import static no.rutebanken.marduk.Constants.FILE_HANDLE;
 
 @Component
 public class ExportToConsumersProcessor implements Processor {
@@ -42,7 +41,7 @@ public class ExportToConsumersProcessor implements Processor {
         if (StringUtils.isNotBlank(jsonExport)) {
             ExportTemplate export = exportJsonMapper.fromJson(jsonExport);
             log.info("Found " + export.getConsumers().size() + " for export " + export.getId() + "/" + export.getName());
-            String filePath = (String) exchange.getIn().getHeaders().get("datedVersionFileName");
+            String filePath = (String) exchange.getIn().getHeaders().get("fileName");
             InputStream streamToUpload = (InputStream) exchange.getIn().getBody();
             export.getConsumers().stream().forEach(consumer -> {
                 log.info(consumer.getType() + " consumer upload starting " + consumer.getName() + " => " + consumer.getServiceUrl());

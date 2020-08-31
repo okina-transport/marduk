@@ -17,13 +17,12 @@
 package no.rutebanken.marduk.routes.chouette;
 
 import no.rutebanken.marduk.Constants;
-import no.rutebanken.marduk.domain.ExportTemplate;
 import no.rutebanken.marduk.domain.Provider;
 import no.rutebanken.marduk.routes.chouette.json.Parameters;
 import no.rutebanken.marduk.routes.file.ZipFileUtils;
 import no.rutebanken.marduk.routes.status.JobEvent;
-import no.rutebanken.marduk.routes.status.JobEvent.TimetableAction;
 import no.rutebanken.marduk.routes.status.JobEvent.State;
+import no.rutebanken.marduk.routes.status.JobEvent.TimetableAction;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.codehaus.plexus.util.StringUtils;
@@ -34,16 +33,24 @@ import org.springframework.stereotype.Component;
 import java.io.File;
 import java.io.InputStream;
 import java.io.PrintWriter;
-import java.sql.Timestamp;
 import java.time.Instant;
-import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
 
-import static java.util.stream.Collectors.*;
-import static no.rutebanken.marduk.Constants.*;
+import static java.util.stream.Collectors.toList;
+import static no.rutebanken.marduk.Constants.BLOBSTORE_MAKE_BLOB_PUBLIC;
+import static no.rutebanken.marduk.Constants.BLOBSTORE_PATH_OUTBOUND;
+import static no.rutebanken.marduk.Constants.CHOUETTE_JOB_STATUS_URL;
+import static no.rutebanken.marduk.Constants.CHOUETTE_REFERENTIAL;
+import static no.rutebanken.marduk.Constants.EXPORT_END_DATE;
+import static no.rutebanken.marduk.Constants.EXPORT_LINES_IDS;
+import static no.rutebanken.marduk.Constants.EXPORT_START_DATE;
+import static no.rutebanken.marduk.Constants.FILE_HANDLE;
+import static no.rutebanken.marduk.Constants.JSON_PART;
+import static no.rutebanken.marduk.Constants.PROVIDER_ID;
+import static no.rutebanken.marduk.Constants.USER;
 import static no.rutebanken.marduk.Utils.Utils.getLastPathElementOfUrl;
 
 /**
@@ -130,7 +137,7 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
                     .setBody(simple(""))
                     .setHeader(Exchange.HTTP_METHOD, constant(org.apache.camel.component.http4.HttpMethods.GET))
                     .toD("${header.data_url}")
-                    .setHeader("datedVersionFileName", simple("${header." + CHOUETTE_REFERENTIAL + "}-${date:now:yyyyMMddHHmmss}.zip"))
+                    .setHeader("fileName", simple("GTFS.zip"))
                     .process(exportToConsumersProcessor)
 //                    .to("direct:addGtfsFeedInfo")
                     .setHeader(BLOBSTORE_MAKE_BLOB_PUBLIC, constant(publicPublication))

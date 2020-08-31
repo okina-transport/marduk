@@ -15,12 +15,15 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.sql.Timestamp;
-import java.time.ZoneId;
-import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
 
-import static no.rutebanken.marduk.Constants.*;
+import static no.rutebanken.marduk.Constants.EXPORT_END_DATE;
+import static no.rutebanken.marduk.Constants.EXPORT_LINES_IDS;
+import static no.rutebanken.marduk.Constants.EXPORT_START_DATE;
+import static no.rutebanken.marduk.Constants.NO_GTFS_EXPORT;
+import static no.rutebanken.marduk.Constants.ORIGINAL_PROVIDER_ID;
+import static no.rutebanken.marduk.Constants.PROVIDER_ID;
 
 /**
  * Handles multiple exports
@@ -87,7 +90,7 @@ public class MultipleExportProcessor implements Processor {
     }
 
     private void toStopPlacesExport(ExportTemplate export, Exchange exchange) throws Exception {
-        log.info("Routing to GTFS export => " + export.getId() + "/" + export.getName());
+        log.info("Routing to StopPlaces export => " + export.getId() + "/" + export.getName());
         prepareHeadersForExport(exchange, export);
         // tiamat export is based on original referential (not the mosaic one)
         Long tiamatProviderId = Long.valueOf(exchange.getIn().getHeaders().get(ORIGINAL_PROVIDER_ID).toString());

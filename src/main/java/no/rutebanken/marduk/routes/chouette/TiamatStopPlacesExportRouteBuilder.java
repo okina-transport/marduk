@@ -11,9 +11,11 @@ import org.springframework.core.io.FileSystemResource;
 import org.springframework.stereotype.Component;
 
 import java.io.File;
+import java.net.HttpURLConnection;
+import java.net.URL;
 
+import static no.rutebanken.marduk.Constants.CHOUETTE_JOB_STATUS_JOB_TYPE;
 import static no.rutebanken.marduk.Constants.CHOUETTE_JOB_STATUS_URL;
-import static no.rutebanken.marduk.Constants.CHOUETTE_REFERENTIAL;
 
 
 /**
@@ -43,10 +45,10 @@ public class TiamatStopPlacesExportRouteBuilder extends AbstractChouetteRouteBui
                 .process(e -> {
                     Object tiamatProviderId = e.getIn().getHeaders().get("tiamatProviderId");
                     log.info("Tiamat Stop Places Export : launching export for provider " + tiamatProviderId.toString());
-                })
-                .toD(stopPlacesExportUrl + "/initiate?providerId=${header.tiamatProviderId}")
-                .unmarshal(ExportJobXmlParser.newInstance())
-                .process(e -> {
+                    URL url = new URL(stopPlacesExportUrl.replace("http4", "http") + "/initiate?providerId=" + tiamatProviderId.toString());
+                    HttpURLConnection con = (HttpURLConnection) url.openConnection();
+                    e.getIn().setBody(con.getInputStream());
+
                     ExportJob exportJob = e.getIn().getBody(ExportJob.class);
                     // required to skip chouette reports parsing when polling job status
                     e.getIn().setHeader(Constants.SKIP_JOB_REPORTS, "true");
@@ -58,8 +60,7 @@ public class TiamatStopPlacesExportRouteBuilder extends AbstractChouetteRouteBui
                 })
 
                 .setHeader(Constants.CHOUETTE_JOB_STATUS_ROUTING_DESTINATION, constant(TIAMAT_EXPORT_ROUTING_DESTINATION))
-                .setHeader(Constants.CHOUETTE_JOB_STATUS_JOB_TYPE, constant(JobEvent.TimetableAction.EXPORT.name()))
-
+                .setHeader(CHOUETTE_JOB_STATUS_JOB_TYPE, constant(JobEvent.TimetableAction.EXPORT.name()))
                 .to("activemq:queue:ChouettePollStatusQueue")
                 .routeId("tiamat-stop-places-export-job");
 
@@ -72,10 +73,10 @@ public class TiamatStopPlacesExportRouteBuilder extends AbstractChouetteRouteBui
                     ExportJob exportJob = e.getIn().getBody(ExportJob.class);
                     File file = fileSystemService.getTiamatFile(exportJob.getFileName());
                     log.info("Tiamat Stop Places Export  : export parsed => " + exportJob.getId() + " : " + exportJob.getJobUrl() + " file => " + file + " => " + file.exists());
+                    e.getIn().setHeader("fileName", file.getName());
                     FileSystemResource fsr = new FileSystemResource(file);
                     e.getIn().setBody(fsr.getInputStream());
                 })
-                .setHeader("datedVersionFileName", simple("${header." + CHOUETTE_REFERENTIAL + "}-${date:now:yyyyMMddHHmmss}.zip"))
                 .process(exportToConsumersProcessor)
                 .routeId("tiamat-stop-places-export-result-job");
     }
