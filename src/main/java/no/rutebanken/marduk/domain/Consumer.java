@@ -13,6 +13,8 @@ public class Consumer {
     private String login;
     private String secretKey;
     private String password;
+    private Integer port;
+    private String destinationPath;
 
     public Long getId() {
         return id;
@@ -69,6 +71,14 @@ public class Consumer {
     public void setPassword(String password) {
         this.password = password;
     }
+
+    public Integer getPort() { return port; }
+
+    public void setPort(Integer port) { this.port = port; }
+
+    public String getDestinationPath() { return destinationPath; }
+
+    public void setDestinationPath(String destinationPath) { this.destinationPath = destinationPath; }
 
     public String getServiceUrl() {
         return serviceUrl;

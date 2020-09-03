@@ -56,7 +56,7 @@ public class FtpServiceTest {
     @Test
     public void uploadStream() throws Exception {
         FileInputStream fis = new FileInputStream(new File(FILE_TO_UPLOAD_PATH));
-        boolean uploaded = ftpService.uploadStream(fis, "ftp://localhost", USER, PASSWORD, "remotefilenameXX.zip");
+        boolean uploaded = ftpService.uploadStream(fis, "ftp://localhost", USER, PASSWORD, 22, "", "remotefilenameXX.zip");
         Assert.assertTrue(uploaded);
     }
 
