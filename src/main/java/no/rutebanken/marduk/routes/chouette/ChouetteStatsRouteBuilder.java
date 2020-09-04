@@ -55,8 +55,8 @@ public class ChouetteStatsRouteBuilder extends AbstractChouetteRouteBuilder {
     /**
      * Every ten minutes as default.
      */
-    @Value("${chouette.stats.cache.refresh.quartz.trigger:trigger.repeatInterval=600000&trigger.repeatCount=0&fireNow=true&startDelayedSeconds=20&stateful=true}")
-    private String quartzTrigger;
+//    @Value("${chouette.stats.cache.refresh.quartz.trigger:trigger.repeatInterval=600000&trigger.repeatCount=0&fireNow=true&startDelayedSeconds=20&stateful=true}")
+//    private String quartzTrigger;
 
     private JsonNode cache;
 
@@ -73,12 +73,12 @@ public class ChouetteStatsRouteBuilder extends AbstractChouetteRouteBuilder {
         super.configure();
 
         // Quartz job must run on all nodes
-        from("quartz2://marduk/refreshLine?" + quartzTrigger)
-                .log(LoggingLevel.DEBUG, "Quartz triggers refresh of line stats.")
-                .to("direct:chouetteRefreshStatsCache")
-
-                .log(LoggingLevel.DEBUG, "Quartz refresh of line stats done.")
-                .routeId("chouette-line-stats-cache-refresh-quartz");
+//        from("quartz2://marduk/refreshLine?" + quartzTrigger)
+//                .log(LoggingLevel.DEBUG, "Quartz triggers refresh of line stats.")
+//                .to("direct:chouetteRefreshStatsCache")
+//
+//                .log(LoggingLevel.DEBUG, "Quartz refresh of line stats done.")
+//                .routeId("chouette-line-stats-cache-refresh-quartz");
 
         from("quartz2://marduk/sendMailAlert?cron=" + dataAlertExpiredCron)
                 .log(LoggingLevel.INFO, "Data alert expired")
