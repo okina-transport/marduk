@@ -1,5 +1,6 @@
 package no.rutebanken.marduk.routes.chouette;
 
+import no.rutebanken.marduk.Utils.CipherEncryption;
 import no.rutebanken.marduk.domain.ExportTemplate;
 import no.rutebanken.marduk.services.FtpService;
 import no.rutebanken.marduk.services.RestUploadService;
@@ -30,6 +31,9 @@ public class ExportToConsumersProcessor implements Processor {
     @Autowired
     RestUploadService restUploadService;
 
+    @Autowired
+    CipherEncryption cipherEncryption;
+
     /**
      * Gets the result stream of an export  and upload it towards consumers defined for this export
      * @param exchange
@@ -47,12 +51,16 @@ public class ExportToConsumersProcessor implements Processor {
             export.getConsumers().stream().forEach(consumer -> {
                 log.info(consumer.getType() + " consumer upload starting " + consumer.getName() + " => " + consumer.getServiceUrl());
                 try {
+                    String passwordDecryptedConsumer = null;
+                    if(consumer.getPassword() != null && consumer.getPassword().length > 0){
+                        passwordDecryptedConsumer = cipherEncryption.decrypt(consumer.getPassword());
+                    }
                     switch (consumer.getType()) {
                         case FTP:
-                            ftpService.uploadStream(streamToUpload, consumer.getServiceUrl(), consumer.getLogin(), consumer.getPassword(), consumer.getPort(), consumer.getDestinationPath(), filePath);
+                            ftpService.uploadStream(streamToUpload, consumer.getServiceUrl(), consumer.getLogin(), passwordDecryptedConsumer, consumer.getPort(), consumer.getDestinationPath(), filePath);
                             break;
                         case SFTP:
-                            ftpService.uploadStreamSFTP(streamToUpload, consumer.getServiceUrl(), consumer.getLogin(), consumer.getPassword(), consumer.getPort(), consumer.getDestinationPath(), filePath);
+                            ftpService.uploadStreamSFTP(streamToUpload, consumer.getServiceUrl(), consumer.getLogin(), passwordDecryptedConsumer, consumer.getPort(), consumer.getDestinationPath(), filePath);
                             break;
                         case REST:
                             restUploadService.uploadStream(streamToUpload, consumer.getServiceUrl(), filePath, consumer.getLogin(), consumer.getSecretKey());

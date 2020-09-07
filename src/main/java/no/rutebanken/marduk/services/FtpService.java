@@ -137,8 +137,9 @@ public class FtpService {
             channel.connect();
             logger.info("SFTP channel opened and connected.");
             channelSftp = (ChannelSftp) channel;
-            channelSftp.cd(destinationPath);
-
+            if(StringUtils.isNotEmpty(destinationPath)){
+                channelSftp.cd(destinationPath);
+            }
             File file = new File(sftpFileName);
             FileUtils.copyInputStreamToFile(streamToUpload, file);
 

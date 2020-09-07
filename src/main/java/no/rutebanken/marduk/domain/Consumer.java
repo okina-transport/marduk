@@ -12,7 +12,7 @@ public class Consumer {
     private String s3Url;
     private String login;
     private String secretKey;
-    private String password;
+    private byte[] password;
     private Integer port;
     private String destinationPath;
 
@@ -64,11 +64,11 @@ public class Consumer {
         this.secretKey = secretKey;
     }
 
-    public String getPassword() {
+    public byte[] getPassword() {
         return password;
     }
 
-    public void setPassword(String password) {
+    public void setPassword(byte[] password) {
         this.password = password;
     }
 
