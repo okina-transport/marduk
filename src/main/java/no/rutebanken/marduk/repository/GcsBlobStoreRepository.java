@@ -23,6 +23,7 @@ import com.google.cloud.storage.BlobId;
 import com.google.cloud.storage.Storage;
 import no.rutebanken.marduk.domain.BlobStoreFiles;
 import no.rutebanken.marduk.domain.Provider;
+import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.StringUtils;
 import org.rutebanken.helper.gcp.BlobStoreHelper;
 import org.slf4j.Logger;
@@ -41,7 +42,7 @@ import java.util.Iterator;
 @Repository
 @Profile("gcs-blobstore")
 @Scope("prototype")
-public class GcsBlobStoreRepository implements BlobStoreRepository {
+            public class GcsBlobStoreRepository implements BlobStoreRepository {
 
     private Logger logger = LoggerFactory.getLogger(this.getClass());
 
@@ -134,6 +135,11 @@ public class GcsBlobStoreRepository implements BlobStoreRepository {
     @Override
     public void uploadBlob(String name, InputStream inputStream, boolean makePublic, String contentType) {
         BlobStoreHelper.uploadBlobWithRetry(storage, containerName, name, inputStream, makePublic, contentType);
+    }
+
+    @Override
+    public void copyBlob(String src, String dest) {
+        throw new NotImplementedException("copBlob not implement for GcsBlobStoreRepository");
     }
 
     @Override
