@@ -139,7 +139,7 @@ import java.util.Iterator;
 
     @Override
     public void copyBlob(String src, String dest) {
-        throw new NotImplementedException("copBlob not implement for GcsBlobStoreRepository");
+        throw new NotImplementedException("copyBlob not implemented for GcsBlobStoreRepository");
     }
 
     @Override
@@ -150,6 +150,11 @@ import java.util.Iterator;
     @Override
     public boolean deleteAllFilesInFolder(String folder) {
         return BlobStoreHelper.deleteBlobsByPrefix(storage, containerName, folder);
+    }
+
+    @Override
+    public void setPublicAccess(boolean isPublic, String filepath) {
+        throw new NotImplementedException("setPublicAccess not implemented for GcsBlobStoreRepository");
     }
 
 

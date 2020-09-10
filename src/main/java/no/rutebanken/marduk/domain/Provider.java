@@ -26,6 +26,7 @@ import java.io.IOException;
 public class Provider {
 
     public Long id;
+    public Long mosaicId;
     
     public Long getId() {
     	return id;

@@ -24,7 +24,9 @@ import no.rutebanken.marduk.Constants;
 import no.rutebanken.marduk.domain.BlobStoreFiles;
 import no.rutebanken.marduk.domain.BlobStoreFiles.File;
 import no.rutebanken.marduk.domain.ExportTemplate;
+import no.rutebanken.marduk.domain.Provider;
 import no.rutebanken.marduk.routes.BaseRouteBuilder;
+import no.rutebanken.marduk.routes.blobstore.BlobStoreRoute;
 import no.rutebanken.marduk.routes.chouette.ExportJsonMapper;
 import no.rutebanken.marduk.routes.chouette.json.ExportJob;
 import no.rutebanken.marduk.routes.chouette.json.JobResponse;
@@ -32,6 +34,7 @@ import no.rutebanken.marduk.routes.chouette.json.Status;
 import no.rutebanken.marduk.routes.status.JobEvent;
 import no.rutebanken.marduk.security.AuthorizationClaim;
 import no.rutebanken.marduk.security.AuthorizationService;
+import no.rutebanken.marduk.services.BlobStoreService;
 import org.apache.camel.Body;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
@@ -80,6 +83,9 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
 
     @Autowired
     private ExportJsonMapper exportJsonMapper;
+
+    @Autowired
+    private BlobStoreService blobStoreService;
 
     @Override
     public void configure() throws Exception {
@@ -875,6 +881,34 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .inOnly("activemq:queue:ChouetteValidationQueue")
                 .routeId("admin-chouette-validate")
                 .endRest()
+
+
+                .post("/public-export")
+                .description("Triggers the public-export")
+                .param().name("public").type(RestParamType.query).description("Defines if export file should be set as public").dataType("boolean").endParam()
+                .consumes(JSON)
+                .produces(JSON)
+                .responseMessage().code(200).message("Public-export command accepted").endResponseMessage()
+                .route()
+                .setHeader(PROVIDER_ID, header("providerId"))
+                .process(e -> {
+                    log.info("Public-export: exports parsing");
+                    Provider provider = getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class));
+                    boolean isPublic = Boolean.valueOf(e.getIn().getHeader("public").toString());
+
+                    String json = exportJsonMapper.toJson(e.getIn().getBody());
+                    List<ExportTemplate> exports = exportJsonMapper.fromJsonArray(json);
+                    exports.stream().forEach(export -> {
+                        String exportFilePath = BlobStoreRoute.exportFilePath(export, provider);
+                        blobStoreService.setPublicAccess(exportFilePath, isPublic);
+                    });
+
+                     log.info("Public-export: exports parsing end ...");
+                })
+                .routeId("admin-public-export")
+                .endRest()
+
+
 
                 .post("/clean")
                 .description("Triggers the clean dataspace process in Chouette. Only timetable data are deleted, not job data (imports, exports, validations)")

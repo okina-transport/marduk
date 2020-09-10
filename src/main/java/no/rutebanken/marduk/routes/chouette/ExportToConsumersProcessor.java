@@ -11,7 +11,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.io.IOException;
 import java.io.InputStream;
+import java.util.Optional;
 
 import static no.rutebanken.marduk.Constants.CURRENT_EXPORT;
 
@@ -20,8 +22,8 @@ public class ExportToConsumersProcessor implements Processor {
 
     Logger log = LoggerFactory.getLogger(this.getClass());
 
-    @Autowired
-    ExportJsonMapper exportJsonMapper;
+//    @Autowired
+    private static ExportJsonMapper exportJsonMapper = new ExportJsonMapper();
 
     @Autowired
     FtpService ftpService;
@@ -61,6 +63,16 @@ public class ExportToConsumersProcessor implements Processor {
             });
         }
 
+    }
+
+    public static Optional<ExportTemplate> currentExport(Exchange exchange) throws IOException {
+        ExportTemplate export = null;
+        // get the json export string:
+        String jsonExport = (String) exchange.getIn().getHeaders().get(CURRENT_EXPORT);
+        if (StringUtils.isNotBlank(jsonExport)) {
+            export = exportJsonMapper.fromJson(jsonExport);
+        }
+        return Optional.ofNullable(export);
     }
 
 

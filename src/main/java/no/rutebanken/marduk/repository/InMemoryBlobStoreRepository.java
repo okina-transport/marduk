@@ -135,6 +135,11 @@ public class InMemoryBlobStoreRepository implements BlobStoreRepository {
         return true;
     }
 
+    @Override
+    public void setPublicAccess(boolean isPublic, String filepath) {
+        throw new NotImplementedException("setPublicAccess not implemented for InMemoryBlobStoreRepository");
+    }
+
     public Provider parseProviderFromFileName(CacheProviderRepository providerRepository, String fileName) {
         if (fileName == null) {
             return null;
@@ -149,7 +154,7 @@ public class InMemoryBlobStoreRepository implements BlobStoreRepository {
 
     @Override
     public void copyBlob(String src, String dest) {
-        throw new NotImplementedException("copyBlob not implement for InMemoryBlobStoreRepository");
+        throw new NotImplementedException("copyBlob not implemented for InMemoryBlobStoreRepository");
     }
 
 

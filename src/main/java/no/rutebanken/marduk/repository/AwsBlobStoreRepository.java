@@ -18,9 +18,7 @@ package no.rutebanken.marduk.repository;
 
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.model.CopyObjectRequest;
-import com.amazonaws.services.s3.model.CopyObjectResult;
-import com.amazonaws.services.s3.model.S3ObjectSummary;
+import com.amazonaws.services.s3.model.*;
 import com.amazonaws.services.s3.transfer.TransferManager;
 import com.amazonaws.services.s3.transfer.TransferManagerBuilder;
 import com.amazonaws.services.s3.transfer.Upload;
@@ -133,11 +131,22 @@ public class AwsBlobStoreRepository implements BlobStoreRepository {
 
     @Override
     public void uploadBlob(String name, InputStream inputStream, boolean makePublic) {
-        try {
-            BlobStoreHelper.uploadBlob(amazonS3Client, containerName, name, inputStream);
-        } catch (InterruptedException | IOException e) {
-            throw new MardukException("error while uploading blob", e);
+//        try {
+//            BlobStoreHelper.uploadBlob(amazonS3Client, containerName, name, inputStream);
+//        } catch (InterruptedException | IOException e) {
+//            throw new MardukException("error while uploading blob", e);
+//        }
+
+        PutObjectRequest putReq = new PutObjectRequest(containerName, name, inputStream, null);
+        if (makePublic) {
+            putReq = putReq.withCannedAcl(CannedAccessControlList.PublicRead);
         }
+        amazonS3Client.putObject(putReq);
+    }
+
+    public void setPublicAccess(boolean isPublic, String filepath) {
+        CannedAccessControlList acl = isPublic ? CannedAccessControlList.PublicRead : CannedAccessControlList.Private;
+        amazonS3Client.setObjectAcl(containerName, filepath, acl);
     }
 
     @Override
