@@ -142,7 +142,7 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
 //                    .to("direct:addGtfsFeedInfo")
                     .setHeader(BLOBSTORE_MAKE_BLOB_PUBLIC, constant(publicPublication))
                     .setHeader(FILE_HANDLE, simple(BLOBSTORE_PATH_OUTBOUND + "gtfs/${header." + CHOUETTE_REFERENTIAL + "}-" + Constants.CURRENT_AGGREGATED_GTFS_FILENAME))
-                    .to("direct:uploadBlob")
+                    .to("direct:uploadBlobExport")
                     .process(e -> {
                         log.info("Upload to consumers and blob store completed");
                     })

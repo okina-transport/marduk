@@ -118,9 +118,7 @@ public class ChouetteExportNetexRouteBuilder extends AbstractChouetteRouteBuilde
 
                     .setHeader(BLOBSTORE_MAKE_BLOB_PUBLIC, constant(publicPublication))
                     .setHeader(FILE_HANDLE, simple(BLOBSTORE_PATH_OUTBOUND + "netex/${header." + CHOUETTE_REFERENTIAL + "}-" + Constants.CURRENT_AGGREGATED_NETEX_FILENAME))
-//                    .to("direct:uploadPigma")
-
-                    .to("direct:uploadBlob")
+                    .to("direct:uploadBlobExport")
                     .process(e -> {
                         log.info("Upload to consumers and blob store completed");
                     })

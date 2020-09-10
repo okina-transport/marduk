@@ -141,7 +141,7 @@ public class BlobStoreRoute extends BaseRouteBuilder {
         String filename = "";
         switch (export.getType()) {
             case NETEX:
-                filename = "next_offre.zip";
+                filename = "netex_offre.zip";
                 break;
             case GTFS:
                 filename = "gtfs.zip";

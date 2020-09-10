@@ -14,8 +14,8 @@ import java.io.File;
 import java.net.HttpURLConnection;
 import java.net.URL;
 
-import static no.rutebanken.marduk.Constants.CHOUETTE_JOB_STATUS_JOB_TYPE;
-import static no.rutebanken.marduk.Constants.CHOUETTE_JOB_STATUS_URL;
+import static no.rutebanken.marduk.Constants.*;
+import static no.rutebanken.marduk.Constants.CHOUETTE_REFERENTIAL;
 
 
 /**
@@ -28,6 +28,9 @@ public class TiamatStopPlacesExportRouteBuilder extends AbstractChouetteRouteBui
 
     @Value("${stop-places-export.api.url}")
     private String stopPlacesExportUrl;
+
+    @Value("${google.publish.public:false}")
+    private boolean publicPublication;
 
     @Autowired
     FileSystemService fileSystemService;
@@ -78,6 +81,8 @@ public class TiamatStopPlacesExportRouteBuilder extends AbstractChouetteRouteBui
                     e.getIn().setBody(fsr.getInputStream());
                 })
                 .process(exportToConsumersProcessor)
+                .setHeader(BLOBSTORE_MAKE_BLOB_PUBLIC, constant(publicPublication))
+                .to("direct:uploadBlobExport")
                 .routeId("tiamat-stop-places-export-result-job");
     }
 
