@@ -177,7 +177,7 @@ public class ChouetteValidationRouteBuilder extends AbstractChouetteRouteBuilder
                             e.getIn().setBody(exports);
                         })
                         .removeHeader(JSON_EXPORTS)
-                        .to("direct:predefinedExports")
+                        .to("direct:multipleExports")
                     .endChoice()
                 .when(simple("${header.action_report_result} == 'OK' and ${header.validation_report_result} == 'NOK'"))
                     .log(LoggingLevel.INFO, correlation() + "Validation failed (processed ok, but timetable data is faulty)")
