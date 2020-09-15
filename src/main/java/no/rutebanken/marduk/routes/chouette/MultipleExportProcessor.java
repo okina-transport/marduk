@@ -4,6 +4,8 @@ import no.rutebanken.marduk.Constants;
 import no.rutebanken.marduk.domain.ExportTemplate;
 import no.rutebanken.marduk.domain.ExportType;
 import no.rutebanken.marduk.domain.Line;
+import no.rutebanken.marduk.domain.Provider;
+import no.rutebanken.marduk.repository.ProviderRepository;
 import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
 import org.apache.camel.ProducerTemplate;
@@ -18,12 +20,7 @@ import java.sql.Timestamp;
 import java.util.List;
 import java.util.Map;
 
-import static no.rutebanken.marduk.Constants.EXPORT_END_DATE;
-import static no.rutebanken.marduk.Constants.EXPORT_LINES_IDS;
-import static no.rutebanken.marduk.Constants.EXPORT_START_DATE;
-import static no.rutebanken.marduk.Constants.NO_GTFS_EXPORT;
-import static no.rutebanken.marduk.Constants.ORIGINAL_PROVIDER_ID;
-import static no.rutebanken.marduk.Constants.PROVIDER_ID;
+import static no.rutebanken.marduk.Constants.*;
 
 /**
  * Handles multiple exports
@@ -40,6 +37,9 @@ public class MultipleExportProcessor implements Processor {
 
     @Autowired
     ProducerTemplate producer;
+
+    @Autowired
+    ProviderRepository providerRepository;
 
     @Autowired
     ExportJsonMapper exportJsonMapper;
@@ -114,6 +114,25 @@ public class MultipleExportProcessor implements Processor {
         headers.put(NO_GTFS_EXPORT, noGtfs);
         headers.put(Constants.FILE_NAME, "export-" + export.getId() + "-" + export.getName());
         headers.put(Constants.CURRENT_EXPORT, exportJsonMapper.toJson(export));
+        setProvidersIdsHeaders(exchange, headers);
         exchange.getOut().setHeaders(headers);
+    }
+
+
+    public void setProvidersIdsHeaders(Exchange exchange, Map<String, Object> headers) {
+        Provider provider = providerRepository.getProvider(exchange.getIn().getHeader(PROVIDER_ID, Long.class));
+        Provider mosaicProvider;
+        if(provider.isMosaicProvider()) {
+            mosaicProvider = provider;
+            provider = providerRepository.findByName(provider.name.replace("mosaic_", ""));
+        }
+        else {
+            mosaicProvider = providerRepository.getMosaicProvider(provider.getId());
+        }
+
+        headers.put(CHOUETTE_REFERENTIAL, mosaicProvider.chouetteInfo.getReferential());
+        headers.put(PROVIDER_ID, mosaicProvider.getId());
+        headers.put("providerId", mosaicProvider.getId());
+        headers.put(ORIGINAL_PROVIDER_ID, provider.getId());
     }
 }
