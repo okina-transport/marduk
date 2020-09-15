@@ -131,6 +131,7 @@ public class MultipleExportProcessor implements Processor {
         }
 
         headers.put(CHOUETTE_REFERENTIAL, mosaicProvider.chouetteInfo.getReferential());
+        headers.put(OKINA_REFERENTIAL, mosaicProvider.chouetteInfo.getReferential());
         headers.put(PROVIDER_ID, mosaicProvider.getId());
         headers.put("providerId", mosaicProvider.getId());
         headers.put(ORIGINAL_PROVIDER_ID, provider.getId());
