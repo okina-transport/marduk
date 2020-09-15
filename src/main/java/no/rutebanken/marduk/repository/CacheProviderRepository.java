@@ -35,6 +35,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import static no.rutebanken.marduk.Constants.PROVIDER_ID;
+
 
 @Repository
 public class CacheProviderRepository implements ProviderRepository {
@@ -98,6 +100,23 @@ public class CacheProviderRepository implements ProviderRepository {
     @Override
     public Provider getProvider(Long id) {
         return cache.getIfPresent(id);
+    }
+
+    /**
+     * Gets the mosaic provider for the given provider id
+     * @param id
+     * @return
+     */
+    @Override
+    public Provider getMosaicProvider(Long id) {
+        Provider provider = getProvider(id);
+        final Provider mosaicProvider;
+        if (!provider.isMosaicProvider() && provider.getMigrateProviderId().isPresent()) {
+            mosaicProvider = getProvider(provider.getMigrateProviderId().get());
+        } else {
+            mosaicProvider = provider;
+        }
+        return mosaicProvider;
     }
 
     @Override

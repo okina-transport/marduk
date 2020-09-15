@@ -893,7 +893,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .setHeader(PROVIDER_ID, header("providerId"))
                 .process(e -> {
                     log.info("Public-export: exports parsing");
-                    Provider provider = getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class));
+                    Provider provider = getProviderRepository().getMosaicProvider(e.getIn().getHeader(PROVIDER_ID, Long.class));
                     boolean isPublic = Boolean.valueOf(e.getIn().getHeader("public").toString());
 
                     String json = exportJsonMapper.toJson(e.getIn().getBody());

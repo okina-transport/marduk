@@ -21,6 +21,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
+import java.util.Optional;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class Provider {
@@ -53,6 +54,14 @@ public class Provider {
     public static Provider create(String jsonString) throws IOException {
         ObjectMapper mapper = new ObjectMapper();
         return mapper.readValue(jsonString, Provider.class);
+    }
+
+    public boolean isMosaicProvider() {
+        return this.name.startsWith("mosaic_");
+    }
+
+    public Optional<Long> getMigrateProviderId() {
+        return this.chouetteInfo != null ? Optional.ofNullable(this.chouetteInfo.migrateDataToProvider) : Optional.empty();
     }
 
 }
