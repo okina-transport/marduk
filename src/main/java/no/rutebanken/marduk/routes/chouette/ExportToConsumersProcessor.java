@@ -12,18 +12,19 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.io.IOException;
 import java.io.InputStream;
+import java.util.Optional;
 
 import static no.rutebanken.marduk.Constants.CURRENT_EXPORT;
-import static no.rutebanken.marduk.Constants.FILE_HANDLE;
 
 @Component
 public class ExportToConsumersProcessor implements Processor {
 
     Logger log = LoggerFactory.getLogger(this.getClass());
 
-    @Autowired
-    ExportJsonMapper exportJsonMapper;
+//    @Autowired
+    private static ExportJsonMapper exportJsonMapper = new ExportJsonMapper();
 
     @Autowired
     FtpService ftpService;
@@ -46,7 +47,7 @@ public class ExportToConsumersProcessor implements Processor {
         if (StringUtils.isNotBlank(jsonExport)) {
             ExportTemplate export = exportJsonMapper.fromJson(jsonExport);
             log.info("Found " + export.getConsumers().size() + " for export " + export.getId() + "/" + export.getName());
-            String filePath = (String) exchange.getIn().getHeaders().get("datedVersionFileName");
+            String filePath = (String) exchange.getIn().getHeaders().get("fileName");
             InputStream streamToUpload = (InputStream) exchange.getIn().getBody();
             export.getConsumers().stream().forEach(consumer -> {
                 log.info(consumer.getType() + " consumer upload starting " + consumer.getName() + " => " + consumer.getServiceUrl());
@@ -73,6 +74,16 @@ public class ExportToConsumersProcessor implements Processor {
             });
         }
 
+    }
+
+    public static Optional<ExportTemplate> currentExport(Exchange exchange) throws IOException {
+        ExportTemplate export = null;
+        // get the json export string:
+        String jsonExport = (String) exchange.getIn().getHeaders().get(CURRENT_EXPORT);
+        if (StringUtils.isNotBlank(jsonExport)) {
+            export = exportJsonMapper.fromJson(jsonExport);
+        }
+        return Optional.ofNullable(export);
     }
 
 

@@ -23,6 +23,7 @@ import com.google.cloud.storage.BlobId;
 import com.google.cloud.storage.Storage;
 import no.rutebanken.marduk.domain.BlobStoreFiles;
 import no.rutebanken.marduk.domain.Provider;
+import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.lang3.StringUtils;
 import org.rutebanken.helper.gcp.BlobStoreHelper;
 import org.slf4j.Logger;
@@ -41,7 +42,7 @@ import java.util.Iterator;
 @Repository
 @Profile("gcs-blobstore")
 @Scope("prototype")
-public class GcsBlobStoreRepository implements BlobStoreRepository {
+            public class GcsBlobStoreRepository implements BlobStoreRepository {
 
     private Logger logger = LoggerFactory.getLogger(this.getClass());
 
@@ -137,6 +138,11 @@ public class GcsBlobStoreRepository implements BlobStoreRepository {
     }
 
     @Override
+    public void copyBlob(String src, String dest) {
+        throw new NotImplementedException("copyBlob not implemented for GcsBlobStoreRepository");
+    }
+
+    @Override
     public boolean delete(String objectName) {
         return BlobStoreHelper.delete(storage, BlobId.of(containerName, objectName));
     }
@@ -144,6 +150,11 @@ public class GcsBlobStoreRepository implements BlobStoreRepository {
     @Override
     public boolean deleteAllFilesInFolder(String folder) {
         return BlobStoreHelper.deleteBlobsByPrefix(storage, containerName, folder);
+    }
+
+    @Override
+    public void setPublicAccess(boolean isPublic, String filepath) {
+        throw new NotImplementedException("setPublicAccess not implemented for GcsBlobStoreRepository");
     }
 
 

@@ -4,6 +4,9 @@ import no.rutebanken.marduk.Constants;
 import no.rutebanken.marduk.domain.ExportTemplate;
 import no.rutebanken.marduk.domain.ExportType;
 import no.rutebanken.marduk.domain.Line;
+import no.rutebanken.marduk.domain.Provider;
+import no.rutebanken.marduk.repository.ExportTemplateDAO;
+import no.rutebanken.marduk.repository.ProviderRepository;
 import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
 import org.apache.camel.ProducerTemplate;
@@ -15,11 +18,12 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.sql.Timestamp;
-import java.time.ZoneId;
-import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
+import static java.util.stream.Collectors.toList;
 import static no.rutebanken.marduk.Constants.*;
 
 /**
@@ -36,7 +40,13 @@ public class MultipleExportProcessor implements Processor {
     private String stopPlacesExportUrl;
 
     @Autowired
+    ExportTemplateDAO exportTemplateDAO;
+
+    @Autowired
     ProducerTemplate producer;
+
+    @Autowired
+    ProviderRepository providerRepository;
 
     @Autowired
     ExportJsonMapper exportJsonMapper;
@@ -45,13 +55,14 @@ public class MultipleExportProcessor implements Processor {
     public void process(Exchange exchange) throws Exception {
         List<ExportTemplate> exports = (List<ExportTemplate>) exchange.getIn().getBody();
         exchange.getIn().setBody(null);
+        updateExportWithMatchingMosaicLines(exports, exchange);
         exports.stream().forEach(export -> {
-
             log.info("Multiple export : export => " + export.getId() + "/" + export.getName());
             try {
                 if (ExportType.NETEX.equals(export.getType())) {
                     toNetexExport(export, exchange);
                 } else if (ExportType.GTFS == export.getType()) {
+
                     toGtfsExport(export, exchange);
                 } else if (ExportType.ARRET == export.getType()) {
                     toStopPlacesExport(export, exchange);
@@ -63,6 +74,9 @@ public class MultipleExportProcessor implements Processor {
             }
         });
     }
+
+
+
 
 
     private void toNetexExport(ExportTemplate export, Exchange exchange) throws Exception {
@@ -87,7 +101,7 @@ public class MultipleExportProcessor implements Processor {
     }
 
     private void toStopPlacesExport(ExportTemplate export, Exchange exchange) throws Exception {
-        log.info("Routing to GTFS export => " + export.getId() + "/" + export.getName());
+        log.info("Routing to StopPlaces export => " + export.getId() + "/" + export.getName());
         prepareHeadersForExport(exchange, export);
         // tiamat export is based on original referential (not the mosaic one)
         Long tiamatProviderId = Long.valueOf(exchange.getIn().getHeaders().get(ORIGINAL_PROVIDER_ID).toString());
@@ -111,6 +125,47 @@ public class MultipleExportProcessor implements Processor {
         headers.put(NO_GTFS_EXPORT, noGtfs);
         headers.put(Constants.FILE_NAME, "export-" + export.getId() + "-" + export.getName());
         headers.put(Constants.CURRENT_EXPORT, exportJsonMapper.toJson(export));
+        setProvidersIdsHeaders(exchange, headers);
         exchange.getOut().setHeaders(headers);
+    }
+
+
+    public void setProvidersIdsHeaders(Exchange exchange, Map<String, Object> headers) {
+        Provider provider = providerRepository.getProvider(exchange.getIn().getHeader(PROVIDER_ID, Long.class));
+        Provider mosaicProvider;
+        if(provider.isMosaicProvider()) {
+            mosaicProvider = provider;
+            provider = providerRepository.findByName(provider.name.replace("mosaic_", ""));
+        }
+        else {
+            mosaicProvider = providerRepository.getMosaicProvider(provider.getId());
+        }
+
+        headers.put(CHOUETTE_REFERENTIAL, mosaicProvider.chouetteInfo.getReferential());
+        headers.put(OKINA_REFERENTIAL, mosaicProvider.chouetteInfo.getReferential());
+        headers.put(PROVIDER_ID, mosaicProvider.getId());
+        headers.put("providerId", mosaicProvider.getId());
+        headers.put(ORIGINAL_PROVIDER_ID, provider.getId());
+    }
+
+
+
+    /**
+     * Remplace les lignes des exports par les lignes correspondantes dans la filiale Mosaic
+     * @param exports
+     * @param exchange
+     */
+    public void updateExportWithMatchingMosaicLines(List<ExportTemplate> exports, Exchange exchange) {
+        Provider provider = providerRepository.getProvider(exchange.getIn().getHeader(ORIGINAL_PROVIDER_ID, Long.class));
+        List<ExportTemplate> mosaicLinesExports = exportTemplateDAO.getAll(provider.chouetteInfo.referential);
+        exports.stream().filter(e -> ExportType.GTFS.equals(e.getType())).forEach( export -> {
+            Optional<ExportTemplate> mosaicLinesExport = mosaicLinesExports.stream().filter(e -> e.getId().equals(export.getId())).findAny();
+            mosaicLinesExport.ifPresent(me -> {
+                List<Line> matchingMosaicLines = (List<Line>) export.getLines().stream().map(l -> {
+                    return me.getLines().stream().filter(mel -> l.getObjectId().equals(mel.getObjectId())).findAny().get();
+                }).collect(toList());
+                export.setLines(matchingMosaicLines);
+            });
+        });
     }
 }

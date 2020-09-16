@@ -17,6 +17,7 @@
 package no.rutebanken.marduk.routes.chouette;
 
 import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import no.rutebanken.marduk.Constants;
 import no.rutebanken.marduk.routes.chouette.json.ActionReportWrapper;
 import no.rutebanken.marduk.routes.chouette.json.ExportJob;
@@ -24,8 +25,8 @@ import no.rutebanken.marduk.routes.chouette.json.JobResponse;
 import no.rutebanken.marduk.routes.chouette.json.JobResponseWithLinks;
 import no.rutebanken.marduk.routes.chouette.mapping.ProviderAndJobsMapper;
 import no.rutebanken.marduk.routes.status.JobEvent;
-import no.rutebanken.marduk.routes.status.JobEvent.TimetableAction;
 import no.rutebanken.marduk.routes.status.JobEvent.State;
+import no.rutebanken.marduk.routes.status.JobEvent.TimetableAction;
 import org.apache.activemq.ScheduledMessage;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
@@ -37,13 +38,20 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
+import static no.rutebanken.marduk.Constants.CHOUETTE_JOB_STATUS_JOB_TYPE;
 import static no.rutebanken.marduk.Constants.CHOUETTE_REFERENTIAL;
 import static no.rutebanken.marduk.Constants.PROVIDER_ID;
-import static no.rutebanken.marduk.routes.chouette.json.Status.*;
+import static no.rutebanken.marduk.routes.chouette.json.Status.ABORTED;
+import static no.rutebanken.marduk.routes.chouette.json.Status.CANCELED;
+import static no.rutebanken.marduk.routes.chouette.json.Status.RESCHEDULED;
+import static no.rutebanken.marduk.routes.chouette.json.Status.SCHEDULED;
+import static no.rutebanken.marduk.routes.chouette.json.Status.STARTED;
 
 @Component
 public class ChouettePollJobStatusRoute extends AbstractChouetteRouteBuilder {
@@ -194,20 +202,36 @@ public class ChouettePollJobStatusRoute extends AbstractChouetteRouteBuilder {
                 .removeHeaders("Camel*")
                 .setBody(constant(""))
                 .setHeader(Exchange.HTTP_METHOD, constant(org.apache.camel.component.http4.HttpMethods.GET))
-                .toD("${exchangeProperty.url}")
+                .process(e -> {
+                    URL url = new URL(e.getProperty("url").toString().replace("http4", "http"));
+                    HttpURLConnection con = (HttpURLConnection) url.openConnection();
+                    e.getIn().setBody(con.getInputStream());
+                })
 
                 .choice()
                     .when(simple("${header.SKIP_JOB_REPORTS} != null "))
-                        .unmarshal(ExportJobXmlParser.newInstance())
                         .process(e -> {
                             log.info("POLLING TIAMAT JOB STATUS END");
-                            ExportJob exportJob = e.getIn().getBody(ExportJob.class);
-                            e.getProperties().put("TIAMAT_STATUS", exportJob.getStatus().name());
+                            if(JobEvent.TimetableAction.EXPORT.name().equals(e.getIn().getHeader(CHOUETTE_JOB_STATUS_JOB_TYPE))) {
+                                ExportJob exportJob = e.getIn().getBody(ExportJob.class);
+                                e.getProperties().put("STATUS", exportJob.getStatus().name());
+                                e.getIn().setBody(exportJob);
+                            } else if(JobEvent.TimetableAction.EXPORT_NETEX.name().equals(e.getIn().getHeader(CHOUETTE_JOB_STATUS_JOB_TYPE))) {
+                                String json = e.getIn().getBody(String.class);
+                                JobResponse jobResponse = new ObjectMapper().readValue(json, JobResponse.class);
+
+                                if("TERMINATED".equals(jobResponse.getStatus().name())) {
+                                    e.getProperties().put("STATUS", "FINISHED");
+                                    e.getIn().setHeader("action_report_result", "OK");
+                                    e.getIn().setBody(json);
+                                }
+                                else {
+                                    e.getProperties().put("STATUS", jobResponse.getStatus().name());
+                                }
+                            }
                         })
-//                        .toD("${header." + Constants.CHOUETTE_JOB_STATUS_ROUTING_DESTINATION + "}")
-//                        .stop()
                         .choice()
-                            .when(simple("${exchangeProperty.TIAMAT_STATUS} == 'FINISHED'"))
+                            .when(simple("${exchangeProperty.STATUS} == 'FINISHED'"))
                                 .toD("${header." + Constants.CHOUETTE_JOB_STATUS_ROUTING_DESTINATION + "}")
                             .otherwise()
                                 .to("direct:rescheduleJob")

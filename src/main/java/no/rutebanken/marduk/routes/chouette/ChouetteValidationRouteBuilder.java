@@ -16,9 +16,6 @@
 
 package no.rutebanken.marduk.routes.chouette;
 
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import no.rutebanken.marduk.Constants;
 import no.rutebanken.marduk.domain.ExportTemplate;
 import no.rutebanken.marduk.routes.chouette.json.Parameters;
@@ -28,7 +25,6 @@ import no.rutebanken.marduk.routes.status.JobEvent.TimetableAction;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.builder.PredicateBuilder;
-import org.apache.camel.component.mock.AssertionClause;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -36,8 +32,17 @@ import org.springframework.stereotype.Component;
 import java.util.List;
 import java.util.UUID;
 
-import static no.rutebanken.marduk.Constants.*;
+import static no.rutebanken.marduk.Constants.CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL;
+import static no.rutebanken.marduk.Constants.CHOUETTE_REFERENTIAL;
+import static no.rutebanken.marduk.Constants.CORRELATION_ID;
+import static no.rutebanken.marduk.Constants.IMPORT;
+import static no.rutebanken.marduk.Constants.JSON_EXPORTS;
+import static no.rutebanken.marduk.Constants.JSON_PART;
+import static no.rutebanken.marduk.Constants.PROVIDER_ID;
+import static no.rutebanken.marduk.Constants.USER;
 import static no.rutebanken.marduk.Utils.Utils.getLastPathElementOfUrl;
+import static no.rutebanken.marduk.routes.status.JobEvent.TimetableAction.VALIDATION_LEVEL_1;
+import static no.rutebanken.marduk.routes.status.JobEvent.TimetableAction.VALIDATION_LEVEL_2;
 
 /**
  * Runs validation in Chouette
@@ -89,7 +94,7 @@ public class ChouetteValidationRouteBuilder extends AbstractChouetteRouteBuilder
                 .process(e -> e.getIn().setHeader(CORRELATION_ID, UUID.randomUUID().toString()))
                 .setHeader(PROVIDER_ID, simple("${body.id}"))
                 .setHeader(CHOUETTE_REFERENTIAL, simple("${body.chouetteInfo.referential}"))
-                .setHeader(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL, constant(JobEvent.TimetableAction.VALIDATION_LEVEL_1.name()))
+                .setHeader(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL, constant(VALIDATION_LEVEL_1.name()))
                 .setBody(constant(null))
                 .inOnly("activemq:queue:ChouetteValidationQueue")
                 .routeId("chouette-validate-level1-all-providers");
@@ -163,7 +168,8 @@ public class ChouetteValidationRouteBuilder extends AbstractChouetteRouteBuilder
                     .to("direct:checkScheduledJobsBeforeTriggeringExport")
                     .process(e -> JobEvent.providerJobBuilder(e).timetableAction(e.getIn().getHeader(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL, TimetableAction.class)).state(State.OK).build())
                     .choice()
-                        .when(PredicateBuilder.and(PredicateBuilder.constant(autoExportsOnValidate), simple("${header.JSON_EXPORTS} != null")))
+                        .when(PredicateBuilder.and(PredicateBuilder.constant(autoExportsOnValidate), simple("${header.JSON_EXPORTS} != null"),
+                                constant(VALIDATION_LEVEL_2).isEqualTo(header(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL))))
                         .process(e -> {
                             log.info("processValidationResult: exports parsing");
                             String jsonExports = (String) e.getIn().getHeader(JSON_EXPORTS);
@@ -172,7 +178,6 @@ public class ChouetteValidationRouteBuilder extends AbstractChouetteRouteBuilder
                         })
                         .removeHeader(JSON_EXPORTS)
                         .to("direct:multipleExports")
-                        .stop()
                     .endChoice()
                 .when(simple("${header.action_report_result} == 'OK' and ${header.validation_report_result} == 'NOK'"))
                     .log(LoggingLevel.INFO, correlation() + "Validation failed (processed ok, but timetable data is faulty)")
@@ -194,7 +199,10 @@ public class ChouetteValidationRouteBuilder extends AbstractChouetteRouteBuilder
                 .choice()
                 .when().jsonpath("$.*[?(@.status == 'SCHEDULED')].status")
                 .log(LoggingLevel.INFO, correlation() + "Validation ok, skipping export as there are more import jobs active")
-                .when(PredicateBuilder.or(method(getClass(), "shouldTransferData").isEqualTo(true), constant(null).isEqualTo(header(IMPORT))))
+                .when(PredicateBuilder.and(
+                        PredicateBuilder.or(method(getClass(), "shouldTransferData").isEqualTo(true), constant(null).isEqualTo(header(IMPORT))),
+                        constant(VALIDATION_LEVEL_1).isEqualTo(header(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL))
+                ))
                 .log(LoggingLevel.INFO, correlation() + "Validation ok, transfering data to next dataspace")
                 .to("activemq:queue:ChouetteTransferExportQueue")
                 .when(method(getClass(), "isAutoTransferData").isEqualTo(true))

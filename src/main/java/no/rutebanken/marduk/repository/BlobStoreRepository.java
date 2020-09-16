@@ -41,6 +41,8 @@ public interface BlobStoreRepository {
 
     void uploadBlob(String objectName, InputStream inputStream, boolean makePublic, String contentType);
 
+    void copyBlob(String src, String dest);
+
     void setStorage(Storage storage);
 
     void setAmazonS3Client(AmazonS3 amazonS3Client);
@@ -50,5 +52,7 @@ public interface BlobStoreRepository {
     boolean delete(String objectName);
 
     boolean deleteAllFilesInFolder(String folder);
+
+    void setPublicAccess(boolean isPublic, String filepath);
 
 }

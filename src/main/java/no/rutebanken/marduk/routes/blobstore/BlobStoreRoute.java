@@ -16,10 +16,17 @@
 
 package no.rutebanken.marduk.routes.blobstore;
 
+import no.rutebanken.marduk.domain.ExportTemplate;
+import no.rutebanken.marduk.domain.Provider;
 import no.rutebanken.marduk.routes.BaseRouteBuilder;
+import no.rutebanken.marduk.routes.chouette.ExportToConsumersProcessor;
 import org.apache.camel.LoggingLevel;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Optional;
 
 import static no.rutebanken.marduk.Constants.*;
 
@@ -28,6 +35,8 @@ public class BlobStoreRoute extends BaseRouteBuilder {
 
     @Value("${google.publish.public:false}")
     private boolean publicPublication;
+
+    private static SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMddhhmmssZ");
 
     @Override
     public void configure() throws Exception {
@@ -43,6 +52,25 @@ public class BlobStoreRoute extends BaseRouteBuilder {
                 .to("log:" + getClass().getName() + "?level=DEBUG&showAll=true&multiline=true")
                 .log(LoggingLevel.INFO, correlation() + "Stored file ${header." + FILE_HANDLE + "} in blob store.")
                 .routeId("blobstore-upload");
+
+        from("direct:uploadBlobExport")
+                .to("log:" + getClass().getName() + "?level=DEBUG&showAll=true&multiline=true")
+                .process(e -> {
+                    Optional<ExportTemplate> export = ExportToConsumersProcessor.currentExport(e);
+                    export.ifPresent(exp -> {
+                        Provider provider = getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class));
+                        e.getIn().setHeader(FILE_HANDLE, exportFilePath(exp, provider));
+                        e.getIn().setHeader(ARCHIVE_FILE_HANDLE, exportArchiveFilePath(exp, provider));
+                    });
+                    //e.getIn().setHeader(FILE_HANDLE, simple(BLOBSTORE_PATH_OUTBOUND + "netex/${header." + CHOUETTE_REFERENTIAL + "}-" + Constants.CURRENT_AGGREGATED_NETEX_FILENAME))
+                })
+                .choice()
+                    .when(header(BLOBSTORE_MAKE_BLOB_PUBLIC).isNull())
+                    .setHeader(BLOBSTORE_MAKE_BLOB_PUBLIC, constant(publicPublication))     //defaulting to false if not specified
+                .end()
+                .bean("blobStoreService", "uploadBlobExport")
+                .setBody(simple(""))
+                .routeId("blobstore-upload-export");
 
         from("direct:getBlob")
                 .to("log:" + getClass().getName() + "?level=DEBUG&showAll=true&multiline=true")
@@ -83,5 +111,67 @@ public class BlobStoreRoute extends BaseRouteBuilder {
                 .routeId("blobstore-list-in-folders-by-provider");
 
 
+    }
+
+
+
+    public static String exportFilePath(ExportTemplate export, Provider provider) {
+        return awsExportPath(export, provider) + "/" + awsExportFileName(export);
+    }
+
+    private static String exportArchiveFilePath(ExportTemplate export, Provider provider) {
+        String archive = "";
+        switch (export.getType()) {
+            case NETEX:
+                archive = " OFFRE_" + exportSiteId(provider) + "_" + nowTag() + ".zip";
+                break;
+            case ARRET:
+                archive = "ARRET_" + exportSiteId(provider) + "_" + exportSiteName(provider)+ "_T_" + nowTag() + ".zip";
+                break;
+            default:
+                archive = nowTag() + "_" + awsExportFileName(export);
+                break;
+        }
+
+        return awsExportPath(export, provider) + "/archive/" +  archive;
+    }
+
+
+    private static String awsExportFileName(ExportTemplate export) {
+        String filename = "";
+        switch (export.getType()) {
+            case NETEX:
+                filename = "netex_offre.zip";
+                break;
+            case GTFS:
+                filename = "gtfs.zip";
+                break;
+            case ARRET:
+                filename = "netex_arrets.zip";
+                break;
+            case CONCERTO:
+                filename = "concerto.csv";
+                break;
+        }
+        return filename;
+    }
+
+
+
+
+    private static String awsExportPath(ExportTemplate export, Provider provider) {
+        return exportSiteId(provider) + "/exports/" + export.getId();
+    }
+
+    private static String exportSiteName(Provider provider) {
+        return provider.chouetteInfo.referential;
+    }
+
+    private static String exportSiteId(Provider provider) {
+        return "" + (provider.mosaicId != null ? provider.mosaicId : "x" + provider.getId());
+    }
+
+    private static String nowTag() {
+        return sdf.format(new Date());
     }
 }

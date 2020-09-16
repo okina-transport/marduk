@@ -26,5 +26,9 @@ public interface ProviderRepository {
 
     Provider getProvider(Long id);
 
+    Provider getMosaicProvider(Long id);
+
     String getReferential(Long id);
+
+    Provider findByName(String name);
 }

@@ -18,7 +18,10 @@ package no.rutebanken.marduk.repository;
 
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.model.S3ObjectSummary;
+import com.amazonaws.services.s3.model.*;
+import com.amazonaws.services.s3.transfer.TransferManager;
+import com.amazonaws.services.s3.transfer.TransferManagerBuilder;
+import com.amazonaws.services.s3.transfer.Upload;
 import com.google.cloud.storage.Storage;
 import com.okina.helper.aws.BlobStoreHelper;
 import no.rutebanken.marduk.domain.BlobStoreFiles;
@@ -32,6 +35,7 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Repository;
 
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Arrays;
@@ -76,7 +80,6 @@ public class AwsBlobStoreRepository implements BlobStoreRepository {
             List<S3ObjectSummary> s3ObjectSummaries = BlobStoreHelper.listAllBlobsRecursively(amazonS3Client, containerName, prefix);
             BlobStoreHelper.listAllBlobsRecursively(amazonS3Client, containerName, prefix).forEach(blob -> blobStoreFiles.add(toBlobStoreFile(amazonS3Client, containerName, blob)));
         }
-
         return blobStoreFiles;
     }
 
@@ -128,17 +131,36 @@ public class AwsBlobStoreRepository implements BlobStoreRepository {
 
     @Override
     public void uploadBlob(String name, InputStream inputStream, boolean makePublic) {
-        try {
-            BlobStoreHelper.uploadBlob(amazonS3Client, containerName, name, inputStream);
-        } catch (InterruptedException | IOException e) {
-            throw new MardukException("error while uploading blob", e);
+//        try {
+//            BlobStoreHelper.uploadBlob(amazonS3Client, containerName, name, inputStream);
+//        } catch (InterruptedException | IOException e) {
+//            throw new MardukException("error while uploading blob", e);
+//        }
+
+        PutObjectRequest putReq = new PutObjectRequest(containerName, name, inputStream, null);
+        if (makePublic) {
+            putReq = putReq.withCannedAcl(CannedAccessControlList.PublicRead);
         }
+        amazonS3Client.putObject(putReq);
+    }
+
+    public void setPublicAccess(boolean isPublic, String filepath) {
+        CannedAccessControlList acl = isPublic ? CannedAccessControlList.PublicRead : CannedAccessControlList.Private;
+        amazonS3Client.setObjectAcl(containerName, filepath, acl);
     }
 
     @Override
     public void uploadBlob(String name, InputStream inputStream, boolean makePublic, String contentType) {
         uploadBlob(name, inputStream, false);
     }
+
+
+    public void copyBlob(String src, String dest) {
+        CopyObjectRequest req = new CopyObjectRequest(this.containerName, src, this.containerName, dest);
+        CopyObjectResult res = amazonS3Client.copyObject(req);
+        logger.info("Aws => copied " + src + " to " + dest);
+    }
+
 
     @Override
     public boolean delete(String objectName) {
