@@ -8,6 +8,7 @@ import java.io.Serializable;
 public class Line implements Serializable {
 
     protected Long id;
+    private String objectId;
     private String name;
     private String comment;
     private String number;
@@ -70,5 +71,13 @@ public class Line implements Serializable {
 
     public void setRegistrationNumber(String registrationNumber) {
         this.registrationNumber = registrationNumber;
+    }
+
+    public String getObjectId() {
+        return objectId;
+    }
+
+    public void setObjectId(String objectId) {
+        this.objectId = objectId;
     }
 }
