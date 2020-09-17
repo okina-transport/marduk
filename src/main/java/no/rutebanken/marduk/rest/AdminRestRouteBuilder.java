@@ -51,11 +51,7 @@ import org.springframework.stereotype.Component;
 
 import javax.ws.rs.NotFoundException;
 import java.net.URLDecoder;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static javax.ws.rs.core.MediaType.MULTIPART_FORM_DATA;
@@ -908,7 +904,22 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .routeId("admin-public-export")
                 .endRest()
 
-
+                .post("/delete-exports")
+                .description("Delete all exports linked to provider")
+                .responseMessage().code(200).message("Delete exports command accepted").endResponseMessage()
+                .route()
+                .setHeader(PROVIDER_ID, header("providerId"))
+                .process(e -> {
+                    log.info("Delete exports starting");
+                    Provider provider = getProviderRepository().getNonMosaicProvider(e.getIn().getHeader(PROVIDER_ID, Long.class))
+                            .orElseThrow(() -> new RuntimeException("No valid base provider found. Provider id : " + e.getIn().getHeader(PROVIDER_ID)));
+                    String baseProviderFolder = BlobStoreRoute.exportSiteId(provider);
+                    blobStoreService.deleteAllBlobsInFolder(baseProviderFolder, e);
+                    blobStoreService.deleteBlob(baseProviderFolder, e);
+                    log.info("Delete exports done");
+                })
+                .routeId("admin-delete-exports")
+                .endRest()
 
                 .post("/clean")
                 .description("Triggers the clean dataspace process in Chouette. Only timetable data are deleted, not job data (imports, exports, validations)")
