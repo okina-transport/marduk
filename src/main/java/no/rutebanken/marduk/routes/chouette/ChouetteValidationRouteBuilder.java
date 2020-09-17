@@ -108,6 +108,9 @@ public class ChouetteValidationRouteBuilder extends AbstractChouetteRouteBuilder
                 .process(e -> e.getIn().setHeader(CORRELATION_ID, UUID.randomUUID().toString()))
                 .setHeader(PROVIDER_ID, simple("${body.id}"))
                 .setHeader(CHOUETTE_REFERENTIAL, simple("${body.chouetteInfo.referential}"))
+                .process(e -> {
+                    log.info("SETTING VALIDATION LEVEL 2 !!!");
+                })
                 .setHeader(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL, constant(JobEvent.TimetableAction.VALIDATION_LEVEL_2.name()))
                 .setBody(constant(null))
                 .inOnly("activemq:queue:ChouetteValidationQueue")
