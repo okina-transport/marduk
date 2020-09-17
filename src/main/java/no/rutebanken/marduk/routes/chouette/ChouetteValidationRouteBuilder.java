@@ -169,7 +169,9 @@ public class ChouetteValidationRouteBuilder extends AbstractChouetteRouteBuilder
                 .choice()
                 .when(simple("${header.action_report_result} == 'OK' and ${header.validation_report_result} == 'OK'"))
                     .to("direct:checkScheduledJobsBeforeTriggeringExport")
-                    .process(e -> JobEvent.providerJobBuilder(e).timetableAction(e.getIn().getHeader(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL, TimetableAction.class)).state(State.OK).build())
+                    .process(e -> {
+                        JobEvent.providerJobBuilder(e).timetableAction(e.getIn().getHeader(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL, TimetableAction.class)).state(State.OK).build();
+                    })
                     .choice()
                         .when(PredicateBuilder.and(PredicateBuilder.constant(autoExportsOnValidate), simple("${header.JSON_EXPORTS} != null"),
                                 constant(VALIDATION_LEVEL_2).isEqualTo(header(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL))))
@@ -182,6 +184,9 @@ public class ChouetteValidationRouteBuilder extends AbstractChouetteRouteBuilder
                         .removeHeader(JSON_EXPORTS)
                         .to("direct:multipleExports")
                     .endChoice()
+                    .process(e -> {
+                        JobEvent.providerJobBuilder(e).timetableAction(e.getIn().getHeader(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL, TimetableAction.class)).state(State.OK).build();
+                    })
                 .when(simple("${header.action_report_result} == 'OK' and ${header.validation_report_result} == 'NOK'"))
                     .log(LoggingLevel.INFO, correlation() + "Validation failed (processed ok, but timetable data is faulty)")
                     .process(e -> JobEvent.providerJobBuilder(e).timetableAction(e.getIn().getHeader(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL, TimetableAction.class)).state(State.FAILED).build())
