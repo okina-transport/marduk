@@ -15,11 +15,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import spark.utils.StringUtils;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.URL;
 import java.net.URLConnection;
 import java.nio.file.Files;
-import java.util.ArrayList;
 import java.util.InvalidPropertiesFormatException;
 
 @Component
@@ -74,21 +77,20 @@ public class FtpService {
         String ftpDestinationPath = getFtpDestinationPath(destinationPath);
 
         boolean uploaded;
-        if(StringUtils.isNotEmpty(destinationPath)){
+        if (StringUtils.isNotEmpty(destinationPath)) {
             uploaded = ftpClient.storeFile(ftpFilePath + ftpDestinationPath + ftpFileName, uploadStream);
-        }
-        else{
+        } else {
             uploaded = ftpClient.storeFile(ftpFilePath + "/" + ftpFileName, uploadStream);
         }
         return uploaded;
     }
 
     private String getFtpDestinationPath(String destinationPath) {
-        if(StringUtils.isNotEmpty(destinationPath)){
-            if(!destinationPath.startsWith("/")){
+        if (StringUtils.isNotEmpty(destinationPath)) {
+            if (!destinationPath.startsWith("/")) {
                 destinationPath = "/" + destinationPath;
             }
-            if(!destinationPath.endsWith("/")){
+            if (!destinationPath.endsWith("/")) {
                 destinationPath = destinationPath + "/";
             }
         }
@@ -105,14 +107,13 @@ public class FtpService {
     }
 
     private String parseFilePathFromFtpUrl(String ftpUrl) throws InvalidPropertiesFormatException {
-        if(ftpUrl.contains("//")){
+        if (ftpUrl.contains("//")) {
             String[] tokens = ftpUrl.split("//");
             if (tokens == null || tokens.length != 2 || !tokens[0].equalsIgnoreCase("ftp:")) {
                 throw new InvalidPropertiesFormatException("Invalid ftp url " + ftpUrl + " for file upload");
             }
             return tokens[1] != null && tokens[1].contains("/") ? tokens[1].split("/")[1] : "";
-        }
-        else{
+        } else {
             return ftpUrl;
         }
     }
@@ -137,13 +138,15 @@ public class FtpService {
             channel.connect();
             logger.info("SFTP channel opened and connected.");
             channelSftp = (ChannelSftp) channel;
-            if(StringUtils.isNotEmpty(destinationPath)){
+            if (StringUtils.isNotEmpty(destinationPath)) {
                 channelSftp.cd(destinationPath);
             }
             File file = new File(sftpFileName);
             FileUtils.copyInputStreamToFile(streamToUpload, file);
 
-            channelSftp.put(new FileInputStream(file.getName()), sftpFileName);
+            try (FileInputStream src = new FileInputStream(file.getName())) {
+                channelSftp.put(src, sftpFileName);
+            }
 
             logger.info("File transfered successfully to host.");
         } catch (Exception ex) {
