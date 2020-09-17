@@ -128,7 +128,7 @@ public class CacheProviderRepository implements ProviderRepository {
         Provider provider = getProvider(id);
         Optional<Provider> nonMosaicProvider = Optional.ofNullable(provider);
         if (provider != null && provider.isMosaicProvider()) {
-            nonMosaicProvider = cache.asMap().values().stream().filter(p -> p.chouetteInfo.migrateDataToProvider ==  id).findAny();
+            nonMosaicProvider = cache.asMap().values().stream().filter(p -> id.equals(p.chouetteInfo.migrateDataToProvider)).findAny();
         }
         return nonMosaicProvider;
     }
