@@ -185,7 +185,7 @@ public class ChouetteValidationRouteBuilder extends AbstractChouetteRouteBuilder
                         .to("direct:multipleExports")
                     .endChoice()
                     .process(e -> {
-                        boolean doOk = false;
+                        boolean doOk = true;
                         if (doOk) {
                             JobEvent.providerJobBuilder(e).timetableAction(e.getIn().getHeader(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL, TimetableAction.class)).state(State.OK).build();
                         }
