@@ -185,7 +185,10 @@ public class ChouetteValidationRouteBuilder extends AbstractChouetteRouteBuilder
                         .to("direct:multipleExports")
                     .endChoice()
                     .process(e -> {
-                        JobEvent.providerJobBuilder(e).timetableAction(e.getIn().getHeader(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL, TimetableAction.class)).state(State.OK).build();
+                        boolean doOk = false;
+                        if (doOk) {
+                            JobEvent.providerJobBuilder(e).timetableAction(e.getIn().getHeader(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL, TimetableAction.class)).state(State.OK).build();
+                        }
                     })
                 .when(simple("${header.action_report_result} == 'OK' and ${header.validation_report_result} == 'NOK'"))
                     .log(LoggingLevel.INFO, correlation() + "Validation failed (processed ok, but timetable data is faulty)")
