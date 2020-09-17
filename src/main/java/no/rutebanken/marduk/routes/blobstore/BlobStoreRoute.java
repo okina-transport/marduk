@@ -58,7 +58,8 @@ public class BlobStoreRoute extends BaseRouteBuilder {
                 .process(e -> {
                     Optional<ExportTemplate> export = ExportToConsumersProcessor.currentExport(e);
                     export.ifPresent(exp -> {
-                        Provider provider = getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class));
+                        Provider provider = getProviderRepository().getNonMosaicProvider(e.getIn().getHeader(PROVIDER_ID, Long.class))
+                                .orElseThrow(() -> new RuntimeException("No valid base provider found for export uploading. Provider id : " + e.getIn().getHeader(PROVIDER_ID)));
                         e.getIn().setHeader(FILE_HANDLE, exportFilePath(exp, provider));
                         e.getIn().setHeader(ARCHIVE_FILE_HANDLE, exportArchiveFilePath(exp, provider));
                     });
@@ -167,7 +168,7 @@ public class BlobStoreRoute extends BaseRouteBuilder {
         return provider.chouetteInfo.referential;
     }
 
-    private static String exportSiteId(Provider provider) {
+    public static String exportSiteId(Provider provider) {
         return "" + (provider.mosaicId != null ? provider.mosaicId : "x" + provider.getId());
     }
 

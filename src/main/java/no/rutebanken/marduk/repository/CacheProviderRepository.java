@@ -119,6 +119,20 @@ public class CacheProviderRepository implements ProviderRepository {
         return mosaicProvider;
     }
 
+    /**
+     * Gets the non mosaic provider associated to the given provider
+     * @param id Provider id (can be mosaic or not)
+     * @return
+     */
+    public Optional<Provider> getNonMosaicProvider(Long id) {
+        Provider provider = getProvider(id);
+        Optional<Provider> nonMosaicProvider = Optional.ofNullable(provider);
+        if (provider != null && provider.isMosaicProvider()) {
+            nonMosaicProvider = cache.asMap().values().stream().filter(p -> p.chouetteInfo.migrateDataToProvider ==  id).findAny();
+        }
+        return nonMosaicProvider;
+    }
+
     @Override
     public String getReferential(Long id) {
         return getProvider(id).chouetteInfo.referential;

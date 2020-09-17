@@ -19,6 +19,7 @@ package no.rutebanken.marduk.repository;
 import no.rutebanken.marduk.domain.Provider;
 
 import java.util.Collection;
+import java.util.Optional;
 
 public interface ProviderRepository {
 
@@ -27,6 +28,8 @@ public interface ProviderRepository {
     Provider getProvider(Long id);
 
     Provider getMosaicProvider(Long id);
+
+    Optional<Provider> getNonMosaicProvider(Long id);
 
     String getReferential(Long id);
 

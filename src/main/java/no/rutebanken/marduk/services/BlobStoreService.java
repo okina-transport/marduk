@@ -100,21 +100,6 @@ public class BlobStoreService {
         copyBlob(name, archiveName);
     }
 
-//    public void uploadBlobExport(@Header(value = Constants.PROVIDER_ID) Long providerId,
-//                                 @Header(value = Constants.BLOBSTORE_MAKE_BLOB_PUBLIC) boolean makePublic, InputStream inputStream, Exchange exchange) {
-//
-//        Optional<ExportTemplate> export = ExportToConsumersProcessor.currentExport(exchange);
-//        export.ifPresent(exp -> {
-//            Provider provider = getProviderRepository().getProvider(exchange.getIn().getHeader(PROVIDER_ID, Long.class));
-//            e.getIn().setHeader(FILE_HANDLE, awsExportFilePath(exp, provider));
-//            e.getIn().setHeader(ARCHIVE_FILE_HANDLE, awsExportArchiveFilePath(exp, provider));
-//        });
-//
-//
-//        uploadBlob(name, makePublic, inputStream, exchange);
-//        copyBlob(name, archiveName);
-//    }
-
 
     public void setPublicAccess(String filepath, boolean makePublic) {
         repository.setPublicAccess(makePublic, filepath);
