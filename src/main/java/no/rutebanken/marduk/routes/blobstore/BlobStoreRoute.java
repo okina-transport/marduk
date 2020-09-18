@@ -63,6 +63,7 @@ public class BlobStoreRoute extends BaseRouteBuilder {
                     if (export.isPresent()) {
                         e.getIn().setHeader(FILE_HANDLE, exportFilePath(export.get(), provider));
                         e.getIn().setHeader(ARCHIVE_FILE_HANDLE, exportArchiveFilePath(export.get(), provider));
+                        e.getIn().setHeader(BLOBSTORE_MAKE_BLOB_PUBLIC, export.get().hasExportFilePublicAccess());
                     } else { // cas des exports manuels
                         e.getIn().setHeader(FILE_HANDLE, exportFilePath(provider, e.getIn().getHeader(EXPORT_FILE_NAME).toString()));
                     }

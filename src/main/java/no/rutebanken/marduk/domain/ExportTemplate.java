@@ -12,6 +12,8 @@ import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import static java.util.stream.Collectors.toList;
+
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class ExportTemplate implements Serializable {
 
@@ -96,5 +98,37 @@ public class ExportTemplate implements Serializable {
 
     public void setConsumers(List<Consumer> consumers) {
         this.consumers = consumers;
+    }
+
+    /**
+     * Détermine si le fichier exporté correspondant à cet export doit être accessible en public
+     * Un export est public si au moins un de ses consommateurs définit l'accès à public
+     * @return
+     */
+    public boolean hasExportFilePublicAccess() {
+        List<Consumer> consumersWithPublicAccess = this.getConsumers().stream().filter(c -> c.isPublicExport()).collect(toList());
+        return !consumersWithPublicAccess.isEmpty();
+
+    }
+
+    /**
+     * Renvoie une liste d'exports dont l'accès au fichier exporté correspond à publicAccess
+     * Si accès public: un export est public si au moins un de ses consommateurs définit l'accès à public
+     * Si accès non public: un export est privé si tous ses consommateurs définissent un accès privé
+     * @param exports
+     * @param publicAccess
+     * @return
+     */
+    public static List<ExportTemplate> filterExportsByPublicAccess(List<ExportTemplate> exports, boolean publicAccess) {
+        return exports.stream().filter(e -> publicAccess == e.hasExportFilePublicAccess()).collect(toList());
+    }
+
+
+    public static List<ExportTemplate> publicAccessExports(List<ExportTemplate> exports) {
+        return filterExportsByPublicAccess(exports, true);
+    }
+
+    public static List<ExportTemplate> privateAccessExports(List<ExportTemplate> exports) {
+        return filterExportsByPublicAccess(exports, false);
     }
 }

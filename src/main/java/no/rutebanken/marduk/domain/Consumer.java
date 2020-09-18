@@ -15,6 +15,7 @@ public class Consumer {
     private byte[] password;
     private Integer port;
     private String destinationPath;
+    private boolean publicExport = false;
 
     public Long getId() {
         return id;
@@ -90,5 +91,13 @@ public class Consumer {
 
     public String toString() {
         return String.format("%d / %s / %s", getId(), getName(), getServiceUrl());
+    }
+
+    public boolean isPublicExport() {
+        return publicExport;
+    }
+
+    public void setPublicExport(boolean publicExport) {
+        this.publicExport = publicExport;
     }
 }
