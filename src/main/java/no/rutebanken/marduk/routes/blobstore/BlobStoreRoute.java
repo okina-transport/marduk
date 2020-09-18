@@ -21,6 +21,7 @@ import no.rutebanken.marduk.domain.Provider;
 import no.rutebanken.marduk.routes.BaseRouteBuilder;
 import no.rutebanken.marduk.routes.chouette.ExportToConsumersProcessor;
 import org.apache.camel.LoggingLevel;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -129,37 +130,68 @@ public class BlobStoreRoute extends BaseRouteBuilder {
         String archive = "";
         switch (export.getType()) {
             case NETEX:
-                archive = " OFFRE_" + exportSiteId(provider) + "_" + nowTag() + ".zip";
+                if (StringUtils.isNotBlank(provider.chouetteInfo.codeIdfm)) {
+                    archive = " OFFRE_" + exportSiteId(provider) + "_" + nowTag() + ".zip";
+                }
                 break;
             case ARRET:
-                archive = "ARRET_" + exportSiteId(provider) + "_" + exportSiteName(provider)+ "_T_" + nowTag() + ".zip";
-                break;
-            default:
-                archive = nowTag() + "_" + awsExportFileName(export);
+                if (StringUtils.isNotBlank(provider.chouetteInfo.codeIdfm)) {
+                    archive = "ARRET_" + exportSiteId(provider) + "_" + exportSiteName(provider)+ "_T_" + nowTag() + ".zip";
+                }
                 break;
         }
 
+        if (StringUtils.isBlank(archive)) {
+            archive =  awsExportFileFormat(export) + "_" + nowTag() + "." + awsExportFileExtension(export);
+        }
         return awsExportPath(export, provider) + "/archive/" +  archive;
     }
 
 
     private static String awsExportFileName(ExportTemplate export) {
-        String filename = "";
+        return awsExportFileFormat(export) + "." + awsExportFileExtension(export);
+    }
+
+    private static String awsExportFileFormat(ExportTemplate export) {
+        String format = "";
         switch (export.getType()) {
             case NETEX:
-                filename = "netex_offre.zip";
+                format = "netex_offre";
                 break;
             case GTFS:
-                filename = "gtfs.zip";
+                format = "gtfs";
                 break;
             case ARRET:
-                filename = "netex_arrets.zip";
+                format = "netex_arrets";
                 break;
             case CONCERTO:
-                filename = "concerto.csv";
+                format = "concerto";
+                break;
+            default:
+                format = "offre";
                 break;
         }
-        return filename;
+        return format;
+    }
+
+    private static String awsExportFileExtension(ExportTemplate export) {
+        String format = "";
+        switch (export.getType()) {
+            case CONCERTO:
+                format = "csv";
+                break;
+            case NETEX:
+                format = "zip";
+                break;
+            case GTFS:
+                format = "zip";
+                break;
+            case ARRET:
+            default:
+                format = "zip";
+                break;
+        }
+        return format;
     }
 
 
