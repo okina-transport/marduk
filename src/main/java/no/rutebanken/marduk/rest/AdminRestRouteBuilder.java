@@ -889,17 +889,18 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .setHeader(PROVIDER_ID, header("providerId"))
                 .process(e -> {
                     log.info("Public-export: exports parsing");
-                    Provider provider = getProviderRepository().getMosaicProvider(e.getIn().getHeader(PROVIDER_ID, Long.class));
+                    Optional<Provider> provider = getProviderRepository().getNonMosaicProvider(e.getIn().getHeader(PROVIDER_ID, Long.class));
                     boolean isPublic = Boolean.valueOf(e.getIn().getHeader("public").toString());
 
                     String json = exportJsonMapper.toJson(e.getIn().getBody());
                     List<ExportTemplate> exports = exportJsonMapper.fromJsonArray(json);
-                    exports.stream().forEach(export -> {
-                        String exportFilePath = BlobStoreRoute.exportFilePath(export, provider);
-                        blobStoreService.setPublicAccess(exportFilePath, isPublic);
+                    provider.ifPresent(p -> {
+                        exports.stream().forEach(export -> {
+                            String exportFilePath = BlobStoreRoute.exportFilePath(export, p);
+                            blobStoreService.setPublicAccess(exportFilePath, isPublic);
+                        });
                     });
-
-                     log.info("Public-export: exports parsing end ...");
+                    log.info("Public-export: exports parsing end ...");
                 })
                 .routeId("admin-public-export")
                 .endRest()
