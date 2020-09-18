@@ -40,17 +40,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static java.util.stream.Collectors.toList;
-import static no.rutebanken.marduk.Constants.BLOBSTORE_MAKE_BLOB_PUBLIC;
-import static no.rutebanken.marduk.Constants.BLOBSTORE_PATH_OUTBOUND;
-import static no.rutebanken.marduk.Constants.CHOUETTE_JOB_STATUS_URL;
-import static no.rutebanken.marduk.Constants.CHOUETTE_REFERENTIAL;
-import static no.rutebanken.marduk.Constants.EXPORT_END_DATE;
-import static no.rutebanken.marduk.Constants.EXPORT_LINES_IDS;
-import static no.rutebanken.marduk.Constants.EXPORT_START_DATE;
-import static no.rutebanken.marduk.Constants.FILE_HANDLE;
-import static no.rutebanken.marduk.Constants.JSON_PART;
-import static no.rutebanken.marduk.Constants.PROVIDER_ID;
-import static no.rutebanken.marduk.Constants.USER;
+import static no.rutebanken.marduk.Constants.*;
 import static no.rutebanken.marduk.Utils.Utils.getLastPathElementOfUrl;
 
 /**
@@ -142,7 +132,9 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
 //                    .to("direct:addGtfsFeedInfo")
                     .setHeader(BLOBSTORE_MAKE_BLOB_PUBLIC, constant(publicPublication))
                     .setHeader(FILE_HANDLE, simple(BLOBSTORE_PATH_OUTBOUND + "gtfs/${header." + CHOUETTE_REFERENTIAL + "}-" + Constants.CURRENT_AGGREGATED_GTFS_FILENAME))
-                    .to("direct:uploadBlobExport")
+                    .setHeader(EXPORT_FILE_NAME, simple(Constants.CURRENT_AGGREGATED_GTFS_FILENAME))
+
+                .to("direct:uploadBlobExport")
                     .process(e -> {
                         log.info("Upload to consumers and blob store completed");
                     })

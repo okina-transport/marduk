@@ -56,14 +56,15 @@ public class BlobStoreRoute extends BaseRouteBuilder {
         from("direct:uploadBlobExport")
                 .to("log:" + getClass().getName() + "?level=DEBUG&showAll=true&multiline=true")
                 .process(e -> {
+                    Provider provider = getProviderRepository().getNonMosaicProvider(e.getIn().getHeader(PROVIDER_ID, Long.class))
+                            .orElseThrow(() -> new RuntimeException("No valid base provider found for export uploading. Provider id : " + e.getIn().getHeader(PROVIDER_ID)));
                     Optional<ExportTemplate> export = ExportToConsumersProcessor.currentExport(e);
-                    export.ifPresent(exp -> {
-                        Provider provider = getProviderRepository().getNonMosaicProvider(e.getIn().getHeader(PROVIDER_ID, Long.class))
-                                .orElseThrow(() -> new RuntimeException("No valid base provider found for export uploading. Provider id : " + e.getIn().getHeader(PROVIDER_ID)));
-                        e.getIn().setHeader(FILE_HANDLE, exportFilePath(exp, provider));
-                        e.getIn().setHeader(ARCHIVE_FILE_HANDLE, exportArchiveFilePath(exp, provider));
-                    });
-                    //e.getIn().setHeader(FILE_HANDLE, simple(BLOBSTORE_PATH_OUTBOUND + "netex/${header." + CHOUETTE_REFERENTIAL + "}-" + Constants.CURRENT_AGGREGATED_NETEX_FILENAME))
+                    if (export.isPresent()) {
+                        e.getIn().setHeader(FILE_HANDLE, exportFilePath(export.get(), provider));
+                        e.getIn().setHeader(ARCHIVE_FILE_HANDLE, exportArchiveFilePath(export.get(), provider));
+                    } else { // cas des exports manuels
+                        e.getIn().setHeader(FILE_HANDLE, exportFilePath(provider, e.getIn().getHeader(EXPORT_FILE_NAME).toString()));
+                    }
                 })
                 .choice()
                     .when(header(BLOBSTORE_MAKE_BLOB_PUBLIC).isNull())
@@ -118,6 +119,10 @@ public class BlobStoreRoute extends BaseRouteBuilder {
 
     public static String exportFilePath(ExportTemplate export, Provider provider) {
         return awsExportPath(export, provider) + "/" + awsExportFileName(export);
+    }
+
+    public static String exportFilePath(Provider provider, String filename) {
+        return exportSiteId(provider) + "/exports/manuels/" + new Date().getTime() + "/" + filename;
     }
 
     private static String exportArchiveFilePath(ExportTemplate export, Provider provider) {

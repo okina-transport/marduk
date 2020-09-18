@@ -29,15 +29,7 @@ import org.springframework.stereotype.Component;
 import java.io.File;
 import java.util.UUID;
 
-import static no.rutebanken.marduk.Constants.BLOBSTORE_MAKE_BLOB_PUBLIC;
-import static no.rutebanken.marduk.Constants.BLOBSTORE_PATH_OUTBOUND;
-import static no.rutebanken.marduk.Constants.CHOUETTE_JOB_STATUS_URL;
-import static no.rutebanken.marduk.Constants.CHOUETTE_REFERENTIAL;
-import static no.rutebanken.marduk.Constants.FILE_HANDLE;
-import static no.rutebanken.marduk.Constants.JSON_PART;
-import static no.rutebanken.marduk.Constants.NO_GTFS_EXPORT;
-import static no.rutebanken.marduk.Constants.PROVIDER_ID;
-import static no.rutebanken.marduk.Constants.USER;
+import static no.rutebanken.marduk.Constants.*;
 import static no.rutebanken.marduk.Utils.Utils.getLastPathElementOfUrl;
 
 @Component
@@ -118,6 +110,7 @@ public class ChouetteExportNetexRouteBuilder extends AbstractChouetteRouteBuilde
 
                     .setHeader(BLOBSTORE_MAKE_BLOB_PUBLIC, constant(publicPublication))
                     .setHeader(FILE_HANDLE, simple(BLOBSTORE_PATH_OUTBOUND + "netex/${header." + CHOUETTE_REFERENTIAL + "}-" + Constants.CURRENT_AGGREGATED_NETEX_FILENAME))
+                    .setHeader(EXPORT_FILE_NAME, simple(Constants.CURRENT_AGGREGATED_NETEX_FILENAME))
                     .to("direct:uploadBlobExport")
                     .process(e -> {
                         log.info("Upload to consumers and blob store completed");

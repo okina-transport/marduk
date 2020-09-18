@@ -77,6 +77,7 @@ public class TiamatStopPlacesExportRouteBuilder extends AbstractChouetteRouteBui
                     File file = fileSystemService.getTiamatFile(exportJob.getFileName());
                     log.info("Tiamat Stop Places Export  : export parsed => " + exportJob.getId() + " : " + exportJob.getJobUrl() + " file => " + file + " => " + file.exists());
                     e.getIn().setHeader("fileName", file.getName());
+                    e.getIn().setHeader(EXPORT_FILE_NAME, file.getName());
                     FileSystemResource fsr = new FileSystemResource(file);
                     e.getIn().setBody(fsr.getInputStream());
                 })

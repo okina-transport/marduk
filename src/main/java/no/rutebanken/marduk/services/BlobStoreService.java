@@ -26,6 +26,7 @@ import no.rutebanken.marduk.routes.chouette.ExportToConsumersProcessor;
 import org.apache.camel.Body;
 import org.apache.camel.Exchange;
 import org.apache.camel.Header;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -97,7 +98,9 @@ public class BlobStoreService {
                                  @Header(value = Constants.ARCHIVE_FILE_HANDLE) String archiveName,
                                  @Header(value = Constants.BLOBSTORE_MAKE_BLOB_PUBLIC) boolean makePublic, InputStream inputStream, Exchange exchange) {
         uploadBlob(name, makePublic, inputStream, exchange);
-        copyBlob(name, archiveName);
+        if (StringUtils.isNotBlank(archiveName)) {
+            copyBlob(name, archiveName);
+        }
     }
 
 
