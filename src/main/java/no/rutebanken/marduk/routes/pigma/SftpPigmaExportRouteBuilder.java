@@ -74,6 +74,7 @@ public class SftpPigmaExportRouteBuilder extends BaseRouteBuilder {
                 .routeId("uploadPigma");
 
     }
+
     public void sendFilesToPigmaPlatform() {
 
         ArrayList<File> metadataFiles = new ArrayList<>();
@@ -82,60 +83,61 @@ public class SftpPigmaExportRouteBuilder extends BaseRouteBuilder {
 
         // Netex files
         BlobStoreFiles netexBlobStoreFiles = blobStoreService.listBlobsInFolders("outbound/netex/");
-        if(netexBlobStoreFiles.getFiles().size() != 0){
+        if (netexBlobStoreFiles.getFiles().size() != 0) {
             List<BlobStoreFiles.File> netexFiles = netexBlobStoreFiles.getFiles();
             listBlobStoreFiles.addAll(netexFiles);
         }
 
         // GTFS files
         BlobStoreFiles gtfsBlobStoreFiles = blobStoreService.listBlobsInFolders("outbound/gtfs/");
-        if(gtfsBlobStoreFiles.getFiles().size() != 0){
+        if (gtfsBlobStoreFiles.getFiles().size() != 0) {
             List<BlobStoreFiles.File> gtfsFiles = gtfsBlobStoreFiles.getFiles();
             listBlobStoreFiles.addAll(gtfsFiles);
         }
 
         // Aggregated Netex file
         BlobStoreFiles aggregatedNetexFileBlobStoreFiles = blobStoreService.listBlobsInFolders("outbound/naq-aggregated-netex.zip");
-        if(aggregatedNetexFileBlobStoreFiles.getFiles().size() != 0){
+        if (aggregatedNetexFileBlobStoreFiles.getFiles().size() != 0) {
             listBlobStoreFiles.add(aggregatedNetexFileBlobStoreFiles.getFiles().get(0));
         }
 
         // Aggregated GTFS file
         BlobStoreFiles aggregatedGtfsFileBlobStoreFiles = blobStoreService.listBlobsInFolders("outbound/naq-aggregated-gtfs.zip");
-        if(aggregatedGtfsFileBlobStoreFiles.getFiles().size() != 0){
+        if (aggregatedGtfsFileBlobStoreFiles.getFiles().size() != 0) {
             listBlobStoreFiles.add(aggregatedGtfsFileBlobStoreFiles.getFiles().get(0));
         }
 
         //Netex file stops
         BlobStoreFiles netexFileStops = blobStoreService.listBlobsInFolders("tiamat/CurrentAndFuture_latest.zip");
-        if(netexFileStops.getFiles().size() != 0){
+        if (netexFileStops.getFiles().size() != 0) {
             listBlobStoreFiles.add(netexFileStops.getFiles().get(0));
         }
 
 
         //Create a metadata file for each file
-        for(BlobStoreFiles.File blobStoreFile : listBlobStoreFiles){
+        for (BlobStoreFiles.File blobStoreFile : listBlobStoreFiles) {
             getBlobFileAndCreateMetadataFile(metadataFiles, blobStoreFile);
         }
 
         files.addAll(metadataFiles);
 
-        for(BlobStoreFiles.File file : listBlobStoreFiles){
-            InputStream inputStream = blobStoreService.getBlob(file.getName());
-            File zipFile = null;
-            if(file.getFileNameOnly().equals("CurrentAndFuture_latest.zip")){
-                zipFile = new File("naq-stops-netex.zip");
-            }
-            else{
-                zipFile = new File(file.getFileNameOnly());
-            }
+        for (BlobStoreFiles.File file : listBlobStoreFiles) {
+            try (InputStream inputStream = blobStoreService.getBlob(file.getName())) {
 
-            try {
+                File zipFile;
+                if (file.getFileNameOnly().equals("CurrentAndFuture_latest.zip")) {
+                    zipFile = new File("naq-stops-netex.zip");
+                } else {
+                    zipFile = new File(file.getFileNameOnly());
+                }
+
                 FileUtils.copyInputStreamToFile(inputStream, zipFile);
                 files.add(zipFile);
             } catch (IOException e) {
                 e.printStackTrace();
             }
+
+
         }
 
 //        ArrayList<File> filesMail = new ArrayList<>();
@@ -151,8 +153,7 @@ public class SftpPigmaExportRouteBuilder extends BaseRouteBuilder {
     }
 
 
-
-    public void uploadFiles(ArrayList<File> files){
+    public void uploadFiles(ArrayList<File> files) {
         Session session = null;
         Channel channel = null;
         ChannelSftp channelSftp = null;
@@ -171,8 +172,10 @@ public class SftpPigmaExportRouteBuilder extends BaseRouteBuilder {
             log.info("SFTP channel opened and connected.");
             channelSftp = (ChannelSftp) channel;
             channelSftp.cd(sftpPath);
-            for(File file : files){
-                channelSftp.put(new FileInputStream(file.getName()), file.getName(), ChannelSftp.OVERWRITE);
+            for (File file : files) {
+                try (FileInputStream src = new FileInputStream(file.getName())) {
+                    channelSftp.put(src, file.getName(), ChannelSftp.OVERWRITE);
+                }
             }
             log.info("File transfered successfully to host.");
         } catch (Exception ex) {
@@ -194,15 +197,13 @@ public class SftpPigmaExportRouteBuilder extends BaseRouteBuilder {
 
     private void getBlobFileAndCreateMetadataFile(ArrayList<File> metadataFiles, BlobStoreFiles.File blobStoreFile) {
         String nameMetadataFile;
-        if(blobStoreFile.getFileNameOnly().equals("naq-aggregated-netex.zip")){
+        if (blobStoreFile.getFileNameOnly().equals("naq-aggregated-netex.zip")) {
             nameMetadataFile = "naq-aggregated-netex-metadonnes.csv";
             metadataFiles.add(createMetadataFile.createMetadataFile(blobStoreFile.getFileNameOnly(), nameMetadataFile, blobStoreFile.getReferential()));
-        }
-        else if(blobStoreFile.getFileNameOnly().equals("naq-aggregated-gtfs.zip")){
+        } else if (blobStoreFile.getFileNameOnly().equals("naq-aggregated-gtfs.zip")) {
             nameMetadataFile = "naq-aggregated-gtfs-metadonnes.csv";
             metadataFiles.add(createMetadataFile.createMetadataFile(blobStoreFile.getFileNameOnly(), nameMetadataFile, blobStoreFile.getReferential()));
-        }
-        else{
+        } else {
             nameMetadataFile = blobStoreFile.getReferential() + "-metadonnes.csv";
             metadataFiles.add(createMetadataFile.createMetadataFile(blobStoreFile.getFileNameOnly(), nameMetadataFile, blobStoreFile.getReferential()));
         }

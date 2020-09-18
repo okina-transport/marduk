@@ -16,6 +16,18 @@
 
 package no.rutebanken.marduk.routes.file;
 
+import com.github.junrar.Archive;
+import com.github.junrar.exception.RarException;
+import com.github.junrar.impl.FileVolumeManager;
+import com.github.junrar.rarfile.FileHeader;
+import no.rutebanken.marduk.routes.file.beans.FileTypeClassifierBean;
+import org.apache.camel.Body;
+import org.apache.camel.Exchange;
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.builder.ToStringBuilder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -29,20 +41,6 @@ import java.util.List;
 import java.util.UUID;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
-
-import org.apache.camel.Body;
-import org.apache.camel.Exchange;
-import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang3.builder.ToStringBuilder;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.github.junrar.Archive;
-import com.github.junrar.exception.RarException;
-import com.github.junrar.impl.FileVolumeManager;
-import com.github.junrar.rarfile.FileHeader;
-
-import no.rutebanken.marduk.routes.file.beans.FileTypeClassifierBean;
 
 public class RARToZipFilesSplitter {
 
@@ -124,9 +122,9 @@ public class RARToZipFilesSplitter {
 				ZipEntry entry = new ZipEntry(f.getName());
 				zos.putNextEntry(entry);
 
-				FileInputStream fis = new FileInputStream(f);
-				IOUtils.copyLarge(fis, zos);
-				fis.close();
+				try (FileInputStream fis = new FileInputStream(f)) {
+					IOUtils.copyLarge(fis, zos);
+				}
 			}
 			zos.close();
 			zipFileObjects.add(os.toByteArray());
@@ -139,19 +137,18 @@ public class RARToZipFilesSplitter {
 
 				if (f.isFile() && f.getName().toUpperCase().endsWith(".ZIP")) {
 					// Already zipped here
-					FileInputStream fis = new FileInputStream(f);
-					byte[] byteArray = IOUtils.toByteArray(fis);
-					fis.close();
-					zipFileObjects.add(byteArray);
+					try (FileInputStream fis = new FileInputStream(f)) {
+						byte[] byteArray = IOUtils.toByteArray(fis);
+						zipFileObjects.add(byteArray);
+					}
 					logger.info("Added existing zip file " + f.getAbsolutePath());
 
 				} else if (f.isFile() && f.getName().toUpperCase().endsWith(".RAR")) {
 					// Embedded rar
-					FileInputStream fis = new FileInputStream(f);
-					byte[] byteArray = IOUtils.toByteArray(fis);
-					fis.close();
-
-					zipFileObjects.add(splitRarFile(byteArray, exchange));
+					try (FileInputStream fis = new FileInputStream(f)) {
+						byte[] byteArray = IOUtils.toByteArray(fis);
+						zipFileObjects.add(splitRarFile(byteArray, exchange));
+					}
 					logger.info("Added result of expanding embeddced rar file " + f.getAbsolutePath());
 
 				} else if (f.isDirectory()) {
