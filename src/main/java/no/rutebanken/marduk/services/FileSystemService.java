@@ -80,6 +80,9 @@ public class FileSystemService {
     public File getOfferFile(Exchange exchange) {
         ExchangeUtils.addHeadersAndAttachments(exchange);
         String referential = exchange.getIn().getHeader(OKINA_REFERENTIAL, String.class);
+        if (StringUtils.isNotBlank(referential) && !referential.startsWith("mosaic_")) {
+            referential = "mosaic_" + referential;
+        }
         String jobId = exchange.getIn().getHeader(CHOUETTE_JOB_ID, String.class);
         FileSystemResource fileSystemResource = new FileSystemResource(chouetteStoragePath + "/" + referential + "/data/" + jobId);
 
