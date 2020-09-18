@@ -114,9 +114,6 @@ public class ChouetteTransferToDataspaceRouteBuilder extends AbstractChouetteRou
  		        .setBody(constant(""))
  		        
  		        .to("log:" + getClass().getName() + "?level=DEBUG&showAll=true&multiline=true")
-				.process(e -> {
-					log.info("SETTING VALIDATION LEVEL 2 !!!");
-				})
 				.setHeader(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL,constant(JobEvent.TimetableAction.VALIDATION_LEVEL_2.name()))
 				.to("activemq:queue:ChouetteValidationQueue")
              .end()
