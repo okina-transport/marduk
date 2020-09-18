@@ -16,8 +16,11 @@
 
 package no.rutebanken.marduk.config;
 
+import com.amazonaws.ClientConfiguration;
+import com.amazonaws.auth.AWSStaticCredentialsProvider;
+import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.services.s3.AmazonS3;
-import com.okina.helper.aws.BlobStoreHelper;
+import com.amazonaws.services.s3.AmazonS3Client;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -35,6 +38,11 @@ public class AwsClientConfig {
 
     @Bean
     public AmazonS3 client() {
-        return BlobStoreHelper.getClient(key, secret);
+        return AmazonS3Client.builder()
+                .withRegion("eu-west-1")
+                .withClientConfiguration(new ClientConfiguration()
+                        .withMaxConnections(500))
+                .withCredentials(new AWSStaticCredentialsProvider(new BasicAWSCredentials(key, secret)))
+                .build();
     }
 }

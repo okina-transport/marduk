@@ -157,7 +157,9 @@ public class GtfsFileUtils {
         if (feedInfoStream != null) {
             File tmp = new File(FEED_INFO_FILE_NAME);
             feedInfoStream.writeTo(new FileOutputStream(tmp));
-            FileUtils.copyInputStreamToFile(ZipFileUtils.addFilesToZip(new FileInputStream(outputFile), tmp), outputFile);
+            try (FileInputStream source = new FileInputStream(outputFile)) {
+                FileUtils.copyInputStreamToFile(ZipFileUtils.addFilesToZip(source, tmp), outputFile);
+            }
             tmp.delete();
         }
     }
@@ -181,7 +183,9 @@ public class GtfsFileUtils {
         ZipFileUtils zipFileUtils = new ZipFileUtils();
         for (File file : files) {
             if (zipFileUtils.listFilesInZip(file).stream().anyMatch(f -> FEED_INFO_FILE_NAME.equals(f))) {
-                return zipFileUtils.extractFileFromZipFile(new FileInputStream(file), FEED_INFO_FILE_NAME);
+                try(FileInputStream inputStream = new FileInputStream(file)) {
+                    return zipFileUtils.extractFileFromZipFile(inputStream, FEED_INFO_FILE_NAME);
+                }
             }
 
         }
