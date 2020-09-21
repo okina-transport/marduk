@@ -168,18 +168,18 @@ public class ZipFileUtils {
 
     public static void addToZipFile(File file, ZipOutputStream zos) {
         try {
-            FileInputStream fis = new FileInputStream(file);
-            ZipEntry zipEntry = new ZipEntry(file.getName());
-            zos.putNextEntry(zipEntry);
+            try (FileInputStream fis = new FileInputStream(file)) {
+                ZipEntry zipEntry = new ZipEntry(file.getName());
+                zos.putNextEntry(zipEntry);
 
-            byte[] bytes = new byte[1024];
-            int length;
-            while ((length = fis.read(bytes)) >= 0) {
-                zos.write(bytes, 0, length);
+                byte[] bytes = new byte[1024];
+                int length;
+                while ((length = fis.read(bytes)) >= 0) {
+                    zos.write(bytes, 0, length);
+                }
+
+                zos.closeEntry();
             }
-
-            zos.closeEntry();
-            fis.close();
         } catch (IOException ioe) {
             throw new MardukException("Failed to add file to zip: " + ioe.getMessage(), ioe);
         }
@@ -275,12 +275,14 @@ public class ZipFileUtils {
     public static File transformGtfsFile(byte[] data) throws IOException {
         File file = getFile(data);
         if (file.exists() && file.length() > 0) {
-            Set<String> filenames = (new ZipFileUtils()).listFilesInZip(IOUtils.toByteArray(new FileInputStream(file)));
-            if (FileTypeClassifierBean.isGtfsZip(filenames)) {
-                try {
-                    file = transformGtfsFiles(file);
-                } catch (Exception e) {
-                    e.printStackTrace();
+            try (FileInputStream input = new FileInputStream(file)) {
+                Set<String> filenames = new ZipFileUtils().listFilesInZip(IOUtils.toByteArray(input));
+                if (FileTypeClassifierBean.isGtfsZip(filenames)) {
+                    try {
+                        file = transformGtfsFiles(file);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
                 }
             }
         }
@@ -326,14 +328,15 @@ public class ZipFileUtils {
             ZipInputStream zin = new ZipInputStream(source);
             ZipOutputStream out = new ZipOutputStream(new FileOutputStream(tmpZip));
 
-            for (int i = 0; i < files.length; i++) {
-                InputStream in = new FileInputStream(files[i]);
-                out.putNextEntry(new ZipEntry(files[i].getName()));
-                for (int read = in.read(buffer); read > -1; read = in.read(buffer)) {
-                    out.write(buffer, 0, read);
+            for (File file : files) {
+                try (FileInputStream fileInputStream = new FileInputStream(file)) {
+
+                    out.putNextEntry(new ZipEntry(file.getName()));
+                    for (int read = fileInputStream.read(buffer); read > -1; read = ((InputStream) fileInputStream).read(buffer)) {
+                        out.write(buffer, 0, read);
+                    }
+                    out.closeEntry();
                 }
-                out.closeEntry();
-                in.close();
             }
 
             for (ZipEntry ze = zin.getNextEntry(); ze != null; ze = zin.getNextEntry()) {

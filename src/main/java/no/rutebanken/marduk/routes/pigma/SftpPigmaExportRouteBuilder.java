@@ -116,17 +116,16 @@ public class SftpPigmaExportRouteBuilder extends BaseRouteBuilder {
         //Create a metadata file for each file
         files.add(metadataFile.createMetadataFile("naq-metadonnes.csv", listBlobStoreFiles));
 
-        for(BlobStoreFiles.File file : listBlobStoreFiles){
-            InputStream inputStream = blobStoreService.getBlob(file.getName());
-            File zipFile = null;
-            if(file.getFileNameOnly().equals("CurrentAndFuture_latest.zip")){
-                zipFile = new File("naq-stops-netex.zip");
-            }
-            else{
-                zipFile = new File(file.getFileNameOnly());
-            }
+        for (BlobStoreFiles.File file : listBlobStoreFiles) {
+            try (InputStream inputStream = blobStoreService.getBlob(file.getName())) {
 
-            try {
+                File zipFile;
+                if (file.getFileNameOnly().equals("CurrentAndFuture_latest.zip")) {
+                    zipFile = new File("naq-stops-netex.zip");
+                } else {
+                    zipFile = new File(file.getFileNameOnly());
+                }
+
                 FileUtils.copyInputStreamToFile(inputStream, zipFile);
                 files.add(zipFile);
             } catch (IOException e) {
@@ -167,8 +166,10 @@ public class SftpPigmaExportRouteBuilder extends BaseRouteBuilder {
             log.info("SFTP channel opened and connected.");
             channelSftp = (ChannelSftp) channel;
             channelSftp.cd(sftpPath);
-            for(File file : files){
-                channelSftp.put(new FileInputStream(file.getName()), file.getName(), ChannelSftp.OVERWRITE);
+            for (File file : files) {
+                try (FileInputStream src = new FileInputStream(file.getName())) {
+                    channelSftp.put(src, file.getName(), ChannelSftp.OVERWRITE);
+                }
             }
             log.info("File transfered successfully to host.");
         } catch (Exception ex) {

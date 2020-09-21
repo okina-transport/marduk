@@ -124,9 +124,9 @@ public class RARToZipFilesSplitter {
 				ZipEntry entry = new ZipEntry(f.getName());
 				zos.putNextEntry(entry);
 
-				FileInputStream fis = new FileInputStream(f);
-				IOUtils.copyLarge(fis, zos);
-				fis.close();
+				try (FileInputStream fis = new FileInputStream(f)) {
+					IOUtils.copyLarge(fis, zos);
+				}
 			}
 			zos.close();
 			zipFileObjects.add(os.toByteArray());
@@ -139,19 +139,18 @@ public class RARToZipFilesSplitter {
 
 				if (f.isFile() && f.getName().toUpperCase().endsWith(".ZIP")) {
 					// Already zipped here
-					FileInputStream fis = new FileInputStream(f);
-					byte[] byteArray = IOUtils.toByteArray(fis);
-					fis.close();
-					zipFileObjects.add(byteArray);
+					try (FileInputStream fis = new FileInputStream(f)) {
+						byte[] byteArray = IOUtils.toByteArray(fis);
+						zipFileObjects.add(byteArray);
+					}
 					logger.info("Added existing zip file " + f.getAbsolutePath());
 
 				} else if (f.isFile() && f.getName().toUpperCase().endsWith(".RAR")) {
 					// Embedded rar
-					FileInputStream fis = new FileInputStream(f);
-					byte[] byteArray = IOUtils.toByteArray(fis);
-					fis.close();
-
-					zipFileObjects.add(splitRarFile(byteArray, exchange));
+					try (FileInputStream fis = new FileInputStream(f)) {
+						byte[] byteArray = IOUtils.toByteArray(fis);
+						zipFileObjects.add(splitRarFile(byteArray, exchange));
+					}
 					logger.info("Added result of expanding embeddced rar file " + f.getAbsolutePath());
 
 				} else if (f.isDirectory()) {
