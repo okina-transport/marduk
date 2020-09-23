@@ -118,6 +118,9 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
 
         from("direct:processExportResult")
                 .to("log:" + getClass().getName() + "?level=DEBUG&showAll=true&multiline=true")
+                .process(e -> {
+                    log.info(getClass().getName() + "?level=DEBUG&showAll=true&multiline=true");
+                })
                 .choice()
                 .when(simple("${header.action_report_result} == 'OK'"))
                     .log(LoggingLevel.INFO, correlation() + "Export ended with status '${header.action_report_result}'")
@@ -126,6 +129,9 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
                     .removeHeaders("Camel*")
                     .setBody(simple(""))
                     .setHeader(Exchange.HTTP_METHOD, constant(org.apache.camel.component.http4.HttpMethods.GET))
+                    .process(e -> {
+                        log.info("Starting export download");
+                    })
                     .toD("${header.data_url}")
                     .setHeader("fileName", simple("GTFS.zip"))
                     .process(exportToConsumersProcessor)
@@ -133,13 +139,15 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
                     .setHeader(BLOBSTORE_MAKE_BLOB_PUBLIC, constant(publicPublication))
                     .setHeader(FILE_HANDLE, simple(BLOBSTORE_PATH_OUTBOUND + "gtfs/${header." + CHOUETTE_REFERENTIAL + "}-" + Constants.CURRENT_AGGREGATED_GTFS_FILENAME))
                     .setHeader(EXPORT_FILE_NAME, simple(Constants.CURRENT_AGGREGATED_GTFS_FILENAME))
-
+                .process(e -> {
+                    log.info("Starting gtfs export upload");
+                })
                 .to("direct:uploadBlobExport")
                     .process(e -> {
                         log.info("Upload to consumers and blob store completed");
                     })
 
-                    .inOnly("activemq:queue:GtfsExportMergedQueue")
+//                    .inOnly("activemq:queue:GtfsExportMergedQueue")
                     .process(e -> JobEvent.providerJobBuilder(e).timetableAction(TimetableAction.EXPORT).state(State.OK).build())
 
 
