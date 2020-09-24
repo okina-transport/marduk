@@ -213,25 +213,33 @@ public class ChouettePollJobStatusRoute extends AbstractChouetteRouteBuilder {
                         .process(e -> {
                             String skipJobReportsJobId = e.getIn().getHeader(Constants.SKIP_JOB_REPORTS).toString();
                             String exportJobId = e.getIn().getHeader(Constants.CHOUETTE_JOB_ID) != null ? e.getIn().getHeader(Constants.CHOUETTE_JOB_ID).toString() : null;
-                            log.info("POLLING TIAMAT JOB STATUS END found job ids " + skipJobReportsJobId + " vs " + exportJobId);
-                            if(JobEvent.TimetableAction.EXPORT.name().equals(e.getIn().getHeader(CHOUETTE_JOB_STATUS_JOB_TYPE))) {
-                                ExportJob exportJob = e.getIn().getBody(ExportJob.class);
-                                e.getProperties().put("STATUS", exportJob.getStatus().name());
-                                e.getIn().setBody(exportJob);
-                            } else if(JobEvent.TimetableAction.EXPORT_NETEX.name().equals(e.getIn().getHeader(CHOUETTE_JOB_STATUS_JOB_TYPE))) {
-                                String json = e.getIn().getBody(String.class);
-                                JobResponse jobResponse = new ObjectMapper().readValue(json, JobResponse.class);
+                            if (skipJobReportsJobId.equals(exportJobId)) {
+                                log.info("SKIP_JOB_REPORTS matching : " + skipJobReportsJobId);
+                                if(JobEvent.TimetableAction.EXPORT.name().equals(e.getIn().getHeader(CHOUETTE_JOB_STATUS_JOB_TYPE))) {
+                                    ExportJob exportJob = e.getIn().getBody(ExportJob.class);
+                                    e.getProperties().put("STATUS", exportJob.getStatus().name());
+                                    e.getIn().setBody(exportJob);
+                                } else if(JobEvent.TimetableAction.EXPORT_NETEX.name().equals(e.getIn().getHeader(CHOUETTE_JOB_STATUS_JOB_TYPE))) {
+                                    String json = e.getIn().getBody(String.class);
+                                    JobResponse jobResponse = new ObjectMapper().readValue(json, JobResponse.class);
 
-                                if("TERMINATED".equals(jobResponse.getStatus().name())) {
-                                    e.getProperties().put("STATUS", "FINISHED");
-                                    e.getIn().setHeader("action_report_result", "OK");
-                                    e.getIn().setBody(json);
+                                    if("TERMINATED".equals(jobResponse.getStatus().name())) {
+                                        e.getProperties().put("STATUS", "FINISHED");
+                                        e.getIn().setHeader("action_report_result", "OK");
+                                        e.getIn().setBody(json);
+                                    }
+                                    else {
+                                        e.getProperties().put("STATUS", jobResponse.getStatus().name());
+                                    }
                                 }
-                                else {
-                                    e.getProperties().put("STATUS", jobResponse.getStatus().name());
+                                String updatedStatus = e.getProperties().get("STATUS").toString();
+                                if ("FINISHED".equals(e.getProperties().get("STATUS")) || "ABORTED".equals(e.getProperties().get("STATUS"))) {
+                                    e.getIn().removeHeader(Constants.SKIP_JOB_REPORTS);
                                 }
+                            } else {
+                                log.warn("Found SKIP_JOB_REPORTS non matching job ids => " + skipJobReportsJobId + " vs " + exportJobId + " XXXXX SHOULD NOT HAPPEN");
+                                e.getIn().removeHeader(Constants.SKIP_JOB_REPORTS);
                             }
-//                            e.getIn().removeHeader(Constants.SKIP_JOB_REPORTS);
                         })
                         .choice()
                             .when(simple("${exchangeProperty.STATUS} == 'FINISHED'"))
