@@ -121,8 +121,9 @@ public class MultipleExportProcessor implements Processor {
         boolean noGtfs = export.getType() != ExportType.GTFS;
         exchange.getIn().getHeaders().put(NO_GTFS_EXPORT, noGtfs);
         exchange.getOut().setBody("Export id : " + export.getId());
-        Map<String, Object> headers = new HashMap<>();
-        headers.putAll(exchange.getIn().getHeaders());
+//        Map<String, Object> headers = new HashMap<>();
+//        headers.putAll(exchange.getIn().getHeaders());
+        Map<String, Object> headers = exchange.getIn().getHeaders();
         headers.put(PROVIDER_ID, headers.get("providerId"));
         headers.put(NO_GTFS_EXPORT, noGtfs);
         headers.put(Constants.FILE_NAME, "export-" + export.getId() + "-" + export.getName());
