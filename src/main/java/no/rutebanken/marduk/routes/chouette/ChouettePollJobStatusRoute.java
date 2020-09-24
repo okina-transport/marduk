@@ -232,8 +232,8 @@ public class ChouettePollJobStatusRoute extends AbstractChouetteRouteBuilder {
                                         e.getProperties().put("STATUS", jobResponse.getStatus().name());
                                     }
                                 }
-                                e.getIn().removeHeader(Constants.SKIP_JOB_REPORTS);
                             }
+                            e.getIn().removeHeader(Constants.SKIP_JOB_REPORTS);
                         })
                         .choice()
                             .when(simple("${exchangeProperty.STATUS} == 'FINISHED'"))
