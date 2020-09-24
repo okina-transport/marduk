@@ -90,13 +90,13 @@ public class MultipleExportProcessor implements Processor {
         log.info("Routing to GTFS export => " + export.getId() + "/" + export.getName());
         prepareHeadersForExport(exchange, export);
         String linesIds = export.getLines() != null ? StringUtils.join(export.getLines().stream().map(Line::getId).toArray(), ",") : "";
-        exchange.getIn().getHeaders().put(EXPORT_LINES_IDS, linesIds);
+        exchange.getOut().getHeaders().put(EXPORT_LINES_IDS, linesIds);
 
         if (export.getStartDate() != null) {
-            exchange.getIn().getHeaders().put(EXPORT_START_DATE, Timestamp.valueOf(export.getStartDate()).getTime() / 1000);
+            exchange.getOut().getHeaders().put(EXPORT_START_DATE, Timestamp.valueOf(export.getStartDate()).getTime() / 1000);
         }
         if (export.getEndDate() != null) {
-            exchange.getIn().getHeaders().put(EXPORT_END_DATE, Timestamp.valueOf(export.getEndDate()).getTime() / 1000);
+            exchange.getOut().getHeaders().put(EXPORT_END_DATE, Timestamp.valueOf(export.getEndDate()).getTime() / 1000);
         }
         producer.send("activemq:queue:ChouetteExportGtfsQueue", exchange);
     }
@@ -106,7 +106,7 @@ public class MultipleExportProcessor implements Processor {
         prepareHeadersForExport(exchange, export);
         // tiamat export is based on original referential (not the mosaic one)
         Long tiamatProviderId = Long.valueOf(exchange.getIn().getHeaders().get(ORIGINAL_PROVIDER_ID).toString());
-        exchange.getIn().getHeaders().put("tiamatProviderId", tiamatProviderId);
+        exchange.getOut().getHeaders().put("tiamatProviderId", tiamatProviderId);
         producer.send("direct:tiamatStopPlacesExport", exchange);
 
     }
