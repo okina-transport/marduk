@@ -209,12 +209,12 @@ public class ChouettePollJobStatusRoute extends AbstractChouetteRouteBuilder {
                 })
 
                 .choice()
-                    .when(simple("${header.SKIP_JOB_REPORTS} != null "))
+                    .when(simple("${header.TIAMAT_STOP_PLACES_EXPORT} != null "))
                         .process(e -> {
-                            String skipJobReportsJobId = e.getIn().getHeader(Constants.SKIP_JOB_REPORTS).toString();
+                            String skipJobReportsJobId = e.getIn().getHeader(Constants.TIAMAT_STOP_PLACES_EXPORT).toString();
                             String exportJobId = e.getIn().getHeader(Constants.CHOUETTE_JOB_ID) != null ? e.getIn().getHeader(Constants.CHOUETTE_JOB_ID).toString() : null;
                             if (skipJobReportsJobId.equals(exportJobId)) {
-                                log.info("SKIP_JOB_REPORTS matching : " + skipJobReportsJobId);
+                                log.info("TIAMAT_STOP_PLACES_EXPORT matching job ids : " + skipJobReportsJobId);
                                 if(JobEvent.TimetableAction.EXPORT.name().equals(e.getIn().getHeader(CHOUETTE_JOB_STATUS_JOB_TYPE))) {
                                     ExportJob exportJob = e.getIn().getBody(ExportJob.class);
                                     e.getProperties().put("STATUS", exportJob.getStatus().name());
@@ -234,11 +234,11 @@ public class ChouettePollJobStatusRoute extends AbstractChouetteRouteBuilder {
                                 }
                                 String updatedStatus = e.getProperties().get("STATUS").toString();
                                 if ("FINISHED".equals(e.getProperties().get("STATUS")) || "ABORTED".equals(e.getProperties().get("STATUS"))) {
-                                    e.getIn().removeHeader(Constants.SKIP_JOB_REPORTS);
+                                    e.getIn().removeHeader(Constants.TIAMAT_STOP_PLACES_EXPORT);
                                 }
                             } else {
-                                log.warn("Found SKIP_JOB_REPORTS non matching job ids => " + skipJobReportsJobId + " vs " + exportJobId + " XXXXX SHOULD NOT HAPPEN");
-                                e.getIn().removeHeader(Constants.SKIP_JOB_REPORTS);
+                                log.warn("ERROR : a non tiamat job should not trigger this camel process. Non matching job ids => " + skipJobReportsJobId + " vs " + exportJobId + " XXXXXXXXXX SHOULD NOT HAPPEN !!");
+                                e.getIn().removeHeader(Constants.TIAMAT_STOP_PLACES_EXPORT);
                             }
                         })
                         .choice()
