@@ -18,6 +18,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.sql.Timestamp;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -120,7 +121,8 @@ public class MultipleExportProcessor implements Processor {
         boolean noGtfs = export.getType() != ExportType.GTFS;
         exchange.getIn().getHeaders().put(NO_GTFS_EXPORT, noGtfs);
         exchange.getOut().setBody("Export id : " + export.getId());
-        Map<String, Object> headers = exchange.getIn().getHeaders();
+        Map<String, Object> headers = new HashMap<>();
+        headers.putAll(exchange.getIn().getHeaders());
         headers.put(PROVIDER_ID, headers.get("providerId"));
         headers.put(NO_GTFS_EXPORT, noGtfs);
         headers.put(Constants.FILE_NAME, "export-" + export.getId() + "-" + export.getName());
