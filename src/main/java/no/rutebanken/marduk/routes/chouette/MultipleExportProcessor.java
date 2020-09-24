@@ -61,12 +61,12 @@ public class MultipleExportProcessor implements Processor {
             log.info("Multiple export : export => " + export.getId() + "/" + export.getName());
             try {
                 if (ExportType.NETEX.equals(export.getType())) {
-                    toNetexExport(export, exchange);
+                    toNetexExport(export, exchange.copy(true));
                 } else if (ExportType.GTFS == export.getType()) {
 
-                    toGtfsExport(export, exchange);
+                    toGtfsExport(export, exchange.copy(true));
                 } else if (ExportType.ARRET == export.getType()) {
-                    toStopPlacesExport(export, exchange);
+                    toStopPlacesExport(export, exchange.copy(true));
                 } else {
                     log.info("Routing not supported yet for => " + export.getId() + "/" + export.getName() + "/" + export.getType());
                 }
