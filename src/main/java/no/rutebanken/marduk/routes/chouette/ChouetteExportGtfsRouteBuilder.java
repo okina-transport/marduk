@@ -147,7 +147,7 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
                         log.info("Upload to consumers and blob store completed");
                     })
 
-                    .inOnly("activemq:queue:GtfsExportMergedQueue")
+//                    .inOnly("activemq:queue:GtfsExportMergedQueue")
                     .process(e -> JobEvent.providerJobBuilder(e).timetableAction(TimetableAction.EXPORT).state(State.OK).build())
 
 
