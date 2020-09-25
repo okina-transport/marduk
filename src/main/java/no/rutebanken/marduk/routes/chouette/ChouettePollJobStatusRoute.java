@@ -19,10 +19,7 @@ package no.rutebanken.marduk.routes.chouette;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import no.rutebanken.marduk.Constants;
-import no.rutebanken.marduk.routes.chouette.json.ActionReportWrapper;
-import no.rutebanken.marduk.routes.chouette.json.ExportJob;
-import no.rutebanken.marduk.routes.chouette.json.JobResponse;
-import no.rutebanken.marduk.routes.chouette.json.JobResponseWithLinks;
+import no.rutebanken.marduk.routes.chouette.json.*;
 import no.rutebanken.marduk.routes.chouette.mapping.ProviderAndJobsMapper;
 import no.rutebanken.marduk.routes.status.JobEvent;
 import no.rutebanken.marduk.routes.status.JobEvent.State;
@@ -215,15 +212,17 @@ public class ChouettePollJobStatusRoute extends AbstractChouetteRouteBuilder {
                             String exportJobId = e.getIn().getHeader(Constants.CHOUETTE_JOB_ID) != null ? e.getIn().getHeader(Constants.CHOUETTE_JOB_ID).toString() : null;
                             if (skipJobReportsJobId.equals(exportJobId)) {
                                 log.info("TIAMAT_STOP_PLACES_EXPORT matching job ids : " + skipJobReportsJobId);
+                                boolean isExportDone = false;
                                 if(JobEvent.TimetableAction.EXPORT.name().equals(e.getIn().getHeader(CHOUETTE_JOB_STATUS_JOB_TYPE))) {
                                     ExportJob exportJob = e.getIn().getBody(ExportJob.class);
                                     e.getProperties().put("STATUS", exportJob.getStatus().name());
                                     e.getIn().setBody(exportJob);
+                                    isExportDone = exportJob.getStatus().isDone();
                                 } else if(JobEvent.TimetableAction.EXPORT_NETEX.name().equals(e.getIn().getHeader(CHOUETTE_JOB_STATUS_JOB_TYPE))) {
                                     String json = e.getIn().getBody(String.class);
                                     JobResponse jobResponse = new ObjectMapper().readValue(json, JobResponse.class);
-
-                                    if("TERMINATED".equals(jobResponse.getStatus().name())) {
+                                    isExportDone = jobResponse.getStatus().isDone();
+                                    if(Status.TERMINATED == jobResponse.getStatus()) {
                                         e.getProperties().put("STATUS", "FINISHED");
                                         e.getIn().setHeader("action_report_result", "OK");
                                         e.getIn().setBody(json);
@@ -232,8 +231,9 @@ public class ChouettePollJobStatusRoute extends AbstractChouetteRouteBuilder {
                                         e.getProperties().put("STATUS", jobResponse.getStatus().name());
                                     }
                                 }
-                                String updatedStatus = e.getProperties().get("STATUS").toString();
-                                if ("FINISHED".equals(e.getProperties().get("STATUS")) || "ABORTED".equals(e.getProperties().get("STATUS"))) {
+
+                                // remove header to ensure we don't fall into a "reschedulejob infinite loop" on aborted/failed jobs
+                                if (isExportDone) {
                                     e.getIn().removeHeader(Constants.TIAMAT_STOP_PLACES_EXPORT);
                                 }
                             } else {
