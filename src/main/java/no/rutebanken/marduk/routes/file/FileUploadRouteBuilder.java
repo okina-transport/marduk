@@ -47,6 +47,7 @@ public class FileUploadRouteBuilder extends BaseRouteBuilder {
                 .process(e -> e.getIn().setHeader(Constants.CORRELATION_ID, e.getIn().getHeader(Constants.CORRELATION_ID, UUID.randomUUID().toString())))
                 .setHeader(FILE_NAME, simple("${body.name}"))
                 .setHeader(FILE_HANDLE, simple("inbound/received/${header." + CHOUETTE_REFERENTIAL + "}/${header." + FILE_NAME + "}"))
+                .setHeader(IMPORT, constant(true))
                 .process(e -> e.getIn().setHeader(FILE_CONTENT_HEADER, new CloseShieldInputStream(e.getIn().getBody(FileItem.class).getInputStream())))
                 .to("direct:uploadFileAndStartImport")
                 .routeId("files-upload");
