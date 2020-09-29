@@ -17,13 +17,17 @@
 package no.rutebanken.marduk.routes.file;
 
 import no.rutebanken.marduk.Constants;
+import no.rutebanken.marduk.domain.Provider;
 import no.rutebanken.marduk.routes.BaseRouteBuilder;
+import no.rutebanken.marduk.routes.blobstore.BlobStoreRoute;
 import no.rutebanken.marduk.routes.status.JobEvent;
 import org.apache.camel.LoggingLevel;
 import org.apache.commons.io.input.CloseShieldInputStream;
 import org.apache.tomcat.util.http.fileupload.FileItem;
+import org.apache.tomcat.util.http.fileupload.disk.DiskFileItem;
 import org.springframework.stereotype.Component;
 
+import java.util.Optional;
 import java.util.UUID;
 
 import static no.rutebanken.marduk.Constants.*;
@@ -47,6 +51,14 @@ public class FileUploadRouteBuilder extends BaseRouteBuilder {
                 .process(e -> e.getIn().setHeader(Constants.CORRELATION_ID, e.getIn().getHeader(Constants.CORRELATION_ID, UUID.randomUUID().toString())))
                 .setHeader(FILE_NAME, simple("${body.name}"))
                 .setHeader(FILE_HANDLE, simple("inbound/received/${header." + CHOUETTE_REFERENTIAL + "}/${header." + FILE_NAME + "}"))
+                .process(e -> {
+                    Long providerId = e.getIn().getHeader(PROVIDER_ID, Long.class);
+                    Provider provider = getProviderRepository().getNonMosaicProvider(providerId)
+                            .orElseThrow(() -> new Exception("No provider found for import with id " + providerId));
+                    DiskFileItem fileItem = (DiskFileItem) e.getIn().getBody();
+                    String importPath = BlobStoreRoute.awsImportPath(provider) + "/" + fileItem.getName();
+                    e.getIn().setHeader(FILE_HANDLE, importPath);
+                })
                 .setHeader(IMPORT, constant(true))
                 .process(e -> e.getIn().setHeader(FILE_CONTENT_HEADER, new CloseShieldInputStream(e.getIn().getBody(FileItem.class).getInputStream())))
                 .to("direct:uploadFileAndStartImport")

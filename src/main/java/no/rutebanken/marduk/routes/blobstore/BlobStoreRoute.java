@@ -196,6 +196,14 @@ public class BlobStoreRoute extends BaseRouteBuilder {
     }
 
 
+    /**
+     * Returns the AWS path for storing imports
+     * @param provider
+     * @return
+     */
+    public static String awsImportPath(Provider provider) {
+        return exportSiteId(provider) + "/imports";
+    }
 
 
     private static String awsExportPath(ExportTemplate export, Provider provider) {
