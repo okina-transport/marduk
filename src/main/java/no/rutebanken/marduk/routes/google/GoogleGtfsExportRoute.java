@@ -57,7 +57,7 @@ public class GoogleGtfsExportRoute extends BaseRouteBuilder {
         super.configure();
 
 
-        singletonFrom("activemq:queue:GoogleExportQueue?transacted=true&maxConcurrentConsumers=1&messageListenerContainerFactoryRef=batchListenerContainerFactory").autoStartup("{{google.export.autoStartup:true}}")
+        singletonFrom("activemq:queue:GoogleExportQueue?transacted=true&maxConcurrentConsumers=1&messageListenerContainerFactoryRef=batchListenerContainerFactory").autoStartup("{{google.export.autoStartup:false}}")
                 .transacted()
                 .to("direct:exportGtfsGoogle")
                 .inOnly("activemq:queue:GoogleQaExportQueue")
@@ -79,7 +79,7 @@ public class GoogleGtfsExportRoute extends BaseRouteBuilder {
                 .routeId("gtfs-google-export-merged");
 
 
-        singletonFrom("activemq:queue:GoogleQaExportQueue?transacted=true&maxConcurrentConsumers=1&messageListenerContainerFactoryRef=batchListenerContainerFactory").autoStartup("{{google.export.qa.autoStartup:true}}")
+        singletonFrom("activemq:queue:GoogleQaExportQueue?transacted=true&maxConcurrentConsumers=1&messageListenerContainerFactoryRef=batchListenerContainerFactory").autoStartup("{{google.export.qa.autoStartup:false}}")
                 .transacted()
                 .to("direct:exportQaGtfsGoogle")
                 .routeId("gtfs-google-qa-export-merged-jms-route");
