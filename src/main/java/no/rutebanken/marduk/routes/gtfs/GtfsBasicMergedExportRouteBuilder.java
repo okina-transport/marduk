@@ -49,7 +49,7 @@ public class GtfsBasicMergedExportRouteBuilder extends BaseRouteBuilder {
     public void configure() throws Exception {
         super.configure();
 
-        singletonFrom("activemq:queue:GtfsBasicExportMergedQueue?transacted=true&maxConcurrentConsumers=1&messageListenerContainerFactoryRef=batchListenerContainerFactory").autoStartup("{{gtfs.export.basic.autoStartup:true}}")
+        singletonFrom("activemq:queue:GtfsBasicExportMergedQueue?transacted=true&maxConcurrentConsumers=1&messageListenerContainerFactoryRef=batchListenerContainerFactory").autoStartup("{{gtfs.export.basic.autoStartup:false}}")
                 .transacted()
                 .to("direct:exportGtfsBasicMerged")
                 .inOnly("activemq:queue:GoogleExportQueue")
