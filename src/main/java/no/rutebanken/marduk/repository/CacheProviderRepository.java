@@ -35,8 +35,6 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-import static no.rutebanken.marduk.Constants.PROVIDER_ID;
-
 
 @Repository
 public class CacheProviderRepository implements ProviderRepository {
@@ -68,7 +66,7 @@ public class CacheProviderRepository implements ProviderRepository {
             Cache<Long, Provider> newCache = CacheBuilder.newBuilder().maximumSize(cacheMaxSize).build();
             newCache.putAll(providerMap);
             cache = newCache;
-            logger.info("Updated provider cache with result from REST Provider Service. Cache now has " + cache.size() + " elements");
+            logger.debug("Updated provider cache with result from REST Provider Service. Cache now has " + cache.size() + " elements");
         } catch (ResourceAccessException re) {
             if (re.getCause() instanceof ConnectException) {
 

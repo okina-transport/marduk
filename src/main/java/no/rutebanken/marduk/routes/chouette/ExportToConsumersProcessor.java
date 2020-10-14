@@ -67,10 +67,10 @@ public class ExportToConsumersProcessor implements Processor {
                             restUploadService.uploadStream(streamToUpload, consumer.getServiceUrl(), filePath, consumer.getLogin(), consumer.getSecretKey());
                             break;
                     }
+                    log.info(consumer.getType() + " consumer upload completed " + consumer.getName() + " => " + consumer.getServiceUrl());
                 } catch (Exception e) {
                     log.error("Error while uploading to consumer " + consumer.toString(), e);
                 }
-                log.info(consumer.getType() + " consumer upload completed " + consumer.getName() + " => " + consumer.getServiceUrl());
             });
         }
 

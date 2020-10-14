@@ -104,7 +104,8 @@ public class ChouetteExportNetexRouteBuilder extends AbstractChouetteRouteBuilde
                     e.getIn().setHeader("fileName", file.getName());
                 })
                 .process(exportToConsumersProcessor)
-                .choice().when(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)).chouetteInfo.generateDatedServiceJourneyIds)
+                .choice()
+                .when(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)).chouetteInfo.generateDatedServiceJourneyIds)
                 .to("direct:uploadDatedExport")
                 .end()
 
