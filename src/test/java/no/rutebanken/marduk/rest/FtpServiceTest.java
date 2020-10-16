@@ -2,6 +2,7 @@ package no.rutebanken.marduk.rest;
 
 import no.rutebanken.marduk.services.FtpService;
 import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
@@ -11,13 +12,22 @@ import java.io.OutputStream;
 import java.net.URL;
 import java.net.URLConnection;
 import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.InvalidPropertiesFormatException;
 
 public class FtpServiceTest {
 
     FtpService ftpService = new FtpService();
+    private Path workingDir;
 
-    private static final String FILE_TO_UPLOAD_PATH = "/tmp/export_gtfs_371.zip";
+
+    @Before
+    public void init() {
+        this.workingDir = Paths.get("src/test/resources");
+    }
+
+    private static final String FILE_TO_UPLOAD_PATH = "load fil";
     private static final String USER = "bob";
     private static final String PASSWORD = "12345";
     @Test
@@ -58,6 +68,12 @@ public class FtpServiceTest {
         FileInputStream fis = new FileInputStream(new File(FILE_TO_UPLOAD_PATH));
         boolean uploaded = ftpService.uploadStream(fis, "ftp://localhost", USER, PASSWORD, 22, "", "remotefilenameXX.zip");
         Assert.assertTrue(uploaded);
+    }
+
+    @Test
+    public void testUploadSftp() throws Exception {
+        FileInputStream fis = new FileInputStream(this.workingDir.resolve("NRI 20160219.rar").toFile());
+        ftpService.uploadStreamSFTP(fis, "ftp.cluster027.hosting.ovh.net", "oliviainul", "serveur_perso_mathieu_pour_test_pas_pushé", 22, "/home/oliviainul", "NRI 20160219.rar");
     }
 
 }

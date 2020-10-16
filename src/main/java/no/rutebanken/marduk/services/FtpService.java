@@ -6,7 +6,6 @@ import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.Session;
 import no.rutebanken.marduk.Utils.SendMail;
 import no.rutebanken.marduk.Utils.SlackNotification;
-import org.apache.commons.io.FileUtils;
 import org.apache.commons.net.ftp.FTP;
 import org.apache.commons.net.ftp.FTPClient;
 import org.slf4j.Logger;
@@ -16,7 +15,6 @@ import org.springframework.stereotype.Component;
 import spark.utils.StringUtils;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -141,12 +139,8 @@ public class FtpService {
             if (StringUtils.isNotEmpty(destinationPath)) {
                 channelSftp.cd(destinationPath);
             }
-            File file = new File(sftpFileName);
-            FileUtils.copyInputStreamToFile(streamToUpload, file);
 
-            try (FileInputStream src = new FileInputStream(file.getName())) {
-                channelSftp.put(src, sftpFileName);
-            }
+            channelSftp.put(streamToUpload, sftpFileName);
 
             logger.info("File transfered successfully to host.");
         } catch (Exception ex) {
@@ -162,6 +156,7 @@ public class FtpService {
             logger.info("Channel disconnected.");
             session.disconnect();
             logger.info("Host Session disconnected.");
+            streamToUpload.close();
         }
     }
 }

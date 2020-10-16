@@ -70,6 +70,12 @@ public class ExportToConsumersProcessor implements Processor {
                     log.info(consumer.getType() + " consumer upload completed " + consumer.getName() + " => " + consumer.getServiceUrl());
                 } catch (Exception e) {
                     log.error("Error while uploading to consumer " + consumer.toString(), e);
+                } finally {
+                    try {
+                        streamToUpload.close();
+                    } catch (IOException e) {
+                        log.error("Error while closing stream to upload", e);
+                    }
                 }
             });
         }
