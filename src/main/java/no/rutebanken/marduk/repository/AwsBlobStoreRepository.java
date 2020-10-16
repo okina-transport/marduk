@@ -18,15 +18,17 @@ package no.rutebanken.marduk.repository;
 
 import com.amazonaws.AmazonClientException;
 import com.amazonaws.services.s3.AmazonS3;
-import com.amazonaws.services.s3.model.*;
-import com.amazonaws.services.s3.transfer.TransferManager;
-import com.amazonaws.services.s3.transfer.TransferManagerBuilder;
-import com.amazonaws.services.s3.transfer.Upload;
+import com.amazonaws.services.s3.model.CannedAccessControlList;
+import com.amazonaws.services.s3.model.CopyObjectRequest;
+import com.amazonaws.services.s3.model.CopyObjectResult;
+import com.amazonaws.services.s3.model.ObjectMetadata;
+import com.amazonaws.services.s3.model.PutObjectRequest;
+import com.amazonaws.services.s3.model.S3ObjectSummary;
 import com.google.cloud.storage.Storage;
 import com.okina.helper.aws.BlobStoreHelper;
 import no.rutebanken.marduk.domain.BlobStoreFiles;
 import no.rutebanken.marduk.domain.Provider;
-import no.rutebanken.marduk.exceptions.MardukException;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,7 +37,7 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Repository;
 
-import java.io.File;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Arrays;
@@ -137,11 +139,20 @@ public class AwsBlobStoreRepository implements BlobStoreRepository {
 //            throw new MardukException("error while uploading blob", e);
 //        }
 
-        PutObjectRequest putReq = new PutObjectRequest(containerName, name, inputStream, null);
+        byte[] bytes;
+        try {
+            bytes = IOUtils.toByteArray(inputStream);
+            ObjectMetadata metadata = new ObjectMetadata();
+            metadata.setContentLength(bytes.length);
+            ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(bytes);
+            PutObjectRequest putReq = new PutObjectRequest(containerName, name, byteArrayInputStream, metadata);
         if (makePublic) {
             putReq = putReq.withCannedAcl(CannedAccessControlList.PublicRead);
         }
         amazonS3Client.putObject(putReq);
+        } catch (IOException e) {
+            logger.error("Erreur sur l'envoi du fichier sur AWS", e);
+        }
     }
 
     public void setPublicAccess(boolean isPublic, String filepath) {
