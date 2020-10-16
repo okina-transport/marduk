@@ -73,7 +73,7 @@ public class FtpServiceTest {
     @Test
     public void testUploadSftp() throws Exception {
         FileInputStream fis = new FileInputStream(this.workingDir.resolve("NRI 20160219.rar").toFile());
-        ftpService.uploadStreamSFTP(fis, "ftp.cluster027.hosting.ovh.net", "oliviainul", "serveur_perso_mathieu_pour_test_pas_pushé", 22, "/home/oliviainul", "NRI 20160219.rar");
+        ftpService.uploadStreamSFTP(fis, "fillme", "fillme", "fillme", 22, "fillme", "NRI 20160219.rar");
     }
 
 }
