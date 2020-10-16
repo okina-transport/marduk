@@ -156,7 +156,6 @@ public class FtpService {
             logger.info("Channel disconnected.");
             session.disconnect();
             logger.info("Host Session disconnected.");
-            streamToUpload.close();
         }
     }
 }

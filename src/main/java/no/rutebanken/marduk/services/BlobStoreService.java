@@ -19,11 +19,7 @@ package no.rutebanken.marduk.services;
 import com.amazonaws.services.s3.AmazonS3;
 import no.rutebanken.marduk.Constants;
 import no.rutebanken.marduk.domain.BlobStoreFiles;
-import no.rutebanken.marduk.domain.ExportTemplate;
-import no.rutebanken.marduk.domain.Provider;
 import no.rutebanken.marduk.repository.BlobStoreRepository;
-import no.rutebanken.marduk.routes.chouette.ExportToConsumersProcessor;
-import org.apache.camel.Body;
 import org.apache.camel.Exchange;
 import org.apache.camel.Header;
 import org.apache.commons.lang3.StringUtils;
@@ -34,9 +30,8 @@ import org.springframework.stereotype.Service;
 import javax.annotation.PostConstruct;
 import java.io.InputStream;
 import java.util.Collection;
-import java.util.Optional;
 
-import static no.rutebanken.marduk.Constants.*;
+import static no.rutebanken.marduk.Constants.FILE_HANDLE;
 
 @Service
 public class BlobStoreService {
@@ -96,7 +91,9 @@ public class BlobStoreService {
 
     public void uploadBlobExport(@Header(value = Constants.FILE_HANDLE) String name,
                                  @Header(value = Constants.ARCHIVE_FILE_HANDLE) String archiveName,
-                                 @Header(value = Constants.BLOBSTORE_MAKE_BLOB_PUBLIC) boolean makePublic, InputStream inputStream, Exchange exchange) {
+                                 @Header(value = Constants.BLOBSTORE_MAKE_BLOB_PUBLIC) boolean makePublic,
+                                 InputStream inputStream,
+                                 Exchange exchange) {
         uploadBlob(name, makePublic, inputStream, exchange);
         if (StringUtils.isNotBlank(archiveName)) {
             copyBlob(name, archiveName);
