@@ -35,11 +35,6 @@ public class MultipleExportProcessor implements Processor {
 
     Logger log = LoggerFactory.getLogger(this.getClass());
 
-    public static final String MOSAIC_REFERENTIAL = "MOSAIC_REFERENTIAL";
-
-    @Value("${stop-places-export.api.url}")
-    private String stopPlacesExportUrl;
-
     @Autowired
     ExportTemplateDAO exportTemplateDAO;
 
@@ -53,7 +48,7 @@ public class MultipleExportProcessor implements Processor {
     ExportJsonMapper exportJsonMapper;
 
     @Override
-    public void process(Exchange exchange) throws Exception {
+    public void process(Exchange exchange) {
         List<ExportTemplate> exports = (List<ExportTemplate>) exchange.getIn().getBody();
         exchange.getIn().setBody(null);
         updateExportWithMatchingMosaicLines(exports, exchange);
@@ -107,7 +102,7 @@ public class MultipleExportProcessor implements Processor {
         Long tiamatProviderId = Long.valueOf(exchange.getIn().getHeaders().get(ORIGINAL_PROVIDER_ID).toString());
         exchange.getIn().getHeaders().put("tiamatProviderId", tiamatProviderId);
         prepareHeadersForExport(exchange, export);
-        producer.send("direct:tiamatStopPlacesExport", exchange);
+        producer.send("activemq:queue:TiamatStopPlacesExport", exchange);
 
     }
 

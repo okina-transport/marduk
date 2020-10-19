@@ -124,7 +124,7 @@ public class BlobStoreRoute extends BaseRouteBuilder {
     }
 
     public static String exportFilePath(Provider provider, String filename) {
-        return exportSiteId(provider) + "/exports/manuels/" + new Date().getTime() + "/" + filename;
+        return exportSiteId(provider) + "/exports/manuels/" + filename;
     }
 
     private static String exportArchiveFilePath(ExportTemplate export, Provider provider) {

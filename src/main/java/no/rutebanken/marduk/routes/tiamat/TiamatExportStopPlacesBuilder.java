@@ -1,6 +1,8 @@
-package no.rutebanken.marduk.routes.chouette;
+package no.rutebanken.marduk.routes.tiamat;
 
 import no.rutebanken.marduk.Constants;
+import no.rutebanken.marduk.routes.chouette.AbstractChouetteRouteBuilder;
+import no.rutebanken.marduk.routes.chouette.ExportToConsumersProcessor;
 import no.rutebanken.marduk.routes.chouette.json.ExportJob;
 import no.rutebanken.marduk.routes.status.JobEvent;
 import no.rutebanken.marduk.services.FileSystemService;
@@ -13,6 +15,7 @@ import org.springframework.stereotype.Component;
 import java.io.File;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.UUID;
 
 import static no.rutebanken.marduk.Constants.*;
 
@@ -21,7 +24,7 @@ import static no.rutebanken.marduk.Constants.*;
  * Exports stop places for specific provider
  */
 @Component
-public class TiamatStopPlacesExportRouteBuilder extends AbstractChouetteRouteBuilder {
+public class TiamatExportStopPlacesBuilder extends AbstractChouetteRouteBuilder {
 
     private static final String TIAMAT_EXPORT_ROUTING_DESTINATION = "direct:processTiamatExportResult";
 
@@ -41,9 +44,24 @@ public class TiamatStopPlacesExportRouteBuilder extends AbstractChouetteRouteBui
     public void configure() throws Exception {
         super.configure();
 
-        from("direct:tiamatStopPlacesExport").streamCaching()
+        from("activemq:queue:TiamatStopPlacesExport").streamCaching()
                 .transacted()
                 .log(LoggingLevel.INFO, getClass().getName(), "Starting Tiamat export stop places for provider with id ${header.tiamatProviderId}")
+                .choice()
+                    .when(simple("${header.RutebankenOriginalProviderId} == null"))
+                    .log(LoggingLevel.INFO, "Valorisation du tiamatProviderId avec RutebankenOriginialProviderId")
+                    .process(e -> {
+                        Long tiamatProviderId = Long.valueOf(e.getIn().getHeaders().get(PROVIDER_ID).toString());
+                        e.getIn().getHeaders().put("tiamatProviderId", tiamatProviderId);
+                    })
+                .end()
+                .choice()
+                    .when(simple("${header.RutebankenCorrelationId} == null"))
+                    .log(LoggingLevel.INFO, "Ajout d'un correlation id")
+                    .process(e -> {
+                        e.getIn().setHeader(Constants.CORRELATION_ID, e.getIn().getHeader(Constants.CORRELATION_ID, UUID.randomUUID().toString()));
+                    })
+                .end()
                 .process(e -> {
                     Object tiamatProviderId = e.getIn().getHeaders().get("tiamatProviderId");
                     log.info("Tiamat Stop Places Export : launching export for provider " + tiamatProviderId.toString());

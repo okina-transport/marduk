@@ -23,6 +23,7 @@ import no.rutebanken.marduk.routes.file.ZipFileUtils;
 import no.rutebanken.marduk.routes.status.JobEvent;
 import no.rutebanken.marduk.routes.status.JobEvent.State;
 import no.rutebanken.marduk.routes.status.JobEvent.TimetableAction;
+import no.rutebanken.marduk.services.FileSystemService;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.codehaus.plexus.util.StringUtils;
@@ -40,7 +41,18 @@ import java.util.List;
 import java.util.UUID;
 
 import static java.util.stream.Collectors.toList;
-import static no.rutebanken.marduk.Constants.*;
+import static no.rutebanken.marduk.Constants.BLOBSTORE_MAKE_BLOB_PUBLIC;
+import static no.rutebanken.marduk.Constants.BLOBSTORE_PATH_OUTBOUND;
+import static no.rutebanken.marduk.Constants.CHOUETTE_JOB_STATUS_URL;
+import static no.rutebanken.marduk.Constants.CHOUETTE_REFERENTIAL;
+import static no.rutebanken.marduk.Constants.EXPORT_END_DATE;
+import static no.rutebanken.marduk.Constants.EXPORT_FILE_NAME;
+import static no.rutebanken.marduk.Constants.EXPORT_LINES_IDS;
+import static no.rutebanken.marduk.Constants.EXPORT_START_DATE;
+import static no.rutebanken.marduk.Constants.FILE_HANDLE;
+import static no.rutebanken.marduk.Constants.JSON_PART;
+import static no.rutebanken.marduk.Constants.PROVIDER_ID;
+import static no.rutebanken.marduk.Constants.USER;
 import static no.rutebanken.marduk.Utils.Utils.getLastPathElementOfUrl;
 
 /**
@@ -64,6 +76,9 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
     @Autowired
     ExportToConsumersProcessor exportToConsumersProcessor;
 
+    @Autowired
+    FileSystemService fileSystemService;
+
     @Override
     public void configure() throws Exception {
         super.configure();
@@ -78,20 +93,30 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
                 })
                 .process(e -> JobEvent.providerJobBuilder(e).timetableAction(TimetableAction.EXPORT).state(State.PENDING).build())
                 .to("direct:updateStatus")
+                .process(e -> e.getIn().setHeader(CHOUETTE_REFERENTIAL, getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)).chouetteInfo.referential))
                 .process(e -> {
                     String user = e.getIn().getHeader(USER, String.class);
                     String gtfsParams = null;
-                    if (e.getIn().getHeader(EXPORT_LINES_IDS) != null) {
-                        String linesIdsS = e.getIn().getHeader(EXPORT_LINES_IDS, String.class);
-                        List<Long> linesIds = Arrays.stream(StringUtils.split(linesIdsS, ",")).map(s -> Long.valueOf(s)).collect(toList());
 
+                    Date startDate = null;
+                    Date endDate = null;
+
+                    if(e.getIn().getHeader(EXPORT_START_DATE) != null && e.getIn().getHeader(EXPORT_END_DATE) != null){
                         Long start = e.getIn().getHeader(EXPORT_START_DATE) != null ?  (Long) e.getIn().getHeader(EXPORT_START_DATE, Long.class) : null;
                         Long end = e.getIn().getHeader(EXPORT_END_DATE) != null ? (Long) e.getIn().getHeader(EXPORT_END_DATE, Long.class) : null;
-                        Date startDate = (start != null) ? Date.from(Instant.ofEpochSecond(start)) : null;
-                        Date endDate = (end != null) ? Date.from(Instant.ofEpochSecond(end)) : null;
+                        startDate = (start != null) ? Date.from(Instant.ofEpochSecond(start)) : null;
+                        endDate = (end != null) ? Date.from(Instant.ofEpochSecond(end)) : null;
+                    }
 
+                    if (e.getIn().getHeader(EXPORT_LINES_IDS) == null && startDate != null && endDate != null) {
+                        gtfsParams = Parameters.getGtfsExportParameters(getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)), user, null, startDate, endDate);
+                    }
+                    else if (e.getIn().getHeader(EXPORT_LINES_IDS) != null) {
+                        String linesIdsS = e.getIn().getHeader(EXPORT_LINES_IDS, String.class);
+                        List<Long> linesIds = Arrays.stream(StringUtils.split(linesIdsS, ",")).map(s -> Long.valueOf(s)).collect(toList());
                         gtfsParams = Parameters.getGtfsExportParameters(getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)), user, linesIds, startDate, endDate);
-                    } else {
+                    }
+                    else {
                         gtfsParams = Parameters.getGtfsExportParameters(getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)), user);
                     }
 
@@ -124,7 +149,6 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
                 .choice()
                 .when(simple("${header.action_report_result} == 'OK'"))
                     .log(LoggingLevel.INFO, correlation() + "Export ended with status '${header.action_report_result}'")
-                    .log(LoggingLevel.INFO, correlation() + "Export ended with status '${header.action_report_result}'")
                     .log(LoggingLevel.INFO, correlation() + "Calling url ${header.data_url}")
                     .removeHeaders("Camel*")
                     .setBody(simple(""))
@@ -133,24 +157,26 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
                         log.info("Starting export download");
                     })
                     .toD("${header.data_url}")
+                    .process(e -> {
+                        File file = fileSystemService.getOfferFile(e);
+                        e.getIn().setHeader("fileName", file.getName());
+                        e.getIn().setHeader(EXPORT_FILE_NAME, file.getName());
+                    })
                     .setHeader("fileName", simple("GTFS.zip"))
                     .process(exportToConsumersProcessor)
 //                    .to("direct:addGtfsFeedInfo")
                     .setHeader(BLOBSTORE_MAKE_BLOB_PUBLIC, constant(publicPublication))
                     .setHeader(FILE_HANDLE, simple(BLOBSTORE_PATH_OUTBOUND + "gtfs/${header." + CHOUETTE_REFERENTIAL + "}-" + Constants.CURRENT_AGGREGATED_GTFS_FILENAME))
-                    .setHeader(EXPORT_FILE_NAME, simple(Constants.CURRENT_AGGREGATED_GTFS_FILENAME))
-                .process(e -> {
-                    log.info("Starting gtfs export upload");
-                })
-                .to("direct:uploadBlobExport")
+//                    .setHeader(EXPORT_FILE_NAME, simple(Constants.CURRENT_AGGREGATED_GTFS_FILENAME))
+                    .process(e -> {
+                        log.info("Starting gtfs export upload");
+                    })
+                    .to("direct:uploadBlobExport")
                     .process(e -> {
                         log.info("Upload to consumers and blob store completed");
                     })
-
 //                    .inOnly("activemq:queue:GtfsExportMergedQueue")
                     .process(e -> JobEvent.providerJobBuilder(e).timetableAction(TimetableAction.EXPORT).state(State.OK).build())
-
-
                 .when(simple("${header.action_report_result} == 'NOK'"))
                     .log(LoggingLevel.WARN, correlation() + "Export failed")
                     .process(e -> JobEvent.providerJobBuilder(e).timetableAction(TimetableAction.EXPORT).state(State.FAILED).build())

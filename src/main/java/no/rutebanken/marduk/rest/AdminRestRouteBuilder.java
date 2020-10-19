@@ -51,6 +51,11 @@ import org.springframework.stereotype.Component;
 
 import javax.ws.rs.NotFoundException;
 import java.net.URLDecoder;
+import java.sql.Timestamp;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
+import java.time.ZonedDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -67,6 +72,8 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
     private static final String JSON = "application/json";
     private static final String X_OCTET_STREAM = "application/x-octet-stream";
     private static final String PLAIN = "text/plain";
+    private static SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMddhhmmssZ");
+
 
     @Value("${server.admin.port}")
     public String port;
@@ -89,7 +96,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
 
         RestPropertyDefinition corsAllowedHeaders = new RestPropertyDefinition();
         corsAllowedHeaders.setKey("Access-Control-Allow-Headers");
-        corsAllowedHeaders.setValue("Origin, Accept, X-Requested-With, Content-Type, Access-Control-Request-Method, Access-Control-Request-Headers, Authorization, x-okina-referential, RutebankenUser, RutebankenDescription");
+        corsAllowedHeaders.setValue("Origin, Accept, X-Requested-With, Content-Type, Access-Control-Request-Method, Access-Control-Request-Headers, Authorization, x-okina-referential, RutebankenUser, RutebankenDescription, EXPORT_LINES_IDS, EXPORT_START_DATE, EXPORT_END_DATE");
 
         RestPropertyDefinition corsAllowedOrigin = new RestPropertyDefinition();
         corsAllowedOrigin.setKey("Access-Control-Allow-Origin");
@@ -809,7 +816,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
                 .log(LoggingLevel.INFO, correlation() + "Chouette start export GTFS")
                 .removeHeaders("CamelHttp*")
-                .process(e -> e.getIn().setHeader(USER, getUserNameFromHeaders(e)))
+                .process(this::getFromHeadersForGTFS)
                 .inOnly("activemq:queue:ChouetteExportGtfsQueue")
                 .routeId("admin-chouette-export-gtfs")
                 .endRest()
@@ -848,6 +855,23 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .process(e -> e.getIn().setHeader(USER, getUserNameFromHeaders(e)))
                 .inOnly("activemq:queue:ChouetteExportConcertoQueue")
                 .routeId("admin-chouette-export-concerto")
+                .endRest()
+
+                .post("/export/stops")
+                .description("Triggers the stops export process in Tiamat. Note that NO validation is performed before export, and that the data must be guaranteed to be error free")
+                .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the nabu service").dataType("integer").endParam()
+                .consumes(PLAIN)
+                .produces(PLAIN)
+                .responseMessage().code(200).message("Command accepted").endResponseMessage()
+                .route()
+                .setHeader(PROVIDER_ID, header("providerId"))
+                .to("direct:authorizeRequest")
+                .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
+                .log(LoggingLevel.INFO, correlation() + "Tiamat start export Stops")
+                .removeHeaders("CamelHttp*")
+                .process(e -> e.getIn().setHeader(USER, getUserNameFromHeaders(e)))
+                .inOnly("activemq:queue:TiamatStopPlacesExport")
+                .routeId("admin-tiamat-export-stops")
                 .endRest()
 
                 .post("/validate")
@@ -1009,6 +1033,28 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
             return (String) headers.get(USER);
         }
         return null;
+    }
+
+    private void getFromHeadersForGTFS(Exchange e) {
+        Map headers = (Map) e.getIn().getBody(Map.class).get("headers");
+        if (headers != null) {
+            if (headers.get(USER) != null) {
+                e.getIn().setHeader(USER, headers.get(USER));
+            }
+            if (headers.get(EXPORT_LINES_IDS) != null) {
+                e.getIn().setHeader(EXPORT_LINES_IDS, headers.get(EXPORT_LINES_IDS));
+            }
+            if (headers.get(EXPORT_START_DATE) != null) {
+                String str = (String) headers.get(EXPORT_START_DATE);
+                ZonedDateTime startDateTime = ZonedDateTime.parse(str);
+                e.getIn().setHeader(EXPORT_START_DATE, Timestamp.valueOf(startDateTime.toLocalDateTime()).getTime() / 1000);
+            }
+            if (headers.get(EXPORT_END_DATE) != null) {
+                String str = (String) headers.get(EXPORT_END_DATE);
+                ZonedDateTime endDateTime = ZonedDateTime.parse(str);
+                e.getIn().setHeader(EXPORT_END_DATE, Timestamp.valueOf(endDateTime.toLocalDateTime()).getTime() / 1000);
+            }
+        }
     }
 }
 

@@ -92,34 +92,32 @@ public class ChouetteExportNetexRouteBuilder extends AbstractChouetteRouteBuilde
 
         from("direct:processNetexExportResult")
                 .choice()
-                .when(simple("${header.action_report_result} == 'OK'"))
-                .log(LoggingLevel.INFO, correlation() + "Export ended with status '${header.action_report_result}'")
-                .log(LoggingLevel.DEBUG, correlation() + "Calling url ${header.data_url}")
-                .removeHeaders("Camel*")
-                .setBody(simple(""))
-                .setHeader(Exchange.HTTP_METHOD, constant(org.apache.camel.component.http4.HttpMethods.GET))
-                .toD("${header.data_url}")
-                .process(e -> {
-                    File file = fileSystemService.getOfferFile(e);
-                    e.getIn().setHeader("fileName", file.getName());
-                })
-                .process(exportToConsumersProcessor)
-                .choice().when(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)).chouetteInfo.generateDatedServiceJourneyIds)
-                .to("direct:uploadDatedExport")
-                .end()
-
+                    .when(simple("${header.action_report_result} == 'OK'"))
+                    .log(LoggingLevel.INFO, correlation() + "Export ended with status '${header.action_report_result}'")
+                    .log(LoggingLevel.DEBUG, correlation() + "Calling url ${header.data_url}")
+                    .removeHeaders("Camel*")
+                    .setBody(simple(""))
+                    .setHeader(Exchange.HTTP_METHOD, constant(org.apache.camel.component.http4.HttpMethods.GET))
+                    .toD("${header.data_url}")
+                    .process(e -> {
+                        File file = fileSystemService.getOfferFile(e);
+                        e.getIn().setHeader("fileName", file.getName());
+                        e.getIn().setHeader(EXPORT_FILE_NAME, file.getName());
+                    })
+                    .process(exportToConsumersProcessor)
+                    .choice()
+                        .when(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)).chouetteInfo.generateDatedServiceJourneyIds)
+                        .to("direct:uploadDatedExport")
+                    .end()
                     .setHeader(BLOBSTORE_MAKE_BLOB_PUBLIC, constant(publicPublication))
                     .setHeader(FILE_HANDLE, simple(BLOBSTORE_PATH_OUTBOUND + "netex/${header." + CHOUETTE_REFERENTIAL + "}-" + Constants.CURRENT_AGGREGATED_NETEX_FILENAME))
-                    .setHeader(EXPORT_FILE_NAME, simple(Constants.CURRENT_AGGREGATED_NETEX_FILENAME))
+//                    .setHeader(EXPORT_FILE_NAME, simple(Constants.CURRENT_AGGREGATED_NETEX_FILENAME))
                     .to("direct:uploadBlobExport")
                     .process(e -> {
                         log.info("Upload to consumers and blob store completed");
                     })
-
                     .process(e -> JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.EXPORT_NETEX).state(JobEvent.State.OK).build())
                     .to("direct:updateStatus")
-
-
                     .removeHeader(Constants.CHOUETTE_JOB_ID)
                     .setBody(constant(null))
 //                    .process(e -> JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.BUILD_GRAPH).state(JobEvent.State.PENDING).build())
