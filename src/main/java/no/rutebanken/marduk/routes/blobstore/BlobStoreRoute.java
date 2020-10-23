@@ -37,7 +37,7 @@ public class BlobStoreRoute extends BaseRouteBuilder {
     @Value("${google.publish.public:false}")
     private boolean publicPublication;
 
-    private static SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMddhhmmssZ");
+    private static SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMddhhmmss");
 
     @Override
     public void configure() throws Exception {
@@ -219,6 +219,6 @@ public class BlobStoreRoute extends BaseRouteBuilder {
     }
 
     private static String nowTag() {
-        return sdf.format(new Date());
+        return sdf.format(new Date()) + "Z";
     }
 }
