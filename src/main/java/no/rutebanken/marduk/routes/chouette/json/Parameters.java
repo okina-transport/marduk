@@ -27,6 +27,7 @@ import no.rutebanken.marduk.routes.chouette.json.importer.GtfsImportParameters;
 import no.rutebanken.marduk.routes.chouette.json.importer.NetexImportParameters;
 import no.rutebanken.marduk.routes.chouette.json.importer.RegtoppImportParameters;
 import no.rutebanken.marduk.routes.file.FileType;
+import org.apache.commons.lang3.StringUtils;
 
 import java.io.IOException;
 import java.io.StringWriter;
@@ -107,7 +108,11 @@ public class Parameters {
         try {
             ChouetteInfo chouetteInfo = provider.chouetteInfo;
             String projectionType = null;
-            NetexExportParameters.NetexExport netexExport = new NetexExportParameters.NetexExport("offre", chouetteInfo.referential, chouetteInfo.organisation, user, projectionType, exportStops,chouetteInfo.xmlns);
+            String defaultCodespacePrefix = chouetteInfo.xmlns;
+            if(StringUtils.isNotBlank(chouetteInfo.getNameNetexOffreIdfm())){
+                defaultCodespacePrefix = chouetteInfo.getNameNetexOffreIdfm();
+            }
+            NetexExportParameters.NetexExport netexExport = new NetexExportParameters.NetexExport("offre", chouetteInfo.referential, chouetteInfo.organisation, user, projectionType, exportStops, defaultCodespacePrefix);
             NetexExportParameters.Parameters parameters = new NetexExportParameters.Parameters(netexExport);
             NetexExportParameters exportParameters = new NetexExportParameters(parameters);
             ObjectMapper mapper = new ObjectMapper();
