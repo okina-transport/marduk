@@ -62,7 +62,7 @@ public class BlobStoreRoute extends BaseRouteBuilder {
                     Optional<ExportTemplate> export = ExportToConsumersProcessor.currentExport(e);
                     if (export.isPresent()) {
                         e.getIn().setHeader(FILE_HANDLE, exportFilePath(export.get(), provider));
-                        e.getIn().setHeader(ARCHIVE_FILE_HANDLE, exportArchiveFilePath(export.get(), provider));
+                        e.getIn().setHeader(ARCHIVE_FILE_HANDLE, exportArchiveFilePath(export.get(), provider, e.getIn().getHeader(EXPORT_FILE_NAME).toString()));
                         e.getIn().setHeader(BLOBSTORE_MAKE_BLOB_PUBLIC, export.get().hasExportFilePublicAccess());
                     } else { // cas des exports manuels
                         e.getIn().setHeader(FILE_HANDLE, exportFilePath(provider, e.getIn().getHeader(EXPORT_FILE_NAME).toString()));
@@ -127,25 +127,8 @@ public class BlobStoreRoute extends BaseRouteBuilder {
         return exportSiteId(provider) + "/exports/manuels/" + filename;
     }
 
-    private static String exportArchiveFilePath(ExportTemplate export, Provider provider) {
-        String archive = "";
-        switch (export.getType()) {
-            case NETEX:
-                if (StringUtils.isNotBlank(provider.chouetteInfo.codeIdfm)) {
-                    archive = " OFFRE_" + exportSiteId(provider) + "_" + nowTag() + ".zip";
-                }
-                break;
-            case ARRET:
-                if (StringUtils.isNotBlank(provider.chouetteInfo.codeIdfm)) {
-                    archive = "ARRET_" + exportSiteId(provider) + "_" + exportSiteName(provider)+ "_T_" + nowTag() + ".zip";
-                }
-                break;
-        }
-
-        if (StringUtils.isBlank(archive)) {
-            archive =  awsExportFileFormat(export) + "_" + nowTag() + "." + awsExportFileExtension(export);
-        }
-        return awsExportPath(export, provider) + "/archive/" +  archive;
+    private static String exportArchiveFilePath(ExportTemplate export, Provider provider, String fileName) {
+        return awsExportPath(export, provider) + "/archive/" +  fileName;
     }
 
 
@@ -210,15 +193,7 @@ public class BlobStoreRoute extends BaseRouteBuilder {
         return exportSiteId(provider) + "/exports/" + export.getId();
     }
 
-    private static String exportSiteName(Provider provider) {
-        return provider.chouetteInfo.referential;
-    }
-
     public static String exportSiteId(Provider provider) {
         return "" + (provider.mosaicId != null ? provider.mosaicId : "x" + provider.getId());
-    }
-
-    private static String nowTag() {
-        return sdf.format(new Date()) + "Z";
     }
 }
