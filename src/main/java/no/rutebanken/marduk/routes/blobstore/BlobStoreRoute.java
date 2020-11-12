@@ -21,12 +21,10 @@ import no.rutebanken.marduk.domain.Provider;
 import no.rutebanken.marduk.routes.BaseRouteBuilder;
 import no.rutebanken.marduk.routes.chouette.ExportToConsumersProcessor;
 import org.apache.camel.LoggingLevel;
-import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.text.SimpleDateFormat;
-import java.util.Date;
 import java.util.Optional;
 
 import static no.rutebanken.marduk.Constants.*;
@@ -64,6 +62,10 @@ public class BlobStoreRoute extends BaseRouteBuilder {
                         e.getIn().setHeader(FILE_HANDLE, exportFilePath(export.get(), provider));
                         e.getIn().setHeader(ARCHIVE_FILE_HANDLE, exportArchiveFilePath(export.get(), provider, e.getIn().getHeader(EXPORT_FILE_NAME).toString()));
                         e.getIn().setHeader(BLOBSTORE_MAKE_BLOB_PUBLIC, export.get().hasExportFilePublicAccess());
+                        e.getIn().setHeader(NOTIFICATION, export.get().getConsumers().get(0).isNotification());
+                        if(e.getIn().getHeader(NOTIFICATION).equals(true)){
+                            e.getIn().setHeader(NOTIFICATION_URL, export.get().getConsumers().get(0).getNotificationUrl());
+                        }
                     } else { // cas des exports manuels
                         e.getIn().setHeader(FILE_HANDLE, exportFilePath(provider, e.getIn().getHeader(EXPORT_FILE_NAME).toString()));
                     }
@@ -73,6 +75,10 @@ public class BlobStoreRoute extends BaseRouteBuilder {
                     .setHeader(BLOBSTORE_MAKE_BLOB_PUBLIC, constant(publicPublication))     //defaulting to false if not specified
                 .end()
                 .bean("blobStoreService", "uploadBlobExport")
+                .choice()
+                    .when(header(NOTIFICATION).isEqualTo(true))
+                    .bean("notificationService", "sendNotification")
+                .end()
                 .setBody(simple(""))
                 .routeId("blobstore-upload-export");
 

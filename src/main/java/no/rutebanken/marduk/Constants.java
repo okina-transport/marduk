@@ -92,5 +92,8 @@ public class Constants {
     public static final String TIME_ZONE = "Europe/Paris";
 
     public static final String OKINA_REFERENTIAL = "x-okina-referential";
+
+    public static final String NOTIFICATION = "Notification";
+    public static final String NOTIFICATION_URL = "NotificationUrl";
 }
 

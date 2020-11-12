@@ -6,6 +6,7 @@ package no.rutebanken.marduk.Utils;
  */
 
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import java.io.BufferedReader;
@@ -20,7 +21,7 @@ import java.net.URLEncoder;
 @Component
 public class SlackNotification {
 
-    Logger log;
+    private Logger logger = LoggerFactory.getLogger(this.getClass());
 
     final String POST = "POST";
     final String PAYLOAD = "payload=";
@@ -102,7 +103,7 @@ public class SlackNotification {
             rd.close();
             return ("ok".equals(response.toString()));
         } catch (Exception e) {
-            log.error("Impossible d'envoyer une notification slack : "+e);
+            logger.error("Impossible d'envoyer une notification slack : "+e);
             return false;
         } finally {
             if (connection != null) {
