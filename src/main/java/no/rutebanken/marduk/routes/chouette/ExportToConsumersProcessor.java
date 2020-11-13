@@ -56,6 +56,12 @@ public class ExportToConsumersProcessor implements Processor {
                     if(consumer.getPassword() != null && consumer.getPassword().length > 0){
                         passwordDecryptedConsumer = cipherEncryption.decrypt(consumer.getPassword());
                     }
+
+                    String secretKeyDecryptedConsumer = null;
+                    if(consumer.getSecretKey() != null && consumer.getSecretKey().length > 0){
+                        secretKeyDecryptedConsumer = cipherEncryption.decrypt(consumer.getSecretKey());
+                    }
+
                     switch (consumer.getType()) {
                         case FTP:
                             ftpService.uploadStream(streamToUpload, consumer.getServiceUrl(), consumer.getLogin(), passwordDecryptedConsumer, consumer.getPort(), consumer.getDestinationPath(), filePath);
@@ -64,7 +70,7 @@ public class ExportToConsumersProcessor implements Processor {
                             ftpService.uploadStreamSFTP(streamToUpload, consumer.getServiceUrl(), consumer.getLogin(), passwordDecryptedConsumer, consumer.getPort(), consumer.getDestinationPath(), filePath);
                             break;
                         case REST:
-                            restUploadService.uploadStream(streamToUpload, consumer.getServiceUrl(), filePath, consumer.getLogin(), consumer.getSecretKey());
+                            restUploadService.uploadStream(streamToUpload, consumer.getServiceUrl(), filePath, consumer.getLogin(), secretKeyDecryptedConsumer);
                             break;
                     }
                     log.info(consumer.getType() + " consumer upload completed " + consumer.getName() + " => " + consumer.getServiceUrl());

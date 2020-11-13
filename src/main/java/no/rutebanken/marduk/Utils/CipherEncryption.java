@@ -19,9 +19,8 @@ public class CipherEncryption {
         Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
         SecretKey secretKey = new SecretKeySpec(encryptionKeyBytes, "AES");
         cipher.init(Cipher.ENCRYPT_MODE, secretKey);
-        byte[] encryptedMessageBytes = cipher.doFinal(password.getBytes());
 
-        return encryptedMessageBytes;
+        return cipher.doFinal(password.getBytes());
     }
 
     public String decrypt(byte[] password) throws Exception {

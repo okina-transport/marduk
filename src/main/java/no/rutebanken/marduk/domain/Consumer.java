@@ -11,7 +11,7 @@ public class Consumer {
     private String serviceUrl;
     private String s3Url;
     private String login;
-    private String secretKey;
+    private byte[] secretKey;
     private byte[] password;
     private Integer port;
     private String destinationPath;
@@ -59,11 +59,11 @@ public class Consumer {
         this.login = login;
     }
 
-    public String getSecretKey() {
+    public byte[] getSecretKey() {
         return secretKey;
     }
 
-    public void setSecretKey(String secretKey) {
+    public void setSecretKey(byte[] secretKey) {
         this.secretKey = secretKey;
     }
 
