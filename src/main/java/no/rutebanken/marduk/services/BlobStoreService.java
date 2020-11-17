@@ -29,6 +29,10 @@ import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
 import java.io.InputStream;
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 
 import static no.rutebanken.marduk.Constants.FILE_HANDLE;
@@ -93,7 +97,8 @@ public class BlobStoreService {
                                  @Header(value = Constants.ARCHIVE_FILE_HANDLE) String archiveName,
                                  @Header(value = Constants.BLOBSTORE_MAKE_BLOB_PUBLIC) boolean makePublic,
                                  InputStream inputStream,
-                                 Exchange exchange) {
+                                 Exchange exchange) throws UnsupportedEncodingException {
+        name = URLDecoder.decode(name, StandardCharsets.UTF_8.toString());
         uploadBlob(name, makePublic, inputStream, exchange);
         if (StringUtils.isNotBlank(archiveName)) {
             copyBlob(name, archiveName);
