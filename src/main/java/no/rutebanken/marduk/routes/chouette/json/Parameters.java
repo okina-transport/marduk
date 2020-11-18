@@ -78,10 +78,11 @@ public class Parameters {
         return netexImportParameters.toJsonString();
     }
 
-    public static String getGtfsExportParameters(Provider provider, String user, List<Long> linesIds, Date startDate, Date endDate) {
+    public static String getGtfsExportParameters(Provider provider,String exportName, String user, List<Long> linesIds, Date startDate, Date endDate) {
         try {
             ChouetteInfo chouetteInfo = provider.chouetteInfo;
-            GtfsExportParameters.GtfsExport gtfsExport = new GtfsExportParameters.GtfsExport("offre",
+
+            GtfsExportParameters.GtfsExport gtfsExport = new GtfsExportParameters.GtfsExport(exportName==null ? "offre" : exportName,
                                                                                                     chouetteInfo.xmlns, chouetteInfo.referential, chouetteInfo.organisation, user, true, startDate, endDate);
             gtfsExport.ids = linesIds;
             if (linesIds != null && !linesIds.isEmpty()) {
@@ -100,7 +101,7 @@ public class Parameters {
     }
 
     public static String getGtfsExportParameters(Provider provider, String user) {
-        return getGtfsExportParameters(provider, user, null, null, null);
+        return getGtfsExportParameters(provider,null, user, null, null, null);
     }
 
 

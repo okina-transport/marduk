@@ -1054,6 +1054,9 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 ZonedDateTime endDateTime = ZonedDateTime.parse(str);
                 e.getIn().setHeader(EXPORT_END_DATE, Timestamp.valueOf(endDateTime.toLocalDateTime()).getTime() / 1000);
             }
+            if (headers.get(EXPORT_NAME) != null) {
+                e.getIn().setHeader(EXPORT_NAME, headers.get(EXPORT_NAME));
+            }
         }
     }
 }
