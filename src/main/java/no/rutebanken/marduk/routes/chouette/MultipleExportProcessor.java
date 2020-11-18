@@ -93,6 +93,10 @@ public class MultipleExportProcessor implements Processor {
         if (export.getEndDate() != null) {
             exchange.getIn().getHeaders().put(EXPORT_END_DATE, Timestamp.valueOf(export.getEndDate()).getTime() / 1000);
         }
+
+        if (export.getName() != null){
+            exchange.getIn().getHeaders().put(EXPORT_NAME, export.getName());
+        }
         producer.send("activemq:queue:ChouetteExportGtfsQueue", exchange);
     }
 
