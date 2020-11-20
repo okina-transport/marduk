@@ -1045,14 +1045,10 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 e.getIn().setHeader(EXPORT_LINES_IDS, headers.get(EXPORT_LINES_IDS));
             }
             if (headers.get(EXPORT_START_DATE) != null) {
-                String str = (String) headers.get(EXPORT_START_DATE);
-                ZonedDateTime startDateTime = ZonedDateTime.parse(str);
-                e.getIn().setHeader(EXPORT_START_DATE, Timestamp.valueOf(startDateTime.toLocalDateTime()).getTime() / 1000);
+                e.getIn().setHeader(EXPORT_START_DATE, headers.get(EXPORT_START_DATE));
             }
             if (headers.get(EXPORT_END_DATE) != null) {
-                String str = (String) headers.get(EXPORT_END_DATE);
-                ZonedDateTime endDateTime = ZonedDateTime.parse(str);
-                e.getIn().setHeader(EXPORT_END_DATE, Timestamp.valueOf(endDateTime.toLocalDateTime()).getTime() / 1000);
+                e.getIn().setHeader(EXPORT_END_DATE, headers.get(EXPORT_END_DATE));
             }
         }
     }
