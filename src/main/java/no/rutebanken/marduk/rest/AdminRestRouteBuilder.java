@@ -548,9 +548,8 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
                 .split(method(ImportFilesSplitter.class, "splitFiles"))
 
-                .process(e -> e.getIn().setHeader(FILE_HANDLE, Constants.BLOBSTORE_PATH_INBOUND
-                                                                       + getProviderRepository().getReferential(e.getIn().getHeader(PROVIDER_ID, Long.class))
-                                                                       + "/" + e.getIn().getBody(String.class)))
+                .process(e -> e.getIn().setHeader(FILE_HANDLE, getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)).mosaicId
+                        + "/imports/" + e.getIn().getBody(String.class)))
                 .process(e -> e.getIn().setHeader(CORRELATION_ID, UUID.randomUUID().toString()))
                 .log(LoggingLevel.INFO, correlation() + "Chouette start import fileHandle=${body}")
 
