@@ -20,6 +20,7 @@ import com.amazonaws.services.s3.AmazonS3;
 import no.rutebanken.marduk.Constants;
 import no.rutebanken.marduk.domain.BlobStoreFiles;
 import no.rutebanken.marduk.repository.BlobStoreRepository;
+import no.rutebanken.marduk.repository.ProviderRepository;
 import org.apache.camel.Exchange;
 import org.apache.camel.Header;
 import org.apache.commons.lang3.StringUtils;
@@ -29,6 +30,9 @@ import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
 import java.io.InputStream;
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 
 import static no.rutebanken.marduk.Constants.FILE_HANDLE;
@@ -38,6 +42,9 @@ public class BlobStoreService {
 
     @Autowired
     BlobStoreRepository repository;
+
+    @Autowired
+    ProviderRepository providerRepository;
 
     @Autowired
     AmazonS3 client;
@@ -69,12 +76,12 @@ public class BlobStoreService {
 
     public BlobStoreFiles listBlobs(@Header(value = Constants.CHOUETTE_REFERENTIAL) String referential, Exchange exchange) {
         ExchangeUtils.addHeadersAndAttachments(exchange);
-        return repository.listBlobs(Constants.BLOBSTORE_PATH_INBOUND + referential + "/");
+        return repository.listBlobs(getMosaicIdFromReferential(referential) + "/imports/");
     }
 
     public BlobStoreFiles listBlobsFlat(@Header(value = Constants.CHOUETTE_REFERENTIAL) String referential, Exchange exchange) {
         ExchangeUtils.addHeadersAndAttachments(exchange);
-        return repository.listBlobsFlat(Constants.BLOBSTORE_PATH_INBOUND + referential + "/");
+        return repository.listBlobsFlat(getMosaicIdFromReferential(referential) + "/imports/");
     }
 
     public InputStream getBlob(@Header(value = Constants.FILE_HANDLE) String name, Exchange exchange) {
@@ -93,7 +100,8 @@ public class BlobStoreService {
                                  @Header(value = Constants.ARCHIVE_FILE_HANDLE) String archiveName,
                                  @Header(value = Constants.BLOBSTORE_MAKE_BLOB_PUBLIC) boolean makePublic,
                                  InputStream inputStream,
-                                 Exchange exchange) {
+                                 Exchange exchange) throws UnsupportedEncodingException {
+        name = URLDecoder.decode(name, StandardCharsets.UTF_8.toString());
         uploadBlob(name, makePublic, inputStream, exchange);
         if (StringUtils.isNotBlank(archiveName)) {
             copyBlob(name, archiveName);
@@ -131,6 +139,18 @@ public class BlobStoreService {
 
     public InputStream getBlob(String name) {
         return repository.getBlob(name);
+    }
+
+    private Long getMosaicIdFromReferential(final String referential) {
+        if (referential == null) {
+            return null;
+        }
+
+        return providerRepository.getProviders().stream().filter(provider ->
+                referential.equalsIgnoreCase(provider.name))
+                .findFirst()
+                .orElse(null)
+                .mosaicId;
     }
 
 }

@@ -548,9 +548,8 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
                 .split(method(ImportFilesSplitter.class, "splitFiles"))
 
-                .process(e -> e.getIn().setHeader(FILE_HANDLE, Constants.BLOBSTORE_PATH_INBOUND
-                                                                       + getProviderRepository().getReferential(e.getIn().getHeader(PROVIDER_ID, Long.class))
-                                                                       + "/" + e.getIn().getBody(String.class)))
+                .process(e -> e.getIn().setHeader(FILE_HANDLE, getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)).mosaicId
+                        + "/imports/" + e.getIn().getBody(String.class)))
                 .process(e -> e.getIn().setHeader(CORRELATION_ID, UUID.randomUUID().toString()))
                 .log(LoggingLevel.INFO, correlation() + "Chouette start import fileHandle=${body}")
 
@@ -1045,14 +1044,10 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 e.getIn().setHeader(EXPORT_LINES_IDS, headers.get(EXPORT_LINES_IDS));
             }
             if (headers.get(EXPORT_START_DATE) != null) {
-                String str = (String) headers.get(EXPORT_START_DATE);
-                ZonedDateTime startDateTime = ZonedDateTime.parse(str);
-                e.getIn().setHeader(EXPORT_START_DATE, Timestamp.valueOf(startDateTime.toLocalDateTime()).getTime() / 1000);
+                e.getIn().setHeader(EXPORT_START_DATE, headers.get(EXPORT_START_DATE));
             }
             if (headers.get(EXPORT_END_DATE) != null) {
-                String str = (String) headers.get(EXPORT_END_DATE);
-                ZonedDateTime endDateTime = ZonedDateTime.parse(str);
-                e.getIn().setHeader(EXPORT_END_DATE, Timestamp.valueOf(endDateTime.toLocalDateTime()).getTime() / 1000);
+                e.getIn().setHeader(EXPORT_END_DATE, headers.get(EXPORT_END_DATE));
             }
             if (headers.get(EXPORT_NAME) != null) {
                 e.getIn().setHeader(EXPORT_NAME, headers.get(EXPORT_NAME));

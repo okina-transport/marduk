@@ -34,7 +34,6 @@ import org.springframework.stereotype.Component;
 import java.io.File;
 import java.io.InputStream;
 import java.io.PrintWriter;
-import java.time.Instant;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
@@ -106,8 +105,8 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
                     if(e.getIn().getHeader(EXPORT_START_DATE) != null && e.getIn().getHeader(EXPORT_END_DATE) != null){
                         Long start = e.getIn().getHeader(EXPORT_START_DATE) != null ?  (Long) e.getIn().getHeader(EXPORT_START_DATE, Long.class) : null;
                         Long end = e.getIn().getHeader(EXPORT_END_DATE) != null ? (Long) e.getIn().getHeader(EXPORT_END_DATE, Long.class) : null;
-                        startDate = (start != null) ? Date.from(Instant.ofEpochSecond(start)) : null;
-                        endDate = (end != null) ? Date.from(Instant.ofEpochSecond(end)) : null;
+                        startDate = (start != null) ? new Date(start) : null;
+                        endDate = (end != null) ? new Date(end) : null;
                     }
 
 
