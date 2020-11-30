@@ -14,18 +14,22 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import java.sql.Timestamp;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.toList;
-import static no.rutebanken.marduk.Constants.*;
+import static no.rutebanken.marduk.Constants.CHOUETTE_REFERENTIAL;
+import static no.rutebanken.marduk.Constants.EXPORT_END_DATE;
+import static no.rutebanken.marduk.Constants.EXPORT_LINES_IDS;
+import static no.rutebanken.marduk.Constants.EXPORT_NAME;
+import static no.rutebanken.marduk.Constants.EXPORT_START_DATE;
+import static no.rutebanken.marduk.Constants.NO_GTFS_EXPORT;
+import static no.rutebanken.marduk.Constants.OKINA_REFERENTIAL;
+import static no.rutebanken.marduk.Constants.ORIGINAL_PROVIDER_ID;
+import static no.rutebanken.marduk.Constants.PROVIDER_ID;
 
 /**
  * Handles multiple exports
@@ -88,10 +92,10 @@ public class MultipleExportProcessor implements Processor {
         exchange.getIn().getHeaders().put(EXPORT_LINES_IDS, linesIds);
 
         if (export.getStartDate() != null) {
-            exchange.getIn().getHeaders().put(EXPORT_START_DATE, Timestamp.valueOf(export.getStartDate()).getTime() / 1000);
+            exchange.getIn().getHeaders().put(EXPORT_START_DATE, export.getStartDate());
         }
         if (export.getEndDate() != null) {
-            exchange.getIn().getHeaders().put(EXPORT_END_DATE, Timestamp.valueOf(export.getEndDate()).getTime() / 1000);
+            exchange.getIn().getHeaders().put(EXPORT_END_DATE, export.getEndDate());
         }
 
         if (export.getName() != null){
