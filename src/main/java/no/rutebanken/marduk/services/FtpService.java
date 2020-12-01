@@ -63,11 +63,12 @@ public class FtpService {
 
 
     public boolean uploadStream(InputStream uploadStream, String ftpUrl, String user, String password, Integer port, String destinationPath, String ftpFileName) throws Exception {
-        FTPSClient ftpClient = new FTPSClient(true);
+        FTPSClient ftpClient = new FTPSClient();
         String ftpHost = parseHostFromFtpUrl(ftpUrl);
         ftpClient.connect(ftpHost, port);
         ftpClient.login(user, password);
         ftpClient.enterLocalPassiveMode();
+        ftpClient.execPROT("C");
 
         ftpClient.setFileType(FTP.BINARY_FILE_TYPE);
 
