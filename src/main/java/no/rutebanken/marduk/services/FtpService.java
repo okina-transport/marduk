@@ -68,7 +68,7 @@ public class FtpService {
         ftpClient.connect(ftpHost, port);
         ftpClient.login(user, password);
         ftpClient.enterLocalPassiveMode();
-        ftpClient.execPROT("P");
+        ftpClient.execPROT("S");
 
         ftpClient.setFileType(FTP.BINARY_FILE_TYPE);
 
