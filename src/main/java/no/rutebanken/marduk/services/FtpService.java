@@ -8,6 +8,7 @@ import no.rutebanken.marduk.Utils.SendMail;
 import no.rutebanken.marduk.Utils.SlackNotification;
 import org.apache.commons.net.ftp.FTP;
 import org.apache.commons.net.ftp.FTPClient;
+import org.apache.commons.net.ftp.FTPSClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -62,7 +63,7 @@ public class FtpService {
 
 
     public boolean uploadStream(InputStream uploadStream, String ftpUrl, String user, String password, Integer port, String destinationPath, String ftpFileName) throws Exception {
-        FTPClient ftpClient = new FTPClient();
+        FTPSClient ftpClient = new FTPSClient();
         String ftpHost = parseHostFromFtpUrl(ftpUrl);
         ftpClient.connect(ftpHost, port);
         ftpClient.login(user, password);
