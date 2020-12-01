@@ -77,9 +77,9 @@ public class FtpService {
 
         boolean uploaded;
         if (StringUtils.isNotEmpty(destinationPath)) {
-            uploaded = ftpClient.storeFile(ftpFilePath + ftpDestinationPath + ftpFileName, uploadStream);
+            uploaded = ftpClient.appendFile(ftpFilePath + ftpDestinationPath + ftpFileName, uploadStream);
         } else {
-            uploaded = ftpClient.storeFile(ftpFilePath + "/" + ftpFileName, uploadStream);
+            uploaded = ftpClient.appendFile(ftpFilePath + "/" + ftpFileName, uploadStream);
         }
         return uploaded;
     }
