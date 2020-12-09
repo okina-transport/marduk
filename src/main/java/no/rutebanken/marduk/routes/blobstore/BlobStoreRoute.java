@@ -136,6 +136,10 @@ public class BlobStoreRoute extends BaseRouteBuilder {
         return exportSiteId(provider) + "/exports/0-manuals/" + filename;
     }
 
+    public static String exportValidationFilePath(Provider provider, String filename, String jobId){
+        return exportSiteId(provider) + "/logs/" + jobId + "/" + filename;
+    }
+
     private static String exportArchiveFilePath(ExportTemplate export, Provider provider, String fileName) {
         return awsExportPath(export, provider) + "/archive/" +  fileName;
     }

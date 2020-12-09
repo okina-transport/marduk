@@ -19,22 +19,29 @@ package no.rutebanken.marduk.routes.chouette;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import no.rutebanken.marduk.Constants;
+import no.rutebanken.marduk.domain.Provider;
+import no.rutebanken.marduk.routes.blobstore.BlobStoreRoute;
 import no.rutebanken.marduk.routes.chouette.json.*;
 import no.rutebanken.marduk.routes.chouette.mapping.ProviderAndJobsMapper;
 import no.rutebanken.marduk.routes.status.JobEvent;
 import no.rutebanken.marduk.routes.status.JobEvent.State;
 import no.rutebanken.marduk.routes.status.JobEvent.TimetableAction;
+import no.rutebanken.marduk.services.BlobStoreService;
+import no.rutebanken.marduk.services.FileSystemService;
 import org.apache.activemq.ScheduledMessage;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.builder.PredicateBuilder;
 import org.apache.camel.component.http4.HttpMethods;
 import org.apache.camel.model.dataformat.JsonLibrary;
+import org.apache.commons.io.FileUtils;
 import org.apache.http.client.utils.URIBuilder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import java.io.File;
+import java.io.InputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.Arrays;
@@ -67,6 +74,12 @@ public class ChouettePollJobStatusRoute extends AbstractChouetteRouteBuilder {
     private MultipleExportProcessor multipleExportProcessor;
 
     private int maxConsumers = 5;
+
+    @Autowired
+    FileSystemService fileSystemService;
+
+    @Autowired
+    BlobStoreService blobStoreService;
 
 
     /**
@@ -359,6 +372,17 @@ public class ChouettePollJobStatusRoute extends AbstractChouetteRouteBuilder {
                 .routeId("chouette-process-job-reports");
 
         from("direct:checkValidationReport")
+                .process(e -> {
+                    Provider provider = getProviderRepository().getNonMosaicProvider(e.getIn().getHeader(PROVIDER_ID, Long.class))
+                            .orElseThrow(() -> new RuntimeException("No valid base provider found for export uploading. Provider id : " + e.getIn().getHeader(PROVIDER_ID)));
+                    String exportJobId = e.getIn().getHeader(Constants.CHOUETTE_JOB_ID) != null ? e.getIn().getHeader(Constants.CHOUETTE_JOB_ID).toString() : null;
+                    List<File> files = fileSystemService.getValidationFiles(e);
+                    for (File file : files){
+                        String nameFile =  BlobStoreRoute.exportValidationFilePath(provider, file.getName(), exportJobId);
+                        InputStream inputStream = FileUtils.openInputStream(file);
+                        blobStoreService.uploadBlobExport(nameFile, null,false, inputStream, e);
+                    }
+                })
                 .choice()
                 .when().jsonpath("$.validation_report.check_points[?(@.severity == 'ERROR' && @.result == 'NOK')]")
                 .setHeader("validation_report_result", constant("NOK"))

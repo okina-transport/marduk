@@ -3,6 +3,7 @@ package no.rutebanken.marduk.services;
 import no.rutebanken.marduk.IDFMNetexIdentifiants;
 import no.rutebanken.marduk.domain.Provider;
 import no.rutebanken.marduk.repository.CacheProviderRepository;
+import no.rutebanken.marduk.routes.blobstore.BlobStoreRoute;
 import org.apache.camel.Exchange;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -17,11 +18,14 @@ import java.io.File;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static no.rutebanken.marduk.Constants.CHOUETTE_JOB_ID;
+import static no.rutebanken.marduk.Constants.CHOUETTE_REFERENTIAL;
 import static no.rutebanken.marduk.Constants.FILE_NAME;
 import static no.rutebanken.marduk.Constants.OKINA_REFERENTIAL;
 
@@ -102,6 +106,25 @@ public class FileSystemService {
         }
 
         return offerFile;
+    }
+
+    public List<File> getValidationFiles(Exchange exchange) {
+        ExchangeUtils.addHeadersAndAttachments(exchange);
+        String referential = exchange.getIn().getHeader(CHOUETTE_REFERENTIAL, String.class);
+        String jobId = exchange.getIn().getHeader(CHOUETTE_JOB_ID, String.class);
+        FileSystemResource fileSystemResource = new FileSystemResource(chouetteStoragePath + "/" + referential + "/data/" + jobId);
+
+        List<File> validationFiles = null;
+        File[] files = fileSystemResource.getFile().listFiles();
+
+        if (files != null) {
+            validationFiles = Arrays.stream(files)
+                    .filter(file -> !file.getName().toLowerCase().endsWith(".zip") &&
+                                    !file.getName().toLowerCase().endsWith(".csv"))
+                    .collect(Collectors.toList());
+        }
+
+        return validationFiles;
     }
 
 }
