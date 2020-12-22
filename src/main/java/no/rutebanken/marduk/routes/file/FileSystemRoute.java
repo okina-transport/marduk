@@ -20,6 +20,12 @@ public class FileSystemRoute extends BaseRouteBuilder {
                 .bean("fileSystemService", "getOfferFile")
                 .to("log:" + getClass().getName() + "?level=DEBUG&showAll=true&multiline=true")
                 .routeId("file-offer-download");
+
+        from("direct:getOfferFileConcerto")
+                .to("log:" + getClass().getName() + "?level=DEBUG&showAll=true&multiline=true")
+                .bean("fileSystemService", "getOfferFileConcerto")
+                .to("log:" + getClass().getName() + "?level=DEBUG&showAll=true&multiline=true")
+                .routeId("file-offer-download-concerto");
     }
 
 }

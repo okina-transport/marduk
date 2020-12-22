@@ -17,6 +17,7 @@
 package no.rutebanken.marduk.routes.blobstore;
 
 import no.rutebanken.marduk.domain.ExportTemplate;
+import no.rutebanken.marduk.domain.ExportType;
 import no.rutebanken.marduk.domain.Provider;
 import no.rutebanken.marduk.routes.BaseRouteBuilder;
 import no.rutebanken.marduk.routes.chouette.ExportToConsumersProcessor;
@@ -129,10 +130,16 @@ public class BlobStoreRoute extends BaseRouteBuilder {
 
 
     public static String exportFilePath(ExportTemplate export, Provider provider) {
+        if(export.getType().equals(ExportType.CONCERTO)){
+          return "concerto_idfm/exports/" + export.getId() + "/" + awsExportFileFormat(export);
+        }
         return awsExportPath(export, provider) + "/" + awsExportFileName(export);
     }
 
     public static String exportFilePath(Provider provider, String filename) {
+        if(filename.endsWith("csv")){
+            return "concerto_idfm/exports/0-manuals/" + filename;
+        }
         return exportSiteId(provider) + "/exports/0-manuals/" + filename;
     }
 
