@@ -131,15 +131,11 @@ public class FileSystemService {
         String jobId = exchange.getIn().getHeader(CHOUETTE_JOB_ID, String.class);
         FileSystemResource fileSystemResource = new FileSystemResource(chouetteStoragePath + "/admin/data/" + jobId);
 
-        File offerFile = null;
-        File[] files = fileSystemResource.getFile().listFiles();
+        File[] files = fileSystemResource.getFile().listFiles(((dir, name) -> name.endsWith(".csv")));
 
+        File offerFile = null;
         if (files != null) {
-            for (final File file : files) {
-                if (file.getName().toLowerCase().endsWith(".csv")) {
-                    offerFile = file;
-                }
-            }
+            offerFile = files.length > 0 ? files[0] : null;
         }
 
         if (offerFile != null) {
