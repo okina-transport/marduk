@@ -21,20 +21,29 @@ import no.rutebanken.marduk.routes.chouette.json.Parameters;
 import no.rutebanken.marduk.routes.status.JobEvent;
 import no.rutebanken.marduk.routes.status.JobEvent.State;
 import no.rutebanken.marduk.routes.status.JobEvent.TimetableAction;
+import no.rutebanken.marduk.services.FileSystemService;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.component.http4.HttpMethods;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import java.io.File;
+import java.util.Date;
 import java.util.UUID;
 
 import static no.rutebanken.marduk.Constants.BLOBSTORE_MAKE_BLOB_PUBLIC;
 import static no.rutebanken.marduk.Constants.BLOBSTORE_PATH_OUTBOUND;
 import static no.rutebanken.marduk.Constants.CHOUETTE_JOB_STATUS_URL;
 import static no.rutebanken.marduk.Constants.CHOUETTE_REFERENTIAL;
+import static no.rutebanken.marduk.Constants.EXPORT_END_DATE;
+import static no.rutebanken.marduk.Constants.EXPORT_FILE_NAME;
+import static no.rutebanken.marduk.Constants.EXPORT_NAME;
+import static no.rutebanken.marduk.Constants.EXPORT_START_DATE;
 import static no.rutebanken.marduk.Constants.FILE_HANDLE;
 import static no.rutebanken.marduk.Constants.JSON_PART;
+import static no.rutebanken.marduk.Constants.OBJECT_TYPE_CONCERTO;
 import static no.rutebanken.marduk.Constants.PROVIDER_ID;
 import static no.rutebanken.marduk.Constants.USER;
 import static no.rutebanken.marduk.Utils.Utils.getLastPathElementOfUrl;
@@ -57,24 +66,18 @@ public class ExportConcertoRouteBuilder extends AbstractChouetteRouteBuilder {
     @Value("${google.publish.public:false}")
     private boolean publicPublication;
 
+    @Autowired
+    ExportToConsumersProcessor exportToConsumersProcessor;
+
+    @Autowired
+    FileSystemService fileSystemService;
+
     @Override
     public void configure() throws Exception {
         super.configure();
 
         from("activemq:queue:ChouetteExportConcertoQueue?transacted=true").streamCaching()
                 .transacted()
-                .log(LoggingLevel.INFO, getClass().getName(), "Starting Chouette mapping ZDEP ZDER ZDLR for provider with id ${header." + PROVIDER_ID + "}")
-                .doTry()
-                .process(e -> e.getIn().setHeader(CHOUETTE_REFERENTIAL, getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)).chouetteInfo.referential))
-                .setHeader(Exchange.HTTP_METHOD, constant(HttpMethods.GET))
-                .setBody(constant(null))
-                .toD(chouetteUrl + "/chouette_iev/referentials/${header." + CHOUETTE_REFERENTIAL + "}/update-mapping-zdep-zder-zdlr")
-                .log(LoggingLevel.WARN, getClass().getName(), "Chouette mapping ZDEP ZDER ZDLR for provider with id ${header." + PROVIDER_ID + "} completed")
-                .endDoTry()
-                .doCatch(Exception.class)
-                .log(LoggingLevel.WARN, getClass().getName(), "Chouette mapping ZDEP ZDER ZDLR for provider with id ${header." + PROVIDER_ID + "} failed")
-                .end()
-
                 .log(LoggingLevel.INFO, getClass().getName(), "Starting Chouette Concerto export for provider with id ${header." + PROVIDER_ID + "}")
                 .setHeader(Exchange.HTTP_METHOD, constant(HttpMethods.POST))
                 .process(e -> {
@@ -84,11 +87,21 @@ public class ExportConcertoRouteBuilder extends AbstractChouetteRouteBuilder {
                 })
                 .process(e -> JobEvent.providerJobBuilder(e).timetableAction(TimetableAction.EXPORT_CONCERTO).state(State.PENDING).build())
                 .to("direct:updateStatus")
-
-                .process(e -> e.getIn().setHeader(CHOUETTE_REFERENTIAL, getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)).chouetteInfo.referential))
                 .process(e -> {
+                    e.getIn().setHeader(CHOUETTE_REFERENTIAL, "admin");
+
                     String user = e.getIn().getHeader(USER, String.class);
-                    e.getIn().setHeader(JSON_PART, Parameters.getConcertoExportParameters(getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)),  user));
+                    Date startDate = null;
+                    Date endDate = null;
+
+                    if(e.getIn().getHeader(EXPORT_START_DATE) != null && e.getIn().getHeader(EXPORT_END_DATE) != null){
+                        Long start = e.getIn().getHeader(EXPORT_START_DATE) != null ?  (Long) e.getIn().getHeader(EXPORT_START_DATE, Long.class) : null;
+                        Long end = e.getIn().getHeader(EXPORT_END_DATE) != null ? (Long) e.getIn().getHeader(EXPORT_END_DATE, Long.class) : null;
+                        startDate = (start != null) ? new Date(start) : null;
+                        endDate = (end != null) ? new Date(end) : null;
+                    }
+
+                    e.getIn().setHeader(JSON_PART, Parameters.getConcertoExportParameters(getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)),  user, startDate, endDate, String.valueOf(e.getIn().getHeader(OBJECT_TYPE_CONCERTO))));
                 }) //Using header to addToExchange json data
                 .log(LoggingLevel.INFO, correlation() + "Creating multipart request")
                 .to("log:" + getClass().getName() + "?level=DEBUG&showAll=true&multiline=true")
@@ -114,15 +127,22 @@ public class ExportConcertoRouteBuilder extends AbstractChouetteRouteBuilder {
                 .choice()
                 .when(simple("${header.action_report_result} == 'OK'"))
                 .log(LoggingLevel.INFO, correlation() + "Export ended with status '${header.action_report_result}'")
-                .log(LoggingLevel.INFO, correlation() + "Export ended with status '${header.action_report_result}'")
                 .log(LoggingLevel.INFO, correlation() + "Calling url ${header.data_url}")
                 .removeHeaders("Camel*")
                 .setBody(simple(""))
                 .setHeader(Exchange.HTTP_METHOD, constant(org.apache.camel.component.http4.HttpMethods.GET))
                 .toD("${header.data_url}")
+                .process(e -> {
+                    File file = fileSystemService.getOfferFileConcerto(e);
+                    e.getIn().setHeader("fileName", file.getName());
+                    e.getIn().setHeader(EXPORT_FILE_NAME, file.getName());
+                })
+                .setHeader("fileName", simple("concerto.csv"))
+                .process(exportToConsumersProcessor)
                 .setHeader(BLOBSTORE_MAKE_BLOB_PUBLIC, constant(publicPublication))
                 .setHeader(FILE_HANDLE, simple(BLOBSTORE_PATH_OUTBOUND + "concerto/${header." + CHOUETTE_REFERENTIAL + "}-" + Constants.CURRENT_AGGREGATED_CONCERTO_FILENAME))
-                .to("direct:uploadBlob")
+                .to("direct:uploadBlobExport")
+                .log(LoggingLevel.INFO, "Upload to consumers and blob store completed")
                 .process(e -> JobEvent.providerJobBuilder(e).timetableAction(TimetableAction.EXPORT_CONCERTO).state(State.OK).build())
                 .when(simple("${header.action_report_result} == 'NOK'"))
                 .log(LoggingLevel.WARN, correlation() + "Export failed")

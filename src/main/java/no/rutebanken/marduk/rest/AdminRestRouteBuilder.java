@@ -682,6 +682,35 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .routeId("admin-offer-file-download")
                 .endRest()
 
+                .get("/files/offer/concerto/{jobId}")
+                .description("Download offer export file (GTFS, NeTEx or Concerto")
+                .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the nabu service").dataType("integer").endParam()
+                .param().name("jobId").type(RestParamType.path).description("Job id").dataType("integer").endParam()
+                .consumes(PLAIN)
+                .produces(X_OCTET_STREAM)
+                .responseMessage().code(200).endResponseMessage()
+                .responseMessage().code(500).message("Invalid providerId or jobId").endResponseMessage()
+                .route()
+                .setHeader(PROVIDER_ID, header("providerId"))
+                .setHeader(CHOUETTE_JOB_ID, header("jobId"))
+                .setHeader("Access-Control-Expose-Headers", simple(FILE_NAME))
+                .to("direct:authorizeRequest")
+                .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
+                .process(e -> {
+                    String ref = e.getIn().getHeader(OKINA_REFERENTIAL, String.class);
+                    if(!ref.contains("mosaic_")) {
+                        e.getIn().setHeader(OKINA_REFERENTIAL, "mosaic_" + ref);
+                    }
+                    else {
+                        e.getIn().setHeader(OKINA_REFERENTIAL, ref);
+                    }
+                })
+                .removeHeaders("CamelHttp*")
+                .to("direct:getOfferFileConcerto")
+                .choice().when(simple("${body} == null")).setHeader(Exchange.HTTP_RESPONSE_CODE, constant(404)).endChoice()
+                .routeId("admin-offer-file-download-concerto")
+                .endRest()
+
                 .get("/line_statistics")
                 .description("List stats about data in chouette for a given provider")
                 .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the nabu service").dataType("integer").endParam()
@@ -815,7 +844,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
                 .log(LoggingLevel.INFO, correlation() + "Chouette start export GTFS")
                 .removeHeaders("CamelHttp*")
-                .process(this::getFromHeadersForGTFS)
+                .process(this::getFromHeaders)
                 .inOnly("activemq:queue:ChouetteExportGtfsQueue")
                 .routeId("admin-chouette-export-gtfs")
                 .endRest()
@@ -851,7 +880,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
                 .log(LoggingLevel.INFO, correlation() + "Chouette start export Concerto")
                 .removeHeaders("CamelHttp*")
-                .process(e -> e.getIn().setHeader(USER, getUserNameFromHeaders(e)))
+                .process(this::getFromHeaders)
                 .inOnly("activemq:queue:ChouetteExportConcertoQueue")
                 .routeId("admin-chouette-export-concerto")
                 .endRest()
@@ -1034,7 +1063,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
         return null;
     }
 
-    private void getFromHeadersForGTFS(Exchange e) {
+    private void getFromHeaders(Exchange e) {
         Map headers = (Map) e.getIn().getBody(Map.class).get("headers");
         if (headers != null) {
             if (headers.get(USER) != null) {
@@ -1051,6 +1080,9 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
             }
             if (headers.get(EXPORT_NAME) != null) {
                 e.getIn().setHeader(EXPORT_NAME, headers.get(EXPORT_NAME));
+            }
+            if (headers.get(OBJECT_TYPE_CONCERTO) != null) {
+                e.getIn().setHeader(OBJECT_TYPE_CONCERTO, headers.get(OBJECT_TYPE_CONCERTO));
             }
         }
     }

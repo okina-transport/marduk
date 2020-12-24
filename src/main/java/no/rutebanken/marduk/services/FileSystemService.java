@@ -127,4 +127,26 @@ public class FileSystemService {
         return validationFiles;
     }
 
+    public File getOfferFileConcerto(Exchange exchange) {
+        String jobId = exchange.getIn().getHeader(CHOUETTE_JOB_ID, String.class);
+        FileSystemResource fileSystemResource = new FileSystemResource(chouetteStoragePath + "/admin/data/" + jobId);
+
+        File offerFile = null;
+        File[] files = fileSystemResource.getFile().listFiles();
+
+        if (files != null) {
+            for (final File file : files) {
+                if (file.getName().toLowerCase().endsWith(".csv")) {
+                    offerFile = file;
+                }
+            }
+        }
+
+        if (offerFile != null) {
+            exchange.getIn().setHeader(FILE_NAME, offerFile.getName());
+        }
+
+        return offerFile;
+    }
+
 }
