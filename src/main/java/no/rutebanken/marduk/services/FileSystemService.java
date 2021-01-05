@@ -121,7 +121,8 @@ public class FileSystemService {
             validationFiles = Arrays.stream(files)
                     .filter(file -> !file.getName().toLowerCase().endsWith(".zip") &&
                                     !file.getName().toLowerCase().endsWith(".csv") &&
-                                    !file.getName().toLowerCase().endsWith("input"))
+                                    !file.getName().toLowerCase().endsWith("input") &&
+                                    !file.getName().toLowerCase().endsWith("output"))
                     .collect(Collectors.toList());
         }
 
