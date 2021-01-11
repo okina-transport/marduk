@@ -26,6 +26,8 @@ import org.apache.camel.Header;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationContext;
+import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
@@ -33,6 +35,7 @@ import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.Collection;
 
 import static no.rutebanken.marduk.Constants.FILE_HANDLE;
@@ -46,16 +49,26 @@ public class BlobStoreService {
     @Autowired
     ProviderRepository providerRepository;
 
-    @Autowired
-    AmazonS3 client;
-
     @Value("${blobstore.aws.container.name}")
     String containerName;
 
+    @Autowired
+    Environment env;
+
+    @Autowired
+    private ApplicationContext context;
+
     @PostConstruct
     public void init() {
-        repository.setAmazonS3Client(client);
+        if (hasS3Profile())            {
+            repository.setAmazonS3Client( context.getBean(AmazonS3.class));
+        }
         repository.setContainerName(containerName);
+    }
+
+    private boolean hasS3Profile(){
+        return Arrays.stream(env.getActiveProfiles())
+                .anyMatch(profile-> "aws-blobstore".equals(profile));
     }
 
     public BlobStoreFiles listBlobsInFolder(@Header(value = Exchange.FILE_PARENT) String folder, Exchange exchange) {

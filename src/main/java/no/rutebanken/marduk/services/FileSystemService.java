@@ -1,6 +1,5 @@
 package no.rutebanken.marduk.services;
 
-import no.rutebanken.marduk.IDFMNetexIdentifiants;
 import no.rutebanken.marduk.domain.Provider;
 import no.rutebanken.marduk.repository.CacheProviderRepository;
 import org.apache.camel.Exchange;
@@ -12,14 +11,14 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.stereotype.Service;
 
-import javax.inject.Inject;
-import java.io.File;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
+import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Comparator;
-import java.util.Date;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static no.rutebanken.marduk.Constants.CHOUETTE_JOB_ID;
 import static no.rutebanken.marduk.Constants.FILE_NAME;
@@ -104,4 +103,55 @@ public class FileSystemService {
         return offerFile;
     }
 
-}
+    public String getChouetteStoragePath(){
+        return chouetteStoragePath;
+    }
+
+    public List<Path> getAllFilesFromLocalStorage(String prefix, String fileExtension){
+        try {
+            return Files.walk(Paths.get(chouetteStoragePath))
+                 .filter(p -> p.toString().startsWith(chouetteStoragePath+"/"+prefix) && p.getFileName().toString().endsWith(fileExtension))
+                 .collect(Collectors.toList());
+        } catch (IOException e) {
+            logger.error("Récupération fichiers localStorage impossible: " + e);
+            return new ArrayList();
+            }
+        }
+
+    public InputStream getFile(String fileName)  {
+
+        try {
+            return new FileInputStream(getOrCreateFilePath(fileName).toFile());
+        } catch (FileNotFoundException e) {
+            logger.error("Récupération fichiers localStorage impossible: " + e);
+            throw new IllegalArgumentException("Fichier :" + fileName);
+        }
+
+    }
+
+    public Path getOrCreateFilePath(String fileName){
+        try {
+          List<Path> pathList = Files.walk(Paths.get(chouetteStoragePath))
+                .filter(p -> p.toString().equals(chouetteStoragePath+"/"+fileName))
+                .collect(Collectors.toList());
+
+            if (pathList.isEmpty()) {
+                logger.info ("Création fichier: " + fileName);
+                File newFile = new File(chouetteStoragePath+"/"+fileName);
+                newFile.getParentFile().mkdirs();
+                Path newPath = newFile.toPath();
+                Files.createFile(newPath);
+                return newPath;
+            }
+            return pathList.get(0);
+        } catch (IOException e) {
+            logger.error("Récupération fichiers localStorage impossible: " + e);
+            throw new IllegalArgumentException("Fichier non trouvé:" + fileName);
+        }
+    }
+
+
+
+    }
+
+

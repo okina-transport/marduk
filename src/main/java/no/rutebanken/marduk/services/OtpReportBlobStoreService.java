@@ -20,10 +20,13 @@ import com.amazonaws.services.s3.AmazonS3;
 import no.rutebanken.marduk.repository.BlobStoreRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationContext;
+import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
 import java.io.InputStream;
+import java.util.Arrays;
 
 @Service
 public class OtpReportBlobStoreService {
@@ -31,16 +34,27 @@ public class OtpReportBlobStoreService {
     @Autowired
     private BlobStoreRepository repository;
 
-    @Autowired
-    private AmazonS3 amazonS3;
 
     @Value("${blobstore.aws.otpreport.container.name}")
     private String containerName;
 
+    @Autowired
+    Environment env;
+
+    @Autowired
+    private ApplicationContext context;
+
     @PostConstruct
     public void init() {
-        repository.setAmazonS3Client(amazonS3);
+        if (hasS3Profile())            {
+            repository.setAmazonS3Client( context.getBean(AmazonS3.class));
+        }
         repository.setContainerName(containerName);
+    }
+
+    private boolean hasS3Profile(){
+        return Arrays.stream(env.getActiveProfiles())
+                .anyMatch(profile-> "aws-blobstore".equals(profile));
     }
 
     public void uploadBlob(String name, InputStream inputStream, boolean makePublic) {

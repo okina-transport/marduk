@@ -23,10 +23,14 @@ import org.apache.camel.Exchange;
 import org.apache.camel.Header;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationContext;
+import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
+
 
 import javax.annotation.PostConstruct;
 import java.io.InputStream;
+import java.util.Arrays;
 
 import static no.rutebanken.marduk.Constants.FILE_HANDLE;
 
@@ -36,16 +40,27 @@ public class ExchangeBlobStoreService {
     @Autowired
     private BlobStoreRepository repository;
 
-    @Autowired
-    private AmazonS3 amazonS3;
-
     @Value("${blobstore.aws.exchange.container.name}")
     private String containerName;
 
+    @Autowired
+    Environment env;
+
+    @Autowired
+    private ApplicationContext context;
+
+
     @PostConstruct
     public void init(){
-        repository.setAmazonS3Client(amazonS3);
+        if (hasS3Profile())            {
+            repository.setAmazonS3Client( context.getBean(AmazonS3.class));
+        }
         repository.setContainerName(containerName);
+    }
+
+    private boolean hasS3Profile(){
+        return Arrays.stream(env.getActiveProfiles())
+                     .anyMatch(profile-> "aws-blobstore".equals(profile));
     }
 
     public void uploadBlob(@Header(value = Constants.FILE_HANDLE) String name, InputStream inputStream, Exchange exchange) {
