@@ -22,7 +22,7 @@ public class ExportTemplateDAO extends RestDAO<ExportTemplate> {
 
 
     public List<ExportTemplate> getAll(String providerReferential) {
-        return super.getEntities(this.exportTemplatesUrl + "?mosaic_lines=true", providerReferential, ExportTemplate.class);
+        return super.getEntities(this.exportTemplatesUrl + "?mobiiti_lines=true", providerReferential, ExportTemplate.class);
     }
 
 

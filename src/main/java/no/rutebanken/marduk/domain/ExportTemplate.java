@@ -18,6 +18,8 @@ public class ExportTemplate implements Serializable {
     private Long startDate;
     private Long endDate;
 
+    private String exportedFileName;
+
     private List<Line> lines;
     private List<Consumer> consumers;
 
@@ -43,6 +45,14 @@ public class ExportTemplate implements Serializable {
 
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    public String getExportedFileName() {
+        return exportedFileName;
+    }
+
+    public void setExportedFileName(String exportedFileName) {
+        this.exportedFileName = exportedFileName;
     }
 
     public ExportType getType() {
