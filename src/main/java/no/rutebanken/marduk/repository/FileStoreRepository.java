@@ -5,6 +5,7 @@ import com.google.cloud.storage.Storage;
 import no.rutebanken.marduk.domain.BlobStoreFiles;
 import no.rutebanken.marduk.domain.Provider;
 import no.rutebanken.marduk.services.FileSystemService;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.NotImplementedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -127,7 +128,7 @@ public class FileStoreRepository implements BlobStoreRepository{
             OutputStream outStream = new FileOutputStream(targetFile);
             outStream.write(buffer);
         } catch (IOException e) {
-            logger.error("Erreur écriture fichier:"+objectName);
+            logger.error("Erreur upload blob fichier:"+objectName);
             logger.error(e.toString());
         }
     }
@@ -139,7 +140,15 @@ public class FileStoreRepository implements BlobStoreRepository{
 
     @Override
     public void copyBlob(String src, String dest) {
-        throw new NotImplementedException("copyBlob not implemented for FileStoreRepository");
+
+        File srcFile = fileSystemService.getOrCreateFilePath(src).toFile();
+        File destFile = fileSystemService.getOrCreateFilePath(dest).toFile();
+        try {
+            FileUtils.copyFile(srcFile, destFile);
+        } catch (IOException e) {
+            logger.error("Erreur copie fichier:"+src + " vers : "+dest);
+            logger.error(e.toString());
+        }
     }
 
     @Override

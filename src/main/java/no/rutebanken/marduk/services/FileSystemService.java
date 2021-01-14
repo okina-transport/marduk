@@ -103,10 +103,6 @@ public class FileSystemService {
         return offerFile;
     }
 
-    public String getChouetteStoragePath(){
-        return chouetteStoragePath;
-    }
-
     public List<Path> getAllFilesFromLocalStorage(String prefix, String fileExtension){
         try {
             return Files.walk(Paths.get(chouetteStoragePath))
@@ -145,8 +141,8 @@ public class FileSystemService {
             }
             return pathList.get(0);
         } catch (IOException e) {
-            logger.error("Récupération fichiers localStorage impossible: " + e);
-            throw new IllegalArgumentException("Fichier non trouvé:" + fileName);
+            logger.error("Récupération/Création fichier localStorage: " + e);
+            throw new IllegalArgumentException("Nom du fichier:" + fileName);
         }
     }
 
