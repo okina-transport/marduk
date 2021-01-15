@@ -21,15 +21,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import static java.util.stream.Collectors.toList;
-import static no.rutebanken.marduk.Constants.CHOUETTE_REFERENTIAL;
-import static no.rutebanken.marduk.Constants.EXPORT_END_DATE;
-import static no.rutebanken.marduk.Constants.EXPORT_LINES_IDS;
-import static no.rutebanken.marduk.Constants.EXPORT_NAME;
-import static no.rutebanken.marduk.Constants.EXPORT_START_DATE;
-import static no.rutebanken.marduk.Constants.NO_GTFS_EXPORT;
-import static no.rutebanken.marduk.Constants.OKINA_REFERENTIAL;
-import static no.rutebanken.marduk.Constants.ORIGINAL_PROVIDER_ID;
-import static no.rutebanken.marduk.Constants.PROVIDER_ID;
+import static no.rutebanken.marduk.Constants.*;
 
 /**
  * Handles multiple exports
@@ -101,6 +93,17 @@ public class MultipleExportProcessor implements Processor {
         if (export.getName() != null){
             exchange.getIn().getHeaders().put(EXPORT_NAME, export.getName());
         }
+
+        if (export.getIdFormat() != null){
+            exchange.getIn().getHeaders().put(ID_FORMAT, export.getIdFormat().toString());
+        }
+
+        if (export.getIdPrefix() != null){
+            exchange.getIn().getHeaders().put(ID_PREFIX, export.getIdPrefix());
+        }
+
+
+
         producer.send("activemq:queue:ChouetteExportGtfsQueue", exchange);
     }
 

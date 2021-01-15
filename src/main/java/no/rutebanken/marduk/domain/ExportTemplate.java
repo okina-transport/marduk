@@ -21,6 +21,9 @@ public class ExportTemplate implements Serializable {
     private List<Line> lines;
     private List<Consumer> consumers;
 
+    private String idPrefix;
+    private IdFormat idFormat;
+
     public Long getId() {
         return id;
     }
@@ -85,6 +88,23 @@ public class ExportTemplate implements Serializable {
     public void setConsumers(List<Consumer> consumers) {
         this.consumers = consumers;
     }
+
+    public String getIdPrefix() {
+        return idPrefix;
+    }
+
+    public void setIdPrefix(String idPrefix) {
+        this.idPrefix = idPrefix;
+    }
+
+    public IdFormat getIdFormat() {
+        return idFormat;
+    }
+
+    public void setIdformat(IdFormat idFormat) {
+        this.idFormat = idFormat;
+    }
+
 
     /**
      * Détermine si le fichier exporté correspondant à cet export doit être accessible en public

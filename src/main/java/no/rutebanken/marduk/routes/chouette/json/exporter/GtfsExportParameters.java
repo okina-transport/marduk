@@ -20,6 +20,7 @@ package no.rutebanken.marduk.routes.chouette.json.exporter;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import no.rutebanken.marduk.Constants;
+import no.rutebanken.marduk.domain.IdFormat;
 
 import java.util.Date;
 
@@ -64,8 +65,14 @@ public class GtfsExportParameters {
         @JsonProperty("use_tpeg_hvt")
         public boolean useTpegHvt = false;
 
+        @JsonProperty("id_prefix")
+        public String idPrefix;
 
-        public GtfsExport(String name, String objectIdPrefix, String referentialName, String organisationName, String userName, boolean keepOriginalId, Date startDate, Date endDate) {
+        @JsonProperty("id_format")
+        public IdFormat idFormat;
+
+
+        public GtfsExport(String name, String objectIdPrefix, String referentialName, String organisationName, String userName, boolean keepOriginalId, Date startDate, Date endDate, String idPrefix, IdFormat idFormat) {
             this.name = name;
             this.objectIdPrefix = objectIdPrefix;
             this.referentialName = referentialName;
@@ -74,10 +81,12 @@ public class GtfsExportParameters {
             this.startDate = (startDate != null) ? startDate : DateUtils.startDateFor(2L);
             this.endDate = (endDate != null) ? endDate : DateUtils.endDateFor(365);
             this.keepOriginalId = keepOriginalId;
+            this.idPrefix = idPrefix;
+            this.idFormat = idFormat;
         }
 
         public GtfsExport(String name, String objectIdPrefix, String referentialName, String organisationName, String userName, boolean keepOriginalId) {
-            this(name, objectIdPrefix, referentialName, organisationName, userName, keepOriginalId, null, null);
+            this(name, objectIdPrefix, referentialName, organisationName, userName, keepOriginalId, null, null,null,null);
         }
 
     }
