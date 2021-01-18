@@ -6,7 +6,10 @@ import no.rutebanken.marduk.domain.BlobStoreFiles;
 import no.rutebanken.marduk.domain.Provider;
 import no.rutebanken.marduk.services.FileSystemService;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.io.output.ByteArrayOutputStream;
 import org.apache.commons.lang3.NotImplementedException;
+import org.apache.commons.net.io.Util;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,6 +17,7 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Repository;
 
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
@@ -120,13 +124,11 @@ public class FileStoreRepository implements BlobStoreRepository{
     @Override
     public void uploadBlob(String objectName, InputStream inputStream, boolean makePublic) {
         try {
-            byte[] buffer = new byte[inputStream.available()];
-            inputStream.read(buffer);
-
             Path newPath = fileSystemService.getOrCreateFilePath(objectName);
             File targetFile = new File(newPath.toUri());
             OutputStream outStream = new FileOutputStream(targetFile);
-            outStream.write(buffer);
+            Util.copyStream(inputStream,outStream);
+
         } catch (IOException e) {
             logger.error("Erreur upload blob fichier:"+objectName);
             logger.error(e.toString());

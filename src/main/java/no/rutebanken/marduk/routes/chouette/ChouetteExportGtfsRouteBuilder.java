@@ -155,12 +155,14 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
                     })
                     .setHeader("fileName", simple("GTFS.zip"))
                     .process(exportToConsumersProcessor)
+
 //                    .to("direct:addGtfsFeedInfo")
                     .setHeader(BLOBSTORE_MAKE_BLOB_PUBLIC, constant(publicPublication))
                     .setHeader(FILE_HANDLE, simple(BLOBSTORE_PATH_OUTBOUND + "gtfs/${header." + CHOUETTE_REFERENTIAL + "}-" + Constants.CURRENT_AGGREGATED_GTFS_FILENAME))
 //                    .setHeader(EXPORT_FILE_NAME, simple(Constants.CURRENT_AGGREGATED_GTFS_FILENAME))
                     .process(e -> {
                         log.info("Starting gtfs export upload");
+                        e.getIn().setBody(fileSystemService.getOfferFile(e));
                     })
                     .to("direct:uploadBlobExport")
                     .process(e -> {
