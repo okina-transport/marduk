@@ -47,7 +47,7 @@ public class ExportToConsumersProcessor implements Processor {
         if (StringUtils.isNotBlank(jsonExport)) {
             ExportTemplate export = exportJsonMapper.fromJson(jsonExport);
             log.info("Found " + export.getConsumers().size() + " for export " + export.getId() + "/" + export.getName());
-            String filePath = (String) exchange.getIn().getHeaders().get("fileName");
+            String filePath = export.getExportedFileName() != null ? export.getExportedFileName()  : (String) exchange.getIn().getHeaders().get("fileName");
             InputStream streamToUpload = (InputStream) exchange.getIn().getBody();
             export.getConsumers().stream().forEach(consumer -> {
                 log.info(consumer.getType() + " consumer upload starting " + consumer.getName() + " => " + consumer.getServiceUrl());
