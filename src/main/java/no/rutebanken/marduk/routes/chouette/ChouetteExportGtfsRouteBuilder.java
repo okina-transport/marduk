@@ -17,6 +17,7 @@
 package no.rutebanken.marduk.routes.chouette;
 
 import no.rutebanken.marduk.Constants;
+import no.rutebanken.marduk.domain.IdFormat;
 import no.rutebanken.marduk.domain.Provider;
 import no.rutebanken.marduk.routes.chouette.json.Parameters;
 import no.rutebanken.marduk.routes.file.ZipFileUtils;
