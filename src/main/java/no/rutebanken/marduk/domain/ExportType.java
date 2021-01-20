@@ -4,5 +4,6 @@ public enum ExportType {
     GTFS,
     CONCERTO,
     NETEX,
-    ARRET;
+    ARRET,
+    NEPTUNE;
 }

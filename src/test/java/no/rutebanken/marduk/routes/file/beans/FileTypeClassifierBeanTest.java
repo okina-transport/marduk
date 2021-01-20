@@ -43,53 +43,53 @@ public class FileTypeClassifierBeanTest {
 
     @Test
     public void classifyGtfsFile() throws Exception {
-        assertFileType("gtfs.zip", GTFS);
+        assertFileType("gtfs.zip", GTFS, "gtfs");
     }
 
     @Test
     public void classifyGtfsFileContainingFolder() throws Exception {
         // The file is known to be invalid - repack zip
         File rePackedZipFile = ZipFileUtils.rePackZipFile(IOUtils.toByteArray(this.getClass().getResourceAsStream("gtfs-folder.zip")));
-        assertFileType(rePackedZipFile, GTFS);
+        assertFileType(rePackedZipFile, GTFS,"gtfs");
     }
 
     @Test
     public void classifyNetexFile() throws Exception {
-        assertFileType("netex.zip", NETEXPROFILE);
+        assertFileType("netex.zip", NETEXPROFILE,null);
     }
 
     @Test(expected = RuntimeException.class)
     public void classifyNetexFileFromRuter() throws Exception {
-        assertFileType("AOR.zip", NETEXPROFILE);
+        assertFileType("AOR.zip", NETEXPROFILE,null);
     }
 
     @Test
     public void classifyNetexWithNeptuneFileNameInside() throws Exception {
-        assertFileType("netex_with_neptune_file_name_inside.zip", NETEXPROFILE);
+        assertFileType("netex_with_neptune_file_name_inside.zip", NETEXPROFILE,null);
     }
 
     @Test
     public void classifyNetexWithTwoFiles() throws Exception {
-        assertFileType("netex_with_two_files.zip", NETEXPROFILE);
+        assertFileType("netex_with_two_files.zip", NETEXPROFILE,null);
     }
 
     @Test(expected = FileValidationException.class)
     public void classifyNetexWithTwoFilesOneInvalid() throws Exception {
-        assertFileType("netex_with_two_files_one_invalid.zip", NETEXPROFILE);
+        assertFileType("netex_with_two_files_one_invalid.zip", NETEXPROFILE,null);
     }
 
     @Test
     public void classifyFileNameWithNonISO_8859_1CharacterAsInvalid() throws Exception {
         // The å in ekspressbåt below is encoded as 97 ('a') + 778 (ring above)
         byte[] data = IOUtils.toByteArray(this.getClass().getResourceAsStream("netex.zip"));
-        assertFileType("sof-20170904121616-2907_20170904_Buss_og_ekspressbåt_til_rutesøk_19.06.2017-28.02.2018 (1).zip", data, INVALID_FILE_NAME);
+        assertFileType("sof-20170904121616-2907_20170904_Buss_og_ekspressbåt_til_rutesøk_19.06.2017-28.02.2018 (1).zip", data, INVALID_FILE_NAME,null);
     }
 
     @Test
     public void classifyFileNameWithOnlyISO_8859_1CharacterAsValid() throws Exception {
         // The å in ekspressbåt below is encoded as a regular 229 ('å')
         byte[] data = IOUtils.toByteArray(this.getClass().getResourceAsStream("netex.zip"));
-        assertFileType("sof-20170904121616-2907_20170904_Buss_og_ekspressbåt_til_rutesøk_19.06.2017-28.02.2018 (1).zip", data, NETEXPROFILE);
+        assertFileType("sof-20170904121616-2907_20170904_Buss_og_ekspressbåt_til_rutesøk_19.06.2017-28.02.2018 (1).zip", data, NETEXPROFILE,null);
     }
 
     @Test
@@ -107,18 +107,24 @@ public class FileTypeClassifierBeanTest {
         Assert.assertFalse("test.test.xml".matches(FileTypeClassifierBean.NON_XML_FILE_XML));
     }
 
-    private void assertFileType(String fileName, FileType expectedFileType) throws IOException {
+    @Test
+    public void classifyFileNameNeptune() throws Exception {
+        byte[] data = IOUtils.toByteArray(this.getClass().getResourceAsStream("inputFile.zip"));
+        assertFileType("someFileName.zip", data, NEPTUNE,"neptune");
+    }
+
+    private void assertFileType(String fileName, FileType expectedFileType, String importType) throws IOException {
         byte[] data = IOUtils.toByteArray(this.getClass().getResourceAsStream(fileName));
-        assertFileType(fileName, data, expectedFileType);
+        assertFileType(fileName, data, expectedFileType,importType);
     }
 
-    private void assertFileType(File file, FileType expectedFileType) throws IOException {
+    private void assertFileType(File file, FileType expectedFileType,String importType) throws IOException {
         byte[] data = IOUtils.toByteArray(new FileInputStream(file));
-        assertFileType(file.getName(), data, expectedFileType);
+        assertFileType(file.getName(), data, expectedFileType, importType);
     }
 
-    private void assertFileType(String fileName, byte[] data, FileType expectedFileType) {
-        FileType resultType = bean.classifyFile(fileName, data);
+    private void assertFileType(String fileName, byte[] data, FileType expectedFileType, String importType) {
+        FileType resultType = bean.classifyFile(fileName, data,importType);
         assertEquals(expectedFileType, resultType);
     }
 

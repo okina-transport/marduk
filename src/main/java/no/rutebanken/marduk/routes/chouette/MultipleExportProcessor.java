@@ -54,11 +54,13 @@ public class MultipleExportProcessor implements Processor {
                 if (ExportType.NETEX.equals(export.getType())) {
                     toNetexExport(export, exchange.copy(true));
                 } else if (ExportType.GTFS == export.getType()) {
-
                     toGtfsExport(export, exchange.copy(true));
                 } else if (ExportType.ARRET == export.getType()) {
                     toStopPlacesExport(export, exchange.copy(true));
-                } else {
+                } else if (ExportType.NEPTUNE == export.getType()) {
+                    toNeptuneExport(export, exchange.copy(true));
+                }
+                else {
                     log.info("Routing not supported yet for => " + export.getId() + "/" + export.getName() + "/" + export.getType());
                 }
             } catch(Exception e) {
@@ -75,6 +77,14 @@ public class MultipleExportProcessor implements Processor {
         log.info("Routing to NETEX export => " + export.getId() + "/" + export.getName());
         prepareHeadersForExport(exchange, export);
         producer.send("activemq:queue:ChouetteExportNetexQueue", exchange);
+
+    }
+
+
+    private void toNeptuneExport(ExportTemplate export, Exchange exchange) throws Exception {
+        log.info("Routing to NEPTUNE export => " + export.getId() + "/" + export.getName());
+        prepareHeadersForExport(exchange, export);
+        producer.send("activemq:queue:ChouetteExportNeptuneQueue", exchange);
     }
 
     private void toGtfsExport(ExportTemplate export, Exchange exchange) throws Exception {

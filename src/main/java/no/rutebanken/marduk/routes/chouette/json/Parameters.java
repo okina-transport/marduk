@@ -22,9 +22,11 @@ import no.rutebanken.marduk.domain.IdFormat;
 import no.rutebanken.marduk.domain.Provider;
 import no.rutebanken.marduk.routes.chouette.json.exporter.ConcertoExportParameters;
 import no.rutebanken.marduk.routes.chouette.json.exporter.GtfsExportParameters;
+import no.rutebanken.marduk.routes.chouette.json.exporter.NeptuneExportParameters;
 import no.rutebanken.marduk.routes.chouette.json.exporter.NetexExportParameters;
 import no.rutebanken.marduk.routes.chouette.json.exporter.TransferExportParameters;
 import no.rutebanken.marduk.routes.chouette.json.importer.GtfsImportParameters;
+import no.rutebanken.marduk.routes.chouette.json.importer.NeptuneImportParameters;
 import no.rutebanken.marduk.routes.chouette.json.importer.NetexImportParameters;
 import no.rutebanken.marduk.routes.chouette.json.importer.RegtoppImportParameters;
 import no.rutebanken.marduk.routes.file.FileType;
@@ -45,6 +47,8 @@ public class Parameters {
             return getGtfsImportParameters(fileName, provider, user, description);
         } else if (FileType.NETEXPROFILE.name().equals(fileType)) {
             return getNetexImportParameters(fileName, provider);
+        } else if (FileType.NEPTUNE.name().equals(fileType)) {
+            return getNeptuneImportParameters(fileName, provider, user, description);
         } else {
             throw new IllegalArgumentException("Cannot create import parameters from file type '" + fileType + "'");
         }
@@ -63,6 +67,14 @@ public class Parameters {
         return regtoppImportParameters.toJsonString();
     }
 
+    static String getNeptuneImportParameters(String importName, Provider provider, String user, String description) {
+        ChouetteInfo chouetteInfo = provider.chouetteInfo;
+        NeptuneImportParameters neptuneImportParameters = NeptuneImportParameters.create(importName,
+                provider.name, chouetteInfo.organisation, user, chouetteInfo.enableCleanImport,
+                chouetteInfo.enableValidation, chouetteInfo.allowCreateMissingStopPlace, chouetteInfo.enableStopPlaceIdMapping, chouetteInfo.generateMissingServiceLinksForModes, description);
+        return neptuneImportParameters.toJsonString();
+    }
+
     static String getGtfsImportParameters(String importName, Provider provider, String user, String description) {
         ChouetteInfo chouetteInfo = provider.chouetteInfo;
         GtfsImportParameters gtfsImportParameters = GtfsImportParameters.create(importName, chouetteInfo.xmlns,
@@ -77,6 +89,27 @@ public class Parameters {
                 chouetteInfo.organisation, chouetteInfo.user, chouetteInfo.enableCleanImport, chouetteInfo.enableValidation,
                 chouetteInfo.allowCreateMissingStopPlace, chouetteInfo.enableStopPlaceIdMapping, chouetteInfo.xmlns, chouetteInfo.generateMissingServiceLinksForModes);
         return netexImportParameters.toJsonString();
+    }
+
+    public static String getNeptuneExportParameters(Provider provider,String exportName, String user, List<Long> linesIds, Date startDate, Date endDate, String exportedFilename) {
+        try {
+            ChouetteInfo chouetteInfo = provider.chouetteInfo;
+            NeptuneExportParameters.NeptuneExport neptuneExport = new NeptuneExportParameters.NeptuneExport(exportName==null ? "offre" : exportName, chouetteInfo.xmlns, chouetteInfo.referential, chouetteInfo.organisation,user,startDate,endDate,exportedFilename);
+
+
+            neptuneExport.ids = linesIds;
+            if (linesIds != null && !linesIds.isEmpty()) {
+                neptuneExport.referencesType = "line";
+            }
+            NeptuneExportParameters.Parameters parameters = new NeptuneExportParameters.Parameters(neptuneExport);
+            NeptuneExportParameters importParameters = new NeptuneExportParameters(parameters);
+            ObjectMapper mapper = new ObjectMapper();
+            StringWriter writer = new StringWriter();
+            mapper.writeValue(writer, importParameters);
+            return writer.toString();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     public static String getGtfsExportParameters(Provider provider,String exportName, String user, List<Long> linesIds, Date startDate, Date endDate, String exportedFilename, String idPrefix, IdFormat idformat) {

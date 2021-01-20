@@ -29,8 +29,7 @@ import java.io.InputStream;
 import java.nio.charset.Charset;
 import java.util.Set;
 
-import static no.rutebanken.marduk.Constants.FILE_HANDLE;
-import static no.rutebanken.marduk.Constants.FILE_TYPE;
+import static no.rutebanken.marduk.Constants.*;
 import static no.rutebanken.marduk.routes.file.FileType.*;
 import static no.rutebanken.marduk.routes.file.beans.FileClassifierPredicates.firstElementQNameMatchesNetex;
 import static no.rutebanken.marduk.routes.file.beans.FileClassifierPredicates.validateZipContent;
@@ -56,7 +55,8 @@ public class FileTypeClassifierBean {
                 throw new IllegalArgumentException("Could not get file path from " + FILE_HANDLE + " header.");
             }
 
-            FileType fileType = classifyFile(relativePath, data);
+            String importType = exchange.getIn().getHeader(IMPORT_TYPE, String.class);
+            FileType fileType = classifyFile(relativePath, data,importType);
             logger.debug("File is classified as " + fileType);
             exchange.getIn().setHeader(FILE_TYPE, fileType.name());
             return true;
@@ -70,19 +70,19 @@ public class FileTypeClassifierBean {
         return Charset.forName(CharEncoding.ISO_8859_1).newEncoder().canEncode(fileName);
     }
 
-    public FileType classifyFile(String relativePath, byte[] data) {
+    public FileType classifyFile(String relativePath, byte[] data, String importType) {
         if (relativePath.toUpperCase().endsWith(".ZIP")) {
             Set<String> filesNamesInZip = zipFileUtils.listFilesInZip(new ByteArrayInputStream(data));
             if (!isValidFileName(relativePath)) {
                 return INVALID_FILE_NAME;
+            } else if (NEPTUNE.toString().equalsIgnoreCase(importType)){
+                return NEPTUNE;
             } else if (isRegtoppZip(filesNamesInZip)) {
                 return REGTOPP;
-            } else if (isGtfsZip(filesNamesInZip)) {
+            } else if (GTFS.toString().equalsIgnoreCase(importType)) {
                 return GTFS;
             } else if (isNetexZip(filesNamesInZip, new ByteArrayInputStream(data))) {
                 return NETEXPROFILE;
-            } else if (isNeptuneZip(filesNamesInZip)) {
-                return NEPTUNE;
             } else if (ZipFileUtils.zipFileContainsSingleFolder(data)) {
                 return ZIP_WITH_SINGLE_FOLDER;
             }
