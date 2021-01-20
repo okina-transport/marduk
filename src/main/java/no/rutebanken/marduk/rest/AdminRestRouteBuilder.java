@@ -16,10 +16,6 @@
 
 package no.rutebanken.marduk.rest;
 
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
 import no.rutebanken.marduk.Constants;
 import no.rutebanken.marduk.domain.BlobStoreFiles;
 import no.rutebanken.marduk.domain.BlobStoreFiles.File;
@@ -28,7 +24,6 @@ import no.rutebanken.marduk.domain.Provider;
 import no.rutebanken.marduk.routes.BaseRouteBuilder;
 import no.rutebanken.marduk.routes.blobstore.BlobStoreRoute;
 import no.rutebanken.marduk.routes.chouette.ExportJsonMapper;
-import no.rutebanken.marduk.routes.chouette.json.ExportJob;
 import no.rutebanken.marduk.routes.chouette.json.JobResponse;
 import no.rutebanken.marduk.routes.chouette.json.Status;
 import no.rutebanken.marduk.routes.status.JobEvent;
@@ -38,7 +33,6 @@ import no.rutebanken.marduk.services.BlobStoreService;
 import org.apache.camel.Body;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
-import org.apache.camel.model.dataformat.JsonLibrary;
 import org.apache.camel.model.rest.RestBindingMode;
 import org.apache.camel.model.rest.RestParamType;
 import org.apache.camel.model.rest.RestPropertyDefinition;
@@ -51,16 +45,33 @@ import org.springframework.stereotype.Component;
 
 import javax.ws.rs.NotFoundException;
 import java.net.URLDecoder;
-import java.sql.Timestamp;
-import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.time.LocalDateTime;
-import java.time.ZonedDateTime;
-import java.util.*;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 import static javax.ws.rs.core.MediaType.MULTIPART_FORM_DATA;
-import static no.rutebanken.marduk.Constants.*;
+import static no.rutebanken.marduk.Constants.CHOUETTE_JOB_ID;
+import static no.rutebanken.marduk.Constants.CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL;
+import static no.rutebanken.marduk.Constants.CHOUETTE_REFERENTIAL;
+import static no.rutebanken.marduk.Constants.CORRELATION_ID;
+import static no.rutebanken.marduk.Constants.EXPORT_END_DATE;
+import static no.rutebanken.marduk.Constants.EXPORT_LINES_IDS;
+import static no.rutebanken.marduk.Constants.EXPORT_NAME;
+import static no.rutebanken.marduk.Constants.EXPORT_START_DATE;
+import static no.rutebanken.marduk.Constants.FILE_HANDLE;
+import static no.rutebanken.marduk.Constants.FILE_NAME;
+import static no.rutebanken.marduk.Constants.IMPORT;
+import static no.rutebanken.marduk.Constants.JSON_EXPORTS;
+import static no.rutebanken.marduk.Constants.NO_GTFS_EXPORT;
+import static no.rutebanken.marduk.Constants.OBJECT_TYPE_CONCERTO;
+import static no.rutebanken.marduk.Constants.OKINA_REFERENTIAL;
+import static no.rutebanken.marduk.Constants.PROVIDER_ID;
+import static no.rutebanken.marduk.Constants.PROVIDER_IDS;
+import static no.rutebanken.marduk.Constants.USER;
 
 /**
  * REST interface for backdoor triggering of messages
@@ -942,16 +953,16 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .process(e -> {
                     log.info("Public-export: exports parsing");
                     Optional<Provider> provider = getProviderRepository().getNonMosaicProvider(e.getIn().getHeader(PROVIDER_ID, Long.class));
-                    boolean isPublic = Boolean.valueOf(e.getIn().getHeader("public").toString());
 
                     String json = exportJsonMapper.toJson(e.getIn().getBody());
                     List<ExportTemplate> exports = exportJsonMapper.fromJsonArray(json);
                     provider.ifPresent(p -> {
                         exports.stream().forEach(export -> {
                             String exportFilePath = BlobStoreRoute.exportFilePath(export, p);
-                            blobStoreService.setPublicAccess(exportFilePath, isPublic);
+                            blobStoreService.setAccess(export.getPublicExport(), exportFilePath);
                         });
                     });
+
                     log.info("Public-export: exports parsing end ...");
                 })
                 .routeId("admin-public-export")

@@ -62,7 +62,7 @@ public class BlobStoreRoute extends BaseRouteBuilder {
                     if (export.isPresent()) {
                         e.getIn().setHeader(FILE_HANDLE, exportFilePath(export.get(), provider));
                         e.getIn().setHeader(ARCHIVE_FILE_HANDLE, exportArchiveFilePath(export.get(), provider, e.getIn().getHeader(EXPORT_FILE_NAME).toString()));
-                        e.getIn().setHeader(BLOBSTORE_MAKE_BLOB_PUBLIC, export.get().hasExportFilePublicAccess());
+                        e.getIn().setHeader(BLOBSTORE_MAKE_BLOB_PUBLIC, export.get().getPublicExport());
 
                         if(export.get().getConsumers() != null && !export.get().getConsumers().isEmpty()) {
                             e.getIn().setHeader(NOTIFICATION, export.get().getConsumers().get(0).isNotification());

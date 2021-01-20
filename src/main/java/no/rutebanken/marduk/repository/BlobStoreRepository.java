@@ -53,6 +53,6 @@ public interface BlobStoreRepository {
 
     boolean deleteAllFilesInFolder(String folder);
 
-    void setPublicAccess(boolean isPublic, String filepath);
+    void setAccess(boolean makePublic, String filepath);
 
 }

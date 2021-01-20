@@ -109,8 +109,8 @@ public class BlobStoreService {
     }
 
 
-    public void setPublicAccess(String filepath, boolean makePublic) {
-        repository.setPublicAccess(makePublic, filepath);
+    public void setAccess(boolean makePublic, String filepath) {
+        repository.setAccess(makePublic, filepath);
     }
 
 

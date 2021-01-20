@@ -22,8 +22,11 @@ import com.amazonaws.services.s3.model.CannedAccessControlList;
 import com.amazonaws.services.s3.model.CopyObjectRequest;
 import com.amazonaws.services.s3.model.CopyObjectResult;
 import com.amazonaws.services.s3.model.ObjectMetadata;
+import com.amazonaws.services.s3.model.ObjectTagging;
 import com.amazonaws.services.s3.model.PutObjectRequest;
 import com.amazonaws.services.s3.model.S3ObjectSummary;
+import com.amazonaws.services.s3.model.SetObjectTaggingRequest;
+import com.amazonaws.services.s3.model.Tag;
 import com.google.cloud.storage.Storage;
 import com.okina.helper.aws.BlobStoreHelper;
 import no.rutebanken.marduk.domain.BlobStoreFiles;
@@ -40,6 +43,7 @@ import org.springframework.stereotype.Repository;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
@@ -133,12 +137,6 @@ public class AwsBlobStoreRepository implements BlobStoreRepository {
 
     @Override
     public void uploadBlob(String name, InputStream inputStream, boolean makePublic) {
-//        try {
-//            BlobStoreHelper.uploadBlob(amazonS3Client, containerName, name, inputStream);
-//        } catch (InterruptedException | IOException e) {
-//            throw new MardukException("error while uploading blob", e);
-//        }
-
         byte[] bytes;
         try {
             bytes = IOUtils.toByteArray(inputStream);
@@ -147,7 +145,12 @@ public class AwsBlobStoreRepository implements BlobStoreRepository {
             ByteArrayInputStream byteArrayInputStream = new ByteArrayInputStream(bytes);
             PutObjectRequest putReq = new PutObjectRequest(containerName, name, byteArrayInputStream, metadata);
         if (makePublic) {
-            putReq = putReq.withCannedAcl(CannedAccessControlList.PublicRead);
+            List<Tag> tags = new ArrayList<>();
+            tags.add(new Tag("public", "yes"));
+            putReq.setTagging(new ObjectTagging(tags));
+        }
+        else{
+            putReq.setTagging(null);
         }
         amazonS3Client.putObject(putReq);
         } catch (IOException e) {
@@ -155,9 +158,14 @@ public class AwsBlobStoreRepository implements BlobStoreRepository {
         }
     }
 
-    public void setPublicAccess(boolean isPublic, String filepath) {
-        CannedAccessControlList acl = isPublic ? CannedAccessControlList.PublicRead : CannedAccessControlList.Private;
-        amazonS3Client.setObjectAcl(containerName, filepath, acl);
+    public void setAccess(boolean makePublic, String filepath) {
+        if(amazonS3Client.doesObjectExist(containerName, filepath)){
+            List<Tag> tags = new ArrayList<>();
+            if(makePublic){
+                tags.add(new Tag("public", "yes"));
+            }
+            amazonS3Client.setObjectTagging(new SetObjectTaggingRequest(containerName, filepath, new ObjectTagging(tags)));
+        }
     }
 
     @Override

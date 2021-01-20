@@ -136,7 +136,7 @@ public class InMemoryBlobStoreRepository implements BlobStoreRepository {
     }
 
     @Override
-    public void setPublicAccess(boolean isPublic, String filepath) {
+    public void setAccess(boolean makePublic, String filepath) {
         throw new NotImplementedException("setPublicAccess not implemented for InMemoryBlobStoreRepository");
     }
 
