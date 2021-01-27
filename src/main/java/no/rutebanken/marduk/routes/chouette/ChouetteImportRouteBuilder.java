@@ -148,6 +148,7 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
                 .process(e -> toImportMultipart(e))
                 .setHeader(Exchange.CONTENT_TYPE, simple("multipart/form-data"))
                 .to("log:" + getClass().getName() + "?level=DEBUG&showAll=true&multiline=true")
+                .log(LoggingLevel.INFO, "chouetteUrl: " + chouetteUrl)
                 .setProperty("chouette_url", simple(chouetteUrl + "/chouette_iev/referentials/${header." + CHOUETTE_REFERENTIAL + "}/importer/${header." + FILE_TYPE + ".toLowerCase()}"))
                 .log(LoggingLevel.DEBUG, correlation() + "Calling Chouette with URL: ${exchangeProperty.chouette_url}")
                 .setHeader(Exchange.HTTP_METHOD, constant(org.apache.camel.component.http4.HttpMethods.POST))
