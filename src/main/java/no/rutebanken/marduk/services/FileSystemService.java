@@ -105,7 +105,7 @@ public class FileSystemService {
 
     public List<Path> getAllFilesFromLocalStorage(String prefix, String fileExtension){
         try {
-            return Files.walk(Paths.get(chouetteStoragePath))
+            return Files.walk(Paths.get(chouetteStoragePath+"/"+prefix))
                  .filter(p -> p.toString().startsWith(chouetteStoragePath+"/"+prefix) && p.getFileName().toString().endsWith(fileExtension))
                  .collect(Collectors.toList());
         } catch (IOException e) {
@@ -125,14 +125,53 @@ public class FileSystemService {
 
     }
 
+    /**
+     * Converts an absolute path to a relative path, starting from Storage Path     *
+     *
+     * @param absolutePath
+     * @return A relative Path
+     */
+    public String convertToRelativePath(String absolutePath){
+        if (!absolutePath.contains(chouetteStoragePath)){
+            //absolutePath does not seem to be a path from storage Path
+            return absolutePath;
+        }
+        String relativePath=absolutePath.replace(chouetteStoragePath,"");
+        if (relativePath.startsWith("/")){
+            return relativePath.substring(1);
+        }
+        return relativePath;
+
+    }
+
+
+    /**
+     * Returns the directory from which the search should be started.
+     * e.g : if the filename is : "71/exports/myFile.zip", the starting rep should be "storagePath/71/exports"
+     *
+     * @param filename
+     * @return the directory from which the search must be started
+     */
+    private String getStartingDirectory(String filename){
+        // No slash in the filename. Seach must be started from root storage path
+        if (!filename.contains("/"))
+            return chouetteStoragePath;
+
+        return chouetteStoragePath+"/"+filename.substring(0,filename.lastIndexOf("/"));
+
+    }
+
     public Path getOrCreateFilePath(String fileName){
         try {
-          List<Path> pathList = Files.walk(Paths.get(chouetteStoragePath))
+            String startingDirectory = getStartingDirectory(fileName);
+            File startDir = new File(startingDirectory);
+            startDir.mkdirs();
+
+          List<Path> pathList = Files.walk(startDir.toPath())
                 .filter(p -> p.toString().equals(chouetteStoragePath+"/"+fileName))
                 .collect(Collectors.toList());
 
             if (pathList.isEmpty()) {
-                logger.info ("Création fichier: " + fileName);
                 File newFile = new File(chouetteStoragePath+"/"+fileName);
                 newFile.getParentFile().mkdirs();
                 Path newPath = newFile.toPath();
@@ -144,6 +183,18 @@ public class FileSystemService {
             logger.error("Récupération/Création fichier localStorage: " + e);
             throw new IllegalArgumentException("Nom du fichier:" + fileName);
         }
+    }
+
+    public boolean deleteDirectoryFromStorage(String directory)  {
+       try {
+            File startDir = new File(chouetteStoragePath+"/"+directory);
+            Files.walk(startDir.toPath())
+                    .map(Path::toFile)
+                    .forEach(File::delete);
+        } catch (IOException e) {
+           logger.error("Erreur suppression répertoire: "+directory + e);
+        }
+        return true;
     }
 
 
