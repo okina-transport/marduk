@@ -130,7 +130,7 @@ public class ChouetteExportNeptuneRouteBuilder extends AbstractChouetteRouteBuil
                 .setHeader(Constants.CHOUETTE_JOB_STATUS_JOB_TYPE, constant(TimetableAction.EXPORT.name()))
                 .removeHeader("loopCounter")
                 .to("activemq:queue:ChouettePollStatusQueue")
-                .routeId("chouette-send-export-job");
+                .routeId("chouette-send-export-neptune-job");
 
 
         from("direct:processNeptuneExportResult")
