@@ -19,6 +19,7 @@ import org.springframework.stereotype.Repository;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.*;
@@ -45,7 +46,7 @@ public class FileStoreRepository implements BlobStoreRepository{
     private Optional<BlobStoreFiles.File> toBlobStoreFile(Path pathToFile){
         try {
             BasicFileAttributes attr = Files.readAttributes(pathToFile, BasicFileAttributes.class);
-            BlobStoreFiles.File file = new BlobStoreFiles.File(pathToFile.getFileName().toString(), new Date(attr.creationTime().toMillis()), new Date(attr.lastModifiedTime().toMillis()), attr.size());
+            BlobStoreFiles.File file = new BlobStoreFiles.File(pathToFile.toString(), new Date(attr.creationTime().toMillis()), new Date(attr.lastModifiedTime().toMillis()), attr.size());
             Provider provider = null;
             if (file.getName().contains("graphs/")) {
                 file.setFormat(BlobStoreFiles.File.Format.GRAPH);
@@ -170,14 +171,19 @@ public class FileStoreRepository implements BlobStoreRepository{
 
     @Override
     public boolean delete(String objectName) {
-        Path filePath = fileSystemService.getOrCreateFilePath(objectName);
-        return filePath.toFile().delete();
+        return fileSystemService.deleteDirectoryFromStorage(objectName);
     }
 
     @Override
     public boolean deleteAllFilesInFolder(String folder){
-        listBlobs(folder).getFiles().forEach(file -> delete(file.getName()));
+        listBlobs(folder).getFiles().forEach(file -> deleteFile(file.getName()));
         return true;
+    }
+
+
+    public boolean deleteFile(String objectName) {
+        Path filePath = fileSystemService.getOrCreateFilePath(fileSystemService.convertToRelativePath(objectName));
+        return filePath.toFile().delete();
     }
 
     @Override
