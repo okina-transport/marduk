@@ -65,12 +65,20 @@ public class GtfsImportParameters extends ChouetteJobParameters {
         @JsonInclude(JsonInclude.Include.ALWAYS)
         public Boolean parseConnectionLinks = false;
 
+        @JsonProperty("route_merge")
+        @JsonInclude(JsonInclude.Include.ALWAYS)
+        public Boolean routeMerge = false;
+
+        @JsonProperty("split_character")
+        @JsonInclude(JsonInclude.Include.ALWAYS)
+        public String splitCharacter = "";
+
     }
 
     public static GtfsImportParameters create(String name, String objectIdPrefix, String referentialName, String organisationName,
                                                      String userName, boolean cleanRepository, boolean enableValidation,
                                                      boolean allowCreateMissingStopPlace, boolean enableStopPlaceIdMapping,
-                                                     Set<String> generateMissingRouteSectionsForModes, String description) {
+                                                     Set<String> generateMissingRouteSectionsForModes, String description,boolean routeMerge,String splitCharacter) {
         Gtfs gtfsImport = new Gtfs();
         gtfsImport.name = name;
         gtfsImport.objectIdPrefix = objectIdPrefix;
@@ -84,6 +92,8 @@ public class GtfsImportParameters extends ChouetteJobParameters {
         if (allowCreateMissingStopPlace) {
             gtfsImport.stopAreaImportMode = AbstractImportParameters.StopAreaImportMode.CREATE_NEW;
         }
+        gtfsImport.routeMerge = routeMerge;
+        gtfsImport.splitCharacter = splitCharacter;
         Parameters parameters = new Parameters();
         parameters.gtfsImport = gtfsImport;
         GtfsImportParameters gtfsImportParameters = new GtfsImportParameters();
@@ -92,5 +102,7 @@ public class GtfsImportParameters extends ChouetteJobParameters {
 
         return gtfsImportParameters;
     }
+
+
 
 }

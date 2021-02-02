@@ -28,6 +28,7 @@ import org.apache.camel.builder.PredicateBuilder;
 import org.apache.camel.component.http4.HttpMethods;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import spark.utils.StringUtils;
 
 import static no.rutebanken.marduk.Constants.*;
 import static no.rutebanken.marduk.Utils.Utils.getHttp4;
@@ -135,9 +136,13 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
                     String fileName = e.getIn().getHeader(FILE_NAME, String.class);
                     String fileType = e.getIn().getHeader(FILE_TYPE, String.class);
                     Long providerId = e.getIn().getHeader(PROVIDER_ID, Long.class);
+                    String splitCharacter = e.getIn().getHeader(SPLIT_CHARACTER, String.class);
+                    String routeMergeStr = e.getIn().getHeader(ROUTE_MERGE, String.class);
+                    boolean routeMerge = StringUtils.isEmpty(routeMergeStr)?false:Boolean.valueOf(routeMergeStr);
+
                     String user = e.getIn().getHeader(USER, String.class);
                     String description = e.getIn().getHeader(DESCRIPTION, String.class);
-                    e.getIn().setHeader(JSON_PART, getImportParameters(fileName, fileType, providerId, user, description));
+                    e.getIn().setHeader(JSON_PART, getImportParameters(fileName, fileType, providerId, user, description,routeMerge,splitCharacter));
                 }) //Using header to addToExchange json data
                 .log(LoggingLevel.DEBUG, correlation() + "import parameters: " + header(JSON_PART))
                 .to("direct:sendImportJobRequest")
@@ -223,9 +228,9 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
 
     }
 
-    private String getImportParameters(String fileName, String fileType, Long providerId, String user, String description) {
+    private String getImportParameters(String fileName, String fileType, Long providerId, String user, String description, boolean routeMerge, String splitCharacter) {
         Provider provider = getProviderRepository().getProvider(providerId);
-        return Parameters.createImportParameters(fileName, fileType, provider, user, description);
+        return Parameters.createImportParameters(fileName, fileType, provider, user, description,routeMerge, splitCharacter);
     }
 
 }

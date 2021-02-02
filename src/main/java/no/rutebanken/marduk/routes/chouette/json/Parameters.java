@@ -40,11 +40,11 @@ import java.util.List;
 
 public class Parameters {
 
-    public static String createImportParameters(String fileName, String fileType, Provider provider, String user, String description) {
+    public static String createImportParameters(String fileName, String fileType, Provider provider, String user, String description,boolean routeMerge, String splitCharacter) {
         if (FileType.REGTOPP.name().equals(fileType)) {
             return getRegtoppImportParameters(fileName, provider);
         } else if (FileType.GTFS.name().equals(fileType)) {
-            return getGtfsImportParameters(fileName, provider, user, description);
+            return getGtfsImportParameters(fileName, provider, user, description,routeMerge,  splitCharacter);
         } else if (FileType.NETEXPROFILE.name().equals(fileType)) {
             return getNetexImportParameters(fileName, provider);
         } else if (FileType.NEPTUNE.name().equals(fileType)) {
@@ -75,11 +75,11 @@ public class Parameters {
         return neptuneImportParameters.toJsonString();
     }
 
-    static String getGtfsImportParameters(String importName, Provider provider, String user, String description) {
+    static String getGtfsImportParameters(String importName, Provider provider, String user, String description,boolean routeMerge, String splitCharacter) {
         ChouetteInfo chouetteInfo = provider.chouetteInfo;
         GtfsImportParameters gtfsImportParameters = GtfsImportParameters.create(importName, chouetteInfo.xmlns,
                 provider.name, chouetteInfo.organisation, user, chouetteInfo.enableCleanImport,
-                chouetteInfo.enableValidation, chouetteInfo.allowCreateMissingStopPlace, chouetteInfo.enableStopPlaceIdMapping, chouetteInfo.generateMissingServiceLinksForModes, description);
+                chouetteInfo.enableValidation, chouetteInfo.allowCreateMissingStopPlace, chouetteInfo.enableStopPlaceIdMapping, chouetteInfo.generateMissingServiceLinksForModes, description,routeMerge, splitCharacter);
         return gtfsImportParameters.toJsonString();
     }
 
