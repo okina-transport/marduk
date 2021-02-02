@@ -188,6 +188,5 @@ public class FileStoreRepository implements BlobStoreRepository{
 
     @Override
     public void setPublicAccess(boolean isPublic, String filepath) {
-        throw new NotImplementedException("setPublicAccess not implemented for FileStoreRepositoru");
     }
 }
