@@ -21,6 +21,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import no.rutebanken.marduk.Constants;
 import no.rutebanken.marduk.domain.IdFormat;
+import no.rutebanken.marduk.routes.chouette.json.IdParameters;
 
 import java.util.Date;
 
@@ -74,7 +75,10 @@ public class GtfsExportParameters {
         @JsonProperty("id_format")
         public IdFormat idFormat;
 
-        public GtfsExport(String name, String objectIdPrefix, String referentialName, String organisationName, String userName, boolean keepOriginalId, Date startDate, Date endDate, String exportedFilename, String idPrefix, IdFormat idFormat) {
+        @JsonProperty("id_suffix")
+        public String idSuffix;
+
+        public GtfsExport(String name, String objectIdPrefix, String referentialName, String organisationName, String userName, boolean keepOriginalId, Date startDate, Date endDate, String exportedFilename, IdParameters idParams) {
             this.name = name;
             this.objectIdPrefix = objectIdPrefix;
             this.referentialName = referentialName;
@@ -84,12 +88,13 @@ public class GtfsExportParameters {
             this.endDate = (endDate != null) ? endDate : DateUtils.endDateFor(365);
             this.keepOriginalId = keepOriginalId;
             this.exportedFilename = exportedFilename;
-            this.idPrefix = idPrefix;
-            this.idFormat = idFormat;
+            this.idPrefix = idParams.getIdPrefix();
+            this.idFormat = idParams.getIdFormat();
+            this.idSuffix = idParams.getIdSuffix();
         }
 
         public GtfsExport(String name, String objectIdPrefix, String referentialName, String organisationName, String userName, boolean keepOriginalId, String exportedFilename) {
-            this(name, objectIdPrefix, referentialName, organisationName, userName, keepOriginalId, null, null,exportedFilename,null,null);
+            this(name, objectIdPrefix, referentialName, organisationName, userName, keepOriginalId, null, null,exportedFilename,new IdParameters());
         }
 
     }

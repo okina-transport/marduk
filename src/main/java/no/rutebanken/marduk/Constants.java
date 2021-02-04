@@ -35,6 +35,7 @@ public class Constants {
     public static final String ID_PREFIX = "ID_PREFIX";
     public static final String ID_FORMAT = "ID_FORMAT";
     public static final String IMPORT_TYPE = "ImportType";
+    public static final String ID_SUFFIX = "ID_SUFFIX";
 
     // tag for tiamat exports
     public static final String TIAMAT_STOP_PLACES_EXPORT = "TIAMAT_STOP_PLACES_EXPORT";

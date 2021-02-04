@@ -116,8 +116,9 @@ public class MultipleExportProcessor implements Processor {
             exchange.getIn().getHeaders().put(ID_PREFIX, export.getIdPrefix());
         }
 
-
-
+        if (export.getIdSuffix() != null){
+            exchange.getIn().getHeaders().put(ID_SUFFIX, export.getIdSuffix());
+        }
         producer.send("activemq:queue:ChouetteExportGtfsQueue", exchange);
     }
 

@@ -25,6 +25,7 @@ public class ExportTemplate implements Serializable {
 
     private String idPrefix;
     private IdFormat idFormat;
+    private String idSuffix;
 
     public Long getId() {
         return id;
@@ -113,6 +114,14 @@ public class ExportTemplate implements Serializable {
 
     public void setIdformat(IdFormat idFormat) {
         this.idFormat = idFormat;
+    }
+
+    public String getIdSuffix() {
+        return idSuffix;
+    }
+
+    public void setIdSuffix(String idSuffix) {
+        this.idSuffix = idSuffix;
     }
 
 

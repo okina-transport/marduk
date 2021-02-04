@@ -19,6 +19,7 @@ package no.rutebanken.marduk.routes.chouette;
 import no.rutebanken.marduk.Constants;
 import no.rutebanken.marduk.domain.IdFormat;
 import no.rutebanken.marduk.domain.Provider;
+import no.rutebanken.marduk.routes.chouette.json.IdParameters;
 import no.rutebanken.marduk.routes.chouette.json.Parameters;
 import no.rutebanken.marduk.routes.file.ZipFileUtils;
 import no.rutebanken.marduk.routes.status.JobEvent;
@@ -92,6 +93,8 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
                     String exportName = e.getIn().getHeader(EXPORT_NAME) != null ? (String) e.getIn().getHeader(EXPORT_NAME) : null;
                     String idPrefix = e.getIn().getHeader(ID_PREFIX) != null ? (String) e.getIn().getHeader(ID_PREFIX) : null;
                     IdFormat idFormat = e.getIn().getHeader(ID_FORMAT) != null ? IdFormat.valueOf((String)e.getIn().getHeader(ID_FORMAT)) : null;
+                    String idSuffix = e.getIn().getHeader(ID_SUFFIX) != null ? (String) e.getIn().getHeader(ID_SUFFIX) : null;
+                    IdParameters idParams = new IdParameters(idPrefix,idFormat,idSuffix);
                     String exportedFilename = e.getIn().getHeader(EXPORTED_FILENAME) != null ? (String) e.getIn().getHeader(EXPORTED_FILENAME) : null;
 
 
@@ -104,12 +107,12 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
 
 
                     if (e.getIn().getHeader(EXPORT_LINES_IDS) == null && startDate != null && endDate != null) {
-                        gtfsParams = Parameters.getGtfsExportParameters(getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)),exportName, user, null, startDate, endDate,exportedFilename,idPrefix,idFormat);
+                        gtfsParams = Parameters.getGtfsExportParameters(getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)),exportName, user, null, startDate, endDate,exportedFilename,idParams);
                     }
                     else if (e.getIn().getHeader(EXPORT_LINES_IDS) != null) {
                         String linesIdsS = e.getIn().getHeader(EXPORT_LINES_IDS, String.class);
                         List<Long> linesIds = Arrays.stream(StringUtils.split(linesIdsS, ",")).map(s -> Long.valueOf(s)).collect(toList());
-                        gtfsParams = Parameters.getGtfsExportParameters(getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)),exportName, user, linesIds, startDate, endDate,exportedFilename,idPrefix,idFormat);
+                        gtfsParams = Parameters.getGtfsExportParameters(getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)),exportName, user, linesIds, startDate, endDate,exportedFilename,idParams);
                     }
                     else {
                         gtfsParams = Parameters.getGtfsExportParameters(getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)), user,exportedFilename);
