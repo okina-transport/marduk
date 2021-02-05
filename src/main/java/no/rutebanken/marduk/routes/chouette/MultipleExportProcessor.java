@@ -112,8 +112,12 @@ public class MultipleExportProcessor implements Processor {
             exchange.getIn().getHeaders().put(ID_FORMAT, export.getIdFormat().toString());
         }
 
-        if (export.getIdPrefix() != null){
-            exchange.getIn().getHeaders().put(ID_PREFIX, export.getIdPrefix());
+        if (export.getStopIdPrefix() != null){
+            exchange.getIn().getHeaders().put(STOP_ID_PREFIX, export.getStopIdPrefix());
+        }
+
+        if (export.getLineIdPrefix() != null){
+            exchange.getIn().getHeaders().put(LINE_ID_PREFIX, export.getLineIdPrefix());
         }
 
         if (export.getIdSuffix() != null){

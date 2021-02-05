@@ -91,10 +91,11 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
                     Date startDate = null;
                     Date endDate = null;
                     String exportName = e.getIn().getHeader(EXPORT_NAME) != null ? (String) e.getIn().getHeader(EXPORT_NAME) : null;
-                    String idPrefix = e.getIn().getHeader(ID_PREFIX) != null ? (String) e.getIn().getHeader(ID_PREFIX) : null;
+                    String stopIdPrefix = e.getIn().getHeader(STOP_ID_PREFIX) != null ? (String) e.getIn().getHeader(STOP_ID_PREFIX) : null;
                     IdFormat idFormat = e.getIn().getHeader(ID_FORMAT) != null ? IdFormat.valueOf((String)e.getIn().getHeader(ID_FORMAT)) : null;
                     String idSuffix = e.getIn().getHeader(ID_SUFFIX) != null ? (String) e.getIn().getHeader(ID_SUFFIX) : null;
-                    IdParameters idParams = new IdParameters(idPrefix,idFormat,idSuffix);
+                    String linePrefix = e.getIn().getHeader(LINE_ID_PREFIX) != null ? (String) e.getIn().getHeader(LINE_ID_PREFIX) : null;
+                    IdParameters idParams = new IdParameters(stopIdPrefix,idFormat,idSuffix,linePrefix);
                     String exportedFilename = e.getIn().getHeader(EXPORTED_FILENAME) != null ? (String) e.getIn().getHeader(EXPORTED_FILENAME) : null;
 
 

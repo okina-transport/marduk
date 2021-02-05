@@ -69,8 +69,11 @@ public class GtfsExportParameters {
         @JsonProperty("exported_filename")
         public String exportedFilename;
 
-        @JsonProperty("id_prefix")
-        public String idPrefix;
+        @JsonProperty("stop_id_prefix")
+        public String stopIdPrefix;
+
+        @JsonProperty("line_id_prefix")
+        public String lineIdPrefix;
 
         @JsonProperty("id_format")
         public IdFormat idFormat;
@@ -88,9 +91,10 @@ public class GtfsExportParameters {
             this.endDate = (endDate != null) ? endDate : DateUtils.endDateFor(365);
             this.keepOriginalId = keepOriginalId;
             this.exportedFilename = exportedFilename;
-            this.idPrefix = idParams.getIdPrefix();
+            this.stopIdPrefix = idParams.getStopIdPrefix();
             this.idFormat = idParams.getIdFormat();
             this.idSuffix = idParams.getIdSuffix();
+            this.lineIdPrefix = idParams.getLineIdPrefix();
         }
 
         public GtfsExport(String name, String objectIdPrefix, String referentialName, String organisationName, String userName, boolean keepOriginalId, String exportedFilename) {

@@ -23,7 +23,8 @@ public class ExportTemplate implements Serializable {
     private List<Line> lines;
     private List<Consumer> consumers;
 
-    private String idPrefix;
+    private String stopIdPrefix;
+    private String lineIdPrefix;
     private IdFormat idFormat;
     private String idSuffix;
 
@@ -100,12 +101,20 @@ public class ExportTemplate implements Serializable {
         this.consumers = consumers;
     }
 
-    public String getIdPrefix() {
-        return idPrefix;
+    public String getStopIdPrefix() {
+        return stopIdPrefix;
     }
 
-    public void setIdPrefix(String idPrefix) {
-        this.idPrefix = idPrefix;
+    public void setStopIdPrefix(String stopIdPrefix) {
+        this.stopIdPrefix = stopIdPrefix;
+    }
+
+    public String getLineIdPrefix() {
+        return lineIdPrefix;
+    }
+
+    public void setLineIdPrefix(String lineIdPrefix) {
+        this.lineIdPrefix = lineIdPrefix;
     }
 
     public IdFormat getIdFormat() {

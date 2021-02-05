@@ -32,7 +32,8 @@ public class Constants {
     public static final String EXPORTED_FILENAME = "EXPORTED_FILENAME";
     public static final String CURRENT_EXPORT = "CURRENT_EXPORT";
     public static final String JSON_EXPORTS = "JSON_EXPORTS";
-    public static final String ID_PREFIX = "ID_PREFIX";
+    public static final String STOP_ID_PREFIX = "STOP_ID_PREFIX";
+    public static final String LINE_ID_PREFIX = "LINE_ID_PREFIX";
     public static final String ID_FORMAT = "ID_FORMAT";
     public static final String IMPORT_TYPE = "ImportType";
     public static final String SPLIT_CHARACTER = "splitCharacter";
