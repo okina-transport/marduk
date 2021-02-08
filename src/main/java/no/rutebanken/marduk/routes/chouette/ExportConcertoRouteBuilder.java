@@ -39,11 +39,9 @@ import static no.rutebanken.marduk.Constants.CHOUETTE_JOB_STATUS_URL;
 import static no.rutebanken.marduk.Constants.CHOUETTE_REFERENTIAL;
 import static no.rutebanken.marduk.Constants.EXPORT_END_DATE;
 import static no.rutebanken.marduk.Constants.EXPORT_FILE_NAME;
-import static no.rutebanken.marduk.Constants.EXPORT_NAME;
 import static no.rutebanken.marduk.Constants.EXPORT_START_DATE;
 import static no.rutebanken.marduk.Constants.FILE_HANDLE;
 import static no.rutebanken.marduk.Constants.JSON_PART;
-import static no.rutebanken.marduk.Constants.OBJECT_TYPE_CONCERTO;
 import static no.rutebanken.marduk.Constants.PROVIDER_ID;
 import static no.rutebanken.marduk.Constants.USER;
 import static no.rutebanken.marduk.Utils.Utils.getLastPathElementOfUrl;
@@ -101,7 +99,7 @@ public class ExportConcertoRouteBuilder extends AbstractChouetteRouteBuilder {
                         endDate = (end != null) ? new Date(end) : null;
                     }
 
-                    e.getIn().setHeader(JSON_PART, Parameters.getConcertoExportParameters(getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)),  user, startDate, endDate, String.valueOf(e.getIn().getHeader(OBJECT_TYPE_CONCERTO))));
+                    e.getIn().setHeader(JSON_PART, Parameters.getConcertoExportParameters(getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)),  user, startDate, endDate));
                 }) //Using header to addToExchange json data
                 .log(LoggingLevel.INFO, correlation() + "Creating multipart request")
                 .to("log:" + getClass().getName() + "?level=DEBUG&showAll=true&multiline=true")

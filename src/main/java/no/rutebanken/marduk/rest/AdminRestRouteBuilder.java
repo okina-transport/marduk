@@ -67,7 +67,6 @@ import static no.rutebanken.marduk.Constants.FILE_NAME;
 import static no.rutebanken.marduk.Constants.IMPORT;
 import static no.rutebanken.marduk.Constants.JSON_EXPORTS;
 import static no.rutebanken.marduk.Constants.NO_GTFS_EXPORT;
-import static no.rutebanken.marduk.Constants.OBJECT_TYPE_CONCERTO;
 import static no.rutebanken.marduk.Constants.OKINA_REFERENTIAL;
 import static no.rutebanken.marduk.Constants.PROVIDER_ID;
 import static no.rutebanken.marduk.Constants.PROVIDER_IDS;
@@ -1091,9 +1090,6 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
             }
             if (headers.get(EXPORT_NAME) != null) {
                 e.getIn().setHeader(EXPORT_NAME, headers.get(EXPORT_NAME));
-            }
-            if (headers.get(OBJECT_TYPE_CONCERTO) != null) {
-                e.getIn().setHeader(OBJECT_TYPE_CONCERTO, headers.get(OBJECT_TYPE_CONCERTO));
             }
         }
     }

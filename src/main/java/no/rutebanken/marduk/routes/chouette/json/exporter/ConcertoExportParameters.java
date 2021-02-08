@@ -44,17 +44,13 @@ public class ConcertoExportParameters {
 
     public static class ConcertoExport extends AbstractExportParameters {
 
-        @JsonProperty("object_type_concerto")
-        public String objectTypeConcerto;
-
-        public ConcertoExport(String name, String referentialName, String organisationName, String userName, Date startDate, Date endDate, String objectTypeConcerto) {
+        public ConcertoExport(String name, String referentialName, String organisationName, String userName, Date startDate, Date endDate) {
             this.name = name;
             this.referentialName = referentialName;
             this.organisationName = organisationName;
             this.userName = userName;
             this.startDate = (startDate != null) ? startDate : DateUtils.startDateFor(2L);
             this.endDate = (endDate != null) ? endDate : DateUtils.endDateFor(365);
-            this.objectTypeConcerto = objectTypeConcerto;
         }
 
     }

@@ -125,11 +125,11 @@ public class Parameters {
         }
     }
 
-    public static String getConcertoExportParameters(Provider provider, String user, Date startDate, Date endDate, String objectTypeConcerto) {
+    public static String getConcertoExportParameters(Provider provider, String user, Date startDate, Date endDate) {
         try {
             ChouetteInfo chouetteInfo = provider.chouetteInfo;
             ConcertoExportParameters.ConcertoExport concertoExport = new ConcertoExportParameters.ConcertoExport("offre",
-                    chouetteInfo.referential, chouetteInfo.organisation, user, startDate, endDate, objectTypeConcerto);
+                    chouetteInfo.referential, chouetteInfo.organisation, user, startDate, endDate);
             ConcertoExportParameters.Parameters parameters = new ConcertoExportParameters.Parameters(concertoExport);
             ConcertoExportParameters importParameters = new ConcertoExportParameters(parameters);
             ObjectMapper mapper = new ObjectMapper();

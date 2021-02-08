@@ -73,7 +73,6 @@ public class TiamatExportStopPlacesBuilder extends AbstractChouetteRouteBuilder 
                     // required to skip chouette reports parsing when polling job status
                     e.getIn().setHeader(Constants.TIAMAT_STOP_PLACES_EXPORT, exportJob.getId());
                     String tiamatJobStatusUrl = stopPlacesExportUrl + "/" + exportJob.getId() + "/status";
-//                    setExportPollingHeaders(e, exportJob.getId().toString(), tiamatJobStatusUrl, TIAMAT_EXPORT_ROUTING_DESTINATION);
                     e.getIn().setHeader(CHOUETTE_JOB_STATUS_URL, tiamatJobStatusUrl);
                     e.getIn().setHeader(Constants.CHOUETTE_JOB_ID, exportJob.getId());
                     log.info("Tiamat Stop Places Export  : export parsed => " + exportJob.getId() + " : " + tiamatJobStatusUrl);
@@ -100,7 +99,9 @@ public class TiamatExportStopPlacesBuilder extends AbstractChouetteRouteBuilder 
                 })
                 .process(exportToConsumersProcessor)
                 .setHeader(BLOBSTORE_MAKE_BLOB_PUBLIC, constant(publicPublication))
+                .log(LoggingLevel.INFO, "Starting Tiamat Stop Places export upload")
                 .to("direct:uploadBlobExport")
+                .log(LoggingLevel.INFO, "Upload to consumers and blob store completed")
                 .routeId("tiamat-stop-places-export-result-job");
     }
 

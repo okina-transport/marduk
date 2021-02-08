@@ -31,7 +31,6 @@ public class Constants {
     public static final String EXPORT_NAME = "EXPORT_NAME";
     public static final String CURRENT_EXPORT = "CURRENT_EXPORT";
     public static final String JSON_EXPORTS = "JSON_EXPORTS";
-    public static final String OBJECT_TYPE_CONCERTO = "OBJECT_TYPE_CONCERTO";
 
     // tag for tiamat exports
     public static final String TIAMAT_STOP_PLACES_EXPORT = "TIAMAT_STOP_PLACES_EXPORT";
