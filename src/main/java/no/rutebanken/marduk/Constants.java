@@ -39,6 +39,7 @@ public class Constants {
     public static final String SPLIT_CHARACTER = "splitCharacter";
     public static final String ROUTE_MERGE = "routeMerge";
     public static final String ID_SUFFIX = "ID_SUFFIX";
+    public static final String ID_PREFIX_TO_REMOVE = "idPrefixToRemove";
 
     // tag for tiamat exports
     public static final String TIAMAT_STOP_PLACES_EXPORT = "TIAMAT_STOP_PLACES_EXPORT";

@@ -140,9 +140,10 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
                     String routeMergeStr = e.getIn().getHeader(ROUTE_MERGE, String.class);
                     boolean routeMerge = StringUtils.isEmpty(routeMergeStr)?false:Boolean.valueOf(routeMergeStr);
 
+                    String idPrefixToRemove = e.getIn().getHeader(ID_PREFIX_TO_REMOVE, String.class);
                     String user = e.getIn().getHeader(USER, String.class);
                     String description = e.getIn().getHeader(DESCRIPTION, String.class);
-                    e.getIn().setHeader(JSON_PART, getImportParameters(fileName, fileType, providerId, user, description,routeMerge,splitCharacter));
+                    e.getIn().setHeader(JSON_PART, getImportParameters(fileName, fileType, providerId, user, description,routeMerge,splitCharacter,idPrefixToRemove));
                 }) //Using header to addToExchange json data
                 .log(LoggingLevel.DEBUG, correlation() + "import parameters: " + header(JSON_PART))
                 .to("direct:sendImportJobRequest")
@@ -228,9 +229,9 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
 
     }
 
-    private String getImportParameters(String fileName, String fileType, Long providerId, String user, String description, boolean routeMerge, String splitCharacter) {
+    private String getImportParameters(String fileName, String fileType, Long providerId, String user, String description, boolean routeMerge, String splitCharacter,String idPrefixToRemove) {
         Provider provider = getProviderRepository().getProvider(providerId);
-        return Parameters.createImportParameters(fileName, fileType, provider, user, description,routeMerge, splitCharacter);
+        return Parameters.createImportParameters(fileName, fileType, provider, user, description,routeMerge, splitCharacter,idPrefixToRemove);
     }
 
 }

@@ -73,12 +73,16 @@ public class GtfsImportParameters extends ChouetteJobParameters {
         @JsonInclude(JsonInclude.Include.ALWAYS)
         public String splitCharacter = "";
 
+        @JsonProperty("id_prefix_to_remove")
+        @JsonInclude(JsonInclude.Include.ALWAYS)
+        public String idPrefixToRemove = "";
+
     }
 
     public static GtfsImportParameters create(String name, String objectIdPrefix, String referentialName, String organisationName,
                                                      String userName, boolean cleanRepository, boolean enableValidation,
                                                      boolean allowCreateMissingStopPlace, boolean enableStopPlaceIdMapping,
-                                                     Set<String> generateMissingRouteSectionsForModes, String description,boolean routeMerge,String splitCharacter) {
+                                                     Set<String> generateMissingRouteSectionsForModes, String description,boolean routeMerge,String splitCharacter, String idPrefixToRemove) {
         Gtfs gtfsImport = new Gtfs();
         gtfsImport.name = name;
         gtfsImport.objectIdPrefix = objectIdPrefix;
@@ -94,6 +98,7 @@ public class GtfsImportParameters extends ChouetteJobParameters {
         }
         gtfsImport.routeMerge = routeMerge;
         gtfsImport.splitCharacter = splitCharacter;
+        gtfsImport.idPrefixToRemove = idPrefixToRemove;
         Parameters parameters = new Parameters();
         parameters.gtfsImport = gtfsImport;
         GtfsImportParameters gtfsImportParameters = new GtfsImportParameters();
