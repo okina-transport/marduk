@@ -123,6 +123,11 @@ public class MultipleExportProcessor implements Processor {
         if (export.getIdSuffix() != null){
             exchange.getIn().getHeaders().put(ID_SUFFIX, export.getIdSuffix());
         }
+
+        if (export.getCommercialPointIdPrefix() != null){
+            exchange.getIn().getHeaders().put(COMMERCIAL_POINT_ID_PREFIX, export.getCommercialPointIdPrefix());
+        }
+
         producer.send("activemq:queue:ChouetteExportGtfsQueue", exchange);
     }
 

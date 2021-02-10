@@ -27,6 +27,7 @@ public class ExportTemplate implements Serializable {
     private String lineIdPrefix;
     private IdFormat idFormat;
     private String idSuffix;
+    private String commercialPointIdPrefix;
 
     public Long getId() {
         return id;
@@ -133,6 +134,13 @@ public class ExportTemplate implements Serializable {
         this.idSuffix = idSuffix;
     }
 
+    public String getCommercialPointIdPrefix() {
+        return commercialPointIdPrefix;
+    }
+
+    public void setCommercialPointIdPrefix(String commercialPointIdPrefix) {
+        this.commercialPointIdPrefix = commercialPointIdPrefix;
+    }
 
     /**
      * Détermine si le fichier exporté correspondant à cet export doit être accessible en public

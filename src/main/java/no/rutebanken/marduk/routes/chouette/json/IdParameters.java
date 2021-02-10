@@ -8,15 +8,17 @@ public class IdParameters {
     private String lineIdPrefix;
     private IdFormat idFormat;
     private String idSuffix;
+    private String commercialPointIdPrefix;
 
     public IdParameters() {
     }
 
-    public IdParameters(String stopIdPrefix, IdFormat idFormat, String idSuffix, String lineIdPrefix) {
+    public IdParameters(String stopIdPrefix, IdFormat idFormat, String idSuffix, String lineIdPrefix,String commercialPointIdPrefix) {
         this.stopIdPrefix = stopIdPrefix;
         this.idFormat = idFormat;
         this.idSuffix = idSuffix;
         this.lineIdPrefix = lineIdPrefix;
+        this.commercialPointIdPrefix = commercialPointIdPrefix;
     }
 
     public String getStopIdPrefix() {
@@ -49,5 +51,13 @@ public class IdParameters {
 
     public void setIdSuffix(String idSuffix) {
         this.idSuffix = idSuffix;
+    }
+
+    public String getCommercialPointIdPrefix() {
+        return commercialPointIdPrefix;
+    }
+
+    public void setCommercialPointIdPrefix(String commercialPointIdPrefix) {
+        this.commercialPointIdPrefix = commercialPointIdPrefix;
     }
 }
