@@ -31,7 +31,9 @@ import org.apache.commons.lang3.StringUtils;
 
 import java.io.IOException;
 import java.io.StringWriter;
-import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 import java.util.Date;
 import java.util.List;
 
@@ -127,8 +129,9 @@ public class Parameters {
 
     public static String getConcertoExportParameters(Provider provider, String user, Date startDate, Date endDate) {
         try {
+            LocalDateTime localDateTime = LocalDateTime.now(ZoneOffset.UTC).withNano(0);
             ChouetteInfo chouetteInfo = provider.chouetteInfo;
-            ConcertoExportParameters.ConcertoExport concertoExport = new ConcertoExportParameters.ConcertoExport("offre",
+            ConcertoExportParameters.ConcertoExport concertoExport = new ConcertoExportParameters.ConcertoExport("concerto_idfm_" + localDateTime.format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss")) + "Z.csv",
                     chouetteInfo.referential, chouetteInfo.organisation, user, startDate, endDate);
             ConcertoExportParameters.Parameters parameters = new ConcertoExportParameters.Parameters(concertoExport);
             ConcertoExportParameters importParameters = new ConcertoExportParameters(parameters);

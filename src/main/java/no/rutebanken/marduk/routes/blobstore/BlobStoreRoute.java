@@ -25,7 +25,6 @@ import org.apache.camel.LoggingLevel;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import java.text.SimpleDateFormat;
 import java.util.Optional;
 
 import static no.rutebanken.marduk.Constants.*;
@@ -35,8 +34,6 @@ public class BlobStoreRoute extends BaseRouteBuilder {
 
     @Value("${google.publish.public:false}")
     private boolean publicPublication;
-
-    private static SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMddhhmmss");
 
     @Override
     public void configure() throws Exception {
