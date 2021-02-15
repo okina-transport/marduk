@@ -63,7 +63,7 @@ public class GtfsImportParameters extends ChouetteJobParameters {
 
         @JsonProperty("parse_connection_links")
         @JsonInclude(JsonInclude.Include.ALWAYS)
-        public Boolean parseConnectionLinks = false;
+        public Boolean parseConnectionLinks = true;
 
         @JsonProperty("route_merge")
         @JsonInclude(JsonInclude.Include.ALWAYS)
