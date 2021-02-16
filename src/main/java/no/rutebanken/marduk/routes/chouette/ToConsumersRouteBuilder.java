@@ -31,12 +31,4 @@ public class ToConsumersRouteBuilder extends AbstractChouetteRouteBuilder {
                 .routeId("send-exports-to-consumers-job");
     }
 
-
-//    from("file://C:\\test")
-//          .choice()
-//          .when(simple("${in.header.CamelFileName} contains '*.xlsx'"))
-//            .to("ftp://rob@10.171.16.100/home/rob/test/?password=rob")
-//          .otherwise()
-//          .to("log://org.apache.camel.howto?showAll=true&level=DEBUG");
-
 }

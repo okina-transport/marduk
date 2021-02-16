@@ -96,5 +96,7 @@ public class Constants {
 
     public static final String NOTIFICATION = "Notification";
     public static final String NOTIFICATION_URL = "NotificationUrl";
+
+    public static final String CONCERTO_EXPORT_SCHEDULER = "ConcertoExportScheduler";
 }
 
