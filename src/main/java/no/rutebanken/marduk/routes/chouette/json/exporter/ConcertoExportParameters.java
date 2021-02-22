@@ -49,8 +49,8 @@ public class ConcertoExportParameters {
             this.referentialName = referentialName;
             this.organisationName = organisationName;
             this.userName = userName;
-            this.startDate = (startDate != null) ? startDate : DateUtils.startDateFor(2L);
-            this.endDate = (endDate != null) ? endDate : DateUtils.endDateFor(365);
+            this.startDate = startDate;
+            this.endDate = endDate;
         }
 
     }

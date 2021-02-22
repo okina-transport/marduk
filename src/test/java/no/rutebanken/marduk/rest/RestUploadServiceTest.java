@@ -60,7 +60,7 @@ public class RestUploadServiceTest {
 
     @Test
     public void restStreamUpload() throws Exception {
-        HttpStatus httpStatus = restUploadService.uploadStream(new FileInputStream(this.workingDir.resolve("NRI 20160219.rar").toFile()), REST_IMPORT_URL, "Testupload-export-file.zip", null, null);
+        HttpStatus httpStatus = restUploadService.uploadStream(new FileInputStream(this.workingDir.resolve("NRI 20160219.rar").toFile()), REST_IMPORT_URL, "Testupload-export-file.zip", null);
         Assertions.assertThat(httpStatus.is2xxSuccessful()).isTrue();
     }
 }

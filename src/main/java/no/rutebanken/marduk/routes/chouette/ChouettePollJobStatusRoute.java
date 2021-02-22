@@ -70,9 +70,6 @@ public class ChouettePollJobStatusRoute extends AbstractChouetteRouteBuilder {
     @Value("${chouette.url}")
     private String chouetteUrl;
 
-    @Autowired
-    private MultipleExportProcessor multipleExportProcessor;
-
     private int maxConsumers = 5;
 
     @Autowired

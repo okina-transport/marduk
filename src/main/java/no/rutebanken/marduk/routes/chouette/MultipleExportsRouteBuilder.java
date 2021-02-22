@@ -8,6 +8,7 @@ import static no.rutebanken.marduk.Constants.PROVIDER_ID;
 
 @Component
 public class MultipleExportsRouteBuilder extends AbstractChouetteRouteBuilder {
+
     @Autowired
     private MultipleExportProcessor multipleExportProcessor;
 

@@ -45,7 +45,6 @@ import org.springframework.stereotype.Component;
 
 import javax.ws.rs.NotFoundException;
 import java.net.URLDecoder;
-import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -535,6 +534,33 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .setBody(simple(""))
                 .to("direct:runOtpTravelSearchQA")
                 .routeId("admin-otp-travelsearch-qa")
+                .endRest()
+
+                .post("/update-scheduler-concerto-export")
+                .description("Update scheduler for the Concerto export process in Chouette.")
+                .consumes(PLAIN)
+                .produces(PLAIN)
+                .responseMessage().code(200).message("Command accepted").endResponseMessage()
+                .route()
+                .to("direct:authorizeRequest")
+                .log(LoggingLevel.INFO, correlation() + "Update scheduler for the Concerto export")
+                .removeHeaders("CamelHttp*")
+                .to("direct:updateSchedulerForConcertoExport")
+                .routeId("admin-export-concerto-scheduler")
+                .endRest()
+
+                .get("/get-cron")
+                .description("Get cron Concerto export")
+                .consumes(PLAIN)
+                .produces(JSON)
+                .responseMessage().code(200).message("Command accepted").endResponseMessage()
+                .route()
+                .setHeader("Access-Control-Expose-Headers", simple(FILE_NAME))
+                .to("direct:authorizeRequest")
+                .log(LoggingLevel.INFO, correlation() + "Get cron from scheduler for the Concerto export")
+                .removeHeaders("CamelHttp*")
+                .to("direct:getCron")
+                .routeId("admin-get-cron-concerto-scheduler")
                 .endRest();
 
 

@@ -17,6 +17,8 @@
 package no.rutebanken.marduk.routes.chouette;
 
 import no.rutebanken.marduk.Constants;
+import no.rutebanken.marduk.config.SchedulerConcertoConfig;
+import no.rutebanken.marduk.routes.ConcertoJob;
 import no.rutebanken.marduk.routes.chouette.json.Parameters;
 import no.rutebanken.marduk.routes.status.JobEvent;
 import no.rutebanken.marduk.routes.status.JobEvent.State;
@@ -25,22 +27,33 @@ import no.rutebanken.marduk.services.FileSystemService;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.component.http4.HttpMethods;
+import org.quartz.CronScheduleBuilder;
+import org.quartz.CronTrigger;
+import org.quartz.JobBuilder;
+import org.quartz.JobDetail;
+import org.quartz.Scheduler;
+import org.quartz.SchedulerException;
+import org.quartz.Trigger;
+import org.quartz.TriggerBuilder;
+import org.quartz.TriggerKey;
+import org.quartz.impl.StdSchedulerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.quartz.JobDetailFactoryBean;
+import org.springframework.scheduling.quartz.SchedulerFactoryBean;
 import org.springframework.stereotype.Component;
 
 import java.io.File;
 import java.util.Date;
+import java.util.Map;
 import java.util.UUID;
 
 import static no.rutebanken.marduk.Constants.BLOBSTORE_MAKE_BLOB_PUBLIC;
-import static no.rutebanken.marduk.Constants.BLOBSTORE_PATH_OUTBOUND;
 import static no.rutebanken.marduk.Constants.CHOUETTE_JOB_STATUS_URL;
-import static no.rutebanken.marduk.Constants.CHOUETTE_REFERENTIAL;
+import static no.rutebanken.marduk.Constants.CONCERTO_EXPORT_SCHEDULER;
 import static no.rutebanken.marduk.Constants.EXPORT_END_DATE;
 import static no.rutebanken.marduk.Constants.EXPORT_FILE_NAME;
 import static no.rutebanken.marduk.Constants.EXPORT_START_DATE;
-import static no.rutebanken.marduk.Constants.FILE_HANDLE;
 import static no.rutebanken.marduk.Constants.JSON_PART;
 import static no.rutebanken.marduk.Constants.PROVIDER_ID;
 import static no.rutebanken.marduk.Constants.USER;
@@ -70,6 +83,9 @@ public class ExportConcertoRouteBuilder extends AbstractChouetteRouteBuilder {
     @Autowired
     FileSystemService fileSystemService;
 
+    @Autowired
+    SchedulerConcertoConfig schedulerConcerto;
+
     @Override
     public void configure() throws Exception {
         super.configure();
@@ -86,8 +102,6 @@ public class ExportConcertoRouteBuilder extends AbstractChouetteRouteBuilder {
                 .process(e -> JobEvent.providerJobBuilder(e).timetableAction(TimetableAction.EXPORT_CONCERTO).state(State.PENDING).build())
                 .to("direct:updateStatus")
                 .process(e -> {
-                    e.getIn().setHeader(CHOUETTE_REFERENTIAL, "admin");
-
                     String user = e.getIn().getHeader(USER, String.class);
                     Date startDate = null;
                     Date endDate = null;
@@ -107,7 +121,7 @@ public class ExportConcertoRouteBuilder extends AbstractChouetteRouteBuilder {
                 .to("log:" + getClass().getName() + "?level=DEBUG&showAll=true&multiline=true")
                 .setHeader(Exchange.CONTENT_TYPE, simple("multipart/form-data"))
                 .to("log:" + getClass().getName() + "?level=DEBUG&showAll=true&multiline=true")
-                .toD(chouetteUrl + "/chouette_iev/referentials/${header." + CHOUETTE_REFERENTIAL + "}/exporter/concerto")
+                .toD(chouetteUrl + "/chouette_iev/referentials/admin/exporter/concerto")
                 .to("log:" + getClass().getName() + "?level=DEBUG&showAll=true&multiline=true")
                 .process(e -> {
                     e.getIn().setHeader(CHOUETTE_JOB_STATUS_URL, e.getIn().getHeader("Location").toString().replaceFirst("http", "http4"));
@@ -132,13 +146,10 @@ public class ExportConcertoRouteBuilder extends AbstractChouetteRouteBuilder {
                 .toD("${header.data_url}")
                 .process(e -> {
                     File file = fileSystemService.getOfferFileConcerto(e);
-                    e.getIn().setHeader("fileName", file.getName());
                     e.getIn().setHeader(EXPORT_FILE_NAME, file.getName());
                 })
-                .setHeader("fileName", simple("concerto.csv"))
                 .process(exportToConsumersProcessor)
                 .setHeader(BLOBSTORE_MAKE_BLOB_PUBLIC, constant(publicPublication))
-                .setHeader(FILE_HANDLE, simple(BLOBSTORE_PATH_OUTBOUND + "concerto/${header." + CHOUETTE_REFERENTIAL + "}-" + Constants.CURRENT_AGGREGATED_CONCERTO_FILENAME))
                 .to("direct:uploadBlobExport")
                 .log(LoggingLevel.INFO, "Upload to consumers and blob store completed")
                 .process(e -> JobEvent.providerJobBuilder(e).timetableAction(TimetableAction.EXPORT_CONCERTO).state(State.OK).build())
@@ -151,8 +162,54 @@ public class ExportConcertoRouteBuilder extends AbstractChouetteRouteBuilder {
                 .end()
                 .to("direct:updateStatus")
                 .routeId("chouette-process-export-concerto-status");
+
+
+        from("direct:updateSchedulerForConcertoExport")
+                .log(LoggingLevel.INFO, getClass().getName(), "Update scheduler Concerto Export")
+                .process(this::updateSchedulerForConcertoExport)
+                .routeId("update-scheduler-process-concerto-export");
+
+        from("direct:getCron")
+                .log(LoggingLevel.INFO, getClass().getName(), "Get scheduler Concerto Export")
+                .process(this::getCron)
+                .routeId("get-cron-scheduler-process-concerto-export");
     }
 
+    private void getCron(Exchange exchange) throws SchedulerException {
+        SchedulerFactoryBean scheduler = schedulerConcerto.getSchedulerConcerto();
+        CronTrigger trigger = (CronTrigger) scheduler.getScheduler().getTrigger(TriggerKey.triggerKey("ConcertoJobTrigger"));
+        if(trigger != null){
+            exchange.getIn().setBody(trigger.getCronExpression());
+        }
+    }
+
+    private void updateSchedulerForConcertoExport(Exchange e) throws SchedulerException {
+        Map headers = (Map) e.getIn().getBody(Map.class).get("headers");
+        if (headers != null) {
+            if (headers.get(CONCERTO_EXPORT_SCHEDULER) != null) {
+                SchedulerFactoryBean scheduler = schedulerConcerto.getSchedulerConcerto();
+
+                String concertoExportSchedulerCron = (String) headers.get(CONCERTO_EXPORT_SCHEDULER);
+
+                JobDetailFactoryBean concertoJobDetails = schedulerConcerto.getJobConcerto();
+
+                Trigger concertoTrigger = TriggerBuilder.newTrigger().forJob(concertoJobDetails.getObject())
+                        .withIdentity("ConcertoJobTrigger")
+                        .withSchedule(CronScheduleBuilder.cronSchedule(concertoExportSchedulerCron))
+                        .build();
+
+                scheduler.start();
+
+                if(scheduler.getScheduler().checkExists(concertoJobDetails.getObject().getKey())){
+                    scheduler.getScheduler().deleteJob(concertoJobDetails.getObject().getKey());
+                }
+
+                scheduler.getScheduler().scheduleJob(concertoJobDetails.getObject(), concertoTrigger);
+
+                log.info("Concerto Export Scheduler created with cron expression: " + concertoExportSchedulerCron);
+            }
+        }
+    }
 }
 
 

@@ -62,7 +62,6 @@ public class MultipleExportProcessor implements Processor {
                 if (ExportType.NETEX.equals(export.getType())) {
                     toNetexExport(export, exchange.copy(true));
                 } else if (ExportType.GTFS == export.getType()) {
-
                     toGtfsExport(export, exchange.copy(true));
                 } else if (ExportType.ARRET == export.getType()) {
                     toStopPlacesExport(export, exchange.copy(true));
@@ -74,9 +73,6 @@ public class MultipleExportProcessor implements Processor {
             }
         });
     }
-
-
-
 
 
     private void toNetexExport(ExportTemplate export, Exchange exchange) throws Exception {
@@ -124,8 +120,6 @@ public class MultipleExportProcessor implements Processor {
         boolean noGtfs = export.getType() != ExportType.GTFS;
         exchange.getIn().getHeaders().put(NO_GTFS_EXPORT, noGtfs);
         exchange.getOut().setBody("Export id : " + export.getId());
-//        Map<String, Object> headers = new HashMap<>();
-//        headers.putAll(exchange.getIn().getHeaders());
         Map<String, Object> headers = exchange.getIn().getHeaders();
         headers.put(PROVIDER_ID, headers.get("providerId"));
         headers.put(NO_GTFS_EXPORT, noGtfs);

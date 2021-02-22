@@ -23,7 +23,6 @@ public class ExportToConsumersProcessor implements Processor {
 
     Logger log = LoggerFactory.getLogger(this.getClass());
 
-//    @Autowired
     private static ExportJsonMapper exportJsonMapper = new ExportJsonMapper();
 
     @Autowired
@@ -49,7 +48,7 @@ public class ExportToConsumersProcessor implements Processor {
             log.info("Found " + export.getConsumers().size() + " for export " + export.getId() + "/" + export.getName());
             String filePath = (String) exchange.getIn().getHeaders().get("fileName");
             InputStream streamToUpload = (InputStream) exchange.getIn().getBody();
-            export.getConsumers().stream().forEach(consumer -> {
+            export.getConsumers().forEach(consumer -> {
                 log.info(consumer.getType() + " consumer upload starting " + consumer.getName() + " => " + consumer.getServiceUrl());
                 try {
                     String passwordDecryptedConsumer = null;
@@ -70,7 +69,7 @@ public class ExportToConsumersProcessor implements Processor {
                             ftpService.uploadStreamSFTP(streamToUpload, consumer.getServiceUrl(), consumer.getLogin(), passwordDecryptedConsumer, consumer.getPort(), consumer.getDestinationPath(), filePath);
                             break;
                         case REST:
-                            restUploadService.uploadStream(streamToUpload, consumer.getServiceUrl(), filePath, consumer.getLogin(), secretKeyDecryptedConsumer);
+                            restUploadService.uploadStream(streamToUpload, consumer.getServiceUrl(), filePath, secretKeyDecryptedConsumer);
                             break;
                     }
                     log.info(consumer.getType() + " consumer upload completed " + consumer.getName() + " => " + consumer.getServiceUrl());
