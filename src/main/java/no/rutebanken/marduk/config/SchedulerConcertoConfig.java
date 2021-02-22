@@ -36,7 +36,7 @@ public class SchedulerConcertoConfig {
     @Value("${spring.datasource.username}")
     private String user;
 
-    @Value("${spring.datasource.username}")
+    @Value("${spring.datasource.password}")
     private String password;
 
 
