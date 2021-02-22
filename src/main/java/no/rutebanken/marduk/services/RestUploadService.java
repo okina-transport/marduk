@@ -19,7 +19,7 @@ import java.util.Map;
 @Component
 public class RestUploadService {
 
-    public HttpStatus uploadStream(InputStream stream, String restUrl, String filename, String key, String secret) throws IOException {
+    public HttpStatus uploadStream(InputStream stream, String restUrl, String filename, String secret) throws IOException {
         // on clone l'input stream, car celui qui sera envoyé au rest template Sprint sera fermé => pose problème
         // plus tard dans la route lorsque Camel essaie de le relire.
         ByteArrayOutputStream baos = new ByteArrayOutputStream();

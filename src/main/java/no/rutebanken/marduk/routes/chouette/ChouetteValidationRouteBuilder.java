@@ -60,8 +60,7 @@ public class ChouetteValidationRouteBuilder extends AbstractChouetteRouteBuilder
 
     @Value("${chouette.url}")
     private String chouetteUrl;
-    @Autowired
-    private MultipleExportProcessor multipleExportProcessor;
+
     @Autowired
     ExportJsonMapper exportJsonMapper;
 

@@ -125,7 +125,6 @@ public class FtpService {
 
         try {
             JSch jsch = new JSch();
-//            jsch.addIdentity(sftpPrivateKey, sftpPassphrase);
             session = jsch.getSession(login, ftpFilePath, port);
             session.setPassword(password);
             java.util.Properties config = new java.util.Properties();
