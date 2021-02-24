@@ -35,7 +35,10 @@ public class RestUploadServiceTest {
     private RestUploadService restUploadService = new RestUploadService();
 
 //    private static final String REST_IMPORT_URL = "https://iboo-preprod.enroute.mobi/api/v1/workbenches/60/imports.json";
+//    private static final String REST_IMPORT_URL = "http://preprod1.api.concerto.ratpdev.com/concerto/import";
+
     private static final String REST_IMPORT_URL = "https://jsonplaceholder.typicode.com/posts";
+
 
     @Test
     public void restExportUpload() {
@@ -61,6 +64,12 @@ public class RestUploadServiceTest {
     @Test
     public void restStreamUpload() throws Exception {
         HttpStatus httpStatus = restUploadService.uploadStream(new FileInputStream(this.workingDir.resolve("NRI 20160219.rar").toFile()), REST_IMPORT_URL, "Testupload-export-file.zip", null);
+        Assertions.assertThat(httpStatus.is2xxSuccessful()).isTrue();
+    }
+
+    @Test
+    public void restConcertoStreamUpload() throws Exception {
+        HttpStatus httpStatus = restUploadService.uploadConcertoStream(new FileInputStream(this.workingDir.resolve("NRI 20160219.rar").toFile()), REST_IMPORT_URL, "Testupload-export-file.csv", "306426cc2a7b91b4336db35c4cba8aee5e50d993d588befd02704cd5091c934c");
         Assertions.assertThat(httpStatus.is2xxSuccessful()).isTrue();
     }
 }

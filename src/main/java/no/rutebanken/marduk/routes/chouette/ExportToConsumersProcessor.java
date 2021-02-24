@@ -71,6 +71,8 @@ public class ExportToConsumersProcessor implements Processor {
                         case REST:
                             restUploadService.uploadStream(streamToUpload, consumer.getServiceUrl(), filePath, secretKeyDecryptedConsumer);
                             break;
+                        case RESTCONCERTO:
+                            restUploadService.uploadConcertoStream(streamToUpload, consumer.getServiceUrl(), filePath, secretKeyDecryptedConsumer);
                     }
                     log.info(consumer.getType() + " consumer upload completed " + consumer.getName() + " => " + consumer.getServiceUrl());
                 } catch (Exception e) {

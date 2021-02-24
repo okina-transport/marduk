@@ -46,6 +46,31 @@ public class RestUploadService {
         return uploadResp.getStatusCode();
     }
 
+    public HttpStatus uploadConcertoStream(InputStream stream, String serviceUrl, String filePath, String secretKeyDecryptedConsumer) throws IOException {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        byte[] buffer = new byte[1024];
+        int len;
+        while ((len = stream.read(buffer)) > -1 ) {
+            baos.write(buffer, 0, len);
+        }
+        baos.flush();
+        InputStream inputStreamToSend = new ByteArrayInputStream(baos.toByteArray());
+
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.MULTIPART_FORM_DATA);
+        headers.add("Authorization", "Token token=" + secretKeyDecryptedConsumer);
+
+        LinkedMultiValueMap<String, Object> body = new LinkedMultiValueMap();
+        body.add("request", "{\"force\": true}");
+        body.add("data", new MultipartFileResource(inputStreamToSend, filePath));
+
+        RestTemplate rest = new RestTemplate();
+        HttpEntity<Map> request = new HttpEntity<>(body, headers);
+        ResponseEntity<Map> uploadResp = rest.postForEntity(serviceUrl, request, Map.class);
+        return uploadResp.getStatusCode();
+    }
+
     /**
      * Useful to upload directly InputStream rather than file based FileSystemResource
      */
