@@ -107,14 +107,19 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
                         endDate = (end != null) ? new Date(end) : null;
                     }
 
+                    boolean mappingLinesIds= false;
+                    if (e.getIn().getHeader(MAPPING_LINES_IDS) != null){
+                        mappingLinesIds = (boolean) e.getIn().getHeader(MAPPING_LINES_IDS);
+                    }
+
 
                     if (e.getIn().getHeader(EXPORT_LINES_IDS) == null && startDate != null && endDate != null) {
-                        gtfsParams = Parameters.getGtfsExportParameters(getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)),exportName, user, null, startDate, endDate,exportedFilename,idParams);
+                        gtfsParams = Parameters.getGtfsExportParameters(getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)),exportName, user, null, startDate, endDate,exportedFilename,idParams,mappingLinesIds);
                     }
                     else if (e.getIn().getHeader(EXPORT_LINES_IDS) != null) {
                         String linesIdsS = e.getIn().getHeader(EXPORT_LINES_IDS, String.class);
                         List<Long> linesIds = Arrays.stream(StringUtils.split(linesIdsS, ",")).map(s -> Long.valueOf(s)).collect(toList());
-                        gtfsParams = Parameters.getGtfsExportParameters(getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)),exportName, user, linesIds, startDate, endDate,exportedFilename,idParams);
+                        gtfsParams = Parameters.getGtfsExportParameters(getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)),exportName, user, linesIds, startDate, endDate,exportedFilename,idParams,mappingLinesIds);
                     }
                     else {
                         gtfsParams = Parameters.getGtfsExportParameters(getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)), user,exportedFilename);
@@ -164,7 +169,6 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
                     })
                     .setHeader("fileName", simple("GTFS.zip"))
                     .process(exportToConsumersProcessor)
-
 //                    .to("direct:addGtfsFeedInfo")
                     .setHeader(BLOBSTORE_MAKE_BLOB_PUBLIC, constant(publicPublication))
                     .setHeader(FILE_HANDLE, simple(BLOBSTORE_PATH_OUTBOUND + "gtfs/${header." + CHOUETTE_REFERENTIAL + "}-" + Constants.CURRENT_AGGREGATED_GTFS_FILENAME))

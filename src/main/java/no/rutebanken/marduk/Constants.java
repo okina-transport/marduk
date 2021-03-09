@@ -43,6 +43,7 @@ public class Constants {
     public static final String COMMERCIAL_POINT_ID_PREFIX = "COMMERCIAL_POINT_ID_PREFIX";
     public static final String STOP_AREA_PREFIX_TO_REMOVE = "stopAreaPrefixToRemove";
     public static final String AREA_CENTROID_PREFIX_TO_REMOVE = "areaCentroidPrefixToRemove";
+    public static final String MAPPING_LINES_IDS= "MAPPING_LINES_IDS";
 
     // tag for tiamat exports
     public static final String TIAMAT_STOP_PLACES_EXPORT = "TIAMAT_STOP_PLACES_EXPORT";
@@ -61,7 +62,6 @@ public class Constants {
     public static final String CURRENT_AGGREGATED_GTFS_FILENAME = "aggregated-gtfs.zip";
     public static final String CURRENT_AGGREGATED_NETEX_FILENAME = "aggregated-netex.zip";
     public static final String CURRENT_AGGREGATED_CONCERTO_FILENAME = "concerto.csv";
-    public static final String CURRENT_AGGREGATED_NEPTUNE_FILENAME = "aggregated-neptune.zip";
     public static final String GRAPH_OBJ = "Graph.obj";
     public static final String BASE_GRAPH_OBJ = "baseGraph.obj";
 
@@ -109,5 +109,7 @@ public class Constants {
 
     public static final String NOTIFICATION = "Notification";
     public static final String NOTIFICATION_URL = "NotificationUrl";
+
+    public static final String CONCERTO_EXPORT_SCHEDULER = "ConcertoExportScheduler";
 }
 

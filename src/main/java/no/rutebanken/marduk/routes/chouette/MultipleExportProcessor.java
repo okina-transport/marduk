@@ -47,7 +47,6 @@ public class MultipleExportProcessor implements Processor {
     public void process(Exchange exchange) {
         List<ExportTemplate> exports = (List<ExportTemplate>) exchange.getIn().getBody();
         exchange.getIn().setBody(null);
-        updateExportWithMatchingMosaicLines(exports, exchange);
         exports.stream().forEach(export -> {
             log.info("Multiple export : export => " + export.getId() + "/" + export.getName());
             try {
@@ -68,9 +67,6 @@ public class MultipleExportProcessor implements Processor {
             }
         });
     }
-
-
-
 
 
     private void toNetexExport(ExportTemplate export, Exchange exchange) throws Exception {
@@ -128,6 +124,8 @@ public class MultipleExportProcessor implements Processor {
             exchange.getIn().getHeaders().put(COMMERCIAL_POINT_ID_PREFIX, export.getCommercialPointIdPrefix());
         }
 
+        exchange.getIn().getHeaders().put(MAPPING_LINES_IDS, true);
+
         producer.send("activemq:queue:ChouetteExportGtfsQueue", exchange);
     }
 
@@ -151,8 +149,6 @@ public class MultipleExportProcessor implements Processor {
         boolean noGtfs = export.getType() != ExportType.GTFS;
         exchange.getIn().getHeaders().put(NO_GTFS_EXPORT, noGtfs);
         exchange.getOut().setBody("Export id : " + export.getId());
-//        Map<String, Object> headers = new HashMap<>();
-//        headers.putAll(exchange.getIn().getHeaders());
         Map<String, Object> headers = exchange.getIn().getHeaders();
         headers.put(PROVIDER_ID, headers.get("providerId"));
         headers.put(NO_GTFS_EXPORT, noGtfs);
@@ -179,26 +175,5 @@ public class MultipleExportProcessor implements Processor {
         headers.put(PROVIDER_ID, mosaicProvider.getId());
         headers.put("providerId", mosaicProvider.getId());
         headers.put(ORIGINAL_PROVIDER_ID, provider.getId());
-    }
-
-
-
-    /**
-     * Remplace les lignes des exports par les lignes correspondantes dans la filiale Mosaic
-     * @param exports
-     * @param exchange
-     */
-    public void updateExportWithMatchingMosaicLines(List<ExportTemplate> exports, Exchange exchange) {
-        Provider provider = providerRepository.getProvider(exchange.getIn().getHeader(ORIGINAL_PROVIDER_ID, Long.class));
-        List<ExportTemplate> mosaicLinesExports = exportTemplateDAO.getAll(provider.chouetteInfo.referential);
-        exports.stream().filter(e -> ExportType.GTFS.equals(e.getType())).forEach( export -> {
-            Optional<ExportTemplate> mosaicLinesExport = mosaicLinesExports.stream().filter(e -> e.getId().equals(export.getId())).findAny();
-            mosaicLinesExport.ifPresent(me -> {
-                List<Line> matchingMosaicLines = (List<Line>) export.getLines().stream().map(l -> {
-                    return me.getLines().stream().filter(mel -> l.getObjectId().equals(mel.getObjectId())).findAny().get();
-                }).collect(toList());
-                export.setLines(matchingMosaicLines);
-            });
-        });
     }
 }

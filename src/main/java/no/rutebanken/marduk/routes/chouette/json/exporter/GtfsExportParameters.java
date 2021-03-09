@@ -84,7 +84,10 @@ public class GtfsExportParameters {
         @JsonProperty("commercial_point_id_prefix")
         public String commercialPointIdPrefix;
 
-        public GtfsExport(String name, String objectIdPrefix, String referentialName, String organisationName, String userName, boolean keepOriginalId, Date startDate, Date endDate, String exportedFilename, IdParameters idParams) {
+        @JsonProperty("mapping_lines_ids")
+        public boolean mappingLinesIds = false;
+
+        public GtfsExport(String name, String objectIdPrefix, String referentialName, String organisationName, String userName, boolean keepOriginalId, Date startDate, Date endDate, String exportedFilename, IdParameters idParams, boolean mappingLinesIds) {
             this.name = name;
             this.objectIdPrefix = objectIdPrefix;
             this.referentialName = referentialName;
@@ -99,10 +102,11 @@ public class GtfsExportParameters {
             this.idSuffix = idParams.getIdSuffix();
             this.lineIdPrefix = idParams.getLineIdPrefix();
             this.commercialPointIdPrefix = idParams.getCommercialPointIdPrefix();
+            this.mappingLinesIds = mappingLinesIds;
         }
 
         public GtfsExport(String name, String objectIdPrefix, String referentialName, String organisationName, String userName, boolean keepOriginalId, String exportedFilename) {
-            this(name, objectIdPrefix, referentialName, organisationName, userName, keepOriginalId, null, null,exportedFilename,new IdParameters());
+            this(name, objectIdPrefix, referentialName, organisationName, userName, keepOriginalId, null, null,exportedFilename,new IdParameters(),false);
         }
 
     }

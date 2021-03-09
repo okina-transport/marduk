@@ -18,7 +18,6 @@ package no.rutebanken.marduk.routes.chouette.json;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import no.rutebanken.marduk.domain.ChouetteInfo;
-import no.rutebanken.marduk.domain.IdFormat;
 import no.rutebanken.marduk.domain.Provider;
 import no.rutebanken.marduk.routes.chouette.json.exporter.ConcertoExportParameters;
 import no.rutebanken.marduk.routes.chouette.json.exporter.GtfsExportParameters;
@@ -34,7 +33,9 @@ import org.apache.commons.lang3.StringUtils;
 
 import java.io.IOException;
 import java.io.StringWriter;
-import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 import java.util.Date;
 import java.util.List;
 
@@ -112,12 +113,12 @@ public class Parameters {
         }
     }
 
-    public static String getGtfsExportParameters(Provider provider,String exportName, String user, List<Long> linesIds, Date startDate, Date endDate, String exportedFilename, IdParameters idParams) {
+    public static String getGtfsExportParameters(Provider provider,String exportName, String user, List<Long> linesIds, Date startDate, Date endDate, String exportedFilename, IdParameters idParams, boolean mappingLinesIds) {
         try {
             ChouetteInfo chouetteInfo = provider.chouetteInfo;
 
             GtfsExportParameters.GtfsExport gtfsExport = new GtfsExportParameters.GtfsExport(exportName==null ? "offre" : exportName,chouetteInfo.xmlns,
-                        chouetteInfo.referential, chouetteInfo.organisation, user, true, startDate, endDate,exportedFilename,idParams);
+                        chouetteInfo.referential, chouetteInfo.organisation, user, true, startDate, endDate,exportedFilename,idParams,mappingLinesIds);
             gtfsExport.ids = linesIds;
             if (linesIds != null && !linesIds.isEmpty()) {
                 gtfsExport.referencesType = "line";
@@ -135,7 +136,7 @@ public class Parameters {
     }
 
     public static String getGtfsExportParameters(Provider provider, String user, String exportedFilename) {
-        return getGtfsExportParameters(provider,null, user, null, null, null,exportedFilename,new IdParameters());
+        return getGtfsExportParameters(provider,null, user, null, null, null,exportedFilename,new IdParameters(),false);
     }
 
 
@@ -161,6 +162,7 @@ public class Parameters {
 
     public static String getConcertoExportParameters(Provider provider, String user) {
         try {
+            LocalDateTime localDateTime = LocalDateTime.now(ZoneOffset.UTC).withNano(0);
             ChouetteInfo chouetteInfo = provider.chouetteInfo;
             ConcertoExportParameters.ConcertoExport concertoExport = new ConcertoExportParameters.ConcertoExport("offre",
                     chouetteInfo.referential, chouetteInfo.organisation, user);
