@@ -64,8 +64,11 @@ public class GtfsExportParameters {
         @JsonProperty("use_tpeg_hvt")
         public boolean useTpegHvt = false;
 
+        @JsonProperty("mapping_lines_ids")
+        public boolean mappingLinesIds = false;
 
-        public GtfsExport(String name, String objectIdPrefix, String referentialName, String organisationName, String userName, boolean keepOriginalId, Date startDate, Date endDate) {
+
+        public GtfsExport(String name, String objectIdPrefix, String referentialName, String organisationName, String userName, boolean keepOriginalId, Date startDate, Date endDate, boolean mappingLinesIds) {
             this.name = name;
             this.objectIdPrefix = objectIdPrefix;
             this.referentialName = referentialName;
@@ -74,10 +77,11 @@ public class GtfsExportParameters {
             this.startDate = (startDate != null) ? startDate : DateUtils.startDateFor(2L);
             this.endDate = (endDate != null) ? endDate : DateUtils.endDateFor(365);
             this.keepOriginalId = keepOriginalId;
+            this.mappingLinesIds = mappingLinesIds;
         }
 
         public GtfsExport(String name, String objectIdPrefix, String referentialName, String organisationName, String userName, boolean keepOriginalId) {
-            this(name, objectIdPrefix, referentialName, organisationName, userName, keepOriginalId, null, null);
+            this(name, objectIdPrefix, referentialName, organisationName, userName, keepOriginalId, null, null, false);
         }
 
     }
