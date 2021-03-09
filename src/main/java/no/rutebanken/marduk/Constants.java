@@ -41,6 +41,8 @@ public class Constants {
     public static final String ID_SUFFIX = "ID_SUFFIX";
     public static final String ID_PREFIX_TO_REMOVE = "idPrefixToRemove";
     public static final String COMMERCIAL_POINT_ID_PREFIX = "COMMERCIAL_POINT_ID_PREFIX";
+    public static final String STOP_AREA_PREFIX_TO_REMOVE = "stopAreaPrefixToRemove";
+    public static final String AREA_CENTROID_PREFIX_TO_REMOVE = "areaCentroidPrefixToRemove";
 
     // tag for tiamat exports
     public static final String TIAMAT_STOP_PLACES_EXPORT = "TIAMAT_STOP_PLACES_EXPORT";

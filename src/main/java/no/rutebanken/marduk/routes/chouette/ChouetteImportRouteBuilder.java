@@ -18,6 +18,7 @@ package no.rutebanken.marduk.routes.chouette;
 
 import no.rutebanken.marduk.Constants;
 import no.rutebanken.marduk.domain.Provider;
+import no.rutebanken.marduk.routes.chouette.json.IdParameters;
 import no.rutebanken.marduk.routes.chouette.json.Parameters;
 import no.rutebanken.marduk.routes.status.JobEvent;
 import no.rutebanken.marduk.routes.status.JobEvent.State;
@@ -141,9 +142,19 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
                     boolean routeMerge = StringUtils.isEmpty(routeMergeStr)?false:Boolean.valueOf(routeMergeStr);
 
                     String idPrefixToRemove = e.getIn().getHeader(ID_PREFIX_TO_REMOVE, String.class);
+                    String stopAreaPrefixToRemove = e.getIn().getHeader(STOP_AREA_PREFIX_TO_REMOVE, String.class);
+                    String areaCentroidPrefixToRemove = e.getIn().getHeader(AREA_CENTROID_PREFIX_TO_REMOVE, String.class);
+
                     String user = e.getIn().getHeader(USER, String.class);
                     String description = e.getIn().getHeader(DESCRIPTION, String.class);
-                    e.getIn().setHeader(JSON_PART, getImportParameters(fileName, fileType, providerId, user, description,routeMerge,splitCharacter,idPrefixToRemove));
+                    IdParameters idParams = new IdParameters();
+                    if (StringUtils.isNotEmpty(idPrefixToRemove)){
+                        idParams.setStopAreaPrefixToRemove(idPrefixToRemove);
+                    }else{
+                        idParams.setStopAreaPrefixToRemove(stopAreaPrefixToRemove);
+                        idParams.setAreaCentroidPrefixToRemove(areaCentroidPrefixToRemove);
+                    }
+                    e.getIn().setHeader(JSON_PART, getImportParameters(fileName, fileType, providerId, user, description,routeMerge,splitCharacter,idParams));
                 }) //Using header to addToExchange json data
                 .log(LoggingLevel.DEBUG, correlation() + "import parameters: " + header(JSON_PART))
                 .to("direct:sendImportJobRequest")
@@ -229,9 +240,9 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
 
     }
 
-    private String getImportParameters(String fileName, String fileType, Long providerId, String user, String description, boolean routeMerge, String splitCharacter,String idPrefixToRemove) {
+    private String getImportParameters(String fileName, String fileType, Long providerId, String user, String description, boolean routeMerge, String splitCharacter, IdParameters idParameters) {
         Provider provider = getProviderRepository().getProvider(providerId);
-        return Parameters.createImportParameters(fileName, fileType, provider, user, description,routeMerge, splitCharacter,idPrefixToRemove);
+        return Parameters.createImportParameters(fileName, fileType, provider, user, description,routeMerge, splitCharacter,idParameters);
     }
 
 }
