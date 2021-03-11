@@ -62,6 +62,7 @@ public class Constants {
     public static final String CURRENT_AGGREGATED_GTFS_FILENAME = "aggregated-gtfs.zip";
     public static final String CURRENT_AGGREGATED_NETEX_FILENAME = "aggregated-netex.zip";
     public static final String CURRENT_AGGREGATED_CONCERTO_FILENAME = "concerto.csv";
+    public static final String CURRENT_AGGREGATED_NEPTUNE_FILENAME = "aggregated-neptune.zip";
     public static final String GRAPH_OBJ = "Graph.obj";
     public static final String BASE_GRAPH_OBJ = "baseGraph.obj";
 
