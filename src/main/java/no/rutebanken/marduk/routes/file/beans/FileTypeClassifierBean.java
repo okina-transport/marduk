@@ -79,7 +79,7 @@ public class FileTypeClassifierBean {
                 return NEPTUNE;
             } else if (isRegtoppZip(filesNamesInZip)) {
                 return REGTOPP;
-            } else if (GTFS.toString().equalsIgnoreCase(importType)) {
+            } else if (GTFS.toString().equalsIgnoreCase(importType)||isGtfsZip(filesNamesInZip)) {
                 return GTFS;
             } else if (isNetexZip(filesNamesInZip, new ByteArrayInputStream(data))) {
                 return NETEXPROFILE;
