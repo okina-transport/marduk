@@ -49,6 +49,9 @@ public class CacheProviderRepository implements ProviderRepository {
 
     private Logger logger = LoggerFactory.getLogger(this.getClass());
 
+    @Value("${superspace.name}")
+    private String superspaceName;
+
     @PostConstruct
     void init() {
         cache = CacheBuilder.newBuilder().maximumSize(cacheMaxSize).build();
@@ -101,34 +104,34 @@ public class CacheProviderRepository implements ProviderRepository {
     }
 
     /**
-     * Gets the mosaic provider for the given provider id
+     * Gets the mobiiti provider for the given provider id
      * @param id
      * @return
      */
     @Override
-    public Provider getMosaicProvider(Long id) {
+    public Provider getMobiitiProvider(Long id) {
         Provider provider = getProvider(id);
-        final Provider mosaicProvider;
-        if (!provider.isMosaicProvider() && provider.getMigrateProviderId().isPresent()) {
-            mosaicProvider = getProvider(provider.getMigrateProviderId().get());
+        final Provider mobiitiProvider;
+        if (!isMobiitiProvider(provider.name) && provider.getMigrateProviderId().isPresent()) {
+            mobiitiProvider = getProvider(provider.getMigrateProviderId().get());
         } else {
-            mosaicProvider = provider;
+            mobiitiProvider = provider;
         }
-        return mosaicProvider;
+        return mobiitiProvider;
     }
 
     /**
-     * Gets the non mosaic provider associated to the given provider
-     * @param id Provider id (can be mosaic or not)
+     * Gets the non mobiiti provider associated to the given provider
+     * @param id Provider id (can be mobiiti or not)
      * @return
      */
-    public Optional<Provider> getNonMosaicProvider(Long id) {
+    public Optional<Provider> getNonMobiitiProvider(Long id) {
         Provider provider = getProvider(id);
-        Optional<Provider> nonMosaicProvider = Optional.ofNullable(provider);
-        if (provider != null && provider.isMosaicProvider()) {
-            nonMosaicProvider = cache.asMap().values().stream().filter(p -> id.equals(p.chouetteInfo.migrateDataToProvider)).findAny();
+        Optional<Provider> nonMobiitiProvider = Optional.ofNullable(provider);
+        if (provider != null && isMobiitiProvider(provider.name)) {
+            nonMobiitiProvider = cache.asMap().values().stream().filter(p -> id.equals(p.chouetteInfo.migrateDataToProvider)).findAny();
         }
-        return nonMosaicProvider;
+        return nonMobiitiProvider;
     }
 
     @Override
@@ -149,5 +152,10 @@ public class CacheProviderRepository implements ProviderRepository {
     public Optional<Provider> getByReferential(String referential) {
         return StringUtils.isNotBlank(referential) ? cache.asMap().values().stream().filter(p -> referential.equalsIgnoreCase(p.getChouetteInfo().getReferential())).findAny() : Optional.empty();
     }
+
+    private boolean isMobiitiProvider(String name) {
+        return name.startsWith(superspaceName+"_");
+    }
+
 
 }

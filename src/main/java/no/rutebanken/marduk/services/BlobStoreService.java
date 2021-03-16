@@ -89,12 +89,12 @@ public class BlobStoreService {
 
     public BlobStoreFiles listBlobs(@Header(value = Constants.CHOUETTE_REFERENTIAL) String referential, Exchange exchange) {
         ExchangeUtils.addHeadersAndAttachments(exchange);
-        return repository.listBlobs(getMosaicIdFromReferential(referential) + "/imports/");
+        return repository.listBlobs(getMobiitiIdFromReferential(referential) + "/imports/");
     }
 
     public BlobStoreFiles listBlobsFlat(@Header(value = Constants.CHOUETTE_REFERENTIAL) String referential, Exchange exchange) {
         ExchangeUtils.addHeadersAndAttachments(exchange);
-        return repository.listBlobsFlat(getMosaicIdFromReferential(referential) + "/imports/");
+        return repository.listBlobsFlat(getMobiitiIdFromReferential(referential) + "/imports/");
     }
 
     public InputStream getBlob(@Header(value = Constants.FILE_HANDLE) String name, Exchange exchange) {
@@ -154,7 +154,7 @@ public class BlobStoreService {
         return repository.getBlob(name);
     }
 
-    private Long getMosaicIdFromReferential(final String referential) {
+    private Long getMobiitiIdFromReferential(final String referential) {
         if (referential == null) {
             return null;
         }
@@ -163,7 +163,7 @@ public class BlobStoreService {
                 referential.equalsIgnoreCase(provider.name))
                 .findFirst()
                 .orElse(null)
-                .mosaicId;
+                .mobiitiId;
     }
 
 }

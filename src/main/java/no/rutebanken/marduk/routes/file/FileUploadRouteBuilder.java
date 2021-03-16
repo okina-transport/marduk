@@ -27,7 +27,6 @@ import org.apache.tomcat.util.http.fileupload.FileItem;
 import org.apache.tomcat.util.http.fileupload.disk.DiskFileItem;
 import org.springframework.stereotype.Component;
 
-import java.util.Optional;
 import java.util.UUID;
 
 import static no.rutebanken.marduk.Constants.*;
@@ -53,7 +52,7 @@ public class FileUploadRouteBuilder extends BaseRouteBuilder {
                 .setHeader(FILE_HANDLE, simple("inbound/received/${header." + CHOUETTE_REFERENTIAL + "}/${header." + FILE_NAME + "}"))
                 .process(e -> {
                     Long providerId = e.getIn().getHeader(PROVIDER_ID, Long.class);
-                    Provider provider = getProviderRepository().getNonMosaicProvider(providerId)
+                    Provider provider = getProviderRepository().getNonMobiitiProvider(providerId)
                             .orElseThrow(() -> new Exception("No provider found for import with id " + providerId));
                     DiskFileItem fileItem = (DiskFileItem) e.getIn().getBody();
                     String importPath = BlobStoreRoute.awsImportPath(provider) + "/" + fileItem.getName();

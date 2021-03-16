@@ -16,10 +16,6 @@
 
 package no.rutebanken.marduk.rest;
 
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
 import no.rutebanken.marduk.Constants;
 import no.rutebanken.marduk.domain.BlobStoreFiles;
 import no.rutebanken.marduk.domain.BlobStoreFiles.File;
@@ -28,7 +24,6 @@ import no.rutebanken.marduk.domain.Provider;
 import no.rutebanken.marduk.routes.BaseRouteBuilder;
 import no.rutebanken.marduk.routes.blobstore.BlobStoreRoute;
 import no.rutebanken.marduk.routes.chouette.ExportJsonMapper;
-import no.rutebanken.marduk.routes.chouette.json.ExportJob;
 import no.rutebanken.marduk.routes.chouette.json.JobResponse;
 import no.rutebanken.marduk.routes.chouette.json.Status;
 import no.rutebanken.marduk.routes.status.JobEvent;
@@ -38,7 +33,6 @@ import no.rutebanken.marduk.services.BlobStoreService;
 import org.apache.camel.Body;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
-import org.apache.camel.model.dataformat.JsonLibrary;
 import org.apache.camel.model.rest.RestBindingMode;
 import org.apache.camel.model.rest.RestParamType;
 import org.apache.camel.model.rest.RestPropertyDefinition;
@@ -51,11 +45,7 @@ import org.springframework.stereotype.Component;
 
 import javax.ws.rs.NotFoundException;
 import java.net.URLDecoder;
-import java.sql.Timestamp;
-import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.time.LocalDateTime;
-import java.time.ZonedDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -89,6 +79,9 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
 
     @Autowired
     private BlobStoreService blobStoreService;
+
+    @Value("${superspace.name}")
+    private String superspaceName;
 
     @Override
     public void configure() throws Exception {
@@ -548,7 +541,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
                 .split(method(ImportFilesSplitter.class, "splitFiles"))
 
-                .process(e -> e.getIn().setHeader(FILE_HANDLE, getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)).mosaicId
+                .process(e -> e.getIn().setHeader(FILE_HANDLE, getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)).mobiitiId
                         + "/imports/" + e.getIn().getBody(String.class)))
                 .process(e -> e.getIn().setHeader(CORRELATION_ID, UUID.randomUUID().toString()))
                 .log(LoggingLevel.INFO, correlation() + "Chouette start import fileHandle=${body}")
@@ -640,8 +633,8 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
                 .process(e -> {
                     String ref = e.getIn().getHeader(OKINA_REFERENTIAL, String.class);
-                    if(!ref.contains("mosaic_")) {
-                        e.getIn().setHeader(OKINA_REFERENTIAL, "mosaic_" + ref);
+                    if(!ref.contains(superspaceName+"_")) {
+                        e.getIn().setHeader(OKINA_REFERENTIAL, superspaceName+"_" + ref);
                     }
                     else {
                         e.getIn().setHeader(OKINA_REFERENTIAL, ref);
@@ -669,8 +662,8 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
                 .process(e -> {
                     String ref = e.getIn().getHeader(OKINA_REFERENTIAL, String.class);
-                    if(!ref.contains("mosaic_")) {
-                        e.getIn().setHeader(OKINA_REFERENTIAL, "mosaic_" + ref);
+                    if(!ref.contains(superspaceName+"_")) {
+                        e.getIn().setHeader(OKINA_REFERENTIAL, superspaceName+"_" + ref);
                     }
                     else {
                         e.getIn().setHeader(OKINA_REFERENTIAL, ref);
@@ -912,7 +905,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .setHeader(PROVIDER_ID, header("providerId"))
                 .process(e -> {
                     log.info("Public-export: exports parsing");
-                    Optional<Provider> provider = getProviderRepository().getNonMosaicProvider(e.getIn().getHeader(PROVIDER_ID, Long.class));
+                    Optional<Provider> provider = getProviderRepository().getNonMobiitiProvider(e.getIn().getHeader(PROVIDER_ID, Long.class));
                     boolean isPublic = Boolean.valueOf(e.getIn().getHeader("public").toString());
 
                     String json = exportJsonMapper.toJson(e.getIn().getBody());
@@ -935,7 +928,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .setHeader(PROVIDER_ID, header("providerId"))
                 .process(e -> {
                     log.info("Delete exports starting");
-                    Provider provider = getProviderRepository().getNonMosaicProvider(e.getIn().getHeader(PROVIDER_ID, Long.class))
+                    Provider provider = getProviderRepository().getNonMobiitiProvider(e.getIn().getHeader(PROVIDER_ID, Long.class))
                             .orElseThrow(() -> new RuntimeException("No valid base provider found. Provider id : " + e.getIn().getHeader(PROVIDER_ID)));
                     String baseProviderFolder = BlobStoreRoute.exportSiteId(provider);
                     blobStoreService.deleteAllBlobsInFolder(baseProviderFolder, e);

@@ -38,6 +38,9 @@ public class FileSystemService {
 
     private Logger logger = LoggerFactory.getLogger(this.getClass());
 
+    @Value("${superspace.name}")
+    private String superspaceName;
+
 
     public File getTiamatFile(String filename) {
         return new File(tiamatStoragePath + "/" + filename);
@@ -46,7 +49,7 @@ public class FileSystemService {
     public File getLatestStopPlacesFile(Exchange exchange) {
         ExchangeUtils.addHeadersAndAttachments(exchange);
         FileSystemResource fileSystemResource = new FileSystemResource(tiamatStoragePath);
-        String referential = exchange.getIn().getHeader(OKINA_REFERENTIAL, String.class).replace("MOSAIC_", "").replace("mosaic_", "");
+        String referential = exchange.getIn().getHeader(OKINA_REFERENTIAL, String.class).replace(superspaceName.toUpperCase()+"_", "").replace(superspaceName.toLowerCase()+"_", "");
         logger.info("------ referential : " + referential);
 
         Provider provider = providerRepository.getByReferential(referential).orElseThrow(() -> new RuntimeException("Aucun provider correspondant au referential " + referential));;
@@ -79,8 +82,8 @@ public class FileSystemService {
     public File getOfferFile(Exchange exchange) {
         ExchangeUtils.addHeadersAndAttachments(exchange);
         String referential = exchange.getIn().getHeader(OKINA_REFERENTIAL, String.class);
-        if (StringUtils.isNotBlank(referential) && !referential.startsWith("mosaic_")) {
-            referential = "mosaic_" + referential;
+        if (StringUtils.isNotBlank(referential) && !referential.startsWith(superspaceName+"_")) {
+            referential = superspaceName+"_" + referential;
         }
         String jobId = exchange.getIn().getHeader(CHOUETTE_JOB_ID, String.class);
         FileSystemResource fileSystemResource = new FileSystemResource(chouetteStoragePath + "/" + referential + "/data/" + jobId);
@@ -196,8 +199,6 @@ public class FileSystemService {
         }
         return true;
     }
-
-
 
     }
 

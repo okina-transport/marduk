@@ -27,7 +27,7 @@ import java.util.Optional;
 public class Provider {
 
     public Long id;
-    public Long mosaicId;
+    public Long mobiitiId;
     
     public Long getId() {
     	return id;
@@ -56,9 +56,6 @@ public class Provider {
         return mapper.readValue(jsonString, Provider.class);
     }
 
-    public boolean isMosaicProvider() {
-        return this.name.startsWith("mosaic_");
-    }
 
     public Optional<Long> getMigrateProviderId() {
         return this.chouetteInfo != null ? Optional.ofNullable(this.chouetteInfo.migrateDataToProvider) : Optional.empty();

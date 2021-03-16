@@ -27,9 +27,9 @@ public interface ProviderRepository {
 
     Provider getProvider(Long id);
 
-    Provider getMosaicProvider(Long id);
+    Provider getMobiitiProvider(Long id);
 
-    Optional<Provider> getNonMosaicProvider(Long id);
+    Optional<Provider> getNonMobiitiProvider(Long id);
 
     String getReferential(Long id);
 

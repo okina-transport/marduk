@@ -202,8 +202,8 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
 
                     String feedInfoContent = "feed_publisher_name,feed_publisher_url,feed_lang,feed_start_date,feed_end_date,feed_version,feed_contact_email,feed_contact_url\n";
 
-                    feedInfoContent += "MOSAIC_A_CORRIGER" + ",";                     // feed_publisher_name
-                    feedInfoContent += "https://www.ratpdev.com/#A_CORRIGER" + ",";   // feed_publisher_url
+                    feedInfoContent += "MOBIITI_A_CORRIGER" + ",";                     // feed_publisher_name
+                    feedInfoContent += "https://www.okina.fr/#A_CORRIGER" + ",";   // feed_publisher_url
                     feedInfoContent += "fr-FR" + ",";                                 // feed_lang
                     feedInfoContent += ",";   // feed_start_date
                     feedInfoContent += ",";   // feed_end_date

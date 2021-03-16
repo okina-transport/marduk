@@ -14,13 +14,12 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
-import static java.util.stream.Collectors.toList;
 import static no.rutebanken.marduk.Constants.*;
 
 /**
@@ -42,6 +41,9 @@ public class MultipleExportProcessor implements Processor {
 
     @Autowired
     ExportJsonMapper exportJsonMapper;
+
+    @Value("${superspace.name}")
+    private String superspaceName;
 
     @Override
     public void process(Exchange exchange) {
@@ -131,7 +133,7 @@ public class MultipleExportProcessor implements Processor {
 
     private void toStopPlacesExport(ExportTemplate export, Exchange exchange) throws Exception {
         log.info("Routing to StopPlaces export => " + export.getId() + "/" + export.getName());
-        // tiamat export is based on original referential (not the mosaic one)
+        // tiamat export is based on original referential (not the mobiiti one)
         Long tiamatProviderId = Long.valueOf(exchange.getIn().getHeaders().get(ORIGINAL_PROVIDER_ID).toString());
         exchange.getIn().getHeaders().put("tiamatProviderId", tiamatProviderId);
         prepareHeadersForExport(exchange, export);
@@ -161,19 +163,23 @@ public class MultipleExportProcessor implements Processor {
 
     public void setProvidersIdsHeaders(Exchange exchange, Map<String, Object> headers) {
         Provider provider = providerRepository.getProvider(exchange.getIn().getHeader(PROVIDER_ID, Long.class));
-        Provider mosaicProvider;
-        if(provider.isMosaicProvider()) {
-            mosaicProvider = provider;
-            provider = providerRepository.findByName(provider.name.replace("mosaic_", ""));
+        Provider mobiitiProvider;
+        if(isMobiitiProvider(provider.name)) {
+            mobiitiProvider = provider;
+            provider = providerRepository.findByName(provider.name.replace(superspaceName+"_", ""));
         }
         else {
-            mosaicProvider = providerRepository.getMosaicProvider(provider.getId());
+            mobiitiProvider = providerRepository.getMobiitiProvider(provider.getId());
         }
 
-        headers.put(CHOUETTE_REFERENTIAL, mosaicProvider.chouetteInfo.getReferential());
-        headers.put(OKINA_REFERENTIAL, mosaicProvider.chouetteInfo.getReferential());
-        headers.put(PROVIDER_ID, mosaicProvider.getId());
-        headers.put("providerId", mosaicProvider.getId());
+        headers.put(CHOUETTE_REFERENTIAL, mobiitiProvider.chouetteInfo.getReferential());
+        headers.put(OKINA_REFERENTIAL, mobiitiProvider.chouetteInfo.getReferential());
+        headers.put(PROVIDER_ID, mobiitiProvider.getId());
+        headers.put("providerId", mobiitiProvider.getId());
         headers.put(ORIGINAL_PROVIDER_ID, provider.getId());
+    }
+
+    private boolean isMobiitiProvider(String name) {
+        return name.startsWith(superspaceName+"_");
     }
 }

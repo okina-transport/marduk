@@ -7,6 +7,7 @@ import no.rutebanken.marduk.repository.ExportTemplateDAO;
 import no.rutebanken.marduk.repository.ProviderRepository;
 import org.apache.camel.LoggingLevel;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -27,6 +28,9 @@ public class PredefinedExportsRouteBuilder extends AbstractChouetteRouteBuilder 
     @Autowired
     private ExportTemplateDAO exportTemplateDAO;
 
+    @Value("${superspace.name}")
+    private String superspaceName;
+
     @Override
     public void configure() throws Exception {
         super.configure();
@@ -39,26 +43,26 @@ public class PredefinedExportsRouteBuilder extends AbstractChouetteRouteBuilder 
                     // Add correlation id only if missing
                     e.getIn().setHeader(Constants.CORRELATION_ID, e.getIn().getHeader(Constants.CORRELATION_ID, UUID.randomUUID().toString()));
                     Provider provider = providerRepository.getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class));
-                    Provider mosaicProvider;
+                    Provider mobiitiProvider;
 
-                    if(provider.name.contains("mosaic")) {
-                        mosaicProvider = provider;
-                        provider = providerRepository.findByName(provider.name.replace("mosaic_", ""));
+                    if(provider.name.contains(superspaceName)) {
+                        mobiitiProvider = provider;
+                        provider = providerRepository.findByName(provider.name.replace(superspaceName+"_", ""));
                     }
                     else {
-                        Long mosaicProviderId = provider.getChouetteInfo().getMigrateDataToProvider();
-                        mosaicProvider = providerRepository.getProvider(mosaicProviderId);
+                        Long mobiitiProviderId = provider.getChouetteInfo().getMigrateDataToProvider();
+                        mobiitiProvider = providerRepository.getProvider(mobiitiProviderId);
                     }
 
-                    // get the matching migration mosaic provider to target export
+                    // get the matching migration mobiiti provider to target export
                     List<ExportTemplate> exports = exportTemplateDAO.getAll(provider.getChouetteInfo().getReferential());
 
                     log.info("Found export templates " + exports.size());
                     e.getOut().setBody(exports);
                     e.getOut().setHeaders(e.getIn().getHeaders());
-                    e.getOut().getHeaders().put(CHOUETTE_REFERENTIAL, mosaicProvider.chouetteInfo.getReferential());
-                    e.getOut().getHeaders().put(PROVIDER_ID, mosaicProvider.getId());
-                    e.getOut().getHeaders().put("providerId", mosaicProvider.getId());
+                    e.getOut().getHeaders().put(CHOUETTE_REFERENTIAL, mobiitiProvider.chouetteInfo.getReferential());
+                    e.getOut().getHeaders().put(PROVIDER_ID, mobiitiProvider.getId());
+                    e.getOut().getHeaders().put("providerId", mobiitiProvider.getId());
 
                     e.getOut().getHeaders().put(ORIGINAL_PROVIDER_ID, provider.getId());
                 })
