@@ -18,6 +18,7 @@ package no.rutebanken.marduk.routes.chouette;
 
 import no.rutebanken.marduk.Constants;
 import no.rutebanken.marduk.domain.ExportTemplate;
+import no.rutebanken.marduk.repository.ExportTemplateDAO;
 import no.rutebanken.marduk.routes.chouette.json.Parameters;
 import no.rutebanken.marduk.routes.status.JobEvent;
 import no.rutebanken.marduk.routes.status.JobEvent.State;
@@ -36,8 +37,8 @@ import static no.rutebanken.marduk.Constants.CHOUETTE_JOB_STATUS_JOB_VALIDATION_
 import static no.rutebanken.marduk.Constants.CHOUETTE_REFERENTIAL;
 import static no.rutebanken.marduk.Constants.CORRELATION_ID;
 import static no.rutebanken.marduk.Constants.IMPORT;
-import static no.rutebanken.marduk.Constants.JSON_EXPORTS;
 import static no.rutebanken.marduk.Constants.JSON_PART;
+import static no.rutebanken.marduk.Constants.OKINA_REFERENTIAL;
 import static no.rutebanken.marduk.Constants.PROVIDER_ID;
 import static no.rutebanken.marduk.Constants.USER;
 import static no.rutebanken.marduk.Utils.Utils.getLastPathElementOfUrl;
@@ -63,6 +64,9 @@ public class ChouetteValidationRouteBuilder extends AbstractChouetteRouteBuilder
 
     @Autowired
     ExportJsonMapper exportJsonMapper;
+
+    @Autowired
+    private ExportTemplateDAO exportTemplateDAO;
 
     @Override
     public void configure() throws Exception {
@@ -165,26 +169,16 @@ public class ChouetteValidationRouteBuilder extends AbstractChouetteRouteBuilder
                 .choice()
                 .when(simple("${header.action_report_result} == 'OK' and ${header.validation_report_result} == 'OK'"))
                     .to("direct:checkScheduledJobsBeforeTriggeringExport")
-                    .process(e -> {
-                        JobEvent.providerJobBuilder(e).timetableAction(e.getIn().getHeader(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL, TimetableAction.class)).state(State.OK).build();
-                    })
                     .choice()
-                        .when(PredicateBuilder.and(PredicateBuilder.constant(autoExportsOnValidate), simple("${header.JSON_EXPORTS} != null"),
-                                constant(VALIDATION_LEVEL_2).isEqualTo(header(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL))))
+                        .when(PredicateBuilder.and(PredicateBuilder.constant(autoExportsOnValidate), constant(VALIDATION_LEVEL_2).isEqualTo(header(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL))))
                         .process(e -> {
-                            log.info("processValidationResult: exports parsing");
-                            String jsonExports = (String) e.getIn().getHeader(JSON_EXPORTS);
-                            List<ExportTemplate> exports = exportJsonMapper.fromJsonArray(jsonExports);
+                            List<ExportTemplate> exports = exportTemplateDAO.getAll(e.getIn().getHeader(OKINA_REFERENTIAL, String.class));
                             e.getIn().setBody(exports);
                         })
-                        .removeHeader(JSON_EXPORTS)
                         .to("direct:multipleExports")
                     .endChoice()
                     .process(e -> {
-                        boolean doOk = true;
-                        if (doOk) {
-                            JobEvent.providerJobBuilder(e).timetableAction(e.getIn().getHeader(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL, TimetableAction.class)).state(State.OK).build();
-                        }
+                        JobEvent.providerJobBuilder(e).timetableAction(e.getIn().getHeader(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL, TimetableAction.class)).state(State.OK).build();
                     })
                 .when(simple("${header.action_report_result} == 'OK' and ${header.validation_report_result} == 'NOK'"))
                     .log(LoggingLevel.INFO, correlation() + "Validation failed (processed ok, but timetable data is faulty)")
