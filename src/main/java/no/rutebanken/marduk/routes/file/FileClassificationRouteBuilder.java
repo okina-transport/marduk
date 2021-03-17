@@ -72,8 +72,8 @@ public class FileClassificationRouteBuilder extends BaseRouteBuilder {
                 .otherwise()
                 .choice()
                 .when(header(FILE_TYPE).isEqualTo(FileType.GTFS.name()))
-                .log(LoggingLevel.INFO, correlation() + "Transforming GTFS file ${header." + FILE_HANDLE + "}")
-                .to("direct:transformGtfsFile")
+//                .log(LoggingLevel.INFO, correlation() + "Transforming GTFS file ${header." + FILE_HANDLE + "}")
+//                .to("direct:transformGtfsFile")
                 .end()
                 .log(LoggingLevel.INFO, correlation() + "Posting " + FILE_HANDLE + " ${header." + FILE_HANDLE + "} and " + FILE_TYPE + " ${header." + FILE_TYPE + "} on chouette import queue.")
                 .setBody(simple(""))   //remove file data from body since this is in blobstore
