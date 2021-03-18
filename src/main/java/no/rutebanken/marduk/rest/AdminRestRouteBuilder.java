@@ -974,7 +974,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                     List<ExportTemplate> exports = exportJsonMapper.fromJsonArray(json);
                     provider.ifPresent(p -> {
                         exports.stream().forEach(export -> {
-                            String exportFilePath = BlobStoreRoute.exportFilePath(export, p);
+                            String exportFilePath = BlobStoreRoute.exportFilePath(export, p, null);
                             blobStoreService.setAccess(export.getPublicExport(), exportFilePath);
                         });
                     });

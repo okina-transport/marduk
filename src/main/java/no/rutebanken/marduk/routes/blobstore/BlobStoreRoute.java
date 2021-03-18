@@ -57,7 +57,7 @@ public class BlobStoreRoute extends BaseRouteBuilder {
                             .orElseThrow(() -> new RuntimeException("No valid base provider found for export uploading. Provider id : " + e.getIn().getHeader(PROVIDER_ID)));
                     Optional<ExportTemplate> export = ExportToConsumersProcessor.currentExport(e);
                     if (export.isPresent()) {
-                        e.getIn().setHeader(FILE_HANDLE, exportFilePath(export.get(), provider));
+                        e.getIn().setHeader(FILE_HANDLE, exportFilePath(export.get(), provider, e.getIn().getHeader(EXPORT_FILE_NAME).toString()));
                         e.getIn().setHeader(ARCHIVE_FILE_HANDLE, exportArchiveFilePath(export.get(), provider, e.getIn().getHeader(EXPORT_FILE_NAME).toString()));
                         e.getIn().setHeader(BLOBSTORE_MAKE_BLOB_PUBLIC, export.get().getPublicExport());
 
@@ -126,9 +126,9 @@ public class BlobStoreRoute extends BaseRouteBuilder {
 
 
 
-    public static String exportFilePath(ExportTemplate export, Provider provider) {
+    public static String exportFilePath(ExportTemplate export, Provider provider, String fileName) {
         if(export.getType().equals(ExportType.CONCERTO)){
-          return "concerto_idfm/exports/" + export.getId() + "/" + awsExportFileFormat(export);
+          return "concerto_idfm/exports/" + export.getId() + "/" + fileName;
         }
         return awsExportPath(export, provider) + "/" + awsExportFileName(export);
     }
