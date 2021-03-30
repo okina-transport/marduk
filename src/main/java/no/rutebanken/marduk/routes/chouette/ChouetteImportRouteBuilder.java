@@ -141,15 +141,18 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
                     String routeMergeStr = e.getIn().getHeader(ROUTE_MERGE, String.class);
                     boolean routeMerge = StringUtils.isEmpty(routeMergeStr)?false:Boolean.valueOf(routeMergeStr);
 
-                    String idPrefixToRemove = e.getIn().getHeader(ID_PREFIX_TO_REMOVE, String.class);
+                    String commercialPointIdPrefixToRemove = e.getIn().getHeader(COMMERCIAL_POINT_ID_PREFIX_TO_REMOVE, String.class);
+                    String quayPrefixToRemove = e.getIn().getHeader(QUAY_ID_PREFIX_TO_REMOVE, String.class);
                     String stopAreaPrefixToRemove = e.getIn().getHeader(STOP_AREA_PREFIX_TO_REMOVE, String.class);
                     String areaCentroidPrefixToRemove = e.getIn().getHeader(AREA_CENTROID_PREFIX_TO_REMOVE, String.class);
 
                     String user = e.getIn().getHeader(USER, String.class);
                     String description = e.getIn().getHeader(DESCRIPTION, String.class);
                     IdParameters idParams = new IdParameters();
-                    if (StringUtils.isNotEmpty(idPrefixToRemove)){
-                        idParams.setStopAreaPrefixToRemove(idPrefixToRemove);
+                    idParams.setQuayIdPrefixToRemove(quayPrefixToRemove);
+
+                    if (StringUtils.isNotEmpty(commercialPointIdPrefixToRemove)){
+                        idParams.setCommercialPointIdPrefixToRemove(commercialPointIdPrefixToRemove);
                     }else{
                         idParams.setStopAreaPrefixToRemove(stopAreaPrefixToRemove);
                         idParams.setAreaCentroidPrefixToRemove(areaCentroidPrefixToRemove);

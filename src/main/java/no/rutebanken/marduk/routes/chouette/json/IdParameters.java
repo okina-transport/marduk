@@ -11,6 +11,8 @@ public class IdParameters {
     private String commercialPointIdPrefix;
     private String stopAreaPrefixToRemove;
     private String areaCentroidPrefixToRemove;
+    private String commercialPointIdPrefixToRemove;
+    private String quayIdPrefixToRemove;
 
 
     public IdParameters() {
@@ -80,4 +82,19 @@ public class IdParameters {
         this.areaCentroidPrefixToRemove = areaCentroidPrefixToRemove;
     }
 
+    public String getCommercialPointIdPrefixToRemove() {
+        return commercialPointIdPrefixToRemove;
+    }
+
+    public void setCommercialPointIdPrefixToRemove(String commercialPointIdPrefixToRemove) {
+        this.commercialPointIdPrefixToRemove = commercialPointIdPrefixToRemove;
+    }
+
+    public String getQuayIdPrefixToRemove() {
+        return quayIdPrefixToRemove;
+    }
+
+    public void setQuayIdPrefixToRemove(String quayIdPrefixToRemove) {
+        this.quayIdPrefixToRemove = quayIdPrefixToRemove;
+    }
 }

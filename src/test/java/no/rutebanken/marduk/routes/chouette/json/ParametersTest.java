@@ -44,7 +44,7 @@ public class ParametersTest {
 
     @Test
     public void createGtfsImportParameters() throws Exception {
-        GtfsImportParameters importParameters = GtfsImportParameters.create("test", "tds", "testDS", "Rutebanken", "Chouette",false,false,true, true, Sets.newHashSet("water","bus"), "testdescription",false,null,null);
+        GtfsImportParameters importParameters = GtfsImportParameters.create("test", "tds", "testDS", "Rutebanken", "Chouette",false,false,true, true, Sets.newHashSet("water","bus"), "testdescription",false,null,null,null);
         assertJsonEquals(gtfsReferenceJson, importParameters.toJsonString());
     }
 

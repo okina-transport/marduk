@@ -73,16 +73,20 @@ public class GtfsImportParameters extends ChouetteJobParameters {
         @JsonInclude(JsonInclude.Include.ALWAYS)
         public String splitCharacter = "";
 
-        @JsonProperty("id_prefix_to_remove")
+        @JsonProperty("commercial_point_prefix_to_remove")
         @JsonInclude(JsonInclude.Include.ALWAYS)
-        public String idPrefixToRemove = "";
+        public String commercialPointIdPrefixToRemove = "";
+
+        @JsonProperty("quay_id_prefix_to_remove")
+        @JsonInclude(JsonInclude.Include.ALWAYS)
+        public String quayIdPrefixToRemove = "";
 
     }
 
     public static GtfsImportParameters create(String name, String objectIdPrefix, String referentialName, String organisationName,
                                                      String userName, boolean cleanRepository, boolean enableValidation,
                                                      boolean allowCreateMissingStopPlace, boolean enableStopPlaceIdMapping,
-                                                     Set<String> generateMissingRouteSectionsForModes, String description,boolean routeMerge,String splitCharacter, String idPrefixToRemove) {
+                                                     Set<String> generateMissingRouteSectionsForModes, String description,boolean routeMerge,String splitCharacter, String commercialPointIdPrefixToRemove, String quayIdPrefixToRemove) {
         Gtfs gtfsImport = new Gtfs();
         gtfsImport.name = name;
         gtfsImport.objectIdPrefix = objectIdPrefix;
@@ -98,7 +102,8 @@ public class GtfsImportParameters extends ChouetteJobParameters {
         }
         gtfsImport.routeMerge = routeMerge;
         gtfsImport.splitCharacter = splitCharacter;
-        gtfsImport.idPrefixToRemove = idPrefixToRemove;
+        gtfsImport.commercialPointIdPrefixToRemove = commercialPointIdPrefixToRemove;
+        gtfsImport.quayIdPrefixToRemove = quayIdPrefixToRemove;
         Parameters parameters = new Parameters();
         parameters.gtfsImport = gtfsImport;
         GtfsImportParameters gtfsImportParameters = new GtfsImportParameters();
