@@ -145,11 +145,15 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
                     String quayPrefixToRemove = e.getIn().getHeader(QUAY_ID_PREFIX_TO_REMOVE, String.class);
                     String stopAreaPrefixToRemove = e.getIn().getHeader(STOP_AREA_PREFIX_TO_REMOVE, String.class);
                     String areaCentroidPrefixToRemove = e.getIn().getHeader(AREA_CENTROID_PREFIX_TO_REMOVE, String.class);
+                    String linePrefixToRemove = e.getIn().getHeader(LINE_PREFIX_TO_REMOVE, String.class);
+
 
                     String user = e.getIn().getHeader(USER, String.class);
                     String description = e.getIn().getHeader(DESCRIPTION, String.class);
                     IdParameters idParams = new IdParameters();
                     idParams.setQuayIdPrefixToRemove(quayPrefixToRemove);
+                    idParams.setLinePrefixToRemove(linePrefixToRemove);
+
 
                     if (StringUtils.isNotEmpty(commercialPointIdPrefixToRemove)){
                         idParams.setCommercialPointIdPrefixToRemove(commercialPointIdPrefixToRemove);

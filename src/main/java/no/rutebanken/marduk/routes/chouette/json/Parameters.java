@@ -45,7 +45,7 @@ public class Parameters {
         if (FileType.REGTOPP.name().equals(fileType)) {
             return getRegtoppImportParameters(fileName, provider);
         } else if (FileType.GTFS.name().equals(fileType)) {
-            return getGtfsImportParameters(fileName, provider, user, description,routeMerge,  splitCharacter,idParams.getCommercialPointIdPrefixToRemove(), idParams.getQuayIdPrefixToRemove());
+            return getGtfsImportParameters(fileName, provider, user, description,routeMerge,  splitCharacter, idParams);
         } else if (FileType.NETEXPROFILE.name().equals(fileType)) {
             return getNetexImportParameters(fileName, provider);
         } else if (FileType.NEPTUNE.name().equals(fileType)) {
@@ -76,11 +76,11 @@ public class Parameters {
         return neptuneImportParameters.toJsonString();
     }
 
-    static String getGtfsImportParameters(String importName, Provider provider, String user, String description,boolean routeMerge, String splitCharacter, String commercialPointIdPrefixToRemove, String quayIdPrefixToRemove) {
+    static String getGtfsImportParameters(String importName, Provider provider, String user, String description,boolean routeMerge, String splitCharacter,IdParameters idParams) {
         ChouetteInfo chouetteInfo = provider.chouetteInfo;
         GtfsImportParameters gtfsImportParameters = GtfsImportParameters.create(importName, chouetteInfo.xmlns,
                 provider.name, chouetteInfo.organisation, user, chouetteInfo.enableCleanImport,
-                chouetteInfo.enableValidation, chouetteInfo.allowCreateMissingStopPlace, chouetteInfo.enableStopPlaceIdMapping, chouetteInfo.generateMissingServiceLinksForModes, description,routeMerge, splitCharacter,commercialPointIdPrefixToRemove, quayIdPrefixToRemove);
+                chouetteInfo.enableValidation, chouetteInfo.allowCreateMissingStopPlace, chouetteInfo.enableStopPlaceIdMapping, chouetteInfo.generateMissingServiceLinksForModes, description,routeMerge, splitCharacter,idParams.getCommercialPointIdPrefixToRemove(), idParams.getQuayIdPrefixToRemove(), idParams.getLinePrefixToRemove());
         return gtfsImportParameters.toJsonString();
     }
 

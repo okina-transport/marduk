@@ -44,6 +44,10 @@ public class NeptuneImportParameters extends ChouetteJobParameters {
         @JsonInclude(JsonInclude.Include.ALWAYS)
         public String areaCentroidPrefixToRemove = "";
 
+        @JsonProperty("line_prefix_to_remove")
+        @JsonInclude(JsonInclude.Include.ALWAYS)
+        public String linePrefixToRemove = "";
+
 
     }
 
@@ -66,6 +70,7 @@ public class NeptuneImportParameters extends ChouetteJobParameters {
         }
         neptuneImport.areaCentroidPrefixToRemove = idParameters.getAreaCentroidPrefixToRemove();
         neptuneImport.stopAreaPrefixToRemove = idParameters.getStopAreaPrefixToRemove();
+        neptuneImport.linePrefixToRemove = idParameters.getLinePrefixToRemove();
 
         Parameters parameters = new Parameters();
         parameters.neptuneImport = neptuneImport;

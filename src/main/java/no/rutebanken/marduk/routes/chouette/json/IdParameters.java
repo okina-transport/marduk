@@ -13,6 +13,7 @@ public class IdParameters {
     private String areaCentroidPrefixToRemove;
     private String commercialPointIdPrefixToRemove;
     private String quayIdPrefixToRemove;
+    private String linePrefixToRemove;
 
 
     public IdParameters() {
@@ -96,5 +97,13 @@ public class IdParameters {
 
     public void setQuayIdPrefixToRemove(String quayIdPrefixToRemove) {
         this.quayIdPrefixToRemove = quayIdPrefixToRemove;
+    }
+
+    public String getLinePrefixToRemove() {
+        return linePrefixToRemove;
+    }
+
+    public void setLinePrefixToRemove(String linePrefixToRemove) {
+        this.linePrefixToRemove = linePrefixToRemove;
     }
 }

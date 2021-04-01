@@ -45,6 +45,7 @@ public class Constants {
     public static final String MAPPING_LINES_IDS= "MAPPING_LINES_IDS";
     public static final String COMMERCIAL_POINT_ID_PREFIX_TO_REMOVE = "commercialPointIdPrefixToRemove";
     public static final String QUAY_ID_PREFIX_TO_REMOVE = "quayIdPrefixToRemove";
+    public static final String LINE_PREFIX_TO_REMOVE = "linePrefixToRemove";
 
 
     // tag for tiamat exports
