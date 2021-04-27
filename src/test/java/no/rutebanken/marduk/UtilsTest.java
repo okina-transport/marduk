@@ -47,9 +47,5 @@ public class UtilsTest {
         Utils.getHttp4(null);
     }
 
-    @Test
-    public void getOtpVersion(){
-        assertThat(Utils.getOtpVersion(), matchesPattern("\\d+\\.\\d+\\.\\d+.*"));
-    }
 
 }

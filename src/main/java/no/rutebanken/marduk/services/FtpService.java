@@ -6,13 +6,13 @@ import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.Session;
 import no.rutebanken.marduk.Utils.SendMail;
 import no.rutebanken.marduk.Utils.SlackNotification;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.net.ftp.FTP;
 import org.apache.commons.net.ftp.FTPClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-import spark.utils.StringUtils;
 
 import java.io.File;
 import java.io.FileNotFoundException;

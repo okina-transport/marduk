@@ -23,15 +23,22 @@ import no.rutebanken.marduk.routes.file.GtfsFileUtils;
 import no.rutebanken.marduk.routes.status.JobEvent;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
-import org.apache.commons.collections.CollectionUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import org.springframework.util.CollectionUtils;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import static no.rutebanken.marduk.Constants.*;
+import static no.rutebanken.marduk.Constants.BLOBSTORE_MAKE_BLOB_PUBLIC;
+import static no.rutebanken.marduk.Constants.BLOBSTORE_PATH_OUTBOUND;
+import static no.rutebanken.marduk.Constants.CURRENT_AGGREGATED_GTFS_FILENAME;
+import static no.rutebanken.marduk.Constants.FILE_HANDLE;
+import static no.rutebanken.marduk.Constants.FILE_NAME;
+import static no.rutebanken.marduk.Constants.JOB_ACTION;
+import static no.rutebanken.marduk.Constants.PROVIDER_BLACK_LIST;
+import static no.rutebanken.marduk.Constants.PROVIDER_WHITE_LIST;
 import static org.apache.camel.Exchange.FILE_PARENT;
 
 /**

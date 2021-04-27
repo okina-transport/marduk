@@ -1,14 +1,9 @@
 package no.rutebanken.marduk.repository;
 
-import com.amazonaws.services.s3.AmazonS3;
-import com.google.cloud.storage.Storage;
 import no.rutebanken.marduk.domain.BlobStoreFiles;
 import no.rutebanken.marduk.domain.Provider;
 import no.rutebanken.marduk.services.FileSystemService;
 import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.IOUtils;
-import org.apache.commons.io.output.ByteArrayOutputStream;
-import org.apache.commons.lang3.NotImplementedException;
 import org.apache.commons.net.io.Util;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,13 +11,20 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Repository;
 
-import java.io.*;
-import java.nio.charset.StandardCharsets;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.file.Files;
-import java.nio.file.NoSuchFileException;
 import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Date;
+import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 
@@ -152,21 +154,6 @@ public class FileStoreRepository implements BlobStoreRepository{
             logger.error("Erreur copie fichier:"+src + " vers : "+dest);
             logger.error(e.toString());
         }
-    }
-
-    @Override
-    public void setStorage(Storage storage) {
-
-    }
-
-    @Override
-    public void setAmazonS3Client(AmazonS3 amazonS3Client) {
-
-    }
-
-    @Override
-    public void setContainerName(String containerName) {
-
     }
 
     @Override

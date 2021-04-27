@@ -18,7 +18,6 @@ package no.rutebanken.marduk.Utils;
 
 import no.rutebanken.marduk.domain.Provider;
 import no.rutebanken.marduk.repository.CacheProviderRepository;
-import org.opentripplanner.common.MavenVersion;
 
 public class Utils {
 
@@ -38,10 +37,6 @@ public class Utils {
             throw new IllegalArgumentException("Url is null");
         }
         return Long.valueOf(url.substring(url.lastIndexOf('/') + 1, url.length()));
-    }
-
-    public static String getOtpVersion() {
-        return MavenVersion.VERSION.version;
     }
 
     public static Provider parseProviderFromFileName(CacheProviderRepository providerRepository, String fileName) {

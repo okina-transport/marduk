@@ -23,10 +23,8 @@ import org.apache.camel.model.RouteDefinition;
 import org.apache.camel.spi.RoutePolicy;
 import org.apache.camel.spi.RoutePolicyFactory;
 import org.rutebanken.hazelcasthelper.service.HazelCastService;
-import org.rutebanken.hazelcasthelper.service.KubernetesService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -43,9 +41,8 @@ public class SingletonRoutePolicyFactory extends HazelCastService implements Rou
     @Value("${rutebanken.route.singleton.policy.ignore:false}")
     private boolean ignorePolicy;
 
-    public SingletonRoutePolicyFactory(@Autowired KubernetesService kubernetesService,
-                                              @Value("${rutebanken.hazelcast.management.url:}") String managementUrl) {
-        super(kubernetesService, managementUrl);
+    public SingletonRoutePolicyFactory(@Value("${rutebanken.hazelcast.management.url:}") String managementUrl) {
+        super(null, managementUrl);
     }
 
     /**

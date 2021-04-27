@@ -93,7 +93,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
 
         RestPropertyDefinition corsAllowedOrigin = new RestPropertyDefinition();
         corsAllowedOrigin.setKey("Access-Control-Allow-Origin");
-        corsAllowedOrigin.setValue("http://localhost:9000");
+        corsAllowedOrigin.setValue("*");
 
         restConfiguration().setCorsHeaders(Arrays.asList(corsAllowedHeaders, corsAllowedOrigin));
 
