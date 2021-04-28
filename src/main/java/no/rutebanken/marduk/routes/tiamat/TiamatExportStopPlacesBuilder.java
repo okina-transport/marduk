@@ -91,7 +91,7 @@ public class TiamatExportStopPlacesBuilder extends AbstractChouetteRouteBuilder 
                 // .toD("${header.data_url}") // => this would be the download from api endpoint version
                 .process(e -> {
                     ExportJob exportJob = e.getIn().getBody(ExportJob.class);
-                    File file = fileSystemService.getTiamatFile(exportJob.getFileName());
+                    File file = fileSystemService.getTiamatFile(exportJob.getSubFolder()+"/"+exportJob.getFileName());
                     log.info("Tiamat Stop Places Export  : export parsed => " + exportJob.getId() + " : " + exportJob.getJobUrl() + " file => " + file + " => " + file.exists());
                     e.getIn().setHeader("fileName", file.getName());
                     e.getIn().setHeader(EXPORT_FILE_NAME, file.getName());
