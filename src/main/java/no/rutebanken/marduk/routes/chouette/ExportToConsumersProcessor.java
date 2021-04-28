@@ -44,7 +44,6 @@ public class ExportToConsumersProcessor implements Processor {
     public void process(Exchange exchange) throws Exception {
         // get the json export string:
         String jsonExport = (String) exchange.getIn().getHeaders().get(CURRENT_EXPORT);
-        System.out.println("yolo4");
         if (StringUtils.isNotBlank(jsonExport)) {
             ExportTemplate export = exportJsonMapper.fromJson(jsonExport);
             log.info("Found " + export.getConsumers().size() + " for export " + export.getId() + "/" + export.getName());
