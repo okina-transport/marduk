@@ -29,7 +29,11 @@ import org.springframework.stereotype.Component;
 
 import java.util.UUID;
 
-import static no.rutebanken.marduk.Constants.*;
+import static no.rutebanken.marduk.Constants.CHOUETTE_REFERENTIAL;
+import static no.rutebanken.marduk.Constants.FILE_HANDLE;
+import static no.rutebanken.marduk.Constants.FILE_NAME;
+import static no.rutebanken.marduk.Constants.IMPORT;
+import static no.rutebanken.marduk.Constants.PROVIDER_ID;
 
 /**
  * Upload file to blob store and trigger import pipeline.

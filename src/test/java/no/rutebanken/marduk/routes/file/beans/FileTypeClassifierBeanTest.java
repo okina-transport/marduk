@@ -27,9 +27,11 @@ import org.junit.Test;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStream;
 
-import static no.rutebanken.marduk.routes.file.FileType.*;
+import static no.rutebanken.marduk.routes.file.FileType.GTFS;
+import static no.rutebanken.marduk.routes.file.FileType.INVALID_FILE_NAME;
+import static no.rutebanken.marduk.routes.file.FileType.NEPTUNE;
+import static no.rutebanken.marduk.routes.file.FileType.NETEXPROFILE;
 import static org.junit.Assert.assertEquals;
 
 public class FileTypeClassifierBeanTest {

@@ -31,7 +31,21 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import static no.rutebanken.marduk.Constants.*;
+import static no.rutebanken.marduk.Constants.AREA_CENTROID_PREFIX_TO_REMOVE;
+import static no.rutebanken.marduk.Constants.CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL;
+import static no.rutebanken.marduk.Constants.CHOUETTE_REFERENTIAL;
+import static no.rutebanken.marduk.Constants.COMMERCIAL_POINT_ID_PREFIX_TO_REMOVE;
+import static no.rutebanken.marduk.Constants.DESCRIPTION;
+import static no.rutebanken.marduk.Constants.FILE_NAME;
+import static no.rutebanken.marduk.Constants.FILE_TYPE;
+import static no.rutebanken.marduk.Constants.JSON_PART;
+import static no.rutebanken.marduk.Constants.LINE_PREFIX_TO_REMOVE;
+import static no.rutebanken.marduk.Constants.PROVIDER_ID;
+import static no.rutebanken.marduk.Constants.QUAY_ID_PREFIX_TO_REMOVE;
+import static no.rutebanken.marduk.Constants.ROUTE_MERGE;
+import static no.rutebanken.marduk.Constants.SPLIT_CHARACTER;
+import static no.rutebanken.marduk.Constants.STOP_AREA_PREFIX_TO_REMOVE;
+import static no.rutebanken.marduk.Constants.USER;
 import static no.rutebanken.marduk.Utils.Utils.getHttp4;
 import static no.rutebanken.marduk.Utils.Utils.getLastPathElementOfUrl;
 

@@ -27,7 +27,14 @@ import java.io.StringWriter;
 import java.time.Instant;
 import java.util.UUID;
 
-import static no.rutebanken.marduk.Constants.*;
+import static no.rutebanken.marduk.Constants.CHOUETTE_JOB_ID;
+import static no.rutebanken.marduk.Constants.CHOUETTE_REFERENTIAL;
+import static no.rutebanken.marduk.Constants.CORRELATION_ID;
+import static no.rutebanken.marduk.Constants.DESCRIPTION;
+import static no.rutebanken.marduk.Constants.FILE_TYPE;
+import static no.rutebanken.marduk.Constants.PROVIDER_ID;
+import static no.rutebanken.marduk.Constants.SYSTEM_STATUS;
+import static no.rutebanken.marduk.Constants.USER;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class JobEvent {

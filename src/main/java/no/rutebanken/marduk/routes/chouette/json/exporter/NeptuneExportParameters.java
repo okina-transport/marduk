@@ -17,10 +17,7 @@
 package no.rutebanken.marduk.routes.chouette.json.exporter;
 
 
-import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import no.rutebanken.marduk.Constants;
-import no.rutebanken.marduk.domain.IdFormat;
 
 import java.util.Date;
 

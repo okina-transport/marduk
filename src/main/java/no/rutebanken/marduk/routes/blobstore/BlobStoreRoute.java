@@ -27,7 +27,14 @@ import org.springframework.stereotype.Component;
 import java.text.SimpleDateFormat;
 import java.util.Optional;
 
-import static no.rutebanken.marduk.Constants.*;
+import static no.rutebanken.marduk.Constants.ARCHIVE_FILE_HANDLE;
+import static no.rutebanken.marduk.Constants.BLOBSTORE_MAKE_BLOB_PUBLIC;
+import static no.rutebanken.marduk.Constants.CHOUETTE_REFERENTIAL;
+import static no.rutebanken.marduk.Constants.EXPORT_FILE_NAME;
+import static no.rutebanken.marduk.Constants.FILE_HANDLE;
+import static no.rutebanken.marduk.Constants.NOTIFICATION;
+import static no.rutebanken.marduk.Constants.NOTIFICATION_URL;
+import static no.rutebanken.marduk.Constants.PROVIDER_ID;
 
 @Component
 public class BlobStoreRoute extends BaseRouteBuilder {

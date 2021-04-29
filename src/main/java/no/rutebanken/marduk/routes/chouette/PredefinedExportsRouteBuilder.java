@@ -13,7 +13,9 @@ import org.springframework.stereotype.Component;
 import java.util.List;
 import java.util.UUID;
 
-import static no.rutebanken.marduk.Constants.*;
+import static no.rutebanken.marduk.Constants.CHOUETTE_REFERENTIAL;
+import static no.rutebanken.marduk.Constants.ORIGINAL_PROVIDER_ID;
+import static no.rutebanken.marduk.Constants.PROVIDER_ID;
 
 @Component
 public class PredefinedExportsRouteBuilder extends AbstractChouetteRouteBuilder {

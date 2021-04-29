@@ -21,10 +21,9 @@ import org.junit.Test;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.function.Predicate;
-import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
-import static no.rutebanken.marduk.routes.file.beans.FileClassifierPredicates.*;
+import static no.rutebanken.marduk.routes.file.beans.FileClassifierPredicates.NETEX_PUBLICATION_DELIVERY_QNAME;
 
 public class FileClassifierPredicatesTest {
 

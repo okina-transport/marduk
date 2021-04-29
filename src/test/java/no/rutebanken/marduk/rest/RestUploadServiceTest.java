@@ -20,7 +20,7 @@ import java.nio.file.Paths;
 import java.util.Base64;
 import java.util.Map;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertNotNull;
 
 public class RestUploadServiceTest {
 

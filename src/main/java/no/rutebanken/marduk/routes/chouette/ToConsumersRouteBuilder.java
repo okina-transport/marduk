@@ -2,7 +2,6 @@ package no.rutebanken.marduk.routes.chouette;
 
 import no.rutebanken.marduk.domain.ExportTemplate;
 import org.apache.camel.LoggingLevel;
-import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Component;
 
 import java.util.List;

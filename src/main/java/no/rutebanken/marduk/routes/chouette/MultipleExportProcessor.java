@@ -20,7 +20,22 @@ import org.springframework.stereotype.Component;
 import java.util.List;
 import java.util.Map;
 
-import static no.rutebanken.marduk.Constants.*;
+import static no.rutebanken.marduk.Constants.CHOUETTE_REFERENTIAL;
+import static no.rutebanken.marduk.Constants.COMMERCIAL_POINT_ID_PREFIX;
+import static no.rutebanken.marduk.Constants.EXPORTED_FILENAME;
+import static no.rutebanken.marduk.Constants.EXPORT_END_DATE;
+import static no.rutebanken.marduk.Constants.EXPORT_LINES_IDS;
+import static no.rutebanken.marduk.Constants.EXPORT_NAME;
+import static no.rutebanken.marduk.Constants.EXPORT_START_DATE;
+import static no.rutebanken.marduk.Constants.ID_FORMAT;
+import static no.rutebanken.marduk.Constants.ID_SUFFIX;
+import static no.rutebanken.marduk.Constants.LINE_ID_PREFIX;
+import static no.rutebanken.marduk.Constants.MAPPING_LINES_IDS;
+import static no.rutebanken.marduk.Constants.NO_GTFS_EXPORT;
+import static no.rutebanken.marduk.Constants.OKINA_REFERENTIAL;
+import static no.rutebanken.marduk.Constants.ORIGINAL_PROVIDER_ID;
+import static no.rutebanken.marduk.Constants.PROVIDER_ID;
+import static no.rutebanken.marduk.Constants.STOP_ID_PREFIX;
 
 /**
  * Handles multiple exports

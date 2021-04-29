@@ -31,7 +31,11 @@ import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.UUID;
 
-import static no.rutebanken.marduk.Constants.*;
+import static no.rutebanken.marduk.Constants.CORRELATION_ID;
+import static no.rutebanken.marduk.Constants.FILE_HANDLE;
+import static no.rutebanken.marduk.Constants.FILE_NAME;
+import static no.rutebanken.marduk.Constants.FILE_TYPE;
+import static no.rutebanken.marduk.Constants.PROVIDER_ID;
 
 /**
  * Receives file handle, pulls file from blob store, classifies files and performs initial validation.

@@ -1,8 +1,6 @@
 package no.rutebanken.marduk.repository;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import no.rutebanken.marduk.domain.ExportTemplate;
-import no.rutebanken.marduk.domain.Provider;
 import no.rutebanken.marduk.security.TokenService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.ParameterizedTypeReference;
@@ -13,7 +11,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
