@@ -25,6 +25,7 @@ import org.apache.camel.test.spring.CamelSpringRunner;
 import org.apache.camel.test.spring.UseAdviceWith;
 import org.apache.commons.io.IOUtils;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -41,6 +42,7 @@ import static org.mockito.Mockito.when;
 @ActiveProfiles({"default", "in-memory-blobstore"})
 @UseAdviceWith
 @DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
+@Ignore
 public class MardukRouteBuilderIntegrationTestBase {
 
     @Autowired

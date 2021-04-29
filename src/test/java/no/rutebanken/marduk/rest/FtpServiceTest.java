@@ -3,6 +3,7 @@ package no.rutebanken.marduk.rest;
 import no.rutebanken.marduk.services.FtpService;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.File;
@@ -16,6 +17,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.InvalidPropertiesFormatException;
 
+@Ignore
 public class FtpServiceTest {
 
     FtpService ftpService = new FtpService();

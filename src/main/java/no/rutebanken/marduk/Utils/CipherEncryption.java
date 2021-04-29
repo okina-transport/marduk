@@ -10,7 +10,7 @@ import javax.crypto.spec.SecretKeySpec;
 @Component
 public class CipherEncryption {
 
-    @Value("${encryption.key}")
+    @Value("${encryption.key:keyfortests}")
     private String encryptionKeyString;
 
     public byte[] encrypt(String password) throws Exception {
