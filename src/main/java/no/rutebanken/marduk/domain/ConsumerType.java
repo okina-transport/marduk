@@ -4,5 +4,5 @@ public enum ConsumerType {
     FTP,
     SFTP,
     REST,
-    URL;
+    S3;
 }
