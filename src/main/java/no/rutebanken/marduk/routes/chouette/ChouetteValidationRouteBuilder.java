@@ -37,6 +37,7 @@ import static no.rutebanken.marduk.Constants.CHOUETTE_JOB_STATUS_JOB_VALIDATION_
 import static no.rutebanken.marduk.Constants.CHOUETTE_REFERENTIAL;
 import static no.rutebanken.marduk.Constants.CORRELATION_ID;
 import static no.rutebanken.marduk.Constants.IMPORT;
+import static no.rutebanken.marduk.Constants.JSON_EXPORTS;
 import static no.rutebanken.marduk.Constants.JSON_PART;
 import static no.rutebanken.marduk.Constants.OKINA_REFERENTIAL;
 import static no.rutebanken.marduk.Constants.PROVIDER_ID;
@@ -173,6 +174,15 @@ public class ChouetteValidationRouteBuilder extends AbstractChouetteRouteBuilder
                         .when(PredicateBuilder.and(PredicateBuilder.constant(autoExportsOnValidate), constant(VALIDATION_LEVEL_2).isEqualTo(header(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL))))
                         .process(e -> {
                             List<ExportTemplate> exports = exportTemplateDAO.getAll(e.getIn().getHeader(OKINA_REFERENTIAL, String.class));
+                            List<ExportTemplate> exportsWithDates = exportJsonMapper.fromJsonArray(e.getIn().getHeader(JSON_EXPORTS, String.class));
+                            for(ExportTemplate exportTemplate : exports){
+                                for(ExportTemplate exportTemplateWithDates : exportsWithDates){
+                                    if(exportTemplate.getId().equals(exportTemplateWithDates.getId())){
+                                        exportTemplate.setStartDate(exportTemplateWithDates.getStartDate());
+                                        exportTemplate.setEndDate(exportTemplateWithDates.getEndDate());
+                                    }
+                                }
+                            }
                             e.getIn().setBody(exports);
                         })
                         .to("direct:multipleExports")

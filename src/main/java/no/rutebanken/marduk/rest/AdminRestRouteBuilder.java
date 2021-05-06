@@ -64,6 +64,7 @@ import static no.rutebanken.marduk.Constants.EXPORT_START_DATE;
 import static no.rutebanken.marduk.Constants.FILE_HANDLE;
 import static no.rutebanken.marduk.Constants.FILE_NAME;
 import static no.rutebanken.marduk.Constants.IMPORT;
+import static no.rutebanken.marduk.Constants.JSON_EXPORTS;
 import static no.rutebanken.marduk.Constants.NO_GTFS_EXPORT;
 import static no.rutebanken.marduk.Constants.OKINA_REFERENTIAL;
 import static no.rutebanken.marduk.Constants.PROVIDER_ID;
@@ -947,7 +948,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
                 .log(LoggingLevel.INFO, correlation() + "Chouette start validation")
                 .removeHeaders("CamelHttp*")
-                .process(e -> e.getIn().setHeader(USER, getUserNameFromHeaders(e)))
+                .process(this::getFromHeaders)
                 .choice().when(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)).chouetteInfo.migrateDataToProvider == null)
                 .setHeader(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL, constant(JobEvent.TimetableAction.VALIDATION_LEVEL_2.name()))
                 .otherwise()
@@ -1090,7 +1091,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
         return null;
     }
 
-    private void getFromHeaders(Exchange e) {
+    private void getFromHeaders(Exchange e) throws Exception {
         Map headers = (Map) e.getIn().getBody(Map.class).get("headers");
         if (headers != null) {
             if (headers.get(USER) != null) {
@@ -1107,6 +1108,10 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
             }
             if (headers.get(EXPORT_NAME) != null) {
                 e.getIn().setHeader(EXPORT_NAME, headers.get(EXPORT_NAME));
+            }
+            if (headers.get(JSON_EXPORTS) != null) {
+                String json = exportJsonMapper.toJson(headers.get(JSON_EXPORTS));
+                e.getIn().setHeader(JSON_EXPORTS, json);
             }
         }
     }
