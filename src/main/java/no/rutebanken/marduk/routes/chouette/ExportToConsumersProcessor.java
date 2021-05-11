@@ -2,6 +2,7 @@ package no.rutebanken.marduk.routes.chouette;
 
 import no.rutebanken.marduk.Utils.CipherEncryption;
 import no.rutebanken.marduk.domain.ExportTemplate;
+import no.rutebanken.marduk.services.BlobStoreService;
 import no.rutebanken.marduk.services.FtpService;
 import no.rutebanken.marduk.services.RestUploadService;
 import org.apache.camel.Exchange;
@@ -10,6 +11,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
@@ -23,6 +25,9 @@ public class ExportToConsumersProcessor implements Processor {
 
     Logger log = LoggerFactory.getLogger(this.getClass());
 
+    @Value("${marduk.upload.public.path:/tmp}")
+    private String publicUploadPath;
+
 //    @Autowired
     private static ExportJsonMapper exportJsonMapper = new ExportJsonMapper();
 
@@ -34,6 +39,9 @@ public class ExportToConsumersProcessor implements Processor {
 
     @Autowired
     CipherEncryption cipherEncryption;
+
+    @Autowired
+    BlobStoreService blobStoreService;
 
     /**
      * Gets the result stream of an export  and upload it towards consumers defined for this export
@@ -50,7 +58,7 @@ public class ExportToConsumersProcessor implements Processor {
             String filePath = export.getExportedFileName() != null ? export.getExportedFileName()  : (String) exchange.getIn().getHeaders().get("fileName");
             InputStream streamToUpload = (InputStream) exchange.getIn().getBody();
             export.getConsumers().stream().forEach(consumer -> {
-                log.info(consumer.getType() + " consumer upload starting " + consumer.getName() + " => " + consumer.getServiceUrl());
+                log.info(consumer.getType() + " consumer upload starting : " + consumer.getName() + " => " + consumer.getServiceUrl());
                 try {
                     String passwordDecryptedConsumer = null;
                     if(consumer.getPassword() != null && consumer.getPassword().length > 0){
@@ -71,6 +79,9 @@ public class ExportToConsumersProcessor implements Processor {
                             break;
                         case REST:
                             restUploadService.uploadStream(streamToUpload, consumer.getServiceUrl(), filePath, consumer.getLogin(), secretKeyDecryptedConsumer);
+                            break;
+                        case URL:
+                            blobStoreService.uploadBlob(publicUploadPath + "/" + filePath, true, streamToUpload);
                             break;
                     }
                     log.info(consumer.getType() + " consumer upload completed " + consumer.getName() + " => " + consumer.getServiceUrl());

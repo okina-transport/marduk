@@ -1,7 +1,7 @@
 package no.rutebanken.marduk.rest;
 
-import io.fabric8.jolokia.assertions.Assertions;
 import no.rutebanken.marduk.services.RestUploadService;
+import org.assertj.core.api.Assertions;
 import org.junit.Before;
 import org.junit.Test;
 import org.springframework.core.io.FileSystemResource;

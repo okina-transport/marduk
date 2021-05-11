@@ -1,0 +1,9 @@
+FROM adoptopenjdk:8-jre-hotspot
+
+ARG JAR_FILE
+
+COPY ${JAR_FILE} /app.jar
+
+CMD ["java","-Xdebug","-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5006","-jar","/app.jar"]
+
+
