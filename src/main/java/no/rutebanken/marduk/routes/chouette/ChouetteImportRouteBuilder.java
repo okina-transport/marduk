@@ -34,6 +34,7 @@ import org.springframework.stereotype.Component;
 import static no.rutebanken.marduk.Constants.AREA_CENTROID_PREFIX_TO_REMOVE;
 import static no.rutebanken.marduk.Constants.CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL;
 import static no.rutebanken.marduk.Constants.CHOUETTE_REFERENTIAL;
+import static no.rutebanken.marduk.Constants.CLEAN_REPOSITORY;
 import static no.rutebanken.marduk.Constants.COMMERCIAL_POINT_ID_PREFIX_TO_REMOVE;
 import static no.rutebanken.marduk.Constants.DESCRIPTION;
 import static no.rutebanken.marduk.Constants.FILE_NAME;
@@ -153,7 +154,10 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
                     Long providerId = e.getIn().getHeader(PROVIDER_ID, Long.class);
                     String splitCharacter = e.getIn().getHeader(SPLIT_CHARACTER, String.class);
                     String routeMergeStr = e.getIn().getHeader(ROUTE_MERGE, String.class);
-                    boolean routeMerge = StringUtils.isEmpty(routeMergeStr)?false:Boolean.valueOf(routeMergeStr);
+                    boolean routeMerge = !StringUtils.isEmpty(routeMergeStr) && Boolean.parseBoolean(routeMergeStr);
+
+                    String cleanRepositoryStr = e.getIn().getHeader(CLEAN_REPOSITORY, String.class);
+                    boolean cleanRepository = !StringUtils.isEmpty(cleanRepositoryStr) && Boolean.parseBoolean(cleanRepositoryStr);
 
                     String commercialPointIdPrefixToRemove = e.getIn().getHeader(COMMERCIAL_POINT_ID_PREFIX_TO_REMOVE, String.class);
                     String quayPrefixToRemove = e.getIn().getHeader(QUAY_ID_PREFIX_TO_REMOVE, String.class);
@@ -175,7 +179,7 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
                         idParams.setStopAreaPrefixToRemove(stopAreaPrefixToRemove);
                         idParams.setAreaCentroidPrefixToRemove(areaCentroidPrefixToRemove);
                     }
-                    e.getIn().setHeader(JSON_PART, getImportParameters(fileName, fileType, providerId, user, description,routeMerge,splitCharacter,idParams));
+                    e.getIn().setHeader(JSON_PART, getImportParameters(fileName, fileType, providerId, user, description, routeMerge, splitCharacter, idParams, cleanRepository));
                 }) //Using header to addToExchange json data
                 .log(LoggingLevel.DEBUG, correlation() + "import parameters: " + header(JSON_PART))
                 .to("direct:sendImportJobRequest")
@@ -261,9 +265,9 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
 
     }
 
-    private String getImportParameters(String fileName, String fileType, Long providerId, String user, String description, boolean routeMerge, String splitCharacter, IdParameters idParameters) {
+    private String getImportParameters(String fileName, String fileType, Long providerId, String user, String description, boolean routeMerge, String splitCharacter, IdParameters idParameters, boolean cleanRepository) {
         Provider provider = getProviderRepository().getProvider(providerId);
-        return Parameters.createImportParameters(fileName, fileType, provider, user, description,routeMerge, splitCharacter,idParameters);
+        return Parameters.createImportParameters(fileName, fileType, provider, user, description, routeMerge, splitCharacter, idParameters, cleanRepository);
     }
 
 }

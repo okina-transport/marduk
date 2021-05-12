@@ -38,6 +38,8 @@ public class Constants {
     public static final String IMPORT_TYPE = "ImportType";
     public static final String SPLIT_CHARACTER = "splitCharacter";
     public static final String ROUTE_MERGE = "routeMerge";
+    public static final String CLEAN_REPOSITORY = "cleanRepository";
+
     public static final String ID_SUFFIX = "ID_SUFFIX";
     public static final String COMMERCIAL_POINT_ID_PREFIX = "COMMERCIAL_POINT_ID_PREFIX";
     public static final String STOP_AREA_PREFIX_TO_REMOVE = "stopAreaPrefixToRemove";

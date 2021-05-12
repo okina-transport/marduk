@@ -37,7 +37,7 @@ public class PredefinedExportsRouteBuilder extends AbstractChouetteRouteBuilder 
     public void configure() throws Exception {
         super.configure();
 
-        from("direct:predefinedExports").streamCaching()
+        from("activemq:queue:predefinedExports?transacted=true").streamCaching()
                 .transacted()
                 .log(LoggingLevel.INFO, getClass().getName(), "Starting Chouette all export for provider with id ${header." + PROVIDER_ID + "}")
                 .process(e -> {

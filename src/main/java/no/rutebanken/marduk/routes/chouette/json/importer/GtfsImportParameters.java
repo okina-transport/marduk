@@ -89,7 +89,7 @@ public class GtfsImportParameters extends ChouetteJobParameters {
     public static GtfsImportParameters create(String name, String objectIdPrefix, String referentialName, String organisationName,
                                                      String userName, boolean cleanRepository, boolean enableValidation,
                                                      boolean allowCreateMissingStopPlace, boolean enableStopPlaceIdMapping,
-                                                     Set<String> generateMissingRouteSectionsForModes, String description,boolean routeMerge,String splitCharacter, String commercialPointIdPrefixToRemove,
+                                                     Set<String> generateMissingRouteSectionsForModes, String description, boolean routeMerge, String splitCharacter, String commercialPointIdPrefixToRemove,
                                                      String quayIdPrefixToRemove, String linePrefixToRemove) {
 
         Gtfs gtfsImport = new Gtfs();

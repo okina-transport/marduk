@@ -65,7 +65,6 @@ import static no.rutebanken.marduk.Constants.EXPORT_START_DATE;
 import static no.rutebanken.marduk.Constants.FILE_HANDLE;
 import static no.rutebanken.marduk.Constants.FILE_NAME;
 import static no.rutebanken.marduk.Constants.IMPORT;
-import static no.rutebanken.marduk.Constants.JSON_EXPORTS;
 import static no.rutebanken.marduk.Constants.NO_GTFS_EXPORT;
 import static no.rutebanken.marduk.Constants.OKINA_REFERENTIAL;
 import static no.rutebanken.marduk.Constants.PROVIDER_ID;
@@ -109,7 +108,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
 
         RestPropertyDefinition corsAllowedHeaders = new RestPropertyDefinition();
         corsAllowedHeaders.setKey("Access-Control-Allow-Headers");
-        corsAllowedHeaders.setValue("Origin, Accept, X-Requested-With, Content-Type, Access-Control-Request-Method, Access-Control-Request-Headers, Authorization, x-okina-referential, RutebankenUser, RutebankenDescription, EXPORT_LINES_IDS, EXPORT_START_DATE, EXPORT_END_DATE, ImportType,routeMerge,splitCharacter,commercialPointIdPrefixToRemove,quayIdPrefixToRemove,areaCentroidPrefixToRemove,linePrefixToRemove,stopAreaPrefixToRemove");
+        corsAllowedHeaders.setValue("Origin, Accept, X-Requested-With, Content-Type, Access-Control-Request-Method, Access-Control-Request-Headers, Authorization, x-okina-referential, RutebankenUser, RutebankenDescription, EXPORT_LINES_IDS, EXPORT_START_DATE, EXPORT_END_DATE, ImportType, routeMerge, splitCharacter, commercialPointIdPrefixToRemove, quayIdPrefixToRemove, areaCentroidPrefixToRemove, linePrefixToRemove, stopAreaPrefixToRemove, cleanRepository");
 
         RestPropertyDefinition corsAllowedOrigin = new RestPropertyDefinition();
         corsAllowedOrigin.setKey("Access-Control-Allow-Origin");
@@ -847,7 +846,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .log(LoggingLevel.INFO, correlation() + "Chouette start all export process")
                 .removeHeaders("CamelHttp*")
                 .process(e -> e.getIn().setHeader(USER, getUserNameFromHeaders(e)))
-                .inOnly("direct:predefinedExports")
+                .inOnly("activemq:queue:predefinedExports")
                 .routeId("admin-chouette-export-all")
                 .endRest()
 
@@ -894,17 +893,11 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .responseMessage().code(200).message("Command accepted").endResponseMessage()
                 .route()
                 .setHeader(PROVIDER_ID, header("providerId"))
-                .process(e -> {
-                    log.info("Validate-> export process: exports parsing");
-                    String json = exportJsonMapper.toJson(e.getIn().getBody());
-                    // keep a JSON form for now to prevent activemq serialize errors on unhandled classes
-                    e.getIn().setHeader(JSON_EXPORTS, json);
-                    e.getIn().setBody(json);
-                })
                 .to("direct:authorizeRequest")
                 .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
                 .log(LoggingLevel.INFO, correlation() + "Chouette start validation")
                 .removeHeaders("CamelHttp*")
+                .process(e -> e.getIn().setHeader(USER, getUserNameFromHeaders(e)))
                 .choice().when(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)).chouetteInfo.migrateDataToProvider == null)
                 .setHeader(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL, constant(JobEvent.TimetableAction.VALIDATION_LEVEL_2.name()))
                 .otherwise()

@@ -40,11 +40,11 @@ import java.util.List;
 
 public class Parameters {
 
-    public static String createImportParameters(String fileName, String fileType, Provider provider, String user, String description,boolean routeMerge, String splitCharacter,IdParameters idParams) {
+    public static String createImportParameters(String fileName, String fileType, Provider provider, String user, String description, boolean routeMerge, String splitCharacter, IdParameters idParams, boolean cleanRepository) {
         if (FileType.REGTOPP.name().equals(fileType)) {
             return getRegtoppImportParameters(fileName, provider);
         } else if (FileType.GTFS.name().equals(fileType)) {
-            return getGtfsImportParameters(fileName, provider, user, description,routeMerge,  splitCharacter, idParams);
+            return getGtfsImportParameters(fileName, provider, user, description, routeMerge, splitCharacter, idParams, cleanRepository);
         } else if (FileType.NETEXPROFILE.name().equals(fileType)) {
             return getNetexImportParameters(fileName, provider);
         } else if (FileType.NEPTUNE.name().equals(fileType)) {
@@ -75,11 +75,11 @@ public class Parameters {
         return neptuneImportParameters.toJsonString();
     }
 
-    static String getGtfsImportParameters(String importName, Provider provider, String user, String description,boolean routeMerge, String splitCharacter,IdParameters idParams) {
+    static String getGtfsImportParameters(String importName, Provider provider, String user, String description, boolean routeMerge, String splitCharacter, IdParameters idParams, boolean cleanRepository) {
         ChouetteInfo chouetteInfo = provider.chouetteInfo;
         GtfsImportParameters gtfsImportParameters = GtfsImportParameters.create(importName, chouetteInfo.xmlns,
-                provider.name, chouetteInfo.organisation, user, chouetteInfo.enableCleanImport,
-                chouetteInfo.enableValidation, chouetteInfo.allowCreateMissingStopPlace, chouetteInfo.enableStopPlaceIdMapping, chouetteInfo.generateMissingServiceLinksForModes, description,routeMerge, splitCharacter,idParams.getCommercialPointIdPrefixToRemove(), idParams.getQuayIdPrefixToRemove(), idParams.getLinePrefixToRemove());
+                provider.name, chouetteInfo.organisation, user, cleanRepository,
+                chouetteInfo.enableValidation, chouetteInfo.allowCreateMissingStopPlace, chouetteInfo.enableStopPlaceIdMapping, chouetteInfo.generateMissingServiceLinksForModes, description, routeMerge, splitCharacter, idParams.getCommercialPointIdPrefixToRemove(), idParams.getQuayIdPrefixToRemove(), idParams.getLinePrefixToRemove());
         return gtfsImportParameters.toJsonString();
     }
 
