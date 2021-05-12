@@ -15,6 +15,7 @@
     <option name="ALTERNATIVE_JRE_PATH" />
     <option name="SHORTEN_COMMAND_LINE" value="NONE" />
     <envs>
+      <env name="env" value="dev" />
       <env name="SPRING_CONFIG_LOCATION" value="$PROJECT_DIR$/../mobi-iti-docker-stack/config/marduk.properties" />
       <env name="TIAMA_STORAGE_PATH" value="/tmp" />
       <env name="CHOUETTE_STORAGE_PATH" value="/tmp" />
