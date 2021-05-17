@@ -18,6 +18,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Optional;
 
+import static no.rutebanken.marduk.Constants.CHOUETTE_REFERENTIAL;
 import static no.rutebanken.marduk.Constants.CURRENT_EXPORT;
 
 @Component
@@ -52,6 +53,7 @@ public class ExportToConsumersProcessor implements Processor {
     public void process(Exchange exchange) throws Exception {
         // get the json export string:
         String jsonExport = (String) exchange.getIn().getHeaders().get(CURRENT_EXPORT);
+        String referential = (String) exchange.getIn().getHeaders().get(CHOUETTE_REFERENTIAL);
         if (StringUtils.isNotBlank(jsonExport)) {
             ExportTemplate export = exportJsonMapper.fromJson(jsonExport);
             log.info("Found " + export.getConsumers().size() + " for export " + export.getId() + "/" + export.getName());
@@ -81,7 +83,7 @@ public class ExportToConsumersProcessor implements Processor {
                             restUploadService.uploadStream(streamToUpload, consumer.getServiceUrl(), filePath, consumer.getLogin(), secretKeyDecryptedConsumer);
                             break;
                         case URL:
-                            blobStoreService.uploadBlob(publicUploadPath + "/" + filePath, true, streamToUpload);
+                            blobStoreService.uploadBlob("/" + publicUploadPath + "/" + referential + "/" + filePath, true, streamToUpload);
                             break;
                     }
                     log.info(consumer.getType() + " consumer upload completed " + consumer.getName() + " => " + consumer.getServiceUrl());

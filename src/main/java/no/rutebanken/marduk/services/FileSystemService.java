@@ -182,7 +182,7 @@ public class FileSystemService {
                 File newFile = new File(chouetteStoragePath+"/"+fileName);
                 newFile.getParentFile().mkdirs();
                 Path newPath = newFile.toPath();
-                Files.createFile(newPath);
+                Files.write(newPath, fileName.getBytes());
                 return newPath;
             }
             return pathList.get(0);
