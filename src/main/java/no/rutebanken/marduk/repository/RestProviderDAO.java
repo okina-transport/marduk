@@ -38,7 +38,7 @@ public class RestProviderDAO {
 
     private Logger logger = LoggerFactory.getLogger(this.getClass());
 
-    @Value("${providers.api.url}")
+    @Value("${providers.api.url:http://baba:16001/services/providers/}")
     private String restServiceUrl;
 
 
