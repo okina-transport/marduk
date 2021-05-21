@@ -46,7 +46,7 @@ public class SendMail {
     private boolean emailStartTlsEnable;
 
 
-    public void sendEmail(String mailObject, String text, ArrayList<File> attachmentFiles) {
+    public void sendEmail(String mailObject, String dest, String text, ArrayList<File> attachmentFiles) {
 
         Properties props = System.getProperties();
         props.put("mail.smtp.host", emailHost);
@@ -68,7 +68,7 @@ public class SendMail {
 
         try {
             msg.setFrom(new InternetAddress(emailFrom));
-            msg.setRecipients(Message.RecipientType.TO, InternetAddress.parse(emailTo));
+            msg.setRecipients(Message.RecipientType.TO, InternetAddress.parse(dest));
             msg.setSubject(mailObject);
             msg.setContent(text, "text/html; charset=utf-8");
 

@@ -147,7 +147,7 @@ public class FtpService {
             ex.printStackTrace();
             logger.error("Exception found while transfer the response.", ex.getMessage());
             slackNotification.sendSlackNotificationTitleAndMessage(SlackNotification.NOTIFICATION_CHANNEL, "Erreur upload du fichier: " + sftpFileName + " sur: " + ftpFilePath, "Le fichier n'a pas pu être exporté.");
-            sendMail.sendEmail("Erreur upload du fichier: " + sftpFileName + " sur: " + ftpFilePath, "Le fichier n'a pas pu être exporté.", null);
+            sendMail.sendEmail("Erreur upload du fichier: " + sftpFileName + " sur: " + ftpFilePath, null, "Le fichier n'a pas pu être exporté.", null);
 
         } finally {
             channelSftp.exit();
