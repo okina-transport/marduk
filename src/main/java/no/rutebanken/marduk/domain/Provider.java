@@ -34,6 +34,7 @@ public class Provider {
     }
     public String name;
     public String sftpAccount;
+    public String email;
 
     public ChouetteInfo getChouetteInfo() {
 		return chouetteInfo;
@@ -46,6 +47,7 @@ public class Provider {
                 "id=" + id +
                 ", name='" + name + '\'' +
                 ", sftpAccount='" + sftpAccount + '\'' +
+                ", email='" + email + '\'' +
                 ", chouetteInfo=" + chouetteInfo +
                 '}';
     }
