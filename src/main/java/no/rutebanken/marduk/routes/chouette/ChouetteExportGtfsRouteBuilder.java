@@ -101,7 +101,7 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
                     // Add correlation id only if missing
                     e.getIn().setHeader(Constants.CORRELATION_ID, e.getIn().getHeader(Constants.CORRELATION_ID, UUID.randomUUID().toString()));
                     e.getIn().removeHeader(Constants.CHOUETTE_JOB_ID);
-                    String exportName = e.getIn().getHeader(EXPORT_NAME) != null ? (String) e.getIn().getHeader(EXPORT_NAME) : "offre";
+                    String exportName = org.springframework.util.StringUtils.hasText(e.getIn().getHeader(EXPORT_NAME, String.class)) ? (String) e.getIn().getHeader(EXPORT_NAME) : "offre";
                     e.getIn().setHeader(FILE_NAME, exportName);
                     e.getIn().setHeader(FILE_TYPE, "gtfs");
                 })
