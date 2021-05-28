@@ -110,7 +110,7 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
                 .process(e -> e.getIn().setHeader(CHOUETTE_REFERENTIAL, getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)).chouetteInfo.referential))
                 .choice()
                     .when(simple("${header." + Constants.CHOUETTE_REFERENTIAL+"} == 'mobiiti_technique'"))
-                    .to("direct:exportMergedGtfs")
+                    .to("direct:exportGtfsBasicMerged")
                 .end()
                 .process(e -> {
                     String user = e.getIn().getHeader(USER, String.class);
