@@ -48,7 +48,7 @@ import static org.apache.camel.Exchange.FILE_PARENT;
 public class CommonGtfsExportMergedRouteBuilder extends BaseRouteBuilder {
 
 
-    @Value("${marduk.storage.path:files/gtfs/merged}")
+    @Value("${marduk.storage.path:/srv/docker-data/data/marduk}")
     private String mardukStoragePath;
 
     @Value("${google.publish.public:false}")
