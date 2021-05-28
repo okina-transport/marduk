@@ -79,7 +79,7 @@ public class GtfsBasicMergedExportRouteBuilder extends BaseRouteBuilder {
      */
     private List<String> createProviderBlackList() {
         List<String> agencyList = new ArrayList<>();
-        agencyList.add("technique");
+        agencyList.add("mobiiti_technique");
 
         if (agencyBlackList != null) {
             agencyBlackList.stream()
