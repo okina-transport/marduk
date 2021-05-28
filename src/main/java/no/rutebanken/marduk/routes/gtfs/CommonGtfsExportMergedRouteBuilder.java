@@ -48,8 +48,8 @@ import static org.apache.camel.Exchange.FILE_PARENT;
 public class CommonGtfsExportMergedRouteBuilder extends BaseRouteBuilder {
 
 
-    @Value("${marduk.storage.path:/srv/docker-data/data/marduk}")
-    private String mardukStoragePath;
+    @Value("${gtfs.export.download.directory:files/gtfs/merged}")
+    private String localWorkingDirectory;
 
     @Value("${google.publish.public:false}")
     private boolean publicPublication;
@@ -63,7 +63,7 @@ public class CommonGtfsExportMergedRouteBuilder extends BaseRouteBuilder {
 
                 .process(e -> JobEvent.systemJobBuilder(e).jobDomain(JobEvent.JobDomain.TIMETABLE_PUBLISH).action(e.getIn().getHeader(JOB_ACTION, String.class)).state(JobEvent.State.STARTED).newCorrelationId().build())
                 .inOnly("direct:updateStatus")
-                .setHeader(FILE_PARENT, simple(mardukStoragePath+"/${header." + JOB_ACTION + "}/${date:now:yyyyMMddHHmmss}"))
+                .setHeader(FILE_PARENT, simple(localWorkingDirectory + "/${header." + JOB_ACTION + "}/${date:now:yyyyMMddHHmmss}"))
                 .doTry()
                 .to("direct:fetchLatestGtfs")
                 .to("direct:mergeGtfs")
