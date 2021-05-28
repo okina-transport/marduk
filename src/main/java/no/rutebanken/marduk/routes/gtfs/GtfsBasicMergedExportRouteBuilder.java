@@ -75,14 +75,22 @@ public class GtfsBasicMergedExportRouteBuilder extends BaseRouteBuilder {
 
 
     /**
-     * Make sure blacklisted agencies start with "rb_" prefix.
+     * Creates a list of blacklisted agencies
      */
     private List<String> createProviderBlackList() {
-        if (agencyBlackList == null) {
-            return new ArrayList<>();
+        List<String> agencyList = new ArrayList<>();
+        agencyList.add("technique");
+
+        if (agencyBlackList != null) {
+            agencyBlackList.stream()
+                            .map(agency -> agency.startsWith("rb_") ? agency : "rb_" + agency)
+                            .forEach(agencyList::add);
         }
 
-        return agencyBlackList.stream().map(agency -> agency.startsWith("rb_") ? agency : "rb_" + agency).collect(Collectors.toList());
+
+
+        return agencyList;
+
     }
 
 }

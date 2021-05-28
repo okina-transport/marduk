@@ -106,7 +106,7 @@ public class CommonGtfsExportMergedRouteBuilder extends BaseRouteBuilder {
 
         from("direct:mergeGtfs")
                 .log(LoggingLevel.DEBUG, getClass().getName(), "Merging gtfs files for all providers.")
-                .setBody(simple("${header." + FILE_PARENT + "}/org"))
+                .setBody(simple("${header." + FILE_PARENT + "}"))
                 .bean(method(GtfsFileUtils.class, "mergeGtfsFilesInDirectory"))
                 .toD("file:${header." + FILE_PARENT + "}?fileName=merged.zip")
 
