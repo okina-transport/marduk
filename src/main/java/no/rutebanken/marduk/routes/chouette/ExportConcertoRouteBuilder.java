@@ -18,7 +18,6 @@ package no.rutebanken.marduk.routes.chouette;
 
 import no.rutebanken.marduk.Constants;
 import no.rutebanken.marduk.config.SchedulerConcertoConfig;
-import no.rutebanken.marduk.routes.ConcertoJob;
 import no.rutebanken.marduk.routes.chouette.json.Parameters;
 import no.rutebanken.marduk.routes.status.JobEvent;
 import no.rutebanken.marduk.routes.status.JobEvent.State;
@@ -29,14 +28,10 @@ import org.apache.camel.LoggingLevel;
 import org.apache.camel.component.http4.HttpMethods;
 import org.quartz.CronScheduleBuilder;
 import org.quartz.CronTrigger;
-import org.quartz.JobBuilder;
-import org.quartz.JobDetail;
-import org.quartz.Scheduler;
 import org.quartz.SchedulerException;
 import org.quartz.Trigger;
 import org.quartz.TriggerBuilder;
 import org.quartz.TriggerKey;
-import org.quartz.impl.StdSchedulerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.quartz.JobDetailFactoryBean;
@@ -44,6 +39,8 @@ import org.springframework.scheduling.quartz.SchedulerFactoryBean;
 import org.springframework.stereotype.Component;
 
 import java.io.File;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Map;
 import java.util.UUID;
@@ -183,7 +180,7 @@ public class ExportConcertoRouteBuilder extends AbstractChouetteRouteBuilder {
         }
     }
 
-    private void updateSchedulerForConcertoExport(Exchange e) throws SchedulerException {
+    private void updateSchedulerForConcertoExport(Exchange e) throws SchedulerException, ParseException {
         Map headers = (Map) e.getIn().getBody(Map.class).get("headers");
         if (headers != null) {
             if (headers.get(CONCERTO_EXPORT_SCHEDULER) != null) {
@@ -193,14 +190,20 @@ public class ExportConcertoRouteBuilder extends AbstractChouetteRouteBuilder {
 
                 JobDetailFactoryBean concertoJobDetails = schedulerConcerto.getJobConcerto();
 
+                String[] dateFromCron = concertoExportSchedulerCron.split(" ");
+                String format = "yyyy-MM-dd HH:mm";
+                SimpleDateFormat simpleStartDateFormat = new SimpleDateFormat(format);
+                Date startDate = simpleStartDateFormat.parse(dateFromCron[6].split("-")[0] + "-" + dateFromCron[4].split(",")[0] + "-" + dateFromCron[3].split("/")[0] + " " + dateFromCron[2] + ":" + dateFromCron[1]);
+
                 Trigger concertoTrigger = TriggerBuilder.newTrigger().forJob(concertoJobDetails.getObject())
                         .withIdentity("ConcertoJobTrigger")
                         .withSchedule(CronScheduleBuilder.cronSchedule(concertoExportSchedulerCron))
+                        .startAt(startDate)
                         .build();
 
                 scheduler.start();
 
-                if(scheduler.getScheduler().checkExists(concertoJobDetails.getObject().getKey())){
+                if (scheduler.getScheduler().checkExists(concertoJobDetails.getObject().getKey())) {
                     scheduler.getScheduler().deleteJob(concertoJobDetails.getObject().getKey());
                 }
 
