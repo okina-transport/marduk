@@ -48,6 +48,9 @@ public class NeptuneImportParameters extends ChouetteJobParameters {
         @JsonInclude(JsonInclude.Include.ALWAYS)
         public String linePrefixToRemove = "";
 
+        @JsonProperty("ignore_commercial_points")
+        public boolean ignoreCommercialPoints = true;
+
 
     }
 
@@ -55,7 +58,7 @@ public class NeptuneImportParameters extends ChouetteJobParameters {
                                                  String userName, boolean cleanRepository, boolean enableValidation,
                                                  boolean allowCreateMissingStopPlace, boolean enableStopPlaceIdMapping,
                                                  Set<String> generateMissingRouteSectionsForModes, String description,
-                                                 IdParameters idParameters) {
+                                                 IdParameters idParameters, boolean ignoreCommercialPoints) {
         Neptune neptuneImport = new Neptune();
         neptuneImport.name = name;
         neptuneImport.referentialName = referentialName;
@@ -71,6 +74,7 @@ public class NeptuneImportParameters extends ChouetteJobParameters {
         neptuneImport.areaCentroidPrefixToRemove = idParameters.getAreaCentroidPrefixToRemove();
         neptuneImport.stopAreaPrefixToRemove = idParameters.getStopAreaPrefixToRemove();
         neptuneImport.linePrefixToRemove = idParameters.getLinePrefixToRemove();
+        neptuneImport.ignoreCommercialPoints = ignoreCommercialPoints;
 
         Parameters parameters = new Parameters();
         parameters.neptuneImport = neptuneImport;

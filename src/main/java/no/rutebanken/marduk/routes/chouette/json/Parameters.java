@@ -40,7 +40,7 @@ import java.util.List;
 
 public class Parameters {
 
-    public static String createImportParameters(String fileName, String fileType, Provider provider, String user, String description, boolean routeMerge, String splitCharacter, IdParameters idParams, boolean cleanRepository) {
+    public static String createImportParameters(String fileName, String fileType, Provider provider, String user, String description, boolean routeMerge, String splitCharacter, IdParameters idParams, boolean cleanRepository, boolean ignoreCommercialPoints) {
         if (FileType.REGTOPP.name().equals(fileType)) {
             return getRegtoppImportParameters(fileName, provider);
         } else if (FileType.GTFS.name().equals(fileType)) {
@@ -48,7 +48,7 @@ public class Parameters {
         } else if (FileType.NETEXPROFILE.name().equals(fileType)) {
             return getNetexImportParameters(fileName, provider);
         } else if (FileType.NEPTUNE.name().equals(fileType)) {
-            return getNeptuneImportParameters(fileName, provider, user, description,idParams);
+            return getNeptuneImportParameters(fileName, provider, user, description,idParams,ignoreCommercialPoints);
         } else {
             throw new IllegalArgumentException("Cannot create import parameters from file type '" + fileType + "'");
         }
@@ -67,11 +67,11 @@ public class Parameters {
         return regtoppImportParameters.toJsonString();
     }
 
-    static String getNeptuneImportParameters(String importName, Provider provider, String user, String description,IdParameters idParameters) {
+    static String getNeptuneImportParameters(String importName, Provider provider, String user, String description,IdParameters idParameters, boolean ignoreCommercialPoints) {
         ChouetteInfo chouetteInfo = provider.chouetteInfo;
         NeptuneImportParameters neptuneImportParameters = NeptuneImportParameters.create(importName,
                 provider.name, chouetteInfo.organisation, user, chouetteInfo.enableCleanImport,
-                chouetteInfo.enableValidation, chouetteInfo.allowCreateMissingStopPlace, chouetteInfo.enableStopPlaceIdMapping, chouetteInfo.generateMissingServiceLinksForModes, description,idParameters);
+                chouetteInfo.enableValidation, chouetteInfo.allowCreateMissingStopPlace, chouetteInfo.enableStopPlaceIdMapping, chouetteInfo.generateMissingServiceLinksForModes, description,idParameters, ignoreCommercialPoints);
         return neptuneImportParameters.toJsonString();
     }
 
