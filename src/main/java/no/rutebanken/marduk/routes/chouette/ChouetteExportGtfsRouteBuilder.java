@@ -69,6 +69,7 @@ import static no.rutebanken.marduk.Utils.Utils.getLastPathElementOfUrl;
 /**
  * Exports gtfs files from Chouette
  */
+// @formatter:off
 @Component
 public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder {
 
@@ -101,7 +102,7 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
                     // Add correlation id only if missing
                     e.getIn().setHeader(Constants.CORRELATION_ID, e.getIn().getHeader(Constants.CORRELATION_ID, UUID.randomUUID().toString()));
                     e.getIn().removeHeader(Constants.CHOUETTE_JOB_ID);
-                    String exportName = org.springframework.util.StringUtils.hasText(e.getIn().getHeader(EXPORT_NAME, String.class)) ? (String) e.getIn().getHeader(EXPORT_NAME) : "offre";
+                    String exportName = org.springframework.util.StringUtils.hasText(e.getIn().getHeader(EXPORTED_FILENAME, String.class)) ? (String) e.getIn().getHeader(EXPORTED_FILENAME) : e.getIn().getHeader(EXPORT_NAME, String.class);
                     e.getIn().setHeader(FILE_NAME, exportName);
                     e.getIn().setHeader(FILE_TYPE, "gtfs");
                 })
@@ -121,7 +122,7 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
                     String linePrefix = e.getIn().getHeader(LINE_ID_PREFIX) != null ? (String) e.getIn().getHeader(LINE_ID_PREFIX) : null;
                     String commercialPointIdPrefix = e.getIn().getHeader(COMMERCIAL_POINT_ID_PREFIX) != null ? (String) e.getIn().getHeader(COMMERCIAL_POINT_ID_PREFIX) : null;
                     IdParameters idParams = new IdParameters(stopIdPrefix,idFormat,idSuffix,linePrefix,commercialPointIdPrefix);
-                    String exportedFilename = e.getIn().getHeader(EXPORTED_FILENAME) != null ? (String) e.getIn().getHeader(EXPORTED_FILENAME) : null;
+                    String exportedFilename = e.getIn().getHeader(EXPORTED_FILENAME) != null ? (String) e.getIn().getHeader(EXPORTED_FILENAME) : exportName + ".zip";
 
 
                     if(e.getIn().getHeader(EXPORT_START_DATE) != null && e.getIn().getHeader(EXPORT_END_DATE) != null){
@@ -138,15 +139,13 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
 
 
                     if (e.getIn().getHeader(EXPORT_LINES_IDS) == null && startDate != null && endDate != null) {
-                        gtfsParams = Parameters.getGtfsExportParameters(getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)),exportName, user, null, startDate, endDate,exportedFilename,idParams,mappingLinesIds);
-                    }
-                    else if (e.getIn().getHeader(EXPORT_LINES_IDS) != null) {
+                        gtfsParams = Parameters.getGtfsExportParameters(getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)), exportName, user, null, startDate, endDate, exportedFilename, idParams, mappingLinesIds);
+                    } else if (e.getIn().getHeader(EXPORT_LINES_IDS) != null) {
                         String linesIdsS = e.getIn().getHeader(EXPORT_LINES_IDS, String.class);
                         List<Long> linesIds = Arrays.stream(StringUtils.split(linesIdsS, ",")).map(s -> Long.valueOf(s)).collect(toList());
-                        gtfsParams = Parameters.getGtfsExportParameters(getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)),exportName, user, linesIds, startDate, endDate,exportedFilename,idParams,mappingLinesIds);
-                    }
-                    else {
-                        gtfsParams = Parameters.getGtfsExportParameters(getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)), user,exportedFilename);
+                        gtfsParams = Parameters.getGtfsExportParameters(getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)), exportName, user, linesIds, startDate, endDate, exportedFilename, idParams, mappingLinesIds);
+                    } else {
+                        gtfsParams = Parameters.getGtfsExportParameters(getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)), user, exportedFilename);
                     }
 
                     e.getIn().setHeader(JSON_PART, gtfsParams);
