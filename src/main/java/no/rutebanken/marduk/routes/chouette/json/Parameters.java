@@ -48,7 +48,7 @@ public class Parameters {
         } else if (FileType.NETEXPROFILE.name().equals(fileType)) {
             return getNetexImportParameters(fileName, provider);
         } else if (FileType.NEPTUNE.name().equals(fileType)) {
-            return getNeptuneImportParameters(fileName, provider, user, description,idParams,ignoreCommercialPoints);
+            return getNeptuneImportParameters(fileName, provider, user, description, idParams, ignoreCommercialPoints);
         } else {
             throw new IllegalArgumentException("Cannot create import parameters from file type '" + fileType + "'");
         }
@@ -63,15 +63,15 @@ public class Parameters {
                 chouetteInfo.referential, chouetteInfo.organisation, chouetteInfo.user, chouetteInfo.regtoppVersion,
                 chouetteInfo.regtoppCoordinateProjection, chouetteInfo.regtoppCalendarStrategy, chouetteInfo.enableCleanImport,
                 chouetteInfo.enableValidation, chouetteInfo.allowCreateMissingStopPlace,
-                chouetteInfo.enableStopPlaceIdMapping,false, true, chouetteInfo.generateMissingServiceLinksForModes);
+                chouetteInfo.enableStopPlaceIdMapping, false, true, chouetteInfo.generateMissingServiceLinksForModes);
         return regtoppImportParameters.toJsonString();
     }
 
-    static String getNeptuneImportParameters(String importName, Provider provider, String user, String description,IdParameters idParameters, boolean ignoreCommercialPoints) {
+    static String getNeptuneImportParameters(String importName, Provider provider, String user, String description, IdParameters idParameters, boolean ignoreCommercialPoints) {
         ChouetteInfo chouetteInfo = provider.chouetteInfo;
         NeptuneImportParameters neptuneImportParameters = NeptuneImportParameters.create(importName,
                 provider.name, chouetteInfo.organisation, user, chouetteInfo.enableCleanImport,
-                chouetteInfo.enableValidation, chouetteInfo.allowCreateMissingStopPlace, chouetteInfo.enableStopPlaceIdMapping, chouetteInfo.generateMissingServiceLinksForModes, description,idParameters, ignoreCommercialPoints);
+                chouetteInfo.enableValidation, chouetteInfo.allowCreateMissingStopPlace, chouetteInfo.enableStopPlaceIdMapping, chouetteInfo.generateMissingServiceLinksForModes, description, idParameters, ignoreCommercialPoints);
         return neptuneImportParameters.toJsonString();
     }
 
@@ -91,10 +91,10 @@ public class Parameters {
         return netexImportParameters.toJsonString();
     }
 
-    public static String getNeptuneExportParameters(Provider provider,String exportName, String user, List<Long> linesIds, Date startDate, Date endDate, String exportedFilename) {
+    public static String getNeptuneExportParameters(Provider provider, String exportName, String user, List<Long> linesIds, Date startDate, Date endDate, String exportedFilename) {
         try {
             ChouetteInfo chouetteInfo = provider.chouetteInfo;
-            NeptuneExportParameters.NeptuneExport neptuneExport = new NeptuneExportParameters.NeptuneExport(exportName==null ? "offre" : exportName, chouetteInfo.xmlns, chouetteInfo.referential, chouetteInfo.organisation,user,startDate,endDate,exportedFilename);
+            NeptuneExportParameters.NeptuneExport neptuneExport = new NeptuneExportParameters.NeptuneExport(exportName == null ? "offre" : exportName, chouetteInfo.xmlns, chouetteInfo.referential, chouetteInfo.organisation, user, startDate, endDate, exportedFilename);
 
 
             neptuneExport.ids = linesIds;
@@ -112,12 +112,12 @@ public class Parameters {
         }
     }
 
-    public static String getGtfsExportParameters(Provider provider,String exportName, String user, List<Long> linesIds, Date startDate, Date endDate, String exportedFilename, IdParameters idParams, boolean mappingLinesIds) {
+    public static String getGtfsExportParameters(Provider provider, String exportName, String user, List<Long> linesIds, Date startDate, Date endDate, String exportedFilename, IdParameters idParams, boolean mappingLinesIds) {
         try {
             ChouetteInfo chouetteInfo = provider.chouetteInfo;
 
-            GtfsExportParameters.GtfsExport gtfsExport = new GtfsExportParameters.GtfsExport(exportName==null ? "offre" : exportName,chouetteInfo.xmlns,
-                        chouetteInfo.referential, chouetteInfo.organisation, user, true, startDate, endDate,exportedFilename,idParams,mappingLinesIds);
+            GtfsExportParameters.GtfsExport gtfsExport = new GtfsExportParameters.GtfsExport(exportName == null ? "offre" : exportName, chouetteInfo.xmlns,
+                    chouetteInfo.referential, chouetteInfo.organisation, user, true, startDate, endDate, exportedFilename, idParams, mappingLinesIds);
             gtfsExport.ids = linesIds;
             if (linesIds != null && !linesIds.isEmpty()) {
                 gtfsExport.referencesType = "line";
@@ -135,19 +135,19 @@ public class Parameters {
     }
 
     public static String getGtfsExportParameters(Provider provider, String user, String exportedFilename) {
-        return getGtfsExportParameters(provider,null, user, null, null, null,exportedFilename,new IdParameters(),false);
+        return getGtfsExportParameters(provider, null, user, null, null, null, exportedFilename, new IdParameters(), false);
     }
 
 
-    public static String getNetexExportProvider(Provider provider, boolean exportStops, String user) {
+    public static String getNetexExportProvider(Provider provider, boolean exportStops, String user, String exportedFilename) {
         try {
             ChouetteInfo chouetteInfo = provider.chouetteInfo;
             String projectionType = null;
             String defaultCodespacePrefix = chouetteInfo.xmlns;
-            if(StringUtils.isNotBlank(chouetteInfo.getNameNetexOffreIdfm())){
+            if (StringUtils.isNotBlank(chouetteInfo.getNameNetexOffreIdfm())) {
                 defaultCodespacePrefix = chouetteInfo.getNameNetexOffreIdfm();
             }
-            NetexExportParameters.NetexExport netexExport = new NetexExportParameters.NetexExport("offre", chouetteInfo.referential, chouetteInfo.organisation, user, projectionType, exportStops, defaultCodespacePrefix);
+            NetexExportParameters.NetexExport netexExport = new NetexExportParameters.NetexExport("offre", chouetteInfo.referential, chouetteInfo.organisation, user, projectionType, exportStops, defaultCodespacePrefix, exportedFilename);
             NetexExportParameters.Parameters parameters = new NetexExportParameters.Parameters(netexExport);
             NetexExportParameters exportParameters = new NetexExportParameters(parameters);
             ObjectMapper mapper = new ObjectMapper();
@@ -179,7 +179,7 @@ public class Parameters {
     public static String getTransferExportParameters(Provider provider, Provider destProvider) {
         try {
             TransferExportParameters.TransferExport transferExport = new TransferExportParameters.TransferExport("data transfer",
-                                                                                                                        provider.name, provider.chouetteInfo.organisation, provider.chouetteInfo.user, destProvider.chouetteInfo.referential);
+                    provider.name, provider.chouetteInfo.organisation, provider.chouetteInfo.user, destProvider.chouetteInfo.referential);
             TransferExportParameters.Parameters parameters = new TransferExportParameters.Parameters(transferExport);
             TransferExportParameters importParameters = new TransferExportParameters(parameters);
             ObjectMapper mapper = new ObjectMapper();

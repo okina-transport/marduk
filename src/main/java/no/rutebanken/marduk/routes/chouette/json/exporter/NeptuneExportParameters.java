@@ -49,7 +49,7 @@ public class NeptuneExportParameters {
         public String exportedFilename;
 
 
-        public NeptuneExport(String name, String objectIdPrefix, String referentialName, String organisationName, String userName,  Date startDate, Date endDate, String exportedFilename) {
+        public NeptuneExport(String name, String objectIdPrefix, String referentialName, String organisationName, String userName, Date startDate, Date endDate, String exportedFilename) {
             this.name = name;
             this.objectIdPrefix = objectIdPrefix;
             this.referentialName = referentialName;

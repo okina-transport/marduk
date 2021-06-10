@@ -106,7 +106,7 @@ public class GtfsExportParameters {
         }
 
         public GtfsExport(String name, String objectIdPrefix, String referentialName, String organisationName, String userName, boolean keepOriginalId, String exportedFilename) {
-            this(name, objectIdPrefix, referentialName, organisationName, userName, keepOriginalId, null, null,exportedFilename,new IdParameters(),false);
+            this(name, objectIdPrefix, referentialName, organisationName, userName, keepOriginalId, null, null, exportedFilename, new IdParameters(), false);
         }
 
     }

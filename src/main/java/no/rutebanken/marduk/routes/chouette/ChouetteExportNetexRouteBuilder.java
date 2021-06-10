@@ -29,19 +29,8 @@ import org.springframework.stereotype.Component;
 import java.io.File;
 import java.util.UUID;
 
-import static no.rutebanken.marduk.Constants.BLOBSTORE_MAKE_BLOB_PUBLIC;
-import static no.rutebanken.marduk.Constants.BLOBSTORE_PATH_OUTBOUND;
-import static no.rutebanken.marduk.Constants.CHOUETTE_JOB_STATUS_URL;
-import static no.rutebanken.marduk.Constants.CHOUETTE_REFERENTIAL;
-import static no.rutebanken.marduk.Constants.EXPORT_FILE_NAME;
-import static no.rutebanken.marduk.Constants.EXPORT_NAME;
-import static no.rutebanken.marduk.Constants.FILE_HANDLE;
-import static no.rutebanken.marduk.Constants.FILE_NAME;
-import static no.rutebanken.marduk.Constants.FILE_TYPE;
-import static no.rutebanken.marduk.Constants.JSON_PART;
-import static no.rutebanken.marduk.Constants.NO_GTFS_EXPORT;
-import static no.rutebanken.marduk.Constants.PROVIDER_ID;
-import static no.rutebanken.marduk.Constants.USER;
+import static no.rutebanken.marduk.Constants.*;
+import static no.rutebanken.marduk.Constants.EXPORTED_FILENAME;
 import static no.rutebanken.marduk.Utils.Utils.getLastPathElementOfUrl;
 
 @Component
@@ -78,7 +67,7 @@ public class ChouetteExportNetexRouteBuilder extends AbstractChouetteRouteBuilde
                     // Add correlation id only if missing
                     e.getIn().setHeader(Constants.CORRELATION_ID, e.getIn().getHeader(Constants.CORRELATION_ID, UUID.randomUUID().toString()));
                     e.getIn().removeHeader(Constants.CHOUETTE_JOB_ID);
-                    String exportName = org.springframework.util.StringUtils.hasText(e.getIn().getHeader(EXPORT_NAME, String.class)) ? (String) e.getIn().getHeader(EXPORT_NAME) : "offre";
+                    String exportName = org.springframework.util.StringUtils.hasText(e.getIn().getHeader(EXPORTED_FILENAME, String.class)) ? (String) e.getIn().getHeader(EXPORTED_FILENAME) : "offre";
                     e.getIn().setHeader(FILE_NAME, exportName);
                     e.getIn().setHeader(FILE_TYPE, "netex");
                 })
@@ -88,7 +77,8 @@ public class ChouetteExportNetexRouteBuilder extends AbstractChouetteRouteBuilde
                 .process(e -> e.getIn().setHeader(CHOUETTE_REFERENTIAL, getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)).chouetteInfo.referential))
                 .process(e -> {
                     String user = e.getIn().getHeader(USER, String.class);
-                    e.getIn().setHeader(JSON_PART, Parameters.getNetexExportProvider(getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)), exportStops, user));
+                    String exportedFilename = e.getIn().getHeader(EXPORTED_FILENAME) != null ? (String) e.getIn().getHeader(EXPORTED_FILENAME) : null;
+                    e.getIn().setHeader(JSON_PART, Parameters.getNetexExportProvider(getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)), exportStops, user, exportedFilename));
                 }) //Using header to addToExchange json data
                 .log(LoggingLevel.INFO, correlation() + "Creating multipart request")
                 .process(e -> toGenericChouetteMultipart(e))
@@ -107,48 +97,48 @@ public class ChouetteExportNetexRouteBuilder extends AbstractChouetteRouteBuilde
 
         from("direct:processNetexExportResult")
                 .choice()
-                    .when(simple("${header.action_report_result} == 'OK'"))
-                    .log(LoggingLevel.INFO, correlation() + "Export ended with status '${header.action_report_result}'")
-                    .log(LoggingLevel.DEBUG, correlation() + "Calling url ${header.data_url}")
-                    .removeHeaders("Camel*")
-                    .setBody(simple(""))
-                    .setHeader(Exchange.HTTP_METHOD, constant(org.apache.camel.component.http4.HttpMethods.GET))
-                    .toD("${header.data_url}")
-                    .process(e -> {
-                        File file = fileSystemService.getOfferFile(e);
-                        e.getIn().setHeader("fileName", file.getName());
-                        e.getIn().setHeader(EXPORT_FILE_NAME, file.getName());
-                    })
-                    .process(exportToConsumersProcessor)
-                    .choice()
-                        .when(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)).chouetteInfo.generateDatedServiceJourneyIds)
-                        .to("direct:uploadDatedExport")
-                    .end()
-                    .setHeader(BLOBSTORE_MAKE_BLOB_PUBLIC, constant(publicPublication))
-                    .setHeader(FILE_HANDLE, simple(BLOBSTORE_PATH_OUTBOUND + "netex/${header." + CHOUETTE_REFERENTIAL + "}-" + Constants.CURRENT_AGGREGATED_NETEX_FILENAME))
+                .when(simple("${header.action_report_result} == 'OK'"))
+                .log(LoggingLevel.INFO, correlation() + "Export ended with status '${header.action_report_result}'")
+                .log(LoggingLevel.DEBUG, correlation() + "Calling url ${header.data_url}")
+                .removeHeaders("Camel*")
+                .setBody(simple(""))
+                .setHeader(Exchange.HTTP_METHOD, constant(org.apache.camel.component.http4.HttpMethods.GET))
+                .toD("${header.data_url}")
+                .process(e -> {
+                    File file = fileSystemService.getOfferFile(e);
+                    e.getIn().setHeader("fileName", file.getName());
+                    e.getIn().setHeader(EXPORT_FILE_NAME, file.getName());
+                })
+                .process(exportToConsumersProcessor)
+                .choice()
+                .when(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)).chouetteInfo.generateDatedServiceJourneyIds)
+                .to("direct:uploadDatedExport")
+                .end()
+                .setHeader(BLOBSTORE_MAKE_BLOB_PUBLIC, constant(publicPublication))
+                .setHeader(FILE_HANDLE, simple(BLOBSTORE_PATH_OUTBOUND + "netex/${header." + CHOUETTE_REFERENTIAL + "}-" + Constants.CURRENT_AGGREGATED_NETEX_FILENAME))
 //                    .setHeader(EXPORT_FILE_NAME, simple(Constants.CURRENT_AGGREGATED_NETEX_FILENAME))
-                    .to("direct:uploadBlobExport")
-                    .process(e -> {
-                        log.info("Upload to consumers and blob store completed");
-                    })
-                    .process(e -> JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.EXPORT_NETEX).state(JobEvent.State.OK).build())
-                    .to("direct:updateStatus")
-                    .removeHeader(Constants.CHOUETTE_JOB_ID)
-                    .setBody(constant(null))
+                .to("direct:uploadBlobExport")
+                .process(e -> {
+                    log.info("Upload to consumers and blob store completed");
+                })
+                .process(e -> JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.EXPORT_NETEX).state(JobEvent.State.OK).build())
+                .to("direct:updateStatus")
+                .removeHeader(Constants.CHOUETTE_JOB_ID)
+                .setBody(constant(null))
 //                    .process(e -> JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.BUILD_GRAPH).state(JobEvent.State.PENDING).build())
 //                    .to("direct:exportMergedNetex")
-                    .choice()
-                        .when(e -> !e.getIn().getHeader(NO_GTFS_EXPORT, Boolean.class))
-                            .to("activemq:queue:ChouetteExportGtfsQueue")
-                        .end()
-                    .endChoice()
+                .choice()
+                .when(e -> !e.getIn().getHeader(NO_GTFS_EXPORT, Boolean.class))
+                .to("activemq:queue:ChouetteExportGtfsQueue")
+                .end()
+                .endChoice()
                 .endChoice()
                 .when(simple("${header.action_report_result} == 'NOK'"))
-                    .log(LoggingLevel.WARN, correlation() + "Netex export failed")
-                    .process(e -> JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.EXPORT_NETEX).state(JobEvent.State.FAILED).build())
+                .log(LoggingLevel.WARN, correlation() + "Netex export failed")
+                .process(e -> JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.EXPORT_NETEX).state(JobEvent.State.FAILED).build())
                 .otherwise()
-                    .log(LoggingLevel.ERROR, correlation() + "Something went wrong on Netex export")
-                    .process(e -> JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.EXPORT_NETEX).state(JobEvent.State.FAILED).build())
+                .log(LoggingLevel.ERROR, correlation() + "Something went wrong on Netex export")
+                .process(e -> JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.EXPORT_NETEX).state(JobEvent.State.FAILED).build())
                 .end()
                 .to("direct:updateStatus")
                 .removeHeader(Constants.CHOUETTE_JOB_ID)
