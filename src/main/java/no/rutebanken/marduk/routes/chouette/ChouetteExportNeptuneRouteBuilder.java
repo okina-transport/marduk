@@ -86,8 +86,8 @@ public class ChouetteExportNeptuneRouteBuilder extends AbstractChouetteRouteBuil
                 .transacted()
                 .log(LoggingLevel.INFO, getClass().getName(), "Starting Chouette NEPTUNE export for provider with id ${header." + PROVIDER_ID + "}")
                 .process(e -> {
-                    // Add correlation id only if missing
-                    e.getIn().setHeader(Constants.CORRELATION_ID, e.getIn().getHeader(Constants.CORRELATION_ID, UUID.randomUUID().toString()));
+                    // Force new correlation ID : each export must have its own correlation ID to me displayed correctly in export screen
+                    e.getIn().setHeader(Constants.CORRELATION_ID, UUID.randomUUID().toString());
                     String exportName = org.springframework.util.StringUtils.hasText(e.getIn().getHeader(EXPORTED_FILENAME, String.class)) ? (String) e.getIn().getHeader(EXPORTED_FILENAME) : "offre";
                     e.getIn().removeHeader(Constants.CHOUETTE_JOB_ID);
                     e.getIn().setHeader(FILE_NAME, exportName);
