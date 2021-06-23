@@ -39,6 +39,7 @@ import org.springframework.scheduling.quartz.SchedulerFactoryBean;
 import org.springframework.stereotype.Component;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -103,14 +104,14 @@ public class ExportConcertoRouteBuilder extends AbstractChouetteRouteBuilder {
                     Date startDate = null;
                     Date endDate = null;
 
-                    if(e.getIn().getHeader(EXPORT_START_DATE) != null && e.getIn().getHeader(EXPORT_END_DATE) != null){
-                        Long start = e.getIn().getHeader(EXPORT_START_DATE) != null ?  (Long) e.getIn().getHeader(EXPORT_START_DATE, Long.class) : null;
+                    if (e.getIn().getHeader(EXPORT_START_DATE) != null && e.getIn().getHeader(EXPORT_END_DATE) != null) {
+                        Long start = e.getIn().getHeader(EXPORT_START_DATE) != null ? (Long) e.getIn().getHeader(EXPORT_START_DATE, Long.class) : null;
                         Long end = e.getIn().getHeader(EXPORT_END_DATE) != null ? (Long) e.getIn().getHeader(EXPORT_END_DATE, Long.class) : null;
                         startDate = (start != null) ? new Date(start) : null;
                         endDate = (end != null) ? new Date(end) : null;
                     }
 
-                    e.getIn().setHeader(JSON_PART, Parameters.getConcertoExportParameters(getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)),  user, startDate, endDate));
+                    e.getIn().setHeader(JSON_PART, Parameters.getConcertoExportParameters(getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)), user, startDate, endDate));
                 }) //Using header to addToExchange json data
                 .log(LoggingLevel.INFO, correlation() + "Creating multipart request")
                 .to("log:" + getClass().getName() + "?level=DEBUG&showAll=true&multiline=true")
@@ -144,6 +145,7 @@ public class ExportConcertoRouteBuilder extends AbstractChouetteRouteBuilder {
                 .process(e -> {
                     File file = fileSystemService.getOfferFileConcerto(e);
                     e.getIn().setHeader(EXPORT_FILE_NAME, file.getName());
+                    e.getIn().setBody(new FileInputStream(file));
                 })
                 .process(exportToConsumersProcessor)
                 .setHeader(BLOBSTORE_MAKE_BLOB_PUBLIC, constant(publicPublication))
@@ -175,7 +177,7 @@ public class ExportConcertoRouteBuilder extends AbstractChouetteRouteBuilder {
     private void getCron(Exchange exchange) throws SchedulerException {
         SchedulerFactoryBean scheduler = schedulerConcerto.getSchedulerConcerto();
         CronTrigger trigger = (CronTrigger) scheduler.getScheduler().getTrigger(TriggerKey.triggerKey("ConcertoJobTrigger"));
-        if(trigger != null){
+        if (trigger != null) {
             exchange.getIn().setBody(trigger.getCronExpression());
         }
     }
