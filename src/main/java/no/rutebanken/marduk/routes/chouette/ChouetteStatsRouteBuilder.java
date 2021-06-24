@@ -132,11 +132,8 @@ public class ChouetteStatsRouteBuilder extends AbstractChouetteRouteBuilder {
 
     private Map<Long, Object> mapReferentialToProviderId(Map<String, Object> statsPerReferential, Boolean sendEmail) {
         if(sendEmail){
-            for(Provider provider : getProviderRepository().getProviders()){
-                if(StringUtils.hasText(provider.email) && !provider.name.contains("mobiiti") && !provider.name.contains("technique")){
-                    sendDataAlertExpired.prepareEmailDataAlertExpired(statsPerReferential, provider.name, provider.email);
-                }
-            }
+            sendDataAlertExpired.prepareEmailDataAlertExpired(statsPerReferential, getProviderRepository().getProviders());
+            sendEmailDataAlertMail = false;
         }
 
         return getProviderRepository().getProviders().stream().filter(provider -> statsPerReferential.containsKey(provider.chouetteInfo.referential))
