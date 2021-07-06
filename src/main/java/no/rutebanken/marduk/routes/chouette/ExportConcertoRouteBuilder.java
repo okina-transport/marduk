@@ -26,6 +26,7 @@ import no.rutebanken.marduk.services.FileSystemService;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.component.http4.HttpMethods;
+import org.json.JSONObject;
 import org.quartz.CronScheduleBuilder;
 import org.quartz.CronTrigger;
 import org.quartz.SchedulerException;
@@ -44,6 +45,7 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Map;
+import java.util.TimeZone;
 import java.util.UUID;
 
 import static no.rutebanken.marduk.Constants.BLOBSTORE_MAKE_BLOB_PUBLIC;
@@ -54,6 +56,7 @@ import static no.rutebanken.marduk.Constants.EXPORT_FILE_NAME;
 import static no.rutebanken.marduk.Constants.EXPORT_START_DATE;
 import static no.rutebanken.marduk.Constants.JSON_PART;
 import static no.rutebanken.marduk.Constants.PROVIDER_ID;
+import static no.rutebanken.marduk.Constants.TIME_ZONE;
 import static no.rutebanken.marduk.Constants.USER;
 import static no.rutebanken.marduk.Utils.Utils.getLastPathElementOfUrl;
 
@@ -178,7 +181,12 @@ public class ExportConcertoRouteBuilder extends AbstractChouetteRouteBuilder {
         SchedulerFactoryBean scheduler = schedulerConcerto.getSchedulerConcerto();
         CronTrigger trigger = (CronTrigger) scheduler.getScheduler().getTrigger(TriggerKey.triggerKey("ConcertoJobTrigger"));
         if (trigger != null) {
-            exchange.getIn().setBody(trigger.getCronExpression());
+            String[] dateFromCron = trigger.getCronExpression().split(" ");
+            String frequency = dateFromCron[3].split("/")[1];
+            JSONObject jsonObject = new JSONObject();
+            jsonObject.append("date", trigger.getStartTime().getTime());
+            jsonObject.append("frequency", frequency);
+            exchange.getIn().setBody(jsonObject.toString());
         }
     }
 
@@ -195,7 +203,9 @@ public class ExportConcertoRouteBuilder extends AbstractChouetteRouteBuilder {
                 String[] dateFromCron = concertoExportSchedulerCron.split(" ");
                 String format = "yyyy-MM-dd HH:mm";
                 SimpleDateFormat simpleStartDateFormat = new SimpleDateFormat(format);
-                Date startDate = simpleStartDateFormat.parse(dateFromCron[6].split("-")[0] + "-" + dateFromCron[4].split(",")[0] + "-" + dateFromCron[3].split("/")[0] + " " + dateFromCron[2] + ":" + dateFromCron[1]);
+                Date startDate = simpleStartDateFormat.parse(dateFromCron[6].split("-")[0] + "-" + dateFromCron[4] + "-" + dateFromCron[3].split("/")[0] + " " + dateFromCron[2] + ":" + dateFromCron[1]);
+
+                concertoExportSchedulerCron = dateFromCron[0] + " " + dateFromCron[1] + " " + dateFromCron[2] + " " + dateFromCron[3] + " * " + dateFromCron[5] + " " + dateFromCron[6];
 
                 Trigger concertoTrigger = TriggerBuilder.newTrigger().forJob(concertoJobDetails.getObject())
                         .withIdentity("ConcertoJobTrigger")
