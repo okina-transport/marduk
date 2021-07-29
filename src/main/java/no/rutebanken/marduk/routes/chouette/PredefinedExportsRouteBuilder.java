@@ -42,16 +42,13 @@ public class PredefinedExportsRouteBuilder extends AbstractChouetteRouteBuilder 
                 .log(LoggingLevel.INFO, getClass().getName(), "Starting Chouette all export for provider with id ${header." + PROVIDER_ID + "}")
                 .process(e -> {
                     log.info("predefinedExports : starting predefined exports");
-                    // Add correlation id only if missing
-                    e.getIn().setHeader(Constants.CORRELATION_ID, e.getIn().getHeader(Constants.CORRELATION_ID, UUID.randomUUID().toString()));
                     Provider provider = providerRepository.getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class));
                     Provider mobiitiProvider;
 
-                    if(provider.name.contains(superspaceName)) {
+                    if (provider.name.contains(superspaceName)) {
                         mobiitiProvider = provider;
-                        provider = providerRepository.findByName(provider.name.replace(superspaceName+"_", ""));
-                    }
-                    else {
+                        provider = providerRepository.findByName(provider.name.replace(superspaceName + "_", ""));
+                    } else {
                         Long mobiitiProviderId = provider.getChouetteInfo().getMigrateDataToProvider();
                         mobiitiProvider = providerRepository.getProvider(mobiitiProviderId);
                     }

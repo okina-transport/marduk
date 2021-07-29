@@ -28,13 +28,17 @@ public class Provider {
 
     public Long id;
     public Long mobiitiId;
-    
+
     public Long getId() {
     	return id;
     }
     public String name;
     public String sftpAccount;
     public String email;
+
+    public String getEmail(){
+        return email;
+    }
 
     public ChouetteInfo getChouetteInfo() {
 		return chouetteInfo;

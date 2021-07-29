@@ -50,16 +50,20 @@ public class NetexExportParameters {
         @JsonProperty("default_codespace_prefix")
         public String defaultCodespacePrefix = null;
 
-        public NetexExport(String name, String referentialName, String organisationName, String userName, String projectionType, boolean exportStops, String defaultCodespacePrefix) {
+        @JsonProperty("exported_filename")
+        public String exportedFilename;
+
+        public NetexExport(String name, String referentialName, String organisationName, String userName, String projectionType, boolean exportStops, String defaultCodespacePrefix, String exportedFilename) {
             this.name = name;
             this.projectionType = projectionType;
             this.referentialName = referentialName;
             this.organisationName = organisationName;
             this.userName = userName;
             this.startDate = DateUtils.startDateFor(2L);
-			this.endDate = DateUtils.endDateFor(365L);
+            this.endDate = DateUtils.endDateFor(365L);
             this.exportStops = exportStops;
             this.defaultCodespacePrefix = defaultCodespacePrefix;
+            this.exportedFilename = exportedFilename;
         }
 
     }

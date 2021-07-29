@@ -86,10 +86,11 @@ public class ChouetteExportNeptuneRouteBuilder extends AbstractChouetteRouteBuil
                 .transacted()
                 .log(LoggingLevel.INFO, getClass().getName(), "Starting Chouette NEPTUNE export for provider with id ${header." + PROVIDER_ID + "}")
                 .process(e -> {
-                    // Add correlation id only if missing
-                    e.getIn().setHeader(Constants.CORRELATION_ID, e.getIn().getHeader(Constants.CORRELATION_ID, UUID.randomUUID().toString()));
+                    // Force new correlation ID : each export must have its own correlation ID to me displayed correctly in export screen
+                    e.getIn().setHeader(Constants.CORRELATION_ID, UUID.randomUUID().toString());
+                    String exportName = org.springframework.util.StringUtils.hasText(e.getIn().getHeader(EXPORTED_FILENAME, String.class)) ? (String) e.getIn().getHeader(EXPORTED_FILENAME) : "offre";
                     e.getIn().removeHeader(Constants.CHOUETTE_JOB_ID);
-                    e.getIn().setHeader(FILE_NAME, "offre");
+                    e.getIn().setHeader(FILE_NAME, exportName);
                     e.getIn().setHeader(FILE_TYPE, "neptune");
                 })
                 .process(e -> JobEvent.providerJobBuilder(e).timetableAction(TimetableAction.EXPORT).state(State.PENDING).build())
@@ -105,7 +106,7 @@ public class ChouetteExportNeptuneRouteBuilder extends AbstractChouetteRouteBuil
                     String exportedFilename = e.getIn().getHeader(EXPORTED_FILENAME) != null ? (String) e.getIn().getHeader(EXPORTED_FILENAME) : null;
 
 
-                    if(e.getIn().getHeader(EXPORT_START_DATE) != null && e.getIn().getHeader(EXPORT_END_DATE) != null){
+                    if (e.getIn().getHeader(EXPORT_START_DATE) != null && e.getIn().getHeader(EXPORT_END_DATE) != null) {
                         Long start = e.getIn().getHeader(EXPORT_START_DATE) != null ? e.getIn().getHeader(EXPORT_START_DATE, Long.class) : null;
                         Long end = e.getIn().getHeader(EXPORT_END_DATE) != null ? e.getIn().getHeader(EXPORT_END_DATE, Long.class) : null;
                         startDate = (start != null) ? new Date(start) : null;
@@ -113,14 +114,12 @@ public class ChouetteExportNeptuneRouteBuilder extends AbstractChouetteRouteBuil
                     }
 
 
-
-                    if (e.getIn().getHeader(EXPORT_LINES_IDS) == null ) {
-                        neptuneParams = Parameters.getNeptuneExportParameters(getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)),exportName, user, null, startDate, endDate,exportedFilename);
-                    }
-                    else  {
+                    if (e.getIn().getHeader(EXPORT_LINES_IDS) == null) {
+                        neptuneParams = Parameters.getNeptuneExportParameters(getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)), exportName, user, null, startDate, endDate, exportedFilename);
+                    } else {
                         String linesIdsS = e.getIn().getHeader(EXPORT_LINES_IDS, String.class);
                         List<Long> linesIds = Arrays.stream(StringUtils.split(linesIdsS, ",")).map(s -> Long.valueOf(s)).collect(toList());
-                        neptuneParams = Parameters.getNeptuneExportParameters(getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)),exportName, user, linesIds, startDate, endDate,exportedFilename);
+                        neptuneParams = Parameters.getNeptuneExportParameters(getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)), exportName, user, linesIds, startDate, endDate, exportedFilename);
                     }
 
 
@@ -152,40 +151,40 @@ public class ChouetteExportNeptuneRouteBuilder extends AbstractChouetteRouteBuil
                 })
                 .choice()
                 .when(simple("${header.action_report_result} == 'OK'"))
-                    .log(LoggingLevel.INFO, correlation() + "Export ended with status '${header.action_report_result}'")
-                    .log(LoggingLevel.INFO, correlation() + "Calling url ${header.data_url}")
-                    .removeHeaders("Camel*")
-                    .setBody(simple(""))
-                    .setHeader(Exchange.HTTP_METHOD, constant(org.apache.camel.component.http4.HttpMethods.GET))
-                    .process(e -> {
-                        log.info("Starting export download");
-                    })
-                    .toD("${header.data_url}")
-                    .process(e -> {
-                        File file = fileSystemService.getOfferFile(e);
-                        e.getIn().setHeader("fileName", file.getName());
-                        e.getIn().setHeader(EXPORT_FILE_NAME, file.getName());
-                    })
-                    .setHeader("fileName", simple("NEPTUNE.zip"))
-                    .process(exportToConsumersProcessor)
-                    .setHeader(BLOBSTORE_MAKE_BLOB_PUBLIC, constant(publicPublication))
-                    .setHeader(FILE_HANDLE, simple(BLOBSTORE_PATH_OUTBOUND + "neptune/${header." + CHOUETTE_REFERENTIAL + "}-" + Constants.CURRENT_AGGREGATED_NEPTUNE_FILENAME))
+                .log(LoggingLevel.INFO, correlation() + "Export ended with status '${header.action_report_result}'")
+                .log(LoggingLevel.INFO, correlation() + "Calling url ${header.data_url}")
+                .removeHeaders("Camel*")
+                .setBody(simple(""))
+                .setHeader(Exchange.HTTP_METHOD, constant(org.apache.camel.component.http4.HttpMethods.GET))
+                .process(e -> {
+                    log.info("Starting export download");
+                })
+                .toD("${header.data_url}")
+                .process(e -> {
+                    File file = fileSystemService.getOfferFile(e);
+                    e.getIn().setHeader("fileName", file.getName());
+                    e.getIn().setHeader(EXPORT_FILE_NAME, file.getName());
+                })
+                .setHeader("fileName", simple("NEPTUNE.zip"))
+                .process(exportToConsumersProcessor)
+                .setHeader(BLOBSTORE_MAKE_BLOB_PUBLIC, constant(publicPublication))
+                .setHeader(FILE_HANDLE, simple(BLOBSTORE_PATH_OUTBOUND + "neptune/${header." + CHOUETTE_REFERENTIAL + "}-" + Constants.CURRENT_AGGREGATED_NEPTUNE_FILENAME))
 
-                    .process(e -> {
-                        log.info("Starting neptune export upload");
-                        e.getIn().setBody(fileSystemService.getOfferFile(e));
-                    })
-                    .to("direct:uploadBlobExport")
-                    .process(e -> {
-                        log.info("Upload to consumers and blob store completed");
-                    })
-                    .process(e -> JobEvent.providerJobBuilder(e).timetableAction(TimetableAction.EXPORT).state(State.OK).build())
+                .process(e -> {
+                    log.info("Starting neptune export upload");
+                    e.getIn().setBody(fileSystemService.getOfferFile(e));
+                })
+                .to("direct:uploadBlobExport")
+                .process(e -> {
+                    log.info("Upload to consumers and blob store completed");
+                })
+                .process(e -> JobEvent.providerJobBuilder(e).timetableAction(TimetableAction.EXPORT).state(State.OK).build())
                 .when(simple("${header.action_report_result} == 'NOK'"))
-                    .log(LoggingLevel.WARN, correlation() + "Export failed")
-                    .process(e -> JobEvent.providerJobBuilder(e).timetableAction(TimetableAction.EXPORT).state(State.FAILED).build())
+                .log(LoggingLevel.WARN, correlation() + "Export failed")
+                .process(e -> JobEvent.providerJobBuilder(e).timetableAction(TimetableAction.EXPORT).state(State.FAILED).build())
                 .otherwise()
-                    .log(LoggingLevel.ERROR, correlation() + "Something went wrong on export")
-                    .process(e -> JobEvent.providerJobBuilder(e).timetableAction(TimetableAction.EXPORT).state(State.FAILED).build())
+                .log(LoggingLevel.ERROR, correlation() + "Something went wrong on export")
+                .process(e -> JobEvent.providerJobBuilder(e).timetableAction(TimetableAction.EXPORT).state(State.FAILED).build())
                 .end()
                 .to("direct:updateStatus")
                 .routeId("chouette-process-export-neptune-status");

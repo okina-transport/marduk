@@ -75,11 +75,10 @@ public class MultipleExportProcessor implements Processor {
                     toStopPlacesExport(export, exchange.copy(true));
                 } else if (ExportType.NEPTUNE == export.getType()) {
                     toNeptuneExport(export, exchange.copy(true));
-                }
-                else {
+                } else {
                     log.info("Routing not supported yet for => " + export.getId() + "/" + export.getName() + "/" + export.getType());
                 }
-            } catch(Exception e) {
+            } catch (Exception e) {
                 log.error("Error while processing export " + export.getId() + "/" + export.getName(), e);
             }
         });
@@ -113,31 +112,31 @@ public class MultipleExportProcessor implements Processor {
             exchange.getIn().getHeaders().put(EXPORT_END_DATE, export.getEndDate());
         }
 
-        if (export.getName() != null){
+        if (export.getName() != null) {
             exchange.getIn().getHeaders().put(EXPORT_NAME, export.getName());
         }
 
-        if (export.getExportedFileName() != null){
+        if (export.getExportedFileName() != null) {
             exchange.getIn().getHeaders().put(EXPORTED_FILENAME, export.getExportedFileName());
         }
 
-        if (export.getIdFormat() != null){
+        if (export.getIdFormat() != null) {
             exchange.getIn().getHeaders().put(ID_FORMAT, export.getIdFormat().toString());
         }
 
-        if (export.getStopIdPrefix() != null){
+        if (export.getStopIdPrefix() != null) {
             exchange.getIn().getHeaders().put(STOP_ID_PREFIX, export.getStopIdPrefix());
         }
 
-        if (export.getLineIdPrefix() != null){
+        if (export.getLineIdPrefix() != null) {
             exchange.getIn().getHeaders().put(LINE_ID_PREFIX, export.getLineIdPrefix());
         }
 
-        if (export.getIdSuffix() != null){
+        if (export.getIdSuffix() != null) {
             exchange.getIn().getHeaders().put(ID_SUFFIX, export.getIdSuffix());
         }
 
-        if (export.getCommercialPointIdPrefix() != null){
+        if (export.getCommercialPointIdPrefix() != null) {
             exchange.getIn().getHeaders().put(COMMERCIAL_POINT_ID_PREFIX, export.getCommercialPointIdPrefix());
         }
 
@@ -159,6 +158,7 @@ public class MultipleExportProcessor implements Processor {
 
     /**
      * Sets headers for export jobs
+     *
      * @param exchange
      * @param export
      */
@@ -171,6 +171,7 @@ public class MultipleExportProcessor implements Processor {
         headers.put(NO_GTFS_EXPORT, noGtfs);
         headers.put(Constants.FILE_NAME, "export-" + export.getId() + "-" + export.getName());
         headers.put(Constants.CURRENT_EXPORT, exportJsonMapper.toJson(export));
+        headers.put(EXPORTED_FILENAME, export.getExportedFileName());
         setProvidersIdsHeaders(exchange, headers);
         exchange.getOut().setHeaders(headers);
     }
@@ -179,11 +180,10 @@ public class MultipleExportProcessor implements Processor {
     public void setProvidersIdsHeaders(Exchange exchange, Map<String, Object> headers) {
         Provider provider = providerRepository.getProvider(exchange.getIn().getHeader(PROVIDER_ID, Long.class));
         Provider mobiitiProvider;
-        if(isMobiitiProvider(provider.name)) {
+        if (isMobiitiProvider(provider.name)) {
             mobiitiProvider = provider;
-            provider = providerRepository.findByName(provider.name.replace(superspaceName+"_", ""));
-        }
-        else {
+            provider = providerRepository.findByName(provider.name.replace(superspaceName + "_", ""));
+        } else {
             mobiitiProvider = providerRepository.getMobiitiProvider(provider.getId());
         }
 
@@ -195,6 +195,6 @@ public class MultipleExportProcessor implements Processor {
     }
 
     private boolean isMobiitiProvider(String name) {
-        return name.startsWith(superspaceName+"_");
+        return name.startsWith(superspaceName + "_");
     }
 }
