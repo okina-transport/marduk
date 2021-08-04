@@ -43,7 +43,6 @@ import static no.rutebanken.marduk.Constants.PROVIDER_ID;
 @Component
 public class FileClassificationRouteBuilder extends BaseRouteBuilder {
 
-    // @formatter:off
     @Override
     public void configure() throws Exception {
         super.configure();
@@ -66,19 +65,19 @@ public class FileClassificationRouteBuilder extends BaseRouteBuilder {
                 .validate().method(FileTypeClassifierBean.class, "validateFile")
                 .choice()
                 .when(header(FILE_TYPE).isEqualTo(FileType.INVALID_FILE_NAME.name()))
-                    .log(LoggingLevel.WARN, correlation() + "File with invalid characters in file name ${header." + FILE_HANDLE + "}")
-                    .to("direct:sanitizeFileName")
+                .log(LoggingLevel.WARN, correlation() + "File with invalid characters in file name ${header." + FILE_HANDLE + "}")
+                .to("direct:sanitizeFileName")
                 .when(header(FILE_TYPE).isEqualTo(FileType.ZIP_WITH_SINGLE_FOLDER.name()))
-                    .log(LoggingLevel.WARN, correlation() + "Unexpected file type or invalid file ${header." + FILE_HANDLE + "}")
-                    .to("direct:repackZipFile")
-                    .when(header(FILE_TYPE).isEqualTo(FileType.RAR.name()))
-                    .log(LoggingLevel.INFO, correlation() + "Splitting and repackaging file ${header." + FILE_HANDLE + "}")
-                    .to("direct:splitRarFile")
+                .log(LoggingLevel.WARN, correlation() + "Unexpected file type or invalid file ${header." + FILE_HANDLE + "}")
+                .to("direct:repackZipFile")
+                .when(header(FILE_TYPE).isEqualTo(FileType.RAR.name()))
+                .log(LoggingLevel.INFO, correlation() + "Splitting and repackaging file ${header." + FILE_HANDLE + "}")
+                .to("direct:splitRarFile")
                 .otherwise()
                 .choice()
                 .when(header(FILE_TYPE).isEqualTo(FileType.GTFS.name()))
-                    .log(LoggingLevel.INFO, correlation() + "Transforming GTFS file ${header." + FILE_HANDLE + "}")
-                    .to("direct:transformGtfsFile")
+                .log(LoggingLevel.INFO, correlation() + "Transforming GTFS file ${header." + FILE_HANDLE + "}")
+                .to("direct:transformGtfsFile")
                 .end()
                 .log(LoggingLevel.INFO, correlation() + "Posting " + FILE_HANDLE + " ${header." + FILE_HANDLE + "} and " + FILE_TYPE + " ${header." + FILE_TYPE + "} on chouette import queue.")
                 .setBody(simple(""))   //remove file data from body since this is in blobstore
@@ -127,8 +126,8 @@ public class FileClassificationRouteBuilder extends BaseRouteBuilder {
                     String orgFileName = e.getIn().getHeader(Constants.FILE_NAME, String.class);
                     String sanitizedFileName = sanitizeString(orgFileName);
                     e.getIn().setHeader(FILE_HANDLE, Constants.BLOBSTORE_PATH_INBOUND
-                            + getProviderRepository().getReferential(e.getIn().getHeader(PROVIDER_ID, Long.class))
-                            + "/" + sanitizedFileName);
+                                                             + getProviderRepository().getReferential(e.getIn().getHeader(PROVIDER_ID, Long.class))
+                                                             + "/" + sanitizedFileName);
                     e.getIn().setHeader(FILE_NAME, sanitizedFileName);
                 })
                 .log(LoggingLevel.INFO, correlation() + "Uploading file with new file name ${header." + FILE_HANDLE + "}")

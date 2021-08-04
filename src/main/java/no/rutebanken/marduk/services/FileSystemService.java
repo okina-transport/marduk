@@ -14,7 +14,6 @@ import org.springframework.stereotype.Service;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
@@ -25,7 +24,9 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import static no.rutebanken.marduk.Constants.*;
+import static no.rutebanken.marduk.Constants.CHOUETTE_JOB_ID;
+import static no.rutebanken.marduk.Constants.FILE_NAME;
+import static no.rutebanken.marduk.Constants.OKINA_REFERENTIAL;
 
 @Service
 public class FileSystemService {
@@ -52,11 +53,11 @@ public class FileSystemService {
     public File getLatestStopPlacesFile(Exchange exchange) {
         ExchangeUtils.addHeadersAndAttachments(exchange);
         FileSystemResource fileSystemResource = new FileSystemResource(tiamatStoragePath);
-        String referential = exchange.getIn().getHeader(OKINA_REFERENTIAL, String.class).replace(superspaceName.toUpperCase() + "_", "").replace(superspaceName.toLowerCase() + "_", "");
+        String referential = exchange.getIn().getHeader(OKINA_REFERENTIAL, String.class).replace(superspaceName.toUpperCase()+"_", "").replace(superspaceName.toLowerCase()+"_", "");
         logger.info("------ referential : " + referential);
 
-        Provider provider = providerRepository.getByReferential(referential).orElseThrow(() -> new RuntimeException("Aucun provider correspondant au referential " + referential));
-        logger.info("------ provider: " + provider.name + " with code idfm/filiale => " + ((provider.getChouetteInfo() != null) ? provider.getChouetteInfo().getCodeIdfm() : "no code idfm found"));
+        Provider provider = providerRepository.getByReferential(referential).orElseThrow(() -> new RuntimeException("Aucun provider correspondant au referential " + referential));;
+        logger.info("------ provider: " + provider.name + " with code idfm/filiale => " + ((provider.getChouetteInfo() != null)? provider.getChouetteInfo().getCodeIdfm() : "no code idfm found" ));
         String idSite = provider.getChouetteInfo().getCodeIdfm();
 
         logger.info("------ idsite : " + idSite);
@@ -76,7 +77,7 @@ public class FileSystemService {
         }
 
         zipFiles.sort(Comparator.comparing(File::getName));
-        File latestFile = zipFiles.get(zipFiles.size() - 1);
+        File latestFile = zipFiles.get(zipFiles.size()-1);
         exchange.getIn().setHeader(FILE_NAME, latestFile.getName());
 
         return latestFile;
@@ -85,8 +86,8 @@ public class FileSystemService {
     public File getOfferFile(Exchange exchange) {
         ExchangeUtils.addHeadersAndAttachments(exchange);
         String referential = exchange.getIn().getHeader(OKINA_REFERENTIAL, String.class);
-        if (StringUtils.isNotBlank(referential) && !referential.startsWith(superspaceName + "_")) {
-            referential = superspaceName + "_" + referential;
+        if (StringUtils.isNotBlank(referential) && !referential.startsWith(superspaceName+"_")) {
+            referential = superspaceName+"_" + referential;
         }
         String jobId = exchange.getIn().getHeader(CHOUETTE_JOB_ID, String.class);
         FileSystemResource fileSystemResource = new FileSystemResource(chouetteStoragePath + "/" + referential + "/data/" + jobId);
@@ -109,41 +110,18 @@ public class FileSystemService {
         return offerFile;
     }
 
-    public File getAnalysisFile(Exchange exchange) {
-        ExchangeUtils.addHeadersAndAttachments(exchange);
-        String referential = exchange.getIn().getHeader(OKINA_REFERENTIAL, String.class);
-        String jobId = exchange.getIn().getHeader(ANALYSIS_JOB_ID, String.class);
-        FileSystemResource fileSystemResource = new FileSystemResource(chouetteStoragePath + "/" + referential + "/data/" + jobId);
-
-        File offerFile = null;
-        File[] files = fileSystemResource.getFile().listFiles(new FilenameFilter() {
-            public boolean accept(File dir, String name) {
-                return name.toLowerCase().endsWith(".zip");
-            }
-        });
-
-        offerFile = files[0];
-
-
-        if (offerFile != null) {
-            exchange.getIn().setHeader(FILE_NAME, offerFile.getName());
-        }
-
-        return offerFile;
-    }
-
-    public List<Path> getAllFilesFromLocalStorage(String prefix, String fileExtension) {
+    public List<Path> getAllFilesFromLocalStorage(String prefix, String fileExtension){
         try {
-            return Files.walk(Paths.get(chouetteStoragePath + "/" + prefix))
-                    .filter(p -> p.toString().startsWith(chouetteStoragePath + "/" + prefix) && p.getFileName().toString().endsWith(fileExtension))
-                    .collect(Collectors.toList());
+            return Files.walk(Paths.get(chouetteStoragePath+"/"+prefix))
+                 .filter(p -> p.toString().startsWith(chouetteStoragePath+"/"+prefix) && p.getFileName().toString().endsWith(fileExtension))
+                 .collect(Collectors.toList());
         } catch (IOException e) {
             logger.error("Récupération fichiers localStorage impossible: " + e);
             return new ArrayList();
+            }
         }
-    }
 
-    public InputStream getFile(String fileName) {
+    public InputStream getFile(String fileName)  {
 
         try {
             return new FileInputStream(getOrCreateFilePath(fileName).toFile());
@@ -160,13 +138,13 @@ public class FileSystemService {
      * @param absolutePath
      * @return A relative Path
      */
-    public String convertToRelativePath(String absolutePath) {
-        if (!absolutePath.contains(chouetteStoragePath)) {
+    public String convertToRelativePath(String absolutePath){
+        if (!absolutePath.contains(chouetteStoragePath)){
             //absolutePath does not seem to be a path from storage Path
             return absolutePath;
         }
-        String relativePath = absolutePath.replace(chouetteStoragePath, "");
-        if (relativePath.startsWith("/")) {
+        String relativePath=absolutePath.replace(chouetteStoragePath,"");
+        if (relativePath.startsWith("/")){
             return relativePath.substring(1);
         }
         return relativePath;
@@ -181,27 +159,27 @@ public class FileSystemService {
      * @param filename
      * @return the directory from which the search must be started
      */
-    private String getStartingDirectory(String filename) {
+    private String getStartingDirectory(String filename){
         // No slash in the filename. Seach must be started from root storage path
         if (!filename.contains("/"))
             return chouetteStoragePath;
 
-        return chouetteStoragePath + "/" + filename.substring(0, filename.lastIndexOf("/"));
+        return chouetteStoragePath+"/"+filename.substring(0,filename.lastIndexOf("/"));
 
     }
 
-    public Path getOrCreateFilePath(String fileName) {
+    public Path getOrCreateFilePath(String fileName){
         try {
             String startingDirectory = getStartingDirectory(fileName);
             File startDir = new File(startingDirectory);
             startDir.mkdirs();
 
-            List<Path> pathList = Files.walk(startDir.toPath())
-                    .filter(p -> p.toString().equals(chouetteStoragePath + "/" + fileName))
-                    .collect(Collectors.toList());
+          List<Path> pathList = Files.walk(startDir.toPath())
+                .filter(p -> p.toString().equals(chouetteStoragePath+"/"+fileName))
+                .collect(Collectors.toList());
 
             if (pathList.isEmpty()) {
-                File newFile = new File(chouetteStoragePath + "/" + fileName);
+                File newFile = new File(chouetteStoragePath+"/"+fileName);
                 newFile.getParentFile().mkdirs();
                 Path newPath = newFile.toPath();
                 Files.write(newPath, fileName.getBytes());
@@ -214,18 +192,18 @@ public class FileSystemService {
         }
     }
 
-    public boolean deleteDirectoryFromStorage(String directory) {
-        try {
-            File startDir = new File(chouetteStoragePath + "/" + directory);
+    public boolean deleteDirectoryFromStorage(String directory)  {
+       try {
+            File startDir = new File(chouetteStoragePath+"/"+directory);
             Files.walk(startDir.toPath())
                     .map(Path::toFile)
                     .forEach(File::delete);
         } catch (IOException e) {
-            logger.error("Erreur suppression répertoire: " + directory + e);
+           logger.error("Erreur suppression répertoire: "+directory + e);
         }
         return true;
     }
 
-}
+    }
 
 

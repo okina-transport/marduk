@@ -40,14 +40,12 @@ public class Constants {
     public static final String ROUTE_MERGE = "routeMerge";
     public static final String CLEAN_REPOSITORY = "cleanRepository";
     public static final String IGNORE_COMMERCIAL_POINTS = "ignoreCommercialPoints";
-    public static final String ANALYSIS_JOB_ID = "analysisJobId";
-
 
     public static final String ID_SUFFIX = "ID_SUFFIX";
     public static final String COMMERCIAL_POINT_ID_PREFIX = "COMMERCIAL_POINT_ID_PREFIX";
     public static final String STOP_AREA_PREFIX_TO_REMOVE = "stopAreaPrefixToRemove";
     public static final String AREA_CENTROID_PREFIX_TO_REMOVE = "areaCentroidPrefixToRemove";
-    public static final String MAPPING_LINES_IDS = "MAPPING_LINES_IDS";
+    public static final String MAPPING_LINES_IDS= "MAPPING_LINES_IDS";
     public static final String COMMERCIAL_POINT_ID_PREFIX_TO_REMOVE = "commercialPointIdPrefixToRemove";
     public static final String QUAY_ID_PREFIX_TO_REMOVE = "quayIdPrefixToRemove";
     public static final String LINE_PREFIX_TO_REMOVE = "linePrefixToRemove";
@@ -120,9 +118,5 @@ public class Constants {
     public static final String NOTIFICATION_URL = "NotificationUrl";
 
     public static final String CONCERTO_EXPORT_SCHEDULER = "ConcertoExportScheduler";
-
-    public static final String ANALYZE_ACTION = "Analyze";
-
-
 }
 

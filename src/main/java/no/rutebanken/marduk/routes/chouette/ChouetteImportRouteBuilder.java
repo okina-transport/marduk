@@ -34,7 +34,6 @@ import org.springframework.stereotype.Component;
 import static no.rutebanken.marduk.Constants.*;
 import static no.rutebanken.marduk.Utils.Utils.getHttp4;
 import static no.rutebanken.marduk.Utils.Utils.getLastPathElementOfUrl;
-import static org.apache.camel.builder.PredicateBuilder.not;
 
 /**
  * Submits files to Chouette
@@ -46,7 +45,6 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
     @Value("${chouette.url}")
     private String chouetteUrl;
 
-    // @formatter:off
     @Override
     public void configure() throws Exception {
         super.configure();
@@ -116,29 +114,21 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
                 .transacted()
                 .log(LoggingLevel.INFO, correlation() + "Starting Chouette import")
                 .removeHeader(Constants.CHOUETTE_JOB_ID)
-                .process(e -> {
-                    Boolean analyze = e.getIn().getHeader(ANALYZE_ACTION, Boolean.class) != null ? e.getIn().getHeader(ANALYZE_ACTION, Boolean.class) : false;
-                    TimetableAction action = analyze ? TimetableAction.FILE_ANALYZE : TimetableAction.IMPORT;
-                    JobEvent.providerJobBuilder(e).timetableAction(action).state(State.PENDING).type(e.getIn().getHeader(FILE_TYPE, String.class)).build();
-                })
+                .process(e -> JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.IMPORT).state(State.PENDING).type(e.getIn().getHeader(FILE_TYPE, String.class)).build())
                 .to("direct:updateStatus")
                 .to("direct:getBlob")
                 .choice()
                 .when(body().isNull())
-                    .log(LoggingLevel.WARN, correlation() + "Import failed because blob could not be found")
-                    .process(e -> {
-                        Boolean analyze = e.getIn().getHeader(ANALYZE_ACTION, Boolean.class) != null ? e.getIn().getHeader(ANALYZE_ACTION, Boolean.class) : false;
-                        TimetableAction action = analyze ? TimetableAction.FILE_ANALYZE : TimetableAction.IMPORT;
-                        JobEvent.providerJobBuilder(e).timetableAction(action).state(State.FAILED).build();
-                    })
+                .log(LoggingLevel.WARN, correlation() + "Import failed because blob could not be found")
+                .process(e -> JobEvent.providerJobBuilder(e).timetableAction(TimetableAction.IMPORT).state(State.FAILED).build())
                 .otherwise()
-                    .process(e -> {
-                        Provider provider = getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class));
-                        e.getIn().setHeader(CHOUETTE_REFERENTIAL, provider.chouetteInfo.referential);
-                        e.getIn().setHeader(Constants.ENABLE_VALIDATION, provider.chouetteInfo.enableValidation);
-                    })
-                    .to("log:" + getClass().getName() + "?level=DEBUG&showAll=true&multiline=true")
-                    .to("direct:addImportParameters")
+                .process(e -> {
+                    Provider provider = getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class));
+                    e.getIn().setHeader(CHOUETTE_REFERENTIAL, provider.chouetteInfo.referential);
+                    e.getIn().setHeader(Constants.ENABLE_VALIDATION, provider.chouetteInfo.enableValidation);
+                })
+                .to("log:" + getClass().getName() + "?level=DEBUG&showAll=true&multiline=true")
+                .to("direct:addImportParameters")
                 .end()
                 .routeId("chouette-import-dataspace");
 
@@ -170,13 +160,13 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
                     String ignoreCommercialPointsStr = e.getIn().getHeader(IGNORE_COMMERCIAL_POINTS, String.class);
                     boolean ignoreCommercialPoints = !StringUtils.isEmpty(ignoreCommercialPointsStr) && Boolean.parseBoolean(ignoreCommercialPointsStr);
 
-                    if (StringUtils.isNotEmpty(commercialPointIdPrefixToRemove)) {
+                    if (StringUtils.isNotEmpty(commercialPointIdPrefixToRemove)){
                         idParams.setCommercialPointIdPrefixToRemove(commercialPointIdPrefixToRemove);
-                    } else {
+                    }else{
                         idParams.setStopAreaPrefixToRemove(stopAreaPrefixToRemove);
                         idParams.setAreaCentroidPrefixToRemove(areaCentroidPrefixToRemove);
                     }
-                    e.getIn().setHeader(JSON_PART, getImportParameters(fileName, fileType, providerId, user, description, routeMerge, splitCharacter, idParams, cleanRepository, ignoreCommercialPoints));
+                    e.getIn().setHeader(JSON_PART, getImportParameters(fileName, fileType, providerId, user, description, routeMerge, splitCharacter, idParams, cleanRepository,ignoreCommercialPoints));
                 }) //Using header to addToExchange json data
                 .log(LoggingLevel.DEBUG, correlation() + "import parameters: " + header(JSON_PART))
                 .to("direct:sendImportJobRequest")
@@ -188,12 +178,7 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
                 .setHeader(Exchange.CONTENT_TYPE, simple("multipart/form-data"))
                 .to("log:" + getClass().getName() + "?level=DEBUG&showAll=true&multiline=true")
                 .log(LoggingLevel.INFO, "chouetteUrl: " + chouetteUrl)
-                .choice()
-                .when(simple("${header." + ANALYZE_ACTION + "}"))
-                    .setProperty("chouette_url", simple(chouetteUrl + "/chouette_iev/referentials/${header." + CHOUETTE_REFERENTIAL + "}/analyzeFile/${header." + FILE_TYPE + ".toLowerCase()}"))
-                .otherwise()
-                    .setProperty("chouette_url", simple(chouetteUrl + "/chouette_iev/referentials/${header." + CHOUETTE_REFERENTIAL + "}/importer/${header." + FILE_TYPE + ".toLowerCase()}"))
-                .end()
+                .setProperty("chouette_url", simple(chouetteUrl + "/chouette_iev/referentials/${header." + CHOUETTE_REFERENTIAL + "}/importer/${header." + FILE_TYPE + ".toLowerCase()}"))
                 .log(LoggingLevel.DEBUG, correlation() + "Calling Chouette with URL: ${exchangeProperty.chouette_url}")
                 .setHeader(Exchange.HTTP_METHOD, constant(org.apache.camel.component.http4.HttpMethods.POST))
                 // Attempt to retrigger delivery in case of errors
@@ -204,12 +189,7 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
                     e.getIn().setHeader(Constants.CHOUETTE_JOB_ID, getLastPathElementOfUrl(e.getIn().getHeader("Location", String.class)));
                 })
                 .setHeader(Constants.CHOUETTE_JOB_STATUS_ROUTING_DESTINATION, constant("direct:processImportResult"))
-                .choice()
-                .when(simple("${header." + ANALYZE_ACTION + "}"))
-                    .setHeader(Constants.CHOUETTE_JOB_STATUS_JOB_TYPE, constant(TimetableAction.FILE_ANALYZE.name()))
-                .otherwise()
-                    .setHeader(Constants.CHOUETTE_JOB_STATUS_JOB_TYPE, constant(JobEvent.TimetableAction.IMPORT.name()))
-                .end()
+                .setHeader(Constants.CHOUETTE_JOB_STATUS_JOB_TYPE, constant(JobEvent.TimetableAction.IMPORT.name()))
                 .removeHeader("loopCounter")
                 .to("activemq:queue:ChouettePollStatusQueue")
                 .routeId("chouette-send-import-job");
@@ -221,44 +201,25 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
         from("direct:processImportResult")
                 .to("log:" + getClass().getName() + "?level=DEBUG&showAll=true&multiline=true")
                 .setBody(constant(""))
-                .process(e->{
-                    Boolean analyze = e.getIn().getHeader("Analyze", Boolean.class);
-
-                })
                 .choice()
-                .when(PredicateBuilder.and(constant("true").isEqualTo(header(ANALYZE_ACTION)), simple("${header.action_report_result} == 'OK'")))
-                    .log(LoggingLevel.INFO, correlation() + "File analysis completed successfully")
-                    .process(e -> {
-                        JobEvent.providerJobBuilder(e).timetableAction(TimetableAction.FILE_ANALYZE).state(State.OK).build();
-                    })
                 .when(PredicateBuilder.and(constant("false").isEqualTo(header(Constants.ENABLE_VALIDATION)), simple("${header.action_report_result} == 'OK'")))
-                    .to("direct:checkScheduledJobsBeforeTriggeringNextAction")
-                    .process(e -> {
-                                JobEvent.providerJobBuilder(e).timetableAction(getTimeTableAction(e)).state(State.OK).build();
-                            })
+                .to("direct:checkScheduledJobsBeforeTriggeringNextAction")
+                .process(e -> JobEvent.providerJobBuilder(e).timetableAction(TimetableAction.IMPORT).state(State.OK).build())
                 .when(simple("${header.action_report_result} == 'OK' and ${header.validation_report_result} == 'OK'"))
-                    .to("direct:checkScheduledJobsBeforeTriggeringNextAction")
-                    .process(e -> {
-                        JobEvent.providerJobBuilder(e).timetableAction(getTimeTableAction(e)).state(State.OK).build();
-                    })
+                .to("direct:checkScheduledJobsBeforeTriggeringNextAction")
+                .process(e -> JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.IMPORT).state(State.OK).build())
                 .when(simple("${header.action_report_result} == 'OK' and ${header.validation_report_result} == 'NOK'"))
-                    .log(LoggingLevel.INFO, correlation() + "Import ok but validation failed")
-                    .process(e -> {
-                        JobEvent.providerJobBuilder(e).timetableAction(getTimeTableAction(e)).state(State.FAILED).build();
-                    })
+                .log(LoggingLevel.INFO, correlation() + "Import ok but validation failed")
+                .process(e -> JobEvent.providerJobBuilder(e).timetableAction(TimetableAction.IMPORT).state(State.FAILED).build())
                 .when(simple("${header.action_report_result} == 'NOK'"))
-                    .choice()
-                    .when(simple("${header.action_report_result} == 'NOK'"))
-                      .log(LoggingLevel.WARN, correlation() + "Import not ok")
-                        .process(e -> {
-                            JobEvent.providerJobBuilder(e).timetableAction(getTimeTableAction(e)).state(State.FAILED).build();
-                        })
-                    .endChoice()
+                .choice()
+                .when(simple("${header.action_report_result} == 'NOK'"))
+                .log(LoggingLevel.WARN, correlation() + "Import not ok")
+                .process(e -> JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.IMPORT).state(State.FAILED).build())
+                .endChoice()
                 .otherwise()
-                    .log(LoggingLevel.ERROR, correlation() + "Something went wrong on import")
-                    .process(e -> {
-                        JobEvent.providerJobBuilder(e).timetableAction(getTimeTableAction(e)).state(State.FAILED).build();
-                    })
+                .log(LoggingLevel.ERROR, correlation() + "Something went wrong on import")
+                .process(e -> JobEvent.providerJobBuilder(e).timetableAction(TimetableAction.IMPORT).state(State.FAILED).build())
                 .end()
                 .to("direct:updateStatus")
                 .routeId("chouette-process-import-status");
@@ -291,14 +252,9 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
 
     }
 
-    private TimetableAction getTimeTableAction(Exchange e){
-        Boolean analyze = e.getIn().getHeader(ANALYZE_ACTION, Boolean.class) != null ? e.getIn().getHeader(ANALYZE_ACTION, Boolean.class) : false;
-        return analyze ? TimetableAction.FILE_ANALYZE : TimetableAction.IMPORT;
-    }
-
     private String getImportParameters(String fileName, String fileType, Long providerId, String user, String description, boolean routeMerge, String splitCharacter, IdParameters idParameters, boolean cleanRepository, boolean ignoreCommercialPoints) {
         Provider provider = getProviderRepository().getProvider(providerId);
-        return Parameters.createImportParameters(fileName, fileType, provider, user, description, routeMerge, splitCharacter, idParameters, cleanRepository, ignoreCommercialPoints);
+        return Parameters.createImportParameters(fileName, fileType, provider, user, description, routeMerge, splitCharacter, idParameters, cleanRepository,ignoreCommercialPoints);
     }
 
 }

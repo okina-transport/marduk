@@ -30,20 +30,12 @@ import no.rutebanken.marduk.routes.status.JobEvent;
 import no.rutebanken.marduk.security.AuthorizationClaim;
 import no.rutebanken.marduk.security.AuthorizationService;
 import no.rutebanken.marduk.services.BlobStoreService;
-import no.rutebanken.marduk.services.FileSystemService;
-import no.rutebanken.marduk.services.RestUploadService;
 import org.apache.camel.Body;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.model.rest.RestBindingMode;
-import org.apache.http.entity.ContentType;
-import org.apache.http.entity.mime.MultipartEntityBuilder;
 import org.apache.camel.model.rest.RestParamType;
 import org.apache.camel.model.rest.RestPropertyDefinition;
-import org.apache.tomcat.util.http.fileupload.FileItem;
-import org.apache.tomcat.util.http.fileupload.FileItemFactory;
-import org.apache.tomcat.util.http.fileupload.disk.DiskFileItemFactory;
-import org.apache.tomcat.util.http.fileupload.util.Streams;
 import org.rutebanken.helper.organisation.AuthorizationConstants;
 import org.rutebanken.helper.organisation.NotAuthenticatedException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -52,7 +44,6 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Component;
 
 import javax.ws.rs.NotFoundException;
-import java.io.FileInputStream;
 import java.net.URLDecoder;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
@@ -62,9 +53,23 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-import static javax.swing.text.DefaultStyledDocument.ElementSpec.ContentType;
 import static javax.ws.rs.core.MediaType.MULTIPART_FORM_DATA;
-import static no.rutebanken.marduk.Constants.*;
+import static no.rutebanken.marduk.Constants.CHOUETTE_JOB_ID;
+import static no.rutebanken.marduk.Constants.CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL;
+import static no.rutebanken.marduk.Constants.CHOUETTE_REFERENTIAL;
+import static no.rutebanken.marduk.Constants.CORRELATION_ID;
+import static no.rutebanken.marduk.Constants.EXPORT_END_DATE;
+import static no.rutebanken.marduk.Constants.EXPORT_LINES_IDS;
+import static no.rutebanken.marduk.Constants.EXPORT_NAME;
+import static no.rutebanken.marduk.Constants.EXPORT_START_DATE;
+import static no.rutebanken.marduk.Constants.FILE_HANDLE;
+import static no.rutebanken.marduk.Constants.FILE_NAME;
+import static no.rutebanken.marduk.Constants.IMPORT;
+import static no.rutebanken.marduk.Constants.NO_GTFS_EXPORT;
+import static no.rutebanken.marduk.Constants.OKINA_REFERENTIAL;
+import static no.rutebanken.marduk.Constants.PROVIDER_ID;
+import static no.rutebanken.marduk.Constants.PROVIDER_IDS;
+import static no.rutebanken.marduk.Constants.USER;
 
 /**
  * REST interface for backdoor triggering of messages
@@ -94,20 +99,16 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
     @Autowired
     private BlobStoreService blobStoreService;
 
-    @Autowired
-    FileSystemService fileSystemService;
-
     @Value("${superspace.name}")
     private String superspaceName;
 
-    // @formatter:off
     @Override
     public void configure() throws Exception {
         super.configure();
 
         RestPropertyDefinition corsAllowedHeaders = new RestPropertyDefinition();
         corsAllowedHeaders.setKey("Access-Control-Allow-Headers");
-        corsAllowedHeaders.setValue("Origin, Accept, X-Requested-With, Content-Type, Access-Control-Request-Method, Access-Control-Request-Headers, Authorization, x-okina-referential, RutebankenUser, RutebankenDescription, EXPORT_LINES_IDS, EXPORT_START_DATE, EXPORT_END_DATE, ImportType, routeMerge, splitCharacter, commercialPointIdPrefixToRemove, quayIdPrefixToRemove, areaCentroidPrefixToRemove, linePrefixToRemove, stopAreaPrefixToRemove,ignoreCommercialPoints,analysisJobId, cleanRepository");
+        corsAllowedHeaders.setValue("Origin, Accept, X-Requested-With, Content-Type, Access-Control-Request-Method, Access-Control-Request-Headers, Authorization, x-okina-referential, RutebankenUser, RutebankenDescription, EXPORT_LINES_IDS, EXPORT_START_DATE, EXPORT_END_DATE, ImportType, routeMerge, splitCharacter, commercialPointIdPrefixToRemove, quayIdPrefixToRemove, areaCentroidPrefixToRemove, linePrefixToRemove, stopAreaPrefixToRemove,ignoreCommercialPoints, cleanRepository");
 
         RestPropertyDefinition corsAllowedOrigin = new RestPropertyDefinition();
         corsAllowedOrigin.setKey("Access-Control-Allow-Origin");
@@ -566,7 +567,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
 
                 .process(e -> {
                     String fileNameForStatusLogging = "reimport-" + e.getIn().getBody(String.class);
-                    e.getIn().setHeader(FILE_NAME, fileNameForStatusLogging);
+                    e.getIn().setHeader(Constants.FILE_NAME, fileNameForStatusLogging);
                 })
                 .setBody(constant(null))
 
@@ -592,29 +593,6 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .routeId("admin-chouette-import-list")
                 .endRest()
 
-                .post("/analyzeFile")
-                .description("Upload file for pre-import analyze into Chouette")
-                .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the nabu service").dataType("integer").endParam()
-                .consumes(MULTIPART_FORM_DATA)
-                .produces(PLAIN)
-                .bindingMode(RestBindingMode.off)
-                .responseMessage().code(200).endResponseMessage()
-                .responseMessage().code(500).message("Invalid providerId").endResponseMessage()
-                .route()
-                .streamCaching()
-                .setHeader(PROVIDER_ID, header("providerId"))
-                .to("direct:authorizeRequest")
-                .process(e -> log.info("Authorized request passed"))
-                .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
-                .process(e -> log.info("validation passed"))
-                .process(e -> e.getIn().setHeader(ANALYZE_ACTION, true))
-                .log(LoggingLevel.INFO, correlation() + "upload files and start import pipeline")
-                .removeHeaders("CamelHttp*")
-                .to("direct:uploadFilesAndStartImport")
-                .routeId("admin-chouette-upload-file-to-analysis")
-                .endRest()
-
-
                 .post("/files")
                 .description("Upload file for import into Chouette")
                 .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the nabu service").dataType("integer").endParam()
@@ -630,18 +608,10 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .process(e -> log.info("Authorized request passed"))
                 .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
                 .process(e -> log.info("validation passed"))
-                .process(e -> {
-                    e.getIn().setHeader(CHOUETTE_REFERENTIAL, getProviderRepository().getReferential(e.getIn().getHeader(PROVIDER_ID, Long.class)));
-                    String analysisJobId = e.getIn().getHeader(ANALYSIS_JOB_ID, String.class);
-                    java.io.File file = fileSystemService.getAnalysisFile(e);
-                    FileItemFactory fac = new DiskFileItemFactory();
-                    FileItem fileItem = fac.createItem("file", "application/zip",false, file.getName());
-                    Streams.copy(new FileInputStream(file), fileItem.getOutputStream(), true);
-                    e.getIn().setBody(fileItem);
-                })
+                .process(e -> e.getIn().setHeader(CHOUETTE_REFERENTIAL, getProviderRepository().getReferential(e.getIn().getHeader(PROVIDER_ID, Long.class))))
                 .log(LoggingLevel.INFO, correlation() + "upload files and start import pipeline")
                 .removeHeaders("CamelHttp*")
-                .to("direct:importLaunch")
+                .to("direct:uploadFilesAndStartImport")
                 .routeId("admin-chouette-upload-file")
                 .endRest()
 
@@ -658,9 +628,9 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .to("direct:authorizeRequest")
                 .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
                 .process(e -> e.getIn().setHeader("fileName", URLDecoder.decode(e.getIn().getHeader("fileName", String.class), "utf-8")))
-                .process(e -> e.getIn().setHeader(FILE_HANDLE, BLOBSTORE_PATH_INBOUND
-                        + getProviderRepository().getReferential(e.getIn().getHeader(PROVIDER_ID, Long.class))
-                        + "/" + e.getIn().getHeader("fileName", String.class)))
+                .process(e -> e.getIn().setHeader(FILE_HANDLE, Constants.BLOBSTORE_PATH_INBOUND
+                                                                       + getProviderRepository().getReferential(e.getIn().getHeader(PROVIDER_ID, Long.class))
+                                                                       + "/" + e.getIn().getHeader("fileName", String.class)))
                 .log(LoggingLevel.INFO, correlation() + "blob store download file by name")
                 .removeHeaders("CamelHttp*")
                 .to("direct:getBlob")
@@ -682,9 +652,10 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
                 .process(e -> {
                     String ref = e.getIn().getHeader(OKINA_REFERENTIAL, String.class);
-                    if (!ref.contains(superspaceName + "_")) {
-                        e.getIn().setHeader(OKINA_REFERENTIAL, superspaceName + "_" + ref);
-                    } else {
+                    if(!ref.contains(superspaceName+"_")) {
+                        e.getIn().setHeader(OKINA_REFERENTIAL, superspaceName+"_" + ref);
+                    }
+                    else {
                         e.getIn().setHeader(OKINA_REFERENTIAL, ref);
                     }
                 })
@@ -710,9 +681,10 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
                 .process(e -> {
                     String ref = e.getIn().getHeader(OKINA_REFERENTIAL, String.class);
-                    if (!ref.contains(superspaceName + "_")) {
-                        e.getIn().setHeader(OKINA_REFERENTIAL, superspaceName + "_" + ref);
-                    } else {
+                    if(!ref.contains(superspaceName+"_")) {
+                        e.getIn().setHeader(OKINA_REFERENTIAL, superspaceName+"_" + ref);
+                    }
+                    else {
                         e.getIn().setHeader(OKINA_REFERENTIAL, ref);
                     }
                 })
