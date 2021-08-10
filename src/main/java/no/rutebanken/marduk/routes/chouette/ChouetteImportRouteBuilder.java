@@ -300,9 +300,10 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
         return analyze ? TimetableAction.FILE_ANALYZE : TimetableAction.IMPORT;
     }
 
-    private String getImportParameters(String fileName, String fileType, Long providerId, String user, String description, boolean routeMerge, String splitCharacter, IdParameters idParameters, boolean cleanRepository, boolean ignoreCommercialPoints, boolean isAnalyzeJob) {
+    private String getImportParameters(String fileName, String fileType, Long providerId, String user, String description, boolean routeMerge, String splitCharacter,
+                                       IdParameters idParameters, boolean cleanRepository, boolean ignoreCommercialPoints, boolean isAnalyzeJob) {
         Provider provider = getProviderRepository().getProvider(providerId);
-        return Parameters.createImportParameters(fileName, fileType, provider, user, description, routeMerge, splitCharacter, idParameters, cleanRepository, ignoreCommercialPoints);
+        return Parameters.createImportParameters(fileName, fileType, provider, user, description, routeMerge, splitCharacter, idParameters, cleanRepository, ignoreCommercialPoints,isAnalyzeJob);
     }
 
 }
