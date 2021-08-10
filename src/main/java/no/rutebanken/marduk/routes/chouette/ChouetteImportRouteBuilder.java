@@ -167,6 +167,8 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
                     idParams.setQuayIdPrefixToRemove(quayPrefixToRemove);
                     idParams.setLinePrefixToRemove(linePrefixToRemove);
 
+                    Boolean isAnalyzeJob = e.getIn().getHeader(ANALYZE_ACTION, Boolean.class) != null ? e.getIn().getHeader(ANALYZE_ACTION, Boolean.class) : false;
+
                     String ignoreCommercialPointsStr = e.getIn().getHeader(IGNORE_COMMERCIAL_POINTS, String.class);
                     boolean ignoreCommercialPoints = !StringUtils.isEmpty(ignoreCommercialPointsStr) && Boolean.parseBoolean(ignoreCommercialPointsStr);
 
@@ -176,7 +178,9 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
                         idParams.setStopAreaPrefixToRemove(stopAreaPrefixToRemove);
                         idParams.setAreaCentroidPrefixToRemove(areaCentroidPrefixToRemove);
                     }
-                    e.getIn().setHeader(JSON_PART, getImportParameters(fileName, fileType, providerId, user, description, routeMerge, splitCharacter, idParams, cleanRepository, ignoreCommercialPoints));
+
+
+                    e.getIn().setHeader(JSON_PART, getImportParameters(fileName, fileType, providerId, user, description, routeMerge, splitCharacter, idParams, cleanRepository, ignoreCommercialPoints,isAnalyzeJob));
                 }) //Using header to addToExchange json data
                 .log(LoggingLevel.DEBUG, correlation() + "import parameters: " + header(JSON_PART))
                 .to("direct:sendImportJobRequest")
@@ -296,7 +300,7 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
         return analyze ? TimetableAction.FILE_ANALYZE : TimetableAction.IMPORT;
     }
 
-    private String getImportParameters(String fileName, String fileType, Long providerId, String user, String description, boolean routeMerge, String splitCharacter, IdParameters idParameters, boolean cleanRepository, boolean ignoreCommercialPoints) {
+    private String getImportParameters(String fileName, String fileType, Long providerId, String user, String description, boolean routeMerge, String splitCharacter, IdParameters idParameters, boolean cleanRepository, boolean ignoreCommercialPoints, boolean isAnalyzeJob) {
         Provider provider = getProviderRepository().getProvider(providerId);
         return Parameters.createImportParameters(fileName, fileType, provider, user, description, routeMerge, splitCharacter, idParameters, cleanRepository, ignoreCommercialPoints);
     }

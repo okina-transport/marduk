@@ -26,7 +26,7 @@ public class GtfsImportParameters extends ChouetteJobParameters {
 
     public Parameters parameters;
 
-	static class Parameters {
+    static class Parameters {
 
         @JsonProperty("gtfs-import")
         public Gtfs gtfsImport;
@@ -39,11 +39,11 @@ public class GtfsImportParameters extends ChouetteJobParameters {
         @JsonInclude(JsonInclude.Include.ALWAYS)
         public String objectIdPrefix;
 
-    	@JsonProperty("split_id_on_dot")
+        @JsonProperty("split_id_on_dot")
         @JsonInclude(JsonInclude.Include.ALWAYS)
-    	private String splitIdOnDot = "0";
+        private String splitIdOnDot = "0";
 
-    	@JsonProperty("max_distance_for_commercial")
+        @JsonProperty("max_distance_for_commercial")
         public String maxDistanceForCommercial = "10";
 
         @JsonProperty("ignore_last_word")
@@ -87,10 +87,10 @@ public class GtfsImportParameters extends ChouetteJobParameters {
     }
 
     public static GtfsImportParameters create(String name, String objectIdPrefix, String referentialName, String organisationName,
-                                                     String userName, boolean cleanRepository, boolean enableValidation,
-                                                     boolean allowCreateMissingStopPlace, boolean enableStopPlaceIdMapping,
-                                                     Set<String> generateMissingRouteSectionsForModes, String description, boolean routeMerge, String splitCharacter, String commercialPointIdPrefixToRemove,
-                                                     String quayIdPrefixToRemove, String linePrefixToRemove) {
+                                              String userName, boolean cleanRepository, boolean enableValidation,
+                                              boolean allowCreateMissingStopPlace, boolean enableStopPlaceIdMapping,
+                                              Set<String> generateMissingRouteSectionsForModes, String description, boolean routeMerge, String splitCharacter, String commercialPointIdPrefixToRemove,
+                                              String quayIdPrefixToRemove, String linePrefixToRemove, boolean isAnalyzeJob) {
 
         Gtfs gtfsImport = new Gtfs();
         gtfsImport.name = name;
@@ -102,8 +102,10 @@ public class GtfsImportParameters extends ChouetteJobParameters {
         gtfsImport.cleanRepository = cleanRepository ? "1" : "0";
         gtfsImport.stopAreaRemoteIdMapping = enableStopPlaceIdMapping;
         gtfsImport.generateMissingRouteSectionsForModes = generateMissingRouteSectionsForModes;
-        if (allowCreateMissingStopPlace) {
+        if (allowCreateMissingStopPlace && !isAnalyzeJob) {
             gtfsImport.stopAreaImportMode = AbstractImportParameters.StopAreaImportMode.CREATE_NEW;
+        } else {
+            gtfsImport.stopAreaImportMode = AbstractImportParameters.StopAreaImportMode.READ_ONLY;
         }
         gtfsImport.routeMerge = routeMerge;
         gtfsImport.splitCharacter = splitCharacter;
@@ -118,7 +120,6 @@ public class GtfsImportParameters extends ChouetteJobParameters {
 
         return gtfsImportParameters;
     }
-
 
 
 }

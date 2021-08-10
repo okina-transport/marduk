@@ -40,15 +40,17 @@ import java.util.List;
 
 public class Parameters {
 
-    public static String createImportParameters(String fileName, String fileType, Provider provider, String user, String description, boolean routeMerge, String splitCharacter, IdParameters idParams, boolean cleanRepository, boolean ignoreCommercialPoints) {
+    public static String createImportParameters(String fileName, String fileType, Provider provider, String user, String description,
+                                                boolean routeMerge, String splitCharacter, IdParameters idParams, boolean cleanRepository,
+                                                boolean ignoreCommercialPoints, boolean isAnalyzeJob) {
         if (FileType.REGTOPP.name().equals(fileType)) {
             return getRegtoppImportParameters(fileName, provider);
         } else if (FileType.GTFS.name().equals(fileType)) {
-            return getGtfsImportParameters(fileName, provider, user, description, routeMerge, splitCharacter, idParams, cleanRepository);
+            return getGtfsImportParameters(fileName, provider, user, description, routeMerge, splitCharacter, idParams, cleanRepository, isAnalyzeJob);
         } else if (FileType.NETEXPROFILE.name().equals(fileType)) {
             return getNetexImportParameters(fileName, provider);
         } else if (FileType.NEPTUNE.name().equals(fileType)) {
-            return getNeptuneImportParameters(fileName, provider, user, description, idParams, ignoreCommercialPoints);
+            return getNeptuneImportParameters(fileName, provider, user, description, idParams, ignoreCommercialPoints, isAnalyzeJob);
         } else {
             throw new IllegalArgumentException("Cannot create import parameters from file type '" + fileType + "'");
         }
@@ -67,19 +69,23 @@ public class Parameters {
         return regtoppImportParameters.toJsonString();
     }
 
-    static String getNeptuneImportParameters(String importName, Provider provider, String user, String description, IdParameters idParameters, boolean ignoreCommercialPoints) {
+    static String getNeptuneImportParameters(String importName, Provider provider, String user, String description, IdParameters idParameters, boolean ignoreCommercialPoints, boolean isAnalyzeJob) {
         ChouetteInfo chouetteInfo = provider.chouetteInfo;
         NeptuneImportParameters neptuneImportParameters = NeptuneImportParameters.create(importName,
                 provider.name, chouetteInfo.organisation, user, chouetteInfo.enableCleanImport,
-                chouetteInfo.enableValidation, chouetteInfo.allowCreateMissingStopPlace, chouetteInfo.enableStopPlaceIdMapping, chouetteInfo.generateMissingServiceLinksForModes, description, idParameters, ignoreCommercialPoints);
+                chouetteInfo.enableValidation, chouetteInfo.allowCreateMissingStopPlace, chouetteInfo.enableStopPlaceIdMapping,
+                chouetteInfo.generateMissingServiceLinksForModes, description, idParameters, ignoreCommercialPoints, isAnalyzeJob);
         return neptuneImportParameters.toJsonString();
     }
 
-    static String getGtfsImportParameters(String importName, Provider provider, String user, String description, boolean routeMerge, String splitCharacter, IdParameters idParams, boolean cleanRepository) {
+    static String getGtfsImportParameters(String importName, Provider provider, String user, String description, boolean routeMerge, String splitCharacter,
+                                          IdParameters idParams, boolean cleanRepository, boolean isAnalyzeJob) {
         ChouetteInfo chouetteInfo = provider.chouetteInfo;
         GtfsImportParameters gtfsImportParameters = GtfsImportParameters.create(importName, chouetteInfo.xmlns,
                 provider.name, chouetteInfo.organisation, user, cleanRepository,
-                chouetteInfo.enableValidation, chouetteInfo.allowCreateMissingStopPlace, chouetteInfo.enableStopPlaceIdMapping, chouetteInfo.generateMissingServiceLinksForModes, description, routeMerge, splitCharacter, idParams.getCommercialPointIdPrefixToRemove(), idParams.getQuayIdPrefixToRemove(), idParams.getLinePrefixToRemove());
+                chouetteInfo.enableValidation, chouetteInfo.allowCreateMissingStopPlace, chouetteInfo.enableStopPlaceIdMapping, chouetteInfo.generateMissingServiceLinksForModes,
+                description, routeMerge, splitCharacter, idParams.getCommercialPointIdPrefixToRemove(), idParams.getQuayIdPrefixToRemove(), idParams.getLinePrefixToRemove(), isAnalyzeJob);
+
         return gtfsImportParameters.toJsonString();
     }
 

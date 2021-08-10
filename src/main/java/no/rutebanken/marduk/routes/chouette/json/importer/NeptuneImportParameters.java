@@ -27,7 +27,7 @@ public class NeptuneImportParameters extends ChouetteJobParameters {
 
     public Parameters parameters;
 
-	static class Parameters {
+    static class Parameters {
 
         @JsonProperty("neptune-import")
         public Neptune neptuneImport;
@@ -54,11 +54,11 @@ public class NeptuneImportParameters extends ChouetteJobParameters {
 
     }
 
-    public static NeptuneImportParameters create(String name,  String referentialName, String organisationName,
+    public static NeptuneImportParameters create(String name, String referentialName, String organisationName,
                                                  String userName, boolean cleanRepository, boolean enableValidation,
                                                  boolean allowCreateMissingStopPlace, boolean enableStopPlaceIdMapping,
                                                  Set<String> generateMissingRouteSectionsForModes, String description,
-                                                 IdParameters idParameters, boolean ignoreCommercialPoints) {
+                                                 IdParameters idParameters, boolean ignoreCommercialPoints, boolean isAnalyzeJob) {
         Neptune neptuneImport = new Neptune();
         neptuneImport.name = name;
         neptuneImport.referentialName = referentialName;
@@ -68,8 +68,10 @@ public class NeptuneImportParameters extends ChouetteJobParameters {
         neptuneImport.cleanRepository = cleanRepository ? "1" : "0";
         neptuneImport.stopAreaRemoteIdMapping = enableStopPlaceIdMapping;
         neptuneImport.generateMissingRouteSectionsForModes = generateMissingRouteSectionsForModes;
-        if (allowCreateMissingStopPlace) {
+        if (allowCreateMissingStopPlace && !isAnalyzeJob) {
             neptuneImport.stopAreaImportMode = AbstractImportParameters.StopAreaImportMode.CREATE_NEW;
+        } else {
+            neptuneImport.stopAreaImportMode = AbstractImportParameters.StopAreaImportMode.READ_ONLY;
         }
         neptuneImport.areaCentroidPrefixToRemove = idParameters.getAreaCentroidPrefixToRemove();
         neptuneImport.stopAreaPrefixToRemove = idParameters.getStopAreaPrefixToRemove();
