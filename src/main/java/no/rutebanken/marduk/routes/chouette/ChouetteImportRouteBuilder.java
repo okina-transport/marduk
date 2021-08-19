@@ -20,6 +20,7 @@ import no.rutebanken.marduk.Constants;
 import no.rutebanken.marduk.domain.Provider;
 import no.rutebanken.marduk.routes.chouette.json.IdParameters;
 import no.rutebanken.marduk.routes.chouette.json.Parameters;
+import no.rutebanken.marduk.routes.chouette.json.importer.RawImportParameters;
 import no.rutebanken.marduk.routes.status.JobEvent;
 import no.rutebanken.marduk.routes.status.JobEvent.State;
 import no.rutebanken.marduk.routes.status.JobEvent.TimetableAction;
@@ -34,7 +35,6 @@ import org.springframework.stereotype.Component;
 import static no.rutebanken.marduk.Constants.*;
 import static no.rutebanken.marduk.Utils.Utils.getHttp4;
 import static no.rutebanken.marduk.Utils.Utils.getLastPathElementOfUrl;
-import static org.apache.camel.builder.PredicateBuilder.not;
 
 /**
  * Submits files to Chouette
@@ -154,6 +154,9 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
                     String cleanRepositoryStr = e.getIn().getHeader(CLEAN_REPOSITORY, String.class);
                     boolean cleanRepository = !StringUtils.isEmpty(cleanRepositoryStr) && Boolean.parseBoolean(cleanRepositoryStr);
 
+                    String keepBoardingAlightingPossibilityStr = e.getIn().getHeader(KEEP_BOARDING_ALIGHTING_POSSIBILITY, String.class);
+                    boolean keepBoardingAlightingPossibility = !StringUtils.isEmpty(keepBoardingAlightingPossibilityStr) && Boolean.parseBoolean(keepBoardingAlightingPossibilityStr);
+
                     String commercialPointIdPrefixToRemove = e.getIn().getHeader(COMMERCIAL_POINT_ID_PREFIX_TO_REMOVE, String.class);
                     String quayPrefixToRemove = e.getIn().getHeader(QUAY_ID_PREFIX_TO_REMOVE, String.class);
                     String stopAreaPrefixToRemove = e.getIn().getHeader(STOP_AREA_PREFIX_TO_REMOVE, String.class);
@@ -179,8 +182,21 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
                         idParams.setAreaCentroidPrefixToRemove(areaCentroidPrefixToRemove);
                     }
 
+                    RawImportParameters rawImportParameters = new RawImportParameters();
+                    rawImportParameters.setFileName(fileName);
+                    rawImportParameters.setFileType(fileType);
+                    rawImportParameters.setProviderId(providerId);
+                    rawImportParameters.setUser(user);
+                    rawImportParameters.setDescription(description);
+                    rawImportParameters.setRouteMerge(routeMerge);
+                    rawImportParameters.setSplitCharacter(splitCharacter);
+                    rawImportParameters.setIdParameters(idParams);
+                    rawImportParameters.setCleanRepository(cleanRepository);
+                    rawImportParameters.setIgnoreCommercialPoints(ignoreCommercialPoints);
+                    rawImportParameters.setAnalyzeJob(isAnalyzeJob);
+                    rawImportParameters.setKeepBoardingAlighting(keepBoardingAlightingPossibility);
 
-                    e.getIn().setHeader(JSON_PART, getImportParameters(fileName, fileType, providerId, user, description, routeMerge, splitCharacter, idParams, cleanRepository, ignoreCommercialPoints,isAnalyzeJob));
+                    e.getIn().setHeader(JSON_PART, getStringImportParameters(rawImportParameters));
                 }) //Using header to addToExchange json data
                 .log(LoggingLevel.DEBUG, correlation() + "import parameters: " + header(JSON_PART))
                 .to("direct:sendImportJobRequest")
@@ -300,10 +316,9 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
         return analyze ? TimetableAction.FILE_ANALYZE : TimetableAction.IMPORT;
     }
 
-    private String getImportParameters(String fileName, String fileType, Long providerId, String user, String description, boolean routeMerge, String splitCharacter,
-                                       IdParameters idParameters, boolean cleanRepository, boolean ignoreCommercialPoints, boolean isAnalyzeJob) {
-        Provider provider = getProviderRepository().getProvider(providerId);
-        return Parameters.createImportParameters(fileName, fileType, provider, user, description, routeMerge, splitCharacter, idParameters, cleanRepository, ignoreCommercialPoints,isAnalyzeJob);
+    private String getStringImportParameters(RawImportParameters rawImportParameters) {
+        rawImportParameters.setProvider(getProviderRepository().getProvider(rawImportParameters.getProviderId()));
+        return Parameters.createStringImportParameters(rawImportParameters);
     }
 
 }

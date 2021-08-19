@@ -27,6 +27,7 @@ import no.rutebanken.marduk.routes.chouette.json.exporter.TransferExportParamete
 import no.rutebanken.marduk.routes.chouette.json.importer.GtfsImportParameters;
 import no.rutebanken.marduk.routes.chouette.json.importer.NeptuneImportParameters;
 import no.rutebanken.marduk.routes.chouette.json.importer.NetexImportParameters;
+import no.rutebanken.marduk.routes.chouette.json.importer.RawImportParameters;
 import no.rutebanken.marduk.routes.chouette.json.importer.RegtoppImportParameters;
 import no.rutebanken.marduk.routes.file.FileType;
 import org.apache.commons.lang3.StringUtils;
@@ -40,23 +41,28 @@ import java.util.List;
 
 public class Parameters {
 
-    public static String createImportParameters(String fileName, String fileType, Provider provider, String user, String description,
-                                                boolean routeMerge, String splitCharacter, IdParameters idParams, boolean cleanRepository,
-                                                boolean ignoreCommercialPoints, boolean isAnalyzeJob) {
+    public static String createStringImportParameters(RawImportParameters rawImportParameters) {
+        String fileType = rawImportParameters.getFileType();
+
         if (FileType.REGTOPP.name().equals(fileType)) {
-            return getRegtoppImportParameters(fileName, provider);
+            return getRegtoppImportParameters(rawImportParameters);
         } else if (FileType.GTFS.name().equals(fileType)) {
-            return getGtfsImportParameters(fileName, provider, user, description, routeMerge, splitCharacter, idParams, cleanRepository, isAnalyzeJob);
+            return getGtfsImportParameters(rawImportParameters);
         } else if (FileType.NETEXPROFILE.name().equals(fileType)) {
-            return getNetexImportParameters(fileName, provider);
+            return getNetexImportParameters(rawImportParameters);
         } else if (FileType.NEPTUNE.name().equals(fileType)) {
-            return getNeptuneImportParameters(fileName, provider, user, description, idParams, ignoreCommercialPoints, isAnalyzeJob);
+            return getNeptuneImportParameters(rawImportParameters);
         } else {
             throw new IllegalArgumentException("Cannot create import parameters from file type '" + fileType + "'");
         }
     }
 
-    static String getRegtoppImportParameters(String importName, Provider provider) {
+    static String getRegtoppImportParameters(RawImportParameters rawImportParameters) {
+
+        String importName = rawImportParameters.getFileName();
+        Provider provider = rawImportParameters.getProvider();
+
+
         ChouetteInfo chouetteInfo = provider.chouetteInfo;
         if (!chouetteInfo.usesRegtopp()) {
             throw new IllegalArgumentException("Could not get regtopp information about provider '" + provider.id + "'.");
@@ -69,31 +75,18 @@ public class Parameters {
         return regtoppImportParameters.toJsonString();
     }
 
-    static String getNeptuneImportParameters(String importName, Provider provider, String user, String description, IdParameters idParameters, boolean ignoreCommercialPoints, boolean isAnalyzeJob) {
-        ChouetteInfo chouetteInfo = provider.chouetteInfo;
-        NeptuneImportParameters neptuneImportParameters = NeptuneImportParameters.create(importName,
-                provider.name, chouetteInfo.organisation, user, chouetteInfo.enableCleanImport,
-                chouetteInfo.enableValidation, chouetteInfo.allowCreateMissingStopPlace, chouetteInfo.enableStopPlaceIdMapping,
-                chouetteInfo.generateMissingServiceLinksForModes, description, idParameters, ignoreCommercialPoints, isAnalyzeJob);
+    static String getNeptuneImportParameters(RawImportParameters rawImportParameters) {
+        NeptuneImportParameters neptuneImportParameters = NeptuneImportParameters.create(rawImportParameters);
         return neptuneImportParameters.toJsonString();
     }
 
-    static String getGtfsImportParameters(String importName, Provider provider, String user, String description, boolean routeMerge, String splitCharacter,
-                                          IdParameters idParams, boolean cleanRepository, boolean isAnalyzeJob) {
-        ChouetteInfo chouetteInfo = provider.chouetteInfo;
-        GtfsImportParameters gtfsImportParameters = GtfsImportParameters.create(importName, chouetteInfo.xmlns,
-                provider.name, chouetteInfo.organisation, user, cleanRepository,
-                chouetteInfo.enableValidation, chouetteInfo.allowCreateMissingStopPlace, chouetteInfo.enableStopPlaceIdMapping, chouetteInfo.generateMissingServiceLinksForModes,
-                description, routeMerge, splitCharacter, idParams.getCommercialPointIdPrefixToRemove(), idParams.getQuayIdPrefixToRemove(), idParams.getLinePrefixToRemove(), isAnalyzeJob);
-
+    static String getGtfsImportParameters(RawImportParameters rawImportParameters) {
+        GtfsImportParameters gtfsImportParameters = GtfsImportParameters.create(rawImportParameters);
         return gtfsImportParameters.toJsonString();
     }
 
-    static String getNetexImportParameters(String importName, Provider provider) {
-        ChouetteInfo chouetteInfo = provider.chouetteInfo;
-        NetexImportParameters netexImportParameters = NetexImportParameters.create(importName, provider.name,
-                chouetteInfo.organisation, chouetteInfo.user, chouetteInfo.enableCleanImport, chouetteInfo.enableValidation,
-                chouetteInfo.allowCreateMissingStopPlace, chouetteInfo.enableStopPlaceIdMapping, chouetteInfo.xmlns, chouetteInfo.generateMissingServiceLinksForModes);
+    static String getNetexImportParameters(RawImportParameters rawImportParameters) {
+        NetexImportParameters netexImportParameters = NetexImportParameters.create(rawImportParameters);
         return netexImportParameters.toJsonString();
     }
 

@@ -18,6 +18,7 @@ package no.rutebanken.marduk.routes.chouette.json.importer;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import no.rutebanken.marduk.domain.ChouetteInfo;
 import no.rutebanken.marduk.routes.chouette.json.ChouetteJobParameters;
 
 import java.util.Set;
@@ -84,39 +85,42 @@ public class GtfsImportParameters extends ChouetteJobParameters {
         @JsonInclude(JsonInclude.Include.ALWAYS)
         public String linePrefixToRemove = "";
 
+        @JsonProperty("keep_boarding_alighting")
+        @JsonInclude(JsonInclude.Include.ALWAYS)
+        public Boolean keepBoardingAlighting = true;
+
     }
 
-    public static GtfsImportParameters create(String name, String objectIdPrefix, String referentialName, String organisationName,
-                                              String userName, boolean cleanRepository, boolean enableValidation,
-                                              boolean allowCreateMissingStopPlace, boolean enableStopPlaceIdMapping,
-                                              Set<String> generateMissingRouteSectionsForModes, String description, boolean routeMerge, String splitCharacter, String commercialPointIdPrefixToRemove,
-                                              String quayIdPrefixToRemove, String linePrefixToRemove, boolean isAnalyzeJob) {
+    public static GtfsImportParameters create(RawImportParameters rawImportParameters) {
 
         Gtfs gtfsImport = new Gtfs();
-        gtfsImport.name = name;
-        gtfsImport.objectIdPrefix = objectIdPrefix;
-        gtfsImport.referentialName = referentialName;
-        gtfsImport.organisationName = organisationName;
-        gtfsImport.userName = userName;
-        gtfsImport.description = description;
-        gtfsImport.cleanRepository = cleanRepository ? "1" : "0";
-        gtfsImport.stopAreaRemoteIdMapping = enableStopPlaceIdMapping;
-        gtfsImport.generateMissingRouteSectionsForModes = generateMissingRouteSectionsForModes;
-        if (allowCreateMissingStopPlace && !isAnalyzeJob) {
+        ChouetteInfo chouetteInfo = rawImportParameters.getProvider().chouetteInfo;
+
+        gtfsImport.name = rawImportParameters.getFileName();
+        gtfsImport.objectIdPrefix = chouetteInfo.xmlns;
+        gtfsImport.referentialName = rawImportParameters.getProvider().name;
+        gtfsImport.organisationName = chouetteInfo.organisation;
+        gtfsImport.userName = rawImportParameters.getUser();
+        gtfsImport.description = rawImportParameters.getDescription();
+        gtfsImport.cleanRepository = rawImportParameters.isCleanRepository() ? "1" : "0";
+        gtfsImport.stopAreaRemoteIdMapping = chouetteInfo.enableStopPlaceIdMapping;
+        gtfsImport.generateMissingRouteSectionsForModes = chouetteInfo.generateMissingServiceLinksForModes;
+        if (chouetteInfo.allowCreateMissingStopPlace && !rawImportParameters.isAnalyzeJob()) {
             gtfsImport.stopAreaImportMode = AbstractImportParameters.StopAreaImportMode.CREATE_NEW;
         } else {
             gtfsImport.stopAreaImportMode = AbstractImportParameters.StopAreaImportMode.READ_ONLY;
         }
-        gtfsImport.routeMerge = routeMerge;
-        gtfsImport.splitCharacter = splitCharacter;
-        gtfsImport.commercialPointIdPrefixToRemove = commercialPointIdPrefixToRemove;
-        gtfsImport.quayIdPrefixToRemove = quayIdPrefixToRemove;
-        gtfsImport.linePrefixToRemove = linePrefixToRemove;
+        gtfsImport.routeMerge = rawImportParameters.isRouteMerge();
+        gtfsImport.splitCharacter = rawImportParameters.getSplitCharacter();
+        gtfsImport.commercialPointIdPrefixToRemove = rawImportParameters.getIdParameters().getCommercialPointIdPrefixToRemove();
+        gtfsImport.quayIdPrefixToRemove = rawImportParameters.getIdParameters().getQuayIdPrefixToRemove();
+        gtfsImport.linePrefixToRemove = rawImportParameters.getIdParameters().getLinePrefixToRemove();
+        gtfsImport.keepBoardingAlighting = rawImportParameters.isKeepBoardingAlighting();
         Parameters parameters = new Parameters();
         parameters.gtfsImport = gtfsImport;
         GtfsImportParameters gtfsImportParameters = new GtfsImportParameters();
         gtfsImportParameters.parameters = parameters;
-        gtfsImportParameters.enableValidation = enableValidation;
+        gtfsImportParameters.enableValidation = chouetteInfo.enableValidation;
 
         return gtfsImportParameters;
     }

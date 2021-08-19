@@ -18,6 +18,8 @@ package no.rutebanken.marduk.routes.chouette.json.importer;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import no.rutebanken.marduk.domain.ChouetteInfo;
+import no.rutebanken.marduk.domain.Provider;
 import no.rutebanken.marduk.routes.chouette.json.ChouetteJobParameters;
 
 import java.util.Set;
@@ -26,7 +28,7 @@ public class NetexImportParameters extends ChouetteJobParameters {
 
     public Parameters parameters;
 
-	static class Parameters {
+    static class Parameters {
         @JsonProperty("netexprofile-import")
         public Netex netexImport;
     }
@@ -34,50 +36,50 @@ public class NetexImportParameters extends ChouetteJobParameters {
     static class Netex extends AbstractImportParameters {
         @JsonProperty("parse_site_frames")
         @JsonInclude(JsonInclude.Include.ALWAYS)
-    	private boolean parseSiteFrames = false;
+        private boolean parseSiteFrames = false;
 
         @JsonProperty("validate_against_schema")
         @JsonInclude(JsonInclude.Include.ALWAYS)
-    	private boolean validateAgainstSchema = true;
+        private boolean validateAgainstSchema = true;
 
         @JsonProperty("validate_against_profile")
         @JsonInclude(JsonInclude.Include.ALWAYS)
-    	private boolean validateAgainstProfile = true;
+        private boolean validateAgainstProfile = true;
 
         @JsonProperty("continue_on_line_errors")
         @JsonInclude(JsonInclude.Include.ALWAYS)
-    	private boolean continueOnLineErrors = true;
+        private boolean continueOnLineErrors = true;
 
         @JsonProperty("clean_on_error")
         @JsonInclude(JsonInclude.Include.ALWAYS)
         private boolean cleanOnErrors = true;
 
-    	@JsonProperty("object_id_prefix")
+        @JsonProperty("object_id_prefix")
         @JsonInclude(JsonInclude.Include.ALWAYS)
-    	private String objectIdPrefix;
+        private String objectIdPrefix;
 
     }
 
-    public static NetexImportParameters create(String name, String referentialName, String organisationName, String userName, boolean cleanRepository,
-                                                      boolean enableValidation, boolean allowCreateMissingStopPlace, boolean enableStopPlaceIdMapping,
-                                                      String objectIdPrefix, Set<String> generateMissingRouteSectionsForModes) {
+    public static NetexImportParameters create(RawImportParameters rawImportParameters) {
         Netex netexImport = new Netex();
-        netexImport.name = name;
-        netexImport.referentialName = referentialName;
-        netexImport.organisationName = organisationName;
-        netexImport.userName = userName;
-        netexImport.cleanRepository = cleanRepository ? "1":"0";
-        netexImport.stopAreaRemoteIdMapping = enableStopPlaceIdMapping;
-        netexImport.objectIdPrefix = objectIdPrefix;
-        netexImport.generateMissingRouteSectionsForModes = generateMissingRouteSectionsForModes;
-        if (allowCreateMissingStopPlace) {
+        Provider provider = rawImportParameters.getProvider();
+        ChouetteInfo chouetteInfo = provider.chouetteInfo;
+        netexImport.name = rawImportParameters.getFileName();
+        netexImport.referentialName = provider.name;
+        netexImport.organisationName = chouetteInfo.organisation;
+        netexImport.userName = rawImportParameters.getUser();
+        netexImport.cleanRepository = rawImportParameters.isCleanRepository() ? "1" : "0";
+        netexImport.stopAreaRemoteIdMapping = chouetteInfo.enableStopPlaceIdMapping;
+        netexImport.objectIdPrefix = chouetteInfo.xmlns;
+        netexImport.generateMissingRouteSectionsForModes = chouetteInfo.generateMissingServiceLinksForModes;
+        if (chouetteInfo.allowCreateMissingStopPlace) {
             netexImport.stopAreaImportMode = AbstractImportParameters.StopAreaImportMode.CREATE_NEW;
         }
         Parameters parameters = new Parameters();
         parameters.netexImport = netexImport;
         NetexImportParameters netexImportParameters = new NetexImportParameters();
         netexImportParameters.parameters = parameters;
-        netexImportParameters.enableValidation = enableValidation;
+        netexImportParameters.enableValidation = chouetteInfo.enableValidation;
         return netexImportParameters;
     }
 

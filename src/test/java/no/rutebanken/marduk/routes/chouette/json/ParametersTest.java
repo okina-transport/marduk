@@ -20,6 +20,7 @@ import com.google.common.collect.Sets;
 import no.rutebanken.marduk.domain.ChouetteInfo;
 import no.rutebanken.marduk.domain.Provider;
 import no.rutebanken.marduk.routes.chouette.json.importer.GtfsImportParameters;
+import no.rutebanken.marduk.routes.chouette.json.importer.RawImportParameters;
 import no.rutebanken.marduk.routes.chouette.json.importer.RegtoppImportParameters;
 import org.junit.Test;
 
@@ -43,7 +44,30 @@ public class ParametersTest {
 
     @Test
     public void createGtfsImportParameters() throws Exception {
-        GtfsImportParameters importParameters = GtfsImportParameters.create("test", "tds", "testDS", "Rutebanken", "Chouette", false, false, true, true, Sets.newHashSet("water", "bus"), "testdescription", false, null, null, null, null, false);
+        RawImportParameters rawInputParameters = new RawImportParameters();
+        rawInputParameters.setFileName("test");
+        rawInputParameters.setUser("Chouette");
+        rawInputParameters.setCleanRepository(false);
+        rawInputParameters.setDescription("testdescription");
+        rawInputParameters.setRouteMerge(false);
+        rawInputParameters.setAnalyzeJob(false);
+
+        Provider prov = new Provider();
+        prov.name = "testDS";
+
+        ChouetteInfo chouetteInfo = new ChouetteInfo();
+        chouetteInfo.xmlns = "tds";
+        chouetteInfo.organisation = "Rutebanken";
+        chouetteInfo.enableValidation = false;
+        chouetteInfo.allowCreateMissingStopPlace = true;
+        chouetteInfo.enableStopPlaceIdMapping = true;
+        chouetteInfo.generateMissingServiceLinksForModes = Sets.newHashSet("water", "bus");
+
+        prov.chouetteInfo = chouetteInfo;
+
+        rawInputParameters.setProvider(prov);
+
+        GtfsImportParameters importParameters = GtfsImportParameters.create(rawInputParameters);
         assertJsonEquals(gtfsReferenceJson, importParameters.toJsonString());
     }
 

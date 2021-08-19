@@ -18,6 +18,8 @@ package no.rutebanken.marduk.routes.chouette.json.importer;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import no.rutebanken.marduk.domain.ChouetteInfo;
+import no.rutebanken.marduk.domain.Provider;
 import no.rutebanken.marduk.routes.chouette.json.ChouetteJobParameters;
 import no.rutebanken.marduk.routes.chouette.json.IdParameters;
 
@@ -54,35 +56,33 @@ public class NeptuneImportParameters extends ChouetteJobParameters {
 
     }
 
-    public static NeptuneImportParameters create(String name, String referentialName, String organisationName,
-                                                 String userName, boolean cleanRepository, boolean enableValidation,
-                                                 boolean allowCreateMissingStopPlace, boolean enableStopPlaceIdMapping,
-                                                 Set<String> generateMissingRouteSectionsForModes, String description,
-                                                 IdParameters idParameters, boolean ignoreCommercialPoints, boolean isAnalyzeJob) {
+    public static NeptuneImportParameters create(RawImportParameters rawImportParameters) {
         Neptune neptuneImport = new Neptune();
-        neptuneImport.name = name;
-        neptuneImport.referentialName = referentialName;
-        neptuneImport.organisationName = organisationName;
-        neptuneImport.userName = userName;
-        neptuneImport.description = description;
-        neptuneImport.cleanRepository = cleanRepository ? "1" : "0";
-        neptuneImport.stopAreaRemoteIdMapping = enableStopPlaceIdMapping;
-        neptuneImport.generateMissingRouteSectionsForModes = generateMissingRouteSectionsForModes;
-        if (allowCreateMissingStopPlace && !isAnalyzeJob) {
+        Provider provider = rawImportParameters.getProvider();
+        ChouetteInfo chouetteInfo = provider.chouetteInfo;
+        neptuneImport.name = rawImportParameters.getFileName();
+        neptuneImport.referentialName = provider.name;
+        neptuneImport.organisationName = chouetteInfo.organisation;
+        neptuneImport.userName = rawImportParameters.getUser();
+        neptuneImport.description = rawImportParameters.getDescription();
+        neptuneImport.cleanRepository = rawImportParameters.isCleanRepository() ? "1" : "0";
+        neptuneImport.stopAreaRemoteIdMapping = chouetteInfo.enableStopPlaceIdMapping;
+        neptuneImport.generateMissingRouteSectionsForModes = chouetteInfo.generateMissingServiceLinksForModes;
+        if (chouetteInfo.allowCreateMissingStopPlace && !rawImportParameters.isAnalyzeJob()) {
             neptuneImport.stopAreaImportMode = AbstractImportParameters.StopAreaImportMode.CREATE_NEW;
         } else {
             neptuneImport.stopAreaImportMode = AbstractImportParameters.StopAreaImportMode.READ_ONLY;
         }
-        neptuneImport.areaCentroidPrefixToRemove = idParameters.getAreaCentroidPrefixToRemove();
-        neptuneImport.stopAreaPrefixToRemove = idParameters.getStopAreaPrefixToRemove();
-        neptuneImport.linePrefixToRemove = idParameters.getLinePrefixToRemove();
-        neptuneImport.ignoreCommercialPoints = ignoreCommercialPoints;
+        neptuneImport.areaCentroidPrefixToRemove = rawImportParameters.getIdParameters().getAreaCentroidPrefixToRemove();
+        neptuneImport.stopAreaPrefixToRemove = rawImportParameters.getIdParameters().getStopAreaPrefixToRemove();
+        neptuneImport.linePrefixToRemove = rawImportParameters.getIdParameters().getLinePrefixToRemove();
+        neptuneImport.ignoreCommercialPoints = rawImportParameters.isIgnoreCommercialPoints();
 
         Parameters parameters = new Parameters();
         parameters.neptuneImport = neptuneImport;
         NeptuneImportParameters neptuneImportParameters = new NeptuneImportParameters();
         neptuneImportParameters.parameters = parameters;
-        neptuneImportParameters.enableValidation = enableValidation;
+        neptuneImportParameters.enableValidation = chouetteInfo.enableValidation;
 
         return neptuneImportParameters;
     }
