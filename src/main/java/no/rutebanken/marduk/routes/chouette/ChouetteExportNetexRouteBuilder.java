@@ -29,8 +29,22 @@ import org.springframework.stereotype.Component;
 import java.io.File;
 import java.util.UUID;
 
-import static no.rutebanken.marduk.Constants.*;
+import static no.rutebanken.marduk.Constants.BLOBSTORE_MAKE_BLOB_PUBLIC;
+import static no.rutebanken.marduk.Constants.CHOUETTE_JOB_STATUS_URL;
+import static no.rutebanken.marduk.Constants.CHOUETTE_REFERENTIAL;
+import static no.rutebanken.marduk.Constants.COUNTPROVIDERS;
 import static no.rutebanken.marduk.Constants.EXPORTED_FILENAME;
+import static no.rutebanken.marduk.Constants.EXPORT_FILE_NAME;
+import static no.rutebanken.marduk.Constants.FILE_HANDLE;
+import static no.rutebanken.marduk.Constants.FILE_NAME;
+import static no.rutebanken.marduk.Constants.FILE_TYPE;
+import static no.rutebanken.marduk.Constants.JSON_PART;
+import static no.rutebanken.marduk.Constants.NETEX_EXPORT_GLOBAL;
+import static no.rutebanken.marduk.Constants.NO_GTFS_EXPORT;
+import static no.rutebanken.marduk.Constants.OKINA_REFERENTIAL;
+import static no.rutebanken.marduk.Constants.PROVIDER_ID;
+import static no.rutebanken.marduk.Constants.TOTALCOUNTPROVIDERS;
+import static no.rutebanken.marduk.Constants.USER;
 import static no.rutebanken.marduk.Utils.Utils.getLastPathElementOfUrl;
 
 @Component
@@ -67,7 +81,7 @@ public class ChouetteExportNetexRouteBuilder extends AbstractChouetteRouteBuilde
                     // Force new correlation ID : each export must have its own correlation ID to me displayed correctly in export screen
                     e.getIn().setHeader(Constants.CORRELATION_ID, UUID.randomUUID().toString());
                     e.getIn().removeHeader(Constants.CHOUETTE_JOB_ID);
-                    String exportName = org.springframework.util.StringUtils.hasText(e.getIn().getHeader(EXPORTED_FILENAME, String.class)) ? (String) e.getIn().getHeader(EXPORTED_FILENAME) : "offre";
+                    String exportName = org.springframework.util.StringUtils.hasText(e.getIn().getHeader(EXPORTED_FILENAME, String.class)) && !e.getIn().getHeader(NETEX_EXPORT_GLOBAL, Boolean.class) ? (String) e.getIn().getHeader(EXPORTED_FILENAME) : "offre";
                     e.getIn().setHeader(FILE_NAME, exportName);
                     e.getIn().setHeader(FILE_TYPE, "netex");
                 })
@@ -75,9 +89,10 @@ public class ChouetteExportNetexRouteBuilder extends AbstractChouetteRouteBuilde
                 .to("direct:updateStatus")
 
                 .process(e -> e.getIn().setHeader(CHOUETTE_REFERENTIAL, getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)).chouetteInfo.referential))
+                .process(e -> e.getIn().setHeader(OKINA_REFERENTIAL, getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)).chouetteInfo.referential))
                 .process(e -> {
                     String user = e.getIn().getHeader(USER, String.class);
-                    String exportedFilename = e.getIn().getHeader(EXPORTED_FILENAME) != null ? (String) e.getIn().getHeader(EXPORTED_FILENAME) : null;
+                    String exportedFilename = e.getIn().getHeader(EXPORTED_FILENAME) != null && !e.getIn().getHeader(NETEX_EXPORT_GLOBAL, Boolean.class) ? (String) e.getIn().getHeader(EXPORTED_FILENAME) : null;
                     e.getIn().setHeader(JSON_PART, Parameters.getNetexExportProvider(getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)), exportStops, user, exportedFilename));
                 }) //Using header to addToExchange json data
                 .log(LoggingLevel.INFO, correlation() + "Creating multipart request")
@@ -109,15 +124,17 @@ public class ChouetteExportNetexRouteBuilder extends AbstractChouetteRouteBuilde
                     e.getIn().setHeader("fileName", file.getName());
                     e.getIn().setHeader(EXPORT_FILE_NAME, file.getName());
                 })
+                .choice()
+                    .when(e -> e.getIn().getHeader(NETEX_EXPORT_GLOBAL, Boolean.class))
+                    .setHeader(FILE_HANDLE, simple("mobiiti_technique/merged/${header." + CHOUETTE_REFERENTIAL + "}-" + Constants.CURRENT_AGGREGATED_NETEX_FILENAME))
+                    .to("direct:uploadBlob")
+                    .to("direct:exportMergedNetex")
+                .endChoice()
                 .process(exportToConsumersProcessor)
                 .choice()
                 .when(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)).chouetteInfo.generateDatedServiceJourneyIds)
-                .to("direct:uploadDatedExport")
-                .end()
+                .endChoice()
                 .setHeader(BLOBSTORE_MAKE_BLOB_PUBLIC, constant(publicPublication))
-                .setHeader(FILE_HANDLE, simple(BLOBSTORE_PATH_OUTBOUND + "netex/${header." + CHOUETTE_REFERENTIAL + "}-" + Constants.CURRENT_AGGREGATED_NETEX_FILENAME))
-//                    .setHeader(EXPORT_FILE_NAME, simple(Constants.CURRENT_AGGREGATED_NETEX_FILENAME))
-                .to("direct:uploadBlobExport")
                 .process(e -> {
                     log.info("Upload to consumers and blob store completed");
                 })
@@ -125,8 +142,6 @@ public class ChouetteExportNetexRouteBuilder extends AbstractChouetteRouteBuilde
                 .to("direct:updateStatus")
                 .removeHeader(Constants.CHOUETTE_JOB_ID)
                 .setBody(constant(null))
-//                    .process(e -> JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.BUILD_GRAPH).state(JobEvent.State.PENDING).build())
-//                    .to("direct:exportMergedNetex")
                 .choice()
                 .when(e -> !e.getIn().getHeader(NO_GTFS_EXPORT, Boolean.class))
                 .to("activemq:queue:ChouetteExportGtfsQueue")
@@ -143,5 +158,13 @@ public class ChouetteExportNetexRouteBuilder extends AbstractChouetteRouteBuilde
                 .to("direct:updateStatus")
                 .removeHeader(Constants.CHOUETTE_JOB_ID)
                 .routeId("chouette-process-export-netex-status");
+
+        from("direct:chouetteNetexExportForAllProviders")
+                .process(e -> e.getIn().setBody(getProviderRepository().getMobiitiProviders()))
+                .split().body().parallelProcessing().executorService(allProvidersExecutorService)
+                .setHeader(PROVIDER_ID, simple("${body.id}"))
+                .setBody(constant(null))
+                .inOnly("activemq:queue:ChouetteExportNetexQueue")
+                .routeId("chouette-netex-export-all-providers");
     }
 }

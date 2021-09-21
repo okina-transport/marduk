@@ -172,7 +172,7 @@ public class ZipFileUtils {
             FileOutputStream out = new FileOutputStream(new File(targetFilePath));
             ZipOutputStream outZip = new ZipOutputStream(out);
 
-            FileUtils.listFiles(new File(folder), null, false).stream().forEach(file -> addToZipFile(file, outZip));
+            FileUtils.listFiles(new File(folder), null, true).stream().forEach(file -> addToZipFile(file, outZip));
 
             outZip.close();
             out.close();
@@ -254,15 +254,12 @@ public class ZipFileUtils {
 
                 File newFile = new File(targetFolder + "/" + fileName);
                 if (fileName.endsWith("/")) {
-                    newFile.mkdirs();
+                    if(!newFile.exists()){
+                        Files.createDirectories(newFile.toPath());
+                    }
+                    zipEntry = zis.getNextEntry();
                     continue;
                 }
-
-                File parent = newFile.getParentFile();
-                if (parent != null) {
-                    parent.mkdirs();
-                }
-
 
                 FileOutputStream fos = new FileOutputStream(newFile);
                 int len;

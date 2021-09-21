@@ -25,6 +25,8 @@ public interface ProviderRepository {
 
     Collection<Provider> getProviders();
 
+    Collection<Provider> getMobiitiProviders();
+
     Provider getProvider(Long id);
 
     Provider getMobiitiProvider(Long id);

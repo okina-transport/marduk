@@ -541,6 +541,9 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <version>${spring-boot-plugin.version}</version>
+<!--                <configuration>-->
+<!--                    <excludeDevtools>false</excludeDevtools>-->
+<!--                </configuration>-->
                 <executions>
                     <execution>
                         <goals>
