@@ -21,6 +21,7 @@ public class RawImportParameters {
     private boolean ignoreCommercialPoints;
     private boolean isAnalyzeJob;
     private boolean keepBoardingAlighting;
+    private boolean keepStopGeolocalisation;
     private Provider provider;
 
     public String getFileName() {
@@ -117,6 +118,14 @@ public class RawImportParameters {
 
     public void setKeepBoardingAlighting(boolean keepBoardingAligh) {
         this.keepBoardingAlighting = keepBoardingAligh;
+    }
+
+    public void setKeepStopGeolocalisation(boolean keepStopGeolocalisation) {
+        this.keepStopGeolocalisation = keepStopGeolocalisation;
+    }
+
+    public boolean isKeepStopGeolocalisation() {
+        return keepStopGeolocalisation;
     }
 
     public Provider getProvider() {

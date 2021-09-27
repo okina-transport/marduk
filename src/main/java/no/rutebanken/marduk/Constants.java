@@ -42,6 +42,7 @@ public class Constants {
     public static final String IGNORE_COMMERCIAL_POINTS = "ignoreCommercialPoints";
     public static final String ANALYSIS_JOB_ID = "analysisJobId";
     public static final String KEEP_BOARDING_ALIGHTING_POSSIBILITY = "keepBoardingAlightingPossibility";
+    public static final String KEEP_STOP_GEOLOCALISATION = "keepStopGeolocalisation";
 
 
     public static final String ID_SUFFIX = "ID_SUFFIX";

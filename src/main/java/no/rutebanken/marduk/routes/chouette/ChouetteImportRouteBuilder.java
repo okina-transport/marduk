@@ -157,6 +157,9 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
                     String keepBoardingAlightingPossibilityStr = e.getIn().getHeader(KEEP_BOARDING_ALIGHTING_POSSIBILITY, String.class);
                     boolean keepBoardingAlightingPossibility = !StringUtils.isEmpty(keepBoardingAlightingPossibilityStr) && Boolean.parseBoolean(keepBoardingAlightingPossibilityStr);
 
+                    String keepStopGeolocalisationStr = e.getIn().getHeader(KEEP_STOP_GEOLOCALISATION, String.class);
+                    boolean keepStopGeolocalisation = !StringUtils.isEmpty(keepStopGeolocalisationStr) && Boolean.parseBoolean(keepStopGeolocalisationStr);
+
                     String commercialPointIdPrefixToRemove = e.getIn().getHeader(COMMERCIAL_POINT_ID_PREFIX_TO_REMOVE, String.class);
                     String quayPrefixToRemove = e.getIn().getHeader(QUAY_ID_PREFIX_TO_REMOVE, String.class);
                     String stopAreaPrefixToRemove = e.getIn().getHeader(STOP_AREA_PREFIX_TO_REMOVE, String.class);
@@ -195,6 +198,7 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
                     rawImportParameters.setIgnoreCommercialPoints(ignoreCommercialPoints);
                     rawImportParameters.setAnalyzeJob(isAnalyzeJob);
                     rawImportParameters.setKeepBoardingAlighting(keepBoardingAlightingPossibility);
+                    rawImportParameters.setKeepStopGeolocalisation(keepStopGeolocalisation);
 
                     e.getIn().setHeader(JSON_PART, getStringImportParameters(rawImportParameters));
                 }) //Using header to addToExchange json data

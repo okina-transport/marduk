@@ -88,7 +88,6 @@ public class GtfsImportParameters extends ChouetteJobParameters {
         @JsonProperty("keep_boarding_alighting")
         @JsonInclude(JsonInclude.Include.ALWAYS)
         public Boolean keepBoardingAlighting = true;
-
     }
 
     public static GtfsImportParameters create(RawImportParameters rawImportParameters) {
@@ -116,6 +115,7 @@ public class GtfsImportParameters extends ChouetteJobParameters {
         gtfsImport.quayIdPrefixToRemove = rawImportParameters.getIdParameters().getQuayIdPrefixToRemove();
         gtfsImport.linePrefixToRemove = rawImportParameters.getIdParameters().getLinePrefixToRemove();
         gtfsImport.keepBoardingAlighting = rawImportParameters.isKeepBoardingAlighting();
+        gtfsImport.keepStopGeolocalisation = rawImportParameters.isKeepBoardingAlighting();
         Parameters parameters = new Parameters();
         parameters.gtfsImport = gtfsImport;
         GtfsImportParameters gtfsImportParameters = new GtfsImportParameters();
