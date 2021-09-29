@@ -85,9 +85,6 @@ public class GtfsImportParameters extends ChouetteJobParameters {
         @JsonInclude(JsonInclude.Include.ALWAYS)
         public String linePrefixToRemove = "";
 
-        @JsonProperty("keep_boarding_alighting")
-        @JsonInclude(JsonInclude.Include.ALWAYS)
-        public Boolean keepBoardingAlighting = true;
 
     }
 
