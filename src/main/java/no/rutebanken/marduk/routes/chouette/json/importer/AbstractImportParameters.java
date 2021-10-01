@@ -66,4 +66,8 @@ public class AbstractImportParameters extends AbstractParameters {
     @JsonProperty("keep_boarding_alighting")
     @JsonInclude(JsonInclude.Include.ALWAYS)
     public Boolean keepBoardingAlighting = true;
+
+    @JsonProperty("keep_stop_geolocalisation")
+    @JsonInclude(JsonInclude.Include.ALWAYS)
+    public Boolean keepStopGeolocalisation;
 }

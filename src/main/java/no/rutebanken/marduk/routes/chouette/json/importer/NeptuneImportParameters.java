@@ -77,6 +77,7 @@ public class NeptuneImportParameters extends ChouetteJobParameters {
         neptuneImport.stopAreaPrefixToRemove = rawImportParameters.getIdParameters().getStopAreaPrefixToRemove();
         neptuneImport.linePrefixToRemove = rawImportParameters.getIdParameters().getLinePrefixToRemove();
         neptuneImport.ignoreCommercialPoints = rawImportParameters.isIgnoreCommercialPoints();
+        neptuneImport.keepStopGeolocalisation = rawImportParameters.isKeepBoardingAlighting();
         neptuneImport.keepBoardingAlighting = rawImportParameters.isKeepBoardingAlighting();
 
         Parameters parameters = new Parameters();
@@ -84,7 +85,6 @@ public class NeptuneImportParameters extends ChouetteJobParameters {
         NeptuneImportParameters neptuneImportParameters = new NeptuneImportParameters();
         neptuneImportParameters.parameters = parameters;
         neptuneImportParameters.enableValidation = chouetteInfo.enableValidation;
-
 
         return neptuneImportParameters;
     }

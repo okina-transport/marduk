@@ -16,7 +16,7 @@
 
 
     <name>marduk</name>
-    <description>Backend integration</description>
+    <description>Mobi-iti orchestrator</description>
 
     <scm>
         <connection>scm:git:ssh://git@github.com:okina-transport/marduk.git</connection>
@@ -38,22 +38,12 @@
         <postgresql.version>9.4-1201-jdbc41</postgresql.version>
         <keycloak.version>4.1.0.Final</keycloak.version>
         <spring.security.version>5.0.7.RELEASE</spring.security.version>
-        <!-- Docker & Fabric8 Configs -->
-        <docker.from>registry.okina.fr/okina/java-base-image</docker.from>
-        <docker.image>registry.okina.fr/mobiiti/${project.artifactId}:${project.version}</docker.image>
-        <docker.cleanup>none</docker.cleanup>
 
-        <!-- fabric8.env.AB_JOLOKIA_AUTH_OPENSHIFT>true</fabric8.env.AB_JOLOKIA_AUTH_OPENSHIFT -->
-        <fabric8.label.component>${project.artifactId}</fabric8.label.component>
-        <fabric8.label.container>spring-boot</fabric8.label.container>
-        <fabric8.label.group>quickstarts</fabric8.label.group>
-        <fabric8.iconRef>camel</fabric8.iconRef>
         <onebusaway.gtfs.modules>1.3.35-SNAPSHOT</onebusaway.gtfs.modules>
 
         <!-- Holding back activemq version as newest version no long support spring wired broker config-->
         <activemq.version>5.13.4</activemq.version>
         <netex-java-model.version>1.0.9-SNAPSHOT</netex-java-model.version>
-        <fabric8.version>2.3.4</fabric8.version>
 
         <!-- The guava version seems to affect serialisation of OTP graph. Somehow, it leaks into
                 the graph built and breaks when OTP tries to read it.
@@ -73,13 +63,6 @@
                 <scope>import</scope>
             </dependency>
 
-            <dependency>
-                <groupId>io.fabric8</groupId>
-                <artifactId>fabric8-project</artifactId>
-                <version>${fabric8.version}</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
 
             <dependency>
                 <groupId>com.google.inject</groupId>
@@ -262,11 +245,6 @@
             <artifactId>camel-hazelcast</artifactId>
             <version>${camel-version}</version>
         </dependency>
-        <dependency>
-            <groupId>io.fabric8</groupId>
-            <artifactId>kubernetes-client</artifactId>
-            <version>2.6.1</version>
-        </dependency>
         <!-- Due to maven artifact cache, this dependency needs to be explicit -->
         <dependency>
             <groupId>com.okina.helpers</groupId>
@@ -417,12 +395,6 @@
             <scope>test</scope>
         </dependency>
 
-        <dependency>
-            <groupId>io.fabric8</groupId>
-            <artifactId>fabric8-arquillian</artifactId>
-            <scope>test</scope>
-        </dependency>
-
 
         <dependency>
             <groupId>net.javacrumbs.json-unit</groupId>
@@ -463,7 +435,7 @@
         <dependency>
             <groupId>com.h2database</groupId>
             <artifactId>h2</artifactId>
-            <!--            <scope>test</scope>-->
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.onebusaway</groupId>
@@ -541,9 +513,6 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <version>${spring-boot-plugin.version}</version>
-<!--                <configuration>-->
-<!--                    <excludeDevtools>false</excludeDevtools>-->
-<!--                </configuration>-->
                 <executions>
                     <execution>
                         <goals>
@@ -552,118 +521,33 @@
                     </execution>
                 </executions>
             </plugin>
-            <plugin>
-                <groupId>io.fabric8</groupId>
-                <artifactId>fabric8-maven-plugin</artifactId>
-                <version>${fabric8.version}</version>
-                <executions>
-                    <execution>
-                        <id>json</id>
-                        <phase>generate-resources</phase>
-                        <goals>
-                            <goal>json</goal>
-                        </goals>
-                    </execution>
-                    <execution>
-                        <id>attach</id>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>attach</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
 
-            <plugin>
-                <groupId>io.fabric8</groupId>
-                <artifactId>docker-maven-plugin</artifactId>
-                <version>${docker.maven.plugin.version}</version>
-                <configuration>
-                    <images>
-                        <image>
-                            <name>${docker.image}</name>
-                            <build>
-                                <from>${docker.from}</from>
-                                <cleanup>${docker.cleanup}</cleanup>
-                                <assembly>
-                                    <basedir>/deployments</basedir>
-                                    <descriptorRef>artifact</descriptorRef>
-                                </assembly>
-                                <env>
-                                    <JAVA_APP_JAR>${project.build.finalName}.jar</JAVA_APP_JAR>
-                                </env>
-                            </build>
-                        </image>
-                    </images>
-                </configuration>
-            </plugin>
         </plugins>
-        <pluginManagement>
-            <plugins>
-                <!--This plugin's configuration is used to store Eclipse m2e settings only. It has no influence on the Maven build itself. -->
-                <plugin>
-                    <groupId>org.eclipse.m2e</groupId>
-                    <artifactId>lifecycle-mapping</artifactId>
-                    <version>1.0.0</version>
-                    <configuration>
-                        <lifecycleMappingMetadata>
-                            <pluginExecutions>
-                                <pluginExecution>
-                                    <pluginExecutionFilter>
-                                        <groupId>io.fabric8</groupId>
-                                        <artifactId>fabric8-maven-plugin</artifactId>
-                                        <versionRange>[2.2.84,)</versionRange>
-                                        <goals>
-                                            <goal>json</goal>
-                                        </goals>
-                                    </pluginExecutionFilter>
-                                    <action>
-                                        <ignore/>
-                                    </action>
-                                </pluginExecution>
-                            </pluginExecutions>
-                        </lifecycleMappingMetadata>
-                    </configuration>
-                </plugin>
-            </plugins>
-        </pluginManagement>
     </build>
 
     <profiles>
         <profile>
-            <id>rutebanken</id>
-            <properties>
-                <fabric8.imagePullPolicySnapshot>Always</fabric8.imagePullPolicySnapshot>
-                <fabric8.recreate>true</fabric8.recreate>
-            </properties>
+            <id>dev</id>
             <build>
-                <!-- Missing fabric8:apply, as this crashed (probably due to missing fabric8) -->
-                <defaultGoal>clean install docker:build docker:push fabric8:json</defaultGoal>
-            </build>
-        </profile>
-        <profile>
-            <id>f8-build</id>
-            <build>
-                <defaultGoal>clean install docker:build fabric8:json</defaultGoal>
-            </build>
-        </profile>
-        <profile>
-            <id>f8-deploy</id>
-            <properties>
-                <fabric8.imagePullPolicySnapshot>Always</fabric8.imagePullPolicySnapshot>
-                <fabric8.recreate>true</fabric8.recreate>
-            </properties>
-            <build>
-                <defaultGoal>clean install docker:build docker:push fabric8:json fabric8:apply</defaultGoal>
-            </build>
-        </profile>
-        <profile>
-            <id>f8-local-deploy</id>
-            <properties>
-                <fabric8.recreate>true</fabric8.recreate>
-            </properties>
-            <build>
-                <defaultGoal>clean install docker:build fabric8:json fabric8:apply</defaultGoal>
+                <plugins>
+                    <plugin>
+                        <groupId>org.springframework.boot</groupId>
+                        <artifactId>spring-boot-maven-plugin</artifactId>
+                        <version>${spring-boot-plugin.version}</version>
+                        <configuration>
+                            <excludeDevtools>false</excludeDevtools>
+                            <finalName>marduk-dev</finalName>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <goals>
+                                    <goal>repackage</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+
+                </plugins>
             </build>
         </profile>
     </profiles>
