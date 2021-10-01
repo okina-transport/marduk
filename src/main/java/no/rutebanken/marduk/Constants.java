@@ -23,6 +23,8 @@ public class Constants {
     public static final String ARCHIVE_FILE_HANDLE = "ArchiveFileHandle";
     public static final String FILE_PARENT_COLLECTION = "RutebankenFileParentCollection";
     public static final String PROVIDER_ID = "RutebankenProviderId";
+    public static final String TOTALCOUNTPROVIDERS = "RutebankenAllCountProviders";
+    public static final String COUNTPROVIDERS = "RutebankenCountProviders";
     public static final String PROVIDER_IDS = "RutebankenProviderIds";
     public static final String ORIGINAL_PROVIDER_ID = "RutebankenOriginalProviderId"; // The original provider id that started this chain of events
     public static final String EXPORT_LINES_IDS = "EXPORT_LINES_IDS";
@@ -67,6 +69,7 @@ public class Constants {
     public static final String USER = "RutebankenUser";
     public static final String DESCRIPTION = "RutebankenDescription";
     public static final String NO_GTFS_EXPORT = "RutebankenNoGtfsExport";
+    public static final String NETEX_EXPORT_GLOBAL = "RutebankenNetexExportGlobal";
     public static final String IMPORT = "RutebankenImport";
 
     public static final String CURRENT_AGGREGATED_GTFS_FILENAME = "aggregated-gtfs.zip";

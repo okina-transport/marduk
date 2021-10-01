@@ -191,10 +191,8 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
                     })
                     .setHeader("fileName", simple("GTFS.zip"))
                     .process(exportToConsumersProcessor)
-//                    .to("direct:addGtfsFeedInfo")
                     .setHeader(BLOBSTORE_MAKE_BLOB_PUBLIC, constant(publicPublication))
                     .setHeader(FILE_HANDLE, simple(BLOBSTORE_PATH_OUTBOUND + "gtfs/${header." + CHOUETTE_REFERENTIAL + "}-" + Constants.CURRENT_AGGREGATED_GTFS_FILENAME))
-//                    .setHeader(EXPORT_FILE_NAME, simple(Constants.CURRENT_AGGREGATED_GTFS_FILENAME))
                     .process(e -> {
                         log.info("Starting gtfs export upload");
                         e.getIn().setBody(fileSystemService.getOfferFile(e));
@@ -203,7 +201,6 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
                     .process(e -> {
                         log.info("Upload to consumers and blob store completed");
                     })
-//                    .inOnly("activemq:queue:GtfsExportMergedQueue")
                     .process(e -> JobEvent.providerJobBuilder(e).timetableAction(TimetableAction.EXPORT).state(State.OK).build())
                 .when(simple("${header.action_report_result} == 'NOK'"))
                     .log(LoggingLevel.WARN, correlation() + "Export failed")
@@ -243,7 +240,6 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
                     writer.close();
 
 
-//                    InputStream indeb = ZipFileUtils.addFilesToZip(e.getIn().getBody(InputStream.class), new File[]{feedInfoFile});
                     e.getIn().setBody(ZipFileUtils.addFilesToZip(e.getIn().getBody(InputStream.class), new File[]{feedInfoFile}));
 
                     feedInfoFile.delete();

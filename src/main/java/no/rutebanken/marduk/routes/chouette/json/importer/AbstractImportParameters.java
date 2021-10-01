@@ -63,6 +63,10 @@ public class AbstractImportParameters extends AbstractParameters {
     @JsonInclude(JsonInclude.Include.ALWAYS)
     public Set<String> generateMissingRouteSectionsForModes;
 
+    @JsonProperty("keep_boarding_alighting")
+    @JsonInclude(JsonInclude.Include.ALWAYS)
+    public Boolean keepBoardingAlighting = true;
+
     @JsonProperty("keep_stop_geolocalisation")
     @JsonInclude(JsonInclude.Include.ALWAYS)
     public Boolean keepStopGeolocalisation;

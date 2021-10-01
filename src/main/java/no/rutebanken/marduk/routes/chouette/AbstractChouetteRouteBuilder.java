@@ -96,8 +96,7 @@ public abstract class AbstractChouetteRouteBuilder extends BaseRouteBuilder {
 	    exchange.getOut().setHeader(Exchange.CONTENT_TYPE, simple("multipart/form-data"));
 	    exchange.getOut().setHeader("Accept", "application/json");
 	}
-	
-	
+
 	public boolean shouldTransferData(Exchange exchange) {
 
 		if (!isAutoTransferData()) {

@@ -98,6 +98,12 @@ public class CacheProviderRepository implements ProviderRepository {
         return cache.asMap().values();
     }
 
+
+    @Override
+    public Collection<Provider> getMobiitiProviders() {
+        return cache.asMap().values().stream().filter(provider -> !provider.getMigrateProviderId().isPresent() && !provider.name.equals("mobiiti_technique") && !provider.name.equals("mobiiti_idfm")).collect(Collectors.toList());
+    }
+
     @Override
     public Provider getProvider(Long id) {
         return cache.getIfPresent(id);

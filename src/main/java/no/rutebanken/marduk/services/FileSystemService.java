@@ -194,7 +194,10 @@ public class FileSystemService {
         try {
             String startingDirectory = getStartingDirectory(fileName);
             File startDir = new File(startingDirectory);
-            startDir.mkdirs();
+
+            if(!startDir.exists()){
+                Files.createDirectories(startDir.toPath());
+            }
 
             List<Path> pathList = Files.walk(startDir.toPath())
                     .filter(p -> p.toString().equals(chouetteStoragePath + "/" + fileName))
@@ -202,7 +205,6 @@ public class FileSystemService {
 
             if (pathList.isEmpty()) {
                 File newFile = new File(chouetteStoragePath + "/" + fileName);
-                newFile.getParentFile().mkdirs();
                 Path newPath = newFile.toPath();
                 Files.write(newPath, fileName.getBytes());
                 return newPath;
