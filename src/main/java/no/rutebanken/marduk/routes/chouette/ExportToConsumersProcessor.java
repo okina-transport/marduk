@@ -20,6 +20,7 @@ import java.util.Optional;
 
 import static no.rutebanken.marduk.Constants.CHOUETTE_REFERENTIAL;
 import static no.rutebanken.marduk.Constants.CURRENT_EXPORT;
+import static no.rutebanken.marduk.Constants.NETEX_EXPORT_GLOBAL;
 
 @Component
 public class ExportToConsumersProcessor implements Processor {
@@ -53,7 +54,7 @@ public class ExportToConsumersProcessor implements Processor {
     public void process(Exchange exchange) throws Exception {
         // get the json export string:
         String jsonExport = (String) exchange.getIn().getHeaders().get(CURRENT_EXPORT);
-        String referential = (String) exchange.getIn().getHeaders().get(CHOUETTE_REFERENTIAL);
+        String referential = (Boolean) exchange.getIn().getHeaders().get(NETEX_EXPORT_GLOBAL) ? "mobiiti_technique" : (String) exchange.getIn().getHeaders().get(CHOUETTE_REFERENTIAL);
         if (StringUtils.isNotBlank(jsonExport)) {
             ExportTemplate export = exportJsonMapper.fromJson(jsonExport);
             log.info("Found " + export.getConsumers().size() + " for export " + export.getId() + "/" + export.getName());
