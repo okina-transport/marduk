@@ -37,6 +37,9 @@ import static no.rutebanken.marduk.Constants.JSON_PART;
 
 public abstract class AbstractChouetteRouteBuilder extends BaseRouteBuilder {
 
+	@Value("${rutebanken.autotransferdata.enabled}")
+	private boolean autoTransferData;
+
 	protected ExecutorService allProvidersExecutorService;
 
 	@Override
@@ -93,4 +96,36 @@ public abstract class AbstractChouetteRouteBuilder extends BaseRouteBuilder {
 	    exchange.getOut().setHeader(Exchange.CONTENT_TYPE, simple("multipart/form-data"));
 	    exchange.getOut().setHeader("Accept", "application/json");
 	}
+
+	public boolean shouldTransferData(Exchange exchange) {
+
+		if (!isAutoTransferData()) {
+			return false;
+		}
+
+		Provider currentProvider = getProviderRepository().getProvider(exchange.getIn().getHeader(Constants.PROVIDER_ID, Long.class));
+		return currentProvider.chouetteInfo.migrateDataToProvider != null;
+	}
+
+	public boolean isAutoTransferData() {
+
+		return autoTransferData;
+	}
+
+
+	/**
+	 * Sets headers required by job status polling queue (cf ChouettePollJobStatusRoute)
+	 * @param e
+	 * @param jobId
+	 * @param jobStatusUrl
+	 * @param routingDestination
+	 */
+	public void setExportPollingHeaders(Exchange e, String jobId, String jobStatusUrl, String routingDestination) {
+		e.getOut().setHeader(Constants.CORRELATION_ID, e.getIn().getHeader(Constants.CORRELATION_ID, UUID.randomUUID().toString()));
+		e.getOut().setHeader(CHOUETTE_JOB_STATUS_URL, jobStatusUrl);
+		e.getOut().setHeader(Constants.CHOUETTE_JOB_ID, jobId);
+		e.getOut().setHeader(Constants.CHOUETTE_JOB_STATUS_ROUTING_DESTINATION, constant(routingDestination));
+		e.getOut().setHeader(Constants.CHOUETTE_JOB_STATUS_JOB_TYPE, constant(JobEvent.TimetableAction.EXPORT.name()));
+	}
+
 }
