@@ -36,7 +36,7 @@ public class NetexImportParameters extends ChouetteJobParameters {
     static class Netex extends AbstractImportParameters {
         @JsonProperty("parse_site_frames")
         @JsonInclude(JsonInclude.Include.ALWAYS)
-        private boolean parseSiteFrames = false;
+        private boolean parseSiteFrames = true;
 
         @JsonProperty("validate_against_schema")
         @JsonInclude(JsonInclude.Include.ALWAYS)
@@ -58,6 +58,9 @@ public class NetexImportParameters extends ChouetteJobParameters {
         @JsonInclude(JsonInclude.Include.ALWAYS)
         private String objectIdPrefix;
 
+        @JsonProperty("import_mode")
+        private ImportMode importMode = ImportMode.LINE;
+
     }
 
     public static NetexImportParameters create(RawImportParameters rawImportParameters) {
@@ -72,6 +75,9 @@ public class NetexImportParameters extends ChouetteJobParameters {
         netexImport.stopAreaRemoteIdMapping = chouetteInfo.enableStopPlaceIdMapping;
         netexImport.objectIdPrefix = chouetteInfo.xmlns;
         netexImport.generateMissingRouteSectionsForModes = chouetteInfo.generateMissingServiceLinksForModes;
+        netexImport.importMode = rawImportParameters.getImportMode();
+        netexImport.keepBoardingAlighting = rawImportParameters.isKeepBoardingAlighting();
+        netexImport.keepStopGeolocalisation = rawImportParameters.isKeepBoardingAlighting();
         if (chouetteInfo.allowCreateMissingStopPlace) {
             netexImport.stopAreaImportMode = AbstractImportParameters.StopAreaImportMode.CREATE_NEW;
         }

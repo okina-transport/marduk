@@ -128,6 +128,6 @@ public class Constants {
 
     public static final String ANALYZE_ACTION = "Analyze";
 
-
+    public static final String IMPORT_MODE = "ImportMode";
 }
 

@@ -22,6 +22,7 @@ public class RawImportParameters {
     private boolean isAnalyzeJob;
     private boolean keepBoardingAlighting;
     private boolean keepStopGeolocalisation;
+    private ImportMode importMode;
     private Provider provider;
 
     public String getFileName() {
@@ -134,5 +135,13 @@ public class RawImportParameters {
 
     public void setProvider(Provider provider) {
         this.provider = provider;
+    }
+
+    public ImportMode getImportMode() {
+        return importMode;
+    }
+
+    public void setImportMode(ImportMode importMode) {
+        this.importMode = importMode;
     }
 }

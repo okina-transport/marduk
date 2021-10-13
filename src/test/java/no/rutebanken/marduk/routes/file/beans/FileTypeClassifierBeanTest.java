@@ -19,6 +19,10 @@ package no.rutebanken.marduk.routes.file.beans;
 import no.rutebanken.marduk.exceptions.FileValidationException;
 import no.rutebanken.marduk.routes.file.FileType;
 import no.rutebanken.marduk.routes.file.ZipFileUtils;
+import org.apache.camel.CamelContext;
+import org.apache.camel.Exchange;
+import org.apache.camel.builder.ExchangeBuilder;
+import org.apache.camel.impl.DefaultCamelContext;
 import org.apache.commons.io.IOUtils;
 import org.junit.Assert;
 import org.junit.Before;
@@ -28,6 +32,8 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 
+import static no.rutebanken.marduk.Constants.FILE_HANDLE;
+import static no.rutebanken.marduk.Constants.IMPORT_TYPE;
 import static no.rutebanken.marduk.routes.file.FileType.GTFS;
 import static no.rutebanken.marduk.routes.file.FileType.INVALID_FILE_NAME;
 import static no.rutebanken.marduk.routes.file.FileType.NEPTUNE;
@@ -126,7 +132,13 @@ public class FileTypeClassifierBeanTest {
     }
 
     private void assertFileType(String fileName, byte[] data, FileType expectedFileType, String importType) {
-        FileType resultType = bean.classifyFile(fileName, data,importType);
+        CamelContext context = new DefaultCamelContext();
+        Exchange exchange = ExchangeBuilder.anExchange(context).build();
+
+        exchange.getIn().setHeader(IMPORT_TYPE, importType);
+        exchange.getIn().setHeader(FILE_HANDLE, fileName);
+
+        FileType resultType = bean.classifyFile(exchange, data);
         assertEquals(expectedFileType, resultType);
     }
 

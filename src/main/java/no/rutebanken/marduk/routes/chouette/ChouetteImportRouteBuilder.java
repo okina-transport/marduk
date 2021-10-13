@@ -20,6 +20,7 @@ import no.rutebanken.marduk.Constants;
 import no.rutebanken.marduk.domain.Provider;
 import no.rutebanken.marduk.routes.chouette.json.IdParameters;
 import no.rutebanken.marduk.routes.chouette.json.Parameters;
+import no.rutebanken.marduk.routes.chouette.json.importer.ImportMode;
 import no.rutebanken.marduk.routes.chouette.json.importer.RawImportParameters;
 import no.rutebanken.marduk.routes.status.JobEvent;
 import no.rutebanken.marduk.routes.status.JobEvent.State;
@@ -114,6 +115,7 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
 
         from("activemq:queue:ChouetteImportQueue?transacted=true").streamCaching()
                 .transacted()
+                .process(e -> log.info("debug purpose to remove"))
                 .log(LoggingLevel.INFO, correlation() + "Starting Chouette import")
                 .removeHeader(Constants.CHOUETTE_JOB_ID)
                 .process(e -> {
@@ -186,6 +188,14 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
                     }
 
                     RawImportParameters rawImportParameters = new RawImportParameters();
+                    String importModeStr = e.getIn().getHeader(IMPORT_MODE, String.class);
+
+                    if (StringUtils.isNotEmpty(importModeStr)){
+                        ImportMode importMode = ImportMode.valueOf(importModeStr);
+                        rawImportParameters.setImportMode(importMode);
+                    }
+
+
                     rawImportParameters.setFileName(fileName);
                     rawImportParameters.setFileType(fileType);
                     rawImportParameters.setProviderId(providerId);
@@ -199,6 +209,7 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
                     rawImportParameters.setAnalyzeJob(isAnalyzeJob);
                     rawImportParameters.setKeepBoardingAlighting(keepBoardingAlightingPossibility);
                     rawImportParameters.setKeepStopGeolocalisation(keepStopGeolocalisation);
+
 
                     e.getIn().setHeader(JSON_PART, getStringImportParameters(rawImportParameters));
                 }) //Using header to addToExchange json data
