@@ -68,9 +68,7 @@ public class NetexExportMergedRouteBuilder extends BaseRouteBuilder {
                 .process(e -> JobEvent.systemJobBuilder(e).jobDomain(JobEvent.JobDomain.TIMETABLE_PUBLISH).action("EXPORT_NETEX_MERGED").fileName(netexExportStopsFilePrefix).state(JobEvent.State.STARTED).newCorrelationId().build())
                 .inOnly("direct:updateStatus")
 
-                .setHeader(Exchange.FILE_PARENT, simple("${exchangeProperty."+FOLDER_NAME+"}" + "/allFiles"))
-                .to("direct:cleanUpLocalDirectory")
-
+                .setHeader(Exchange.FILE_PARENT, simple("${exchangeProperty."+FOLDER_NAME+"}" + "/netex/allFiles"))
 
                 .to("direct:fetchLatestProviderNetexExports")
 
@@ -100,11 +98,11 @@ public class NetexExportMergedRouteBuilder extends BaseRouteBuilder {
         from("direct:fetchProviderNetexExport")
                 .log(LoggingLevel.DEBUG, getClass().getName(), "Fetching mobiiti_technique/merged/${body}")
                 .setProperty("fileName", body())
-                .setHeader(FILE_HANDLE, simple("mobiiti_technique/merged/${property.fileName}"))
+                .setHeader(FILE_HANDLE, simple("mobiiti_technique/netex/merged/${property.fileName}"))
                 .to("direct:getBlob")
                 .choice()
                 .when(body().isNotEqualTo(null))
-                .process(e -> ZipFileUtils.unzipFile(e.getIn().getBody(InputStream.class), e.getProperty(FOLDER_NAME, String.class) + "/allFiles"))
+                .process(e -> ZipFileUtils.unzipFile(e.getIn().getBody(InputStream.class), e.getProperty(FOLDER_NAME, String.class) + "/netex/allFiles"))
                 .otherwise()
                 .log(LoggingLevel.INFO, getClass().getName(), "${property.fileName} was empty when trying to fetch it from blobstore.")
                 .routeId("netex-export-fetch-latest-for-provider");
@@ -127,7 +125,7 @@ public class NetexExportMergedRouteBuilder extends BaseRouteBuilder {
 
         from("direct:mergeNetex").streamCaching()
                 .log(LoggingLevel.DEBUG, getClass().getName(), "Merging Netex files for all providers and stop place registry.")
-                .process(e -> e.getIn().setBody(new FileInputStream(ZipFileUtils.zipFilesInFolder( e.getProperty(FOLDER_NAME, String.class) + "/allFiles",  e.getProperty(FOLDER_NAME, String.class) + "/export_global.zip"))))
+                .process(e -> e.getIn().setBody(new FileInputStream(ZipFileUtils.zipFilesInFolder( e.getProperty(FOLDER_NAME, String.class) + "/netex/allFiles",  e.getProperty(FOLDER_NAME, String.class) + "/netex/export_global_netex.zip"))))
                 .setHeader(BLOBSTORE_MAKE_BLOB_PUBLIC, constant(publicPublication))
                 .log(LoggingLevel.INFO, getClass().getName(), "Uploaded new combined Netex for France")
                 .routeId("netex-export-merge-file");

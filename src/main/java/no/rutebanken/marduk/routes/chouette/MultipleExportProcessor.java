@@ -27,8 +27,10 @@ import static no.rutebanken.marduk.Constants.EXPORT_END_DATE;
 import static no.rutebanken.marduk.Constants.EXPORT_LINES_IDS;
 import static no.rutebanken.marduk.Constants.EXPORT_NAME;
 import static no.rutebanken.marduk.Constants.EXPORT_START_DATE;
+import static no.rutebanken.marduk.Constants.GTFS_EXPORT_GLOBAL;
 import static no.rutebanken.marduk.Constants.ID_FORMAT;
 import static no.rutebanken.marduk.Constants.ID_SUFFIX;
+import static no.rutebanken.marduk.Constants.KEEP_ORIGINAL_ID;
 import static no.rutebanken.marduk.Constants.LINE_ID_PREFIX;
 import static no.rutebanken.marduk.Constants.MAPPING_LINES_IDS;
 import static no.rutebanken.marduk.Constants.NETEX_EXPORT_GLOBAL;
@@ -95,7 +97,6 @@ public class MultipleExportProcessor implements Processor {
         else{
             producer.send("activemq:queue:ChouetteExportNetexQueue", exchange);
         }
-
     }
 
 
@@ -148,7 +149,12 @@ public class MultipleExportProcessor implements Processor {
 
         exchange.getIn().getHeaders().put(MAPPING_LINES_IDS, true);
 
-        producer.send("activemq:queue:ChouetteExportGtfsQueue", exchange);
+        if("mobiiti_technique".equals(exchange.getIn().getHeader(CHOUETTE_REFERENTIAL, String.class))){
+            producer.sendBodyAndHeaders("direct:chouetteGtfsExportForAllProviders", exchange, exchange.getOut().getHeaders());
+        }
+        else{
+            producer.send("activemq:queue:ChouetteExportGtfsQueue", exchange);
+        }
     }
 
     private void toStopPlacesExport(ExportTemplate export, Exchange exchange) throws Exception {
@@ -170,14 +176,18 @@ public class MultipleExportProcessor implements Processor {
      */
     public void prepareHeadersForExport(Exchange exchange, ExportTemplate export) throws Exception {
         boolean noGtfs = export.getType() != ExportType.GTFS;
-        boolean netexExportGlobal = "mobiiti_technique".equals(exchange.getIn().getHeader(CHOUETTE_REFERENTIAL, String.class));
+        boolean exportGlobal = "mobiiti_technique".equals(exchange.getIn().getHeader(CHOUETTE_REFERENTIAL, String.class));
         exchange.getIn().getHeaders().put(NO_GTFS_EXPORT, noGtfs);
-        exchange.getIn().getHeaders().put(NETEX_EXPORT_GLOBAL, netexExportGlobal);
+        exchange.getIn().getHeaders().put(NETEX_EXPORT_GLOBAL, exportGlobal);
+        exchange.getIn().getHeaders().put(GTFS_EXPORT_GLOBAL, exportGlobal);
+        exchange.getIn().getHeaders().put(KEEP_ORIGINAL_ID, exportGlobal);
         exchange.getOut().setBody("Export id : " + export.getId());
         Map<String, Object> headers = exchange.getIn().getHeaders();
         headers.put(PROVIDER_ID, headers.get("providerId"));
         headers.put(NO_GTFS_EXPORT, noGtfs);
-        headers.put(NETEX_EXPORT_GLOBAL, netexExportGlobal);
+        headers.put(NETEX_EXPORT_GLOBAL, exportGlobal);
+        headers.put(GTFS_EXPORT_GLOBAL, exportGlobal);
+        headers.put(KEEP_ORIGINAL_ID, exportGlobal);
         headers.put(Constants.FILE_NAME, "export-" + export.getId() + "-" + export.getName());
         headers.put(Constants.CURRENT_EXPORT, exportJsonMapper.toJson(export));
         headers.put(EXPORTED_FILENAME, export.getExportedFileName());

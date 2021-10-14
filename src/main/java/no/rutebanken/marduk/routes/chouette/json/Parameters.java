@@ -111,12 +111,12 @@ public class Parameters {
         }
     }
 
-    public static String getGtfsExportParameters(Provider provider, String exportName, String user, List<Long> linesIds, Date startDate, Date endDate, String exportedFilename, IdParameters idParams, boolean mappingLinesIds) {
+    public static String getGtfsExportParameters(Provider provider, String exportName, String user, boolean keepOriginalId, List<Long> linesIds, Date startDate, Date endDate, String exportedFilename, IdParameters idParams, boolean mappingLinesIds) {
         try {
             ChouetteInfo chouetteInfo = provider.chouetteInfo;
 
             GtfsExportParameters.GtfsExport gtfsExport = new GtfsExportParameters.GtfsExport(exportName == null ? "offre" : exportName, chouetteInfo.xmlns,
-                    chouetteInfo.referential, chouetteInfo.organisation, user, true, startDate, endDate, exportedFilename, idParams, mappingLinesIds);
+                    chouetteInfo.referential, chouetteInfo.organisation, user, keepOriginalId, startDate, endDate, exportedFilename, idParams, mappingLinesIds);
             gtfsExport.ids = linesIds;
             if (linesIds != null && !linesIds.isEmpty()) {
                 gtfsExport.referencesType = "line";
@@ -133,8 +133,8 @@ public class Parameters {
         }
     }
 
-    public static String getGtfsExportParameters(Provider provider, String user, String exportedFilename) {
-        return getGtfsExportParameters(provider, null, user, null, null, null, exportedFilename, new IdParameters(), false);
+    public static String getGtfsExportParameters(Provider provider, String user, boolean keepOriginalId, String exportedFilename) {
+        return getGtfsExportParameters(provider, null, user, keepOriginalId, null, null, null, exportedFilename, new IdParameters(), false);
     }
 
 
