@@ -47,7 +47,14 @@ public class PredefinedExportsRouteBuilder extends AbstractChouetteRouteBuilder 
                 .log(LoggingLevel.INFO, getClass().getName(), "Starting Chouette all export for provider with id ${header." + PROVIDER_ID + "}")
                 .process(e -> {
                     log.info("predefinedExports : starting predefined exports");
-                    Provider provider = providerRepository.getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class));
+                    Provider provider;
+                    if(e.getIn().getHeader(PROVIDER_ID, Long.class) == null){
+                        provider = providerRepository.findByName("mobiiti_technique");
+                    }
+                    else{
+                        provider = providerRepository.getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class));
+                    }
+
                     Provider mobiitiProvider;
 
                     if (provider.name.contains(superspaceName)) {
@@ -79,7 +86,6 @@ public class PredefinedExportsRouteBuilder extends AbstractChouetteRouteBuilder 
                 .transacted()
                 .filter(e -> shouldQuartzRouteTrigger(e, chouettePredefinedExportsMobiitiTechniqueProviderCronSchedule))
                 .log(LoggingLevel.INFO, "Quartz triggers predefined exports mobiiti technique provider in Chouette.")
-                .setHeader(PROVIDER_ID, simple(String.valueOf(providerRepository.findByName("mobiiti_technique").id)))
                 .inOnly("activemq:queue:predefinedExports")
                 .routeId("chouette-predefined-export-mobiiti_technique-quartz");
     }
