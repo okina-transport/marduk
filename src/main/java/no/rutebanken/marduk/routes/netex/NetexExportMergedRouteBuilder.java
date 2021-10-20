@@ -27,6 +27,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.stream.Collectors;
@@ -126,10 +127,8 @@ public class NetexExportMergedRouteBuilder extends BaseRouteBuilder {
 
         from("direct:mergeNetex").streamCaching()
                 .log(LoggingLevel.DEBUG, getClass().getName(), "Merging Netex files for all providers and stop place registry.")
-                .process(e -> e.getIn().setBody(ZipFileUtils.zipFilesInFolder( e.getProperty(FOLDER_NAME, String.class) + "/allFiles",  e.getProperty(FOLDER_NAME, String.class) + "/export_global.zip")))
+                .process(e -> e.getIn().setBody(new FileInputStream(ZipFileUtils.zipFilesInFolder( e.getProperty(FOLDER_NAME, String.class) + "/allFiles",  e.getProperty(FOLDER_NAME, String.class) + "/export_global.zip"))))
                 .setHeader(BLOBSTORE_MAKE_BLOB_PUBLIC, constant(publicPublication))
-                .setHeader(FILE_HANDLE, simple("mobiiti_technique/export_global.zip"))
-                .to("direct:getBlob")
                 .log(LoggingLevel.INFO, getClass().getName(), "Uploaded new combined Netex for France")
                 .routeId("netex-export-merge-file");
 

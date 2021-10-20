@@ -245,12 +245,8 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
         from("direct:processImportResult")
                 .to("log:" + getClass().getName() + "?level=DEBUG&showAll=true&multiline=true")
                 .setBody(constant(""))
-                .process(e->{
-                    Boolean analyze = e.getIn().getHeader("Analyze", Boolean.class);
-
-                })
                 .choice()
-                .when(PredicateBuilder.and(constant("true").isEqualTo(header(ANALYZE_ACTION)), simple("${header.action_report_result} == 'OK'")))
+                .when(PredicateBuilder.and(constant("true").isEqualTo(header(ANALYZE_ACTION)), simple("${header.action_report_result} == 'OK' and ${header.validation_report_result} == 'OK'")))
                     .log(LoggingLevel.INFO, correlation() + "File analysis completed successfully")
                     .process(e -> {
                         JobEvent.providerJobBuilder(e).timetableAction(TimetableAction.FILE_ANALYZE).state(State.OK).build();

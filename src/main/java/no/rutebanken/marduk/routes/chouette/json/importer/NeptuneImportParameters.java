@@ -38,6 +38,10 @@ public class NeptuneImportParameters extends ChouetteJobParameters {
 
     static class Neptune extends AbstractImportParameters {
 
+        @JsonProperty("object_id_prefix")
+        @JsonInclude(JsonInclude.Include.ALWAYS)
+        public String objectIdPrefix;
+
         @JsonProperty("stopArea_prefix_to_remove")
         @JsonInclude(JsonInclude.Include.ALWAYS)
         public String stopAreaPrefixToRemove = "";
@@ -61,6 +65,7 @@ public class NeptuneImportParameters extends ChouetteJobParameters {
         Provider provider = rawImportParameters.getProvider();
         ChouetteInfo chouetteInfo = provider.chouetteInfo;
         neptuneImport.name = rawImportParameters.getFileName();
+        neptuneImport.objectIdPrefix = chouetteInfo.xmlns;
         neptuneImport.referentialName = provider.name;
         neptuneImport.organisationName = chouetteInfo.organisation;
         neptuneImport.userName = rawImportParameters.getUser();
