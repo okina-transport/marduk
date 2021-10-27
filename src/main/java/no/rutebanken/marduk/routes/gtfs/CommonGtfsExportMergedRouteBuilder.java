@@ -36,6 +36,7 @@ import static no.rutebanken.marduk.Constants.BLOBSTORE_PATH_OUTBOUND;
 import static no.rutebanken.marduk.Constants.CURRENT_AGGREGATED_GTFS_FILENAME;
 import static no.rutebanken.marduk.Constants.FILE_HANDLE;
 import static no.rutebanken.marduk.Constants.FILE_NAME;
+import static no.rutebanken.marduk.Constants.FOLDER_NAME;
 import static no.rutebanken.marduk.Constants.JOB_ACTION;
 import static no.rutebanken.marduk.Constants.PROVIDER_BLACK_LIST;
 import static no.rutebanken.marduk.Constants.PROVIDER_WHITE_LIST;
@@ -59,23 +60,19 @@ public class CommonGtfsExportMergedRouteBuilder extends BaseRouteBuilder {
         super.configure();
 
         from("direct:exportMergedGtfs")
-                .log(LoggingLevel.INFO, getClass().getName(), "Start export of merged GTFS file: ${header." + FILE_NAME + "}")
-
-                .process(e -> JobEvent.systemJobBuilder(e).jobDomain(JobEvent.JobDomain.TIMETABLE_PUBLISH).action(e.getIn().getHeader(JOB_ACTION, String.class)).state(JobEvent.State.STARTED).newCorrelationId().build())
+                .log(LoggingLevel.INFO, getClass().getName(), "Start export of merged GTFS file for France")
+                .setProperty(FOLDER_NAME, simple(localWorkingDirectory))
+                .process(e -> JobEvent.systemJobBuilder(e).jobDomain(JobEvent.JobDomain.TIMETABLE_PUBLISH).action("EXPORT_GTFS_MERGED").state(JobEvent.State.STARTED).newCorrelationId().build())
                 .inOnly("direct:updateStatus")
-                .setHeader(FILE_PARENT, simple(localWorkingDirectory + "/${header." + JOB_ACTION + "}/${date:now:yyyyMMddHHmmss}"))
+                .setHeader(Exchange.FILE_PARENT, simple("${exchangeProperty."+FOLDER_NAME+"}" + "/gtfs/merged"))
                 .doTry()
-                .to("direct:fetchLatestGtfs")
                 .to("direct:mergeGtfs")
-                .to("direct:transformGtfs")
-                .to("direct:uploadMergedGtfs")
 
                 // Use wire tap to avoid replacing body
                 .wireTap("direct:reportExportMergedGtfsOK")
                 .end()
-                .log(LoggingLevel.INFO, getClass().getName(), "Completed export of merged GTFS file: ${header." + FILE_NAME + "}")
+                .log(LoggingLevel.INFO, getClass().getName(), "Completed export of merged GTFS file for France")
                 .doFinally()
-                .to("direct:cleanUpLocalDirectory")
                 .end()
                 .routeId("gtfs-export-merged-route");
 
@@ -93,23 +90,20 @@ public class CommonGtfsExportMergedRouteBuilder extends BaseRouteBuilder {
                 .routeId("gtfs-export-fetch-latest");
 
         from("direct:getGtfsFiles")
-                .log(LoggingLevel.INFO, getClass().getName(), correlation() + "Fetching " + BLOBSTORE_PATH_OUTBOUND + "gtfs/${body}")
+                .log(LoggingLevel.INFO, getClass().getName(), correlation() + "Fetching mobiiti_technique/gtfs/merged/${body}")
                 .setProperty("fileName", body())
-                .setHeader(FILE_HANDLE, simple(BLOBSTORE_PATH_OUTBOUND + "gtfs/${property.fileName}"))
+                .setHeader(FILE_HANDLE, simple("mobiiti_technique/gtfs/merged/${property.fileName}"))
                 .to("direct:getBlob")
-                .choice()
-                .when(body().isNotEqualTo(null))
-                .toD("file:${header." + FILE_PARENT + "}/org?fileName=${property.fileName}")
-                .otherwise()
                 .log(LoggingLevel.INFO, getClass().getName(), correlation() + "${property.fileName} was empty when trying to fetch it from blobstore.")
                 .routeId("gtfs-export-get-latest-for-provider");
 
         from("direct:mergeGtfs")
                 .log(LoggingLevel.DEBUG, getClass().getName(), "Merging gtfs files for all providers.")
-                .setBody(simple("${header." + FILE_PARENT + "}/org"))
+                .setBody(simple("${header." + FILE_PARENT + "}"))
                 .bean(method(GtfsFileUtils.class, "mergeGtfsFilesInDirectory"))
-                .toD("file:${header." + FILE_PARENT + "}?fileName=merged.zip")
-
+                .toD("file:${exchangeProperty." + FOLDER_NAME + "}/gtfs?fileName=export_global_gtfs.zip")
+                .setHeader(FILE_HANDLE, simple("mobiiti_technique/gtfs/export_global_gtfs.zip"))
+                .to("direct:getBlob")
                 .routeId("gtfs-export-merge");
 
         from("direct:transformGtfs")
@@ -119,7 +113,6 @@ public class CommonGtfsExportMergedRouteBuilder extends BaseRouteBuilder {
 
         from("direct:uploadMergedGtfs")
                 .setHeader(BLOBSTORE_MAKE_BLOB_PUBLIC, constant(publicPublication))
-                .setHeader(FILE_HANDLE, simple(BLOBSTORE_PATH_OUTBOUND + "${header." + FILE_NAME + "}"))
                 .to("direct:uploadBlob")
                 .log(LoggingLevel.INFO, getClass().getName(), "Uploaded new merged GTFS file: ${header." + FILE_NAME + "}")
                 .routeId("gtfs-export-upload-merged");
@@ -129,8 +122,7 @@ public class CommonGtfsExportMergedRouteBuilder extends BaseRouteBuilder {
 
     String getAggregatedGtfsFiles(List<String> providerBlackList, List<String> providerWhiteList) {
         return getProviderRepository().getProviders().stream()
-                       .filter(p -> p.chouetteInfo.migrateDataToProvider == null)
-                       .filter(p -> isMatch(p, providerBlackList, providerWhiteList))
+                       .filter(p -> p.chouetteInfo.migrateDataToProvider == null && !p.chouetteInfo.referential.equals("mobiiti_technique"))
                        .map(p -> p.chouetteInfo.referential + "-" + CURRENT_AGGREGATED_GTFS_FILENAME)
                        .collect(Collectors.joining(","));
     }

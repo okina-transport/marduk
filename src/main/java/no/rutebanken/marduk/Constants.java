@@ -52,6 +52,7 @@ public class Constants {
     public static final String STOP_AREA_PREFIX_TO_REMOVE = "stopAreaPrefixToRemove";
     public static final String AREA_CENTROID_PREFIX_TO_REMOVE = "areaCentroidPrefixToRemove";
     public static final String MAPPING_LINES_IDS = "MAPPING_LINES_IDS";
+    public static final String KEEP_ORIGINAL_ID = "KEEP_ORIGINAL_ID";
     public static final String COMMERCIAL_POINT_ID_PREFIX_TO_REMOVE = "commercialPointIdPrefixToRemove";
     public static final String QUAY_ID_PREFIX_TO_REMOVE = "quayIdPrefixToRemove";
     public static final String LINE_PREFIX_TO_REMOVE = "linePrefixToRemove";
@@ -70,6 +71,7 @@ public class Constants {
     public static final String DESCRIPTION = "RutebankenDescription";
     public static final String NO_GTFS_EXPORT = "RutebankenNoGtfsExport";
     public static final String NETEX_EXPORT_GLOBAL = "RutebankenNetexExportGlobal";
+    public static final String GTFS_EXPORT_GLOBAL = "RutebankenGtfsExportGlobal";
     public static final String IMPORT = "RutebankenImport";
 
     public static final String CURRENT_AGGREGATED_GTFS_FILENAME = "aggregated-gtfs.zip";

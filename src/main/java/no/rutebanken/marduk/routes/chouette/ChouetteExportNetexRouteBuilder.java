@@ -124,7 +124,7 @@ public class ChouetteExportNetexRouteBuilder extends AbstractChouetteRouteBuilde
                 })
                 .choice()
                     .when(e -> e.getIn().getHeader(NETEX_EXPORT_GLOBAL, Boolean.class))
-                    .setHeader(FILE_HANDLE, simple("mobiiti_technique/merged/${header." + CHOUETTE_REFERENTIAL + "}-" + Constants.CURRENT_AGGREGATED_NETEX_FILENAME))
+                    .setHeader(FILE_HANDLE, simple("mobiiti_technique/netex/merged/${header." + CHOUETTE_REFERENTIAL + "}-" + Constants.CURRENT_AGGREGATED_NETEX_FILENAME))
                     .to("direct:uploadBlob")
                     .to("direct:exportMergedNetex")
                 .endChoice()
