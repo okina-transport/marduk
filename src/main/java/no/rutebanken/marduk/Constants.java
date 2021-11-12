@@ -130,6 +130,10 @@ public class Constants {
 
     public static final String ANALYZE_ACTION = "Analyze";
 
+    public static final String MERGED_NETEX_ROOT_DIR = "mobiiti_technique/netex/merged";
+    public static final String MISSING_EXPORTS = "missingExports";
+    public static final String IS_MERGED_NETEX_FAILED = "isMergedNetexFailed";
+
 
 }
 

@@ -31,13 +31,11 @@ import no.rutebanken.marduk.security.AuthorizationClaim;
 import no.rutebanken.marduk.security.AuthorizationService;
 import no.rutebanken.marduk.services.BlobStoreService;
 import no.rutebanken.marduk.services.FileSystemService;
-import no.rutebanken.marduk.services.RestUploadService;
 import org.apache.camel.Body;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.model.rest.RestBindingMode;
-import org.apache.http.entity.ContentType;
-import org.apache.http.entity.mime.MultipartEntityBuilder;
+import org.apache.commons.io.FileUtils;
 import org.apache.camel.model.rest.RestParamType;
 import org.apache.camel.model.rest.RestPropertyDefinition;
 import org.apache.tomcat.util.http.fileupload.FileItem;
@@ -53,6 +51,7 @@ import org.springframework.stereotype.Component;
 
 import javax.ws.rs.NotFoundException;
 import java.io.FileInputStream;
+import java.io.IOException;
 import java.net.URLDecoder;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
@@ -62,7 +61,6 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-import static javax.swing.text.DefaultStyledDocument.ElementSpec.ContentType;
 import static javax.ws.rs.core.MediaType.MULTIPART_FORM_DATA;
 import static no.rutebanken.marduk.Constants.*;
 
@@ -99,6 +97,9 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
 
     @Value("${superspace.name}")
     private String superspaceName;
+
+    @Value("${netex.export.download.directory:files/netex/merged}")
+    private String netexWorkingDirectory;
 
     // @formatter:off
     @Override
@@ -859,8 +860,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
                 .log(LoggingLevel.INFO, correlation() + "Chouette start export Netex global")
                 .removeHeaders("CamelHttp*")
-                .process(e -> e.getIn().setHeader(USER, getUserNameFromHeaders(e)))
-                .inOnly("direct:chouetteNetexExportForAllProviders")
+                .inOnly("direct:launchGlobalNetexExport")
                 .routeId("admin-chouette-export-netex-global")
                 .endRest()
 
@@ -1093,6 +1093,15 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .routeId("admin-authorize-request");
 
 
+        from("direct:launchGlobalNetexExport")
+                .setHeader(Exchange.FILE_PARENT, simple(netexWorkingDirectory + "/netex/allFiles"))
+                .inOnly("direct:cleanUpLocalDirectory")
+                .process(e -> e.getIn().setHeader(USER, getUserNameFromHeaders(e)))
+                .inOnly("direct:resetExportLists")
+                .inOnly("direct:chouetteNetexExportForAllProviders")
+                .inOnly("direct:exportMergedNetex")
+                .routeId("launch-global-netex-export");
+
     }
 
     public static class ImportFilesSplitter {
@@ -1102,7 +1111,10 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
     }
 
     private String getUserNameFromHeaders(Exchange e) {
-        Map headers = (Map) e.getIn().getBody(Map.class).get("headers");
+        Map body = (Map) e.getIn().getBody(Map.class);
+        Map headers;
+        headers = body == null ?  e.getIn().getHeaders() : (Map) body.get("headers");
+
         if (headers != null) {
             return (String) headers.get(USER);
         }
@@ -1129,6 +1141,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
             }
         }
     }
+
 }
 
 

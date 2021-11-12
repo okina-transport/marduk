@@ -31,6 +31,7 @@ import org.springframework.web.client.ResourceAccessException;
 import javax.annotation.PostConstruct;
 import java.net.ConnectException;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -51,6 +52,9 @@ public class CacheProviderRepository implements ProviderRepository {
 
     @Value("${superspace.name}")
     private String superspaceName;
+
+    @Value("#{'${netex.global.excluded.providers:}'.split(',')}")
+    private List<String> excludedProviders;
 
     @PostConstruct
     void init() {
@@ -101,7 +105,9 @@ public class CacheProviderRepository implements ProviderRepository {
 
     @Override
     public Collection<Provider> getMobiitiProviders() {
-        return cache.asMap().values().stream().filter(provider -> !provider.getMigrateProviderId().isPresent() && !provider.name.equals("mobiiti_technique") && !provider.name.equals("mobiiti_idfm")).collect(Collectors.toList());
+        return cache.asMap().values().stream()
+                        .filter(provider -> !provider.getMigrateProviderId().isPresent() && !provider.name.equals("mobiiti_technique") && !excludedProviders.contains(provider.name))
+                        .collect(Collectors.toList());
     }
 
     @Override

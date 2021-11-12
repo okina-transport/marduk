@@ -29,20 +29,7 @@ import org.springframework.stereotype.Component;
 import java.io.File;
 import java.util.UUID;
 
-import static no.rutebanken.marduk.Constants.BLOBSTORE_MAKE_BLOB_PUBLIC;
-import static no.rutebanken.marduk.Constants.CHOUETTE_JOB_STATUS_URL;
-import static no.rutebanken.marduk.Constants.CHOUETTE_REFERENTIAL;
-import static no.rutebanken.marduk.Constants.EXPORTED_FILENAME;
-import static no.rutebanken.marduk.Constants.EXPORT_FILE_NAME;
-import static no.rutebanken.marduk.Constants.FILE_HANDLE;
-import static no.rutebanken.marduk.Constants.FILE_NAME;
-import static no.rutebanken.marduk.Constants.FILE_TYPE;
-import static no.rutebanken.marduk.Constants.JSON_PART;
-import static no.rutebanken.marduk.Constants.NETEX_EXPORT_GLOBAL;
-import static no.rutebanken.marduk.Constants.NO_GTFS_EXPORT;
-import static no.rutebanken.marduk.Constants.OKINA_REFERENTIAL;
-import static no.rutebanken.marduk.Constants.PROVIDER_ID;
-import static no.rutebanken.marduk.Constants.USER;
+import static no.rutebanken.marduk.Constants.*;
 import static no.rutebanken.marduk.Utils.Utils.getLastPathElementOfUrl;
 
 @Component
@@ -124,11 +111,13 @@ public class ChouetteExportNetexRouteBuilder extends AbstractChouetteRouteBuilde
                 })
                 .choice()
                     .when(e -> e.getIn().getHeader(NETEX_EXPORT_GLOBAL, Boolean.class))
-                    .setHeader(FILE_HANDLE, simple("mobiiti_technique/netex/merged/${header." + CHOUETTE_REFERENTIAL + "}-" + Constants.CURRENT_AGGREGATED_NETEX_FILENAME))
-                    .to("direct:uploadBlob")
-                    .to("direct:exportMergedNetex")
+                        .setHeader(FILE_HANDLE, simple(MERGED_NETEX_ROOT_DIR+"/${header." + CHOUETTE_REFERENTIAL + "}-" + Constants.CURRENT_AGGREGATED_NETEX_FILENAME))
+                        .to("direct:uploadBlob")
+                        .to("direct:updateStatus")
+                    .otherwise()
+                        .process(exportToConsumersProcessor)
+                 //   .to("direct:exportMergedNetex")
                 .endChoice()
-                .process(exportToConsumersProcessor)
                 .choice()
                 .when(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)).chouetteInfo.generateDatedServiceJourneyIds)
                 .endChoice()
