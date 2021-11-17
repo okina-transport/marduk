@@ -101,6 +101,9 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
     @Value("${netex.export.download.directory:files/netex/merged}")
     private String netexWorkingDirectory;
 
+    @Value("${netex.merged.tmp.working.directory:/tmp/mergedNetex/allFiles}")
+    private String mergedNetexTmpDirectory;
+
     // @formatter:off
     @Override
     public void configure() throws Exception {
@@ -1094,7 +1097,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
 
 
         from("direct:launchGlobalNetexExport")
-                .setHeader(Exchange.FILE_PARENT, simple(netexWorkingDirectory + "/netex/allFiles"))
+                .setHeader(Exchange.FILE_PARENT, simple(mergedNetexTmpDirectory))
                 .inOnly("direct:cleanUpLocalDirectory")
                 .process(e -> e.getIn().setHeader(USER, getUserNameFromHeaders(e)))
                 .inOnly("direct:resetExportLists")

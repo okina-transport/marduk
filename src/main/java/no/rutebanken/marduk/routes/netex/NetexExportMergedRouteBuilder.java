@@ -22,6 +22,8 @@ import no.rutebanken.marduk.routes.BaseRouteBuilder;
 import no.rutebanken.marduk.routes.chouette.ExportToConsumersProcessor;
 import no.rutebanken.marduk.routes.file.ZipFileUtils;
 import no.rutebanken.marduk.routes.status.JobEvent;
+import org.apache.activemq.ScheduledMessage;
+import org.apache.activemq.command.ActiveMQMessage;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.builder.PredicateBuilder;
@@ -75,6 +77,9 @@ public class NetexExportMergedRouteBuilder extends BaseRouteBuilder {
     @Value("${netex.merge.max.retries:300}")
     private Integer maxRetries;
 
+    @Value("${netex.merged.tmp.working.directory:/tmp/mergedNetex/allFiles}")
+    private String mergedNetexTmpDirectory;
+
     @Autowired
     ExportToConsumersProcessor exportToConsumersProcessor;
 
@@ -116,7 +121,7 @@ public class NetexExportMergedRouteBuilder extends BaseRouteBuilder {
                     e.getIn().setHeader(Constants.CORRELATION_ID, correlationId);
                     JobEvent.systemJobBuilder(e).jobDomain(JobEvent.JobDomain.TIMETABLE_PUBLISH).action("EXPORT_NETEX_MERGED").fileName(netexExportStopsFilePrefix).correlationId(correlationId).state(JobEvent.State.STARTED).build();
                         })
-                .setHeader(Exchange.FILE_PARENT, simple("${exchangeProperty."+FOLDER_NAME+"}" + "/netex/allFiles"))
+                .setHeader(Exchange.FILE_PARENT, simple(mergedNetexTmpDirectory))
                 .inOnly("direct:checkMergedNetex")
                 .routeId("netex-export-merged-route");
 
@@ -129,17 +134,17 @@ public class NetexExportMergedRouteBuilder extends BaseRouteBuilder {
         from("direct:checkMergedNetex")
                 .process(e -> {
                     e.getIn().setHeader("loopCounter", (Integer) e.getIn().getHeader("loopCounter", 0) + 1);
+                    log.info("Loop counter :" +  e.getIn().getHeader("loopCounter", 0) + "/" + maxRetries);
                     setUnfinishedExports(e);
                 })
+
                 .choice()
                 .when(e -> e.getIn().getHeader(MISSING_EXPORTS, String.class) != null)
-                    .log(LoggingLevel.INFO, getClass().getName(), "Waiting for next export to launch merge")
-                    .delay(delayBeforeChecks)
                     .to("direct:newRetryMergeNetex")
                 .endChoice()
                 .otherwise()
                     .setProperty(FOLDER_NAME, simple(localWorkingDirectory))
-                    .setHeader(Exchange.FILE_PARENT, simple("${exchangeProperty."+FOLDER_NAME+"}" + "/netex/allFiles"))
+                    .setHeader(Exchange.FILE_PARENT, simple(mergedNetexTmpDirectory))
                     .log(LoggingLevel.INFO, getClass().getName(), "All exports have been generated. Launching merge of all export files")
                     .to("direct:fetchLatestProviderNetexExports")
 
@@ -154,7 +159,12 @@ public class NetexExportMergedRouteBuilder extends BaseRouteBuilder {
                     .log(LoggingLevel.INFO, getClass().getName(), "Completed export of merged Netex file for France")
                 .endChoice()
 
-                .routeId("check_merged_netex");
+                .routeId("check-merged-netex");
+
+        from("activemq:queue:MergedNetexPollStatusQueue")
+                .transacted()
+                .to("direct:checkMergedNetex")
+                .routeId("check-merged-netex-poll-queue");
 
 
         from("direct:newRetryMergeNetex")
@@ -163,8 +173,11 @@ public class NetexExportMergedRouteBuilder extends BaseRouteBuilder {
                      .log(LoggingLevel.ERROR, getClass().getName(), "Too many retries for merged netex. merged Netex stopped. Files still missing:${header.MISSING_EXPORTS}")
                     .stop()
                 .otherwise()
-                    // Update status
-                    .to("direct:checkMergedNetex")
+                    .setHeader(ScheduledMessage.AMQ_SCHEDULED_DELAY, constant(delayBeforeChecks))
+                    // Remove or ActiveMQ will think message is overdue and resend immediately
+                    .removeHeader("scheduledJobId")
+                    .log(LoggingLevel.INFO,"Scheduling next merged netex check in ${header."+ ActiveMQMessage.AMQ_SCHEDULED_DELAY+"}ms")
+                    .to("activemq:queue:MergedNetexPollStatusQueue")
                 .end()
                 .routeId("new_retry_check_merged_netex");
 
@@ -186,7 +199,7 @@ public class NetexExportMergedRouteBuilder extends BaseRouteBuilder {
                 .to("direct:getBlob")
                 .choice()
                 .when(body().isNotEqualTo(null))
-                .process(e -> ZipFileUtils.unzipFile(e.getIn().getBody(InputStream.class), e.getProperty(FOLDER_NAME, String.class) + "/netex/allFiles"))
+                .process(e -> ZipFileUtils.unzipFile(e.getIn().getBody(InputStream.class), mergedNetexTmpDirectory))
                 .otherwise()
                 .log(LoggingLevel.INFO, getClass().getName(), "${property.fileName} was empty when trying to fetch it from blobstore.")
                 .routeId("netex-export-fetch-latest-for-provider");
@@ -209,7 +222,7 @@ public class NetexExportMergedRouteBuilder extends BaseRouteBuilder {
 
         from("direct:mergeNetex").streamCaching()
                 .log(LoggingLevel.DEBUG, getClass().getName(), "Merging Netex files for all providers and stop place registry.")
-                .process(e -> e.getIn().setBody(new FileInputStream(ZipFileUtils.zipFilesInFolder( e.getProperty(FOLDER_NAME, String.class) + "/netex/allFiles",  e.getProperty(FOLDER_NAME, String.class) + "/netex/export_global_netex.zip"))))
+                .process(e -> e.getIn().setBody(new FileInputStream(ZipFileUtils.zipFilesInFolder( mergedNetexTmpDirectory,  e.getProperty(FOLDER_NAME, String.class) + "/netex/export_global_netex.zip"))))
                 .setHeader(BLOBSTORE_MAKE_BLOB_PUBLIC, constant(publicPublication))
                 .log(LoggingLevel.INFO, getClass().getName(), "Uploaded new combined Netex for France")
                 .routeId("netex-export-merge-file");
