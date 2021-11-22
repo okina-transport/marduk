@@ -3,6 +3,7 @@ package no.rutebanken.marduk.routes.chouette;
 import no.rutebanken.marduk.Constants;
 import no.rutebanken.marduk.domain.ExportTemplate;
 import no.rutebanken.marduk.domain.ExportType;
+import no.rutebanken.marduk.domain.IdFormat;
 import no.rutebanken.marduk.domain.Line;
 import no.rutebanken.marduk.domain.Provider;
 import no.rutebanken.marduk.repository.ExportTemplateDAO;
@@ -180,14 +181,18 @@ public class MultipleExportProcessor implements Processor {
         exchange.getIn().getHeaders().put(NO_GTFS_EXPORT, noGtfs);
         exchange.getIn().getHeaders().put(NETEX_EXPORT_GLOBAL, exportGlobal);
         exchange.getIn().getHeaders().put(GTFS_EXPORT_GLOBAL, exportGlobal);
-        exchange.getIn().getHeaders().put(KEEP_ORIGINAL_ID, exportGlobal);
+        boolean keepOriginalId = true;
+        if (!exportGlobal){
+            keepOriginalId = !IdFormat.SOURCE.equals(export.getIdFormat());
+        }
+        exchange.getIn().getHeaders().put(KEEP_ORIGINAL_ID, keepOriginalId);
         exchange.getOut().setBody("Export id : " + export.getId());
         Map<String, Object> headers = exchange.getIn().getHeaders();
         headers.put(PROVIDER_ID, headers.get("providerId"));
         headers.put(NO_GTFS_EXPORT, noGtfs);
         headers.put(NETEX_EXPORT_GLOBAL, exportGlobal);
         headers.put(GTFS_EXPORT_GLOBAL, exportGlobal);
-        headers.put(KEEP_ORIGINAL_ID, exportGlobal);
+        headers.put(KEEP_ORIGINAL_ID, keepOriginalId);
         headers.put(Constants.FILE_NAME, "export-" + export.getId() + "-" + export.getName());
         headers.put(Constants.CURRENT_EXPORT, exportJsonMapper.toJson(export));
         headers.put(EXPORTED_FILENAME, export.getExportedFileName());
