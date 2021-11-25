@@ -22,6 +22,7 @@ public class ExportTemplate implements Serializable {
 
     private List<Line> lines;
     private List<Consumer> consumers;
+    private List<String> referentials;
 
     private String stopIdPrefix;
     private String lineIdPrefix;
@@ -140,6 +141,14 @@ public class ExportTemplate implements Serializable {
 
     public void setCommercialPointIdPrefix(String commercialPointIdPrefix) {
         this.commercialPointIdPrefix = commercialPointIdPrefix;
+    }
+
+    public List<String> getReferentials() {
+        return referentials;
+    }
+
+    public void setReferentials(List<String> referentials) {
+        this.referentials = referentials;
     }
 
     /**

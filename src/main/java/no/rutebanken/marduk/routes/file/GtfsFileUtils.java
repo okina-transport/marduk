@@ -68,7 +68,7 @@ public class GtfsFileUtils {
     }
 
     public static void main(String[] args) {
-        new GtfsFileUtils().mergeGtfsFilesInDirectory("/home/mhicauber/Téléchargements/extract");
+        new GtfsFileUtils().mergeGtfsFilesInDirectory("/home/gfora/Téléchargements/Remi");
     }
 
     public static File mergeGtfsFiles(Collection<File> files) {

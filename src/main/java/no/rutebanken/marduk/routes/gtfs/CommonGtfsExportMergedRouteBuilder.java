@@ -23,21 +23,23 @@ import no.rutebanken.marduk.routes.file.GtfsFileUtils;
 import no.rutebanken.marduk.routes.status.JobEvent;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
+import org.codehaus.plexus.util.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.util.CollectionUtils;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import static java.util.stream.Collectors.toList;
 import static no.rutebanken.marduk.Constants.BLOBSTORE_MAKE_BLOB_PUBLIC;
-import static no.rutebanken.marduk.Constants.BLOBSTORE_PATH_OUTBOUND;
 import static no.rutebanken.marduk.Constants.CURRENT_AGGREGATED_GTFS_FILENAME;
+import static no.rutebanken.marduk.Constants.EXPORT_REFERENTIALS_NAMES;
 import static no.rutebanken.marduk.Constants.FILE_HANDLE;
 import static no.rutebanken.marduk.Constants.FILE_NAME;
 import static no.rutebanken.marduk.Constants.FOLDER_NAME;
-import static no.rutebanken.marduk.Constants.JOB_ACTION;
 import static no.rutebanken.marduk.Constants.PROVIDER_BLACK_LIST;
 import static no.rutebanken.marduk.Constants.PROVIDER_WHITE_LIST;
 import static org.apache.camel.Exchange.FILE_PARENT;
@@ -66,11 +68,13 @@ public class CommonGtfsExportMergedRouteBuilder extends BaseRouteBuilder {
                 .inOnly("direct:updateStatus")
                 .setHeader(Exchange.FILE_PARENT, simple("${exchangeProperty."+FOLDER_NAME+"}" + "/gtfs/merged"))
                 .doTry()
+                .to("direct:fetchLatestGtfs")
                 .to("direct:mergeGtfs")
 
                 // Use wire tap to avoid replacing body
                 .wireTap("direct:reportExportMergedGtfsOK")
                 .end()
+                .to("direct:cleanUpLocalDirectory")
                 .log(LoggingLevel.INFO, getClass().getName(), "Completed export of merged GTFS file for France")
                 .doFinally()
                 .end()
@@ -84,16 +88,20 @@ public class CommonGtfsExportMergedRouteBuilder extends BaseRouteBuilder {
 
         from("direct:fetchLatestGtfs")
                 .log(LoggingLevel.DEBUG, getClass().getName(), "Fetching gtfs files for all providers.")
-                .process(e -> e.getIn().setBody(getAggregatedGtfsFiles(getProviderBlackList(e), getProviderWhiteList(e))))
-                .split(body())
-                .to("direct:getGtfsFiles")
-                .routeId("gtfs-export-fetch-latest");
+                .process(e -> e.getIn().setBody(getAggregatedGtfsFiles((String) e.getIn().getHeader(EXPORT_REFERENTIALS_NAMES))))
+                        .split(body())
+                        .to("direct:getGtfsFiles")
+                        .routeId("gtfs-export-fetch-latest");
 
         from("direct:getGtfsFiles")
-                .log(LoggingLevel.INFO, getClass().getName(), correlation() + "Fetching mobiiti_technique/gtfs/merged/${body}")
+                .log(LoggingLevel.INFO, getClass().getName(), correlation() + "Fetching mobiiti_technique/gtfs/allFiles/${body}")
                 .setProperty("fileName", body())
-                .setHeader(FILE_HANDLE, simple("mobiiti_technique/gtfs/merged/${property.fileName}"))
+                .setHeader(FILE_HANDLE, simple("mobiiti_technique/gtfs/allFiles/${property.fileName}"))
                 .to("direct:getBlob")
+                .choice()
+                .when(body().isNotEqualTo(null))
+                .toD("file:${header." + FILE_PARENT + "}?fileName=${property.fileName}")
+                .otherwise()
                 .log(LoggingLevel.INFO, getClass().getName(), correlation() + "${property.fileName} was empty when trying to fetch it from blobstore.")
                 .routeId("gtfs-export-get-latest-for-provider");
 
@@ -120,11 +128,13 @@ public class CommonGtfsExportMergedRouteBuilder extends BaseRouteBuilder {
 
     }
 
-    String getAggregatedGtfsFiles(List<String> providerBlackList, List<String> providerWhiteList) {
+    String getAggregatedGtfsFiles(String allReferentialsNames) {
+        List<String> referentialsNames = Arrays.stream(StringUtils.split(allReferentialsNames, ",")).map(s -> "mobiiti_" + s).collect(toList());
         return getProviderRepository().getProviders().stream()
-                       .filter(p -> p.chouetteInfo.migrateDataToProvider == null && !p.chouetteInfo.referential.equals("mobiiti_technique"))
-                       .map(p -> p.chouetteInfo.referential + "-" + CURRENT_AGGREGATED_GTFS_FILENAME)
-                       .collect(Collectors.joining(","));
+                .filter(p -> p.chouetteInfo.migrateDataToProvider == null && !p.chouetteInfo.referential.equals("mobiiti_technique"))
+                .filter(provider -> referentialsNames.contains(provider.name))
+                .map(p -> p.chouetteInfo.referential + "-" + CURRENT_AGGREGATED_GTFS_FILENAME)
+                .collect(Collectors.joining(","));
     }
 
     private boolean isMatch(Provider p, List<String> providerBlackList, List<String> providerWhiteList) {

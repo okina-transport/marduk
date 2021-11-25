@@ -36,14 +36,16 @@ import org.springframework.stereotype.Component;
 import java.io.File;
 import java.io.InputStream;
 import java.io.PrintWriter;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.toList;
 import static no.rutebanken.marduk.Constants.BLOBSTORE_MAKE_BLOB_PUBLIC;
-import static no.rutebanken.marduk.Constants.BLOBSTORE_PATH_OUTBOUND;
 import static no.rutebanken.marduk.Constants.CHOUETTE_JOB_STATUS_URL;
 import static no.rutebanken.marduk.Constants.CHOUETTE_REFERENTIAL;
 import static no.rutebanken.marduk.Constants.COMMERCIAL_POINT_ID_PREFIX;
@@ -52,6 +54,7 @@ import static no.rutebanken.marduk.Constants.EXPORT_END_DATE;
 import static no.rutebanken.marduk.Constants.EXPORT_FILE_NAME;
 import static no.rutebanken.marduk.Constants.EXPORT_LINES_IDS;
 import static no.rutebanken.marduk.Constants.EXPORT_NAME;
+import static no.rutebanken.marduk.Constants.EXPORT_REFERENTIALS_NAMES;
 import static no.rutebanken.marduk.Constants.EXPORT_START_DATE;
 import static no.rutebanken.marduk.Constants.FILE_HANDLE;
 import static no.rutebanken.marduk.Constants.FILE_NAME;
@@ -63,7 +66,6 @@ import static no.rutebanken.marduk.Constants.JSON_PART;
 import static no.rutebanken.marduk.Constants.KEEP_ORIGINAL_ID;
 import static no.rutebanken.marduk.Constants.LINE_ID_PREFIX;
 import static no.rutebanken.marduk.Constants.MAPPING_LINES_IDS;
-import static no.rutebanken.marduk.Constants.NETEX_EXPORT_GLOBAL;
 import static no.rutebanken.marduk.Constants.OKINA_REFERENTIAL;
 import static no.rutebanken.marduk.Constants.PROVIDER_ID;
 import static no.rutebanken.marduk.Constants.STOP_ID_PREFIX;
@@ -215,7 +217,7 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
                     })
                     .choice()
                         .when(e -> e.getIn().getHeader(GTFS_EXPORT_GLOBAL, Boolean.class))
-                        .setHeader(FILE_HANDLE, simple("mobiiti_technique/gtfs/merged/${header." + CHOUETTE_REFERENTIAL + "}-" + Constants.CURRENT_AGGREGATED_GTFS_FILENAME))
+                        .setHeader(FILE_HANDLE, simple("mobiiti_technique/gtfs/allFiles/${header." + CHOUETTE_REFERENTIAL + "}-" + Constants.CURRENT_AGGREGATED_GTFS_FILENAME))
                         .to("direct:uploadBlob")
                         .to("direct:exportMergedGtfs")
                 .endChoice()
@@ -271,7 +273,17 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
                 .routeId("chouette-process-export-gtfs-feedinfo");
 
         from("direct:chouetteGtfsExportForAllProviders")
-                .process(e -> e.getIn().setBody(getProviderRepository().getMobiitiProviders()))
+                .process(e -> {
+                    if (e.getIn().getHeader(EXPORT_REFERENTIALS_NAMES) != null) {
+                        String allReferentialsNames = e.getIn().getHeader(EXPORT_REFERENTIALS_NAMES, String.class);
+                        List<String> referentialsNames = Arrays.stream(StringUtils.split(allReferentialsNames, ",")).map(s -> "mobiiti_" + s).collect(toList());
+                        Collection<Provider> mobiitiProviders =  getProviderRepository().getMobiitiProviders().stream().filter(provider -> referentialsNames.contains(provider.name)).collect(Collectors.toList());
+                        e.getIn().setBody(mobiitiProviders);
+                    }
+                    else {
+                        e.getIn().setBody(getProviderRepository().getMobiitiProviders());
+                    }
+                })
                 .split().body().parallelProcessing().executorService(allProvidersExecutorService)
                 .setHeader(PROVIDER_ID, simple("${body.id}"))
                 .setBody(constant(null))
