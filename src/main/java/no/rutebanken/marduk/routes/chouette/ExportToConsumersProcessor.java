@@ -5,6 +5,7 @@ import no.rutebanken.marduk.domain.ConsumerType;
 import no.rutebanken.marduk.domain.ExportTemplate;
 import no.rutebanken.marduk.services.FileSystemService;
 import no.rutebanken.marduk.services.FtpService;
+import no.rutebanken.marduk.services.NotificationService;
 import no.rutebanken.marduk.services.RestUploadService;
 import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
@@ -41,6 +42,9 @@ public class ExportToConsumersProcessor implements Processor {
     @Autowired
     FileSystemService fileSystemService;
 
+    @Autowired
+    NotificationService notificationService;
+
     /**
      * Gets the result stream of an export  and upload it towards consumers defined for this export
      *
@@ -57,7 +61,8 @@ public class ExportToConsumersProcessor implements Processor {
             String filePath = (String) exchange.getIn().getHeaders().get("fileName");
             export.getConsumers().forEach(consumer -> {
 
-                log.info(consumer.getType() + " consumer upload starting " + consumer.getName() + " => " + consumer.getServiceUrl());
+                String url = consumer.getServiceUrl() == null || consumer.getServiceUrl().isEmpty() ? consumer.getNotificationUrl() : consumer.getServiceUrl();
+                log.info(consumer.getType() + " consumer upload starting " + consumer.getName() + " => " + url);
                 try {
                     File fileToExport;
                     if (ConsumerType.RESTCONCERTO.equals(consumer.getType())) {
@@ -91,8 +96,11 @@ public class ExportToConsumersProcessor implements Processor {
                             break;
                         case RESTCONCERTO:
                             restUploadService.uploadConcertoStream(streamToUpload, consumer.getServiceUrl(), filePath, secretKeyDecryptedConsumer);
+                            break;
+                        case S3:
+                            notificationService.sendNotification(consumer.getNotificationUrl());
                     }
-                    log.info(consumer.getType() + " consumer upload completed " + consumer.getName() + " => " + consumer.getServiceUrl());
+                    log.info(consumer.getType() + " consumer upload completed " + consumer.getName() + " => " + url);
                 } catch (Exception e) {
                     log.error("Error while uploading to consumer " + consumer.toString(), e);
                 }
