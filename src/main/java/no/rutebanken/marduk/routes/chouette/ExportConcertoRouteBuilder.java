@@ -43,6 +43,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.Map;
 import java.util.TimeZone;
@@ -182,10 +183,9 @@ public class ExportConcertoRouteBuilder extends AbstractChouetteRouteBuilder {
         CronTrigger trigger = (CronTrigger) scheduler.getScheduler().getTrigger(TriggerKey.triggerKey("ConcertoJobTrigger"));
         if (trigger != null) {
             String[] dateFromCron = trigger.getCronExpression().split(" ");
-            String frequency = dateFromCron[3].split("/")[1];
             JSONObject jsonObject = new JSONObject();
             jsonObject.append("date", trigger.getStartTime().getTime());
-            jsonObject.append("frequency", frequency);
+            jsonObject.append("applicationDays", dateFromCron[3]);
             exchange.getIn().setBody(jsonObject.toString());
         }
     }
@@ -201,11 +201,11 @@ public class ExportConcertoRouteBuilder extends AbstractChouetteRouteBuilder {
                 JobDetailFactoryBean concertoJobDetails = schedulerConcerto.getJobConcerto();
 
                 String[] dateFromCron = concertoExportSchedulerCron.split(" ");
-                String format = "yyyy-MM-dd HH:mm";
-                SimpleDateFormat simpleStartDateFormat = new SimpleDateFormat(format);
-                Date startDate = simpleStartDateFormat.parse(dateFromCron[6].split("-")[0] + "-" + dateFromCron[4] + "-" + dateFromCron[3].split("/")[0] + " " + dateFromCron[2] + ":" + dateFromCron[1]);
 
-                concertoExportSchedulerCron = dateFromCron[0] + " " + dateFromCron[1] + " " + dateFromCron[2] + " " + dateFromCron[3] + " * " + dateFromCron[5] + " " + dateFromCron[6];
+                Date startDate = getStartDate();
+
+                concertoExportSchedulerCron = dateFromCron[0] + " " + dateFromCron[1] + " " + dateFromCron[2] + " ? * " + dateFromCron[3] + " " + dateFromCron[6];
+
 
                 Trigger concertoTrigger = TriggerBuilder.newTrigger().forJob(concertoJobDetails.getObject())
                         .withIdentity("ConcertoJobTrigger")
@@ -224,6 +224,23 @@ public class ExportConcertoRouteBuilder extends AbstractChouetteRouteBuilder {
                 log.info("Concerto Export Scheduler created with cron expression: " + concertoExportSchedulerCron);
             }
         }
+    }
+
+    /**
+     * Calculate the start date of the cron : 1st day of the current month
+     * @return
+     */
+    private Date getStartDate(){
+
+        Calendar currentDate = Calendar.getInstance();
+        int month = currentDate.get(Calendar.MONTH);
+        int year = currentDate.get(Calendar.YEAR);
+
+        Calendar startDate = Calendar.getInstance();
+        startDate.set(Calendar.DAY_OF_MONTH,1);
+        startDate.set(Calendar.MONTH,month);
+        startDate.set(Calendar.YEAR,year);
+        return startDate.getTime();
     }
 }
 
