@@ -185,7 +185,7 @@ public class ExportConcertoRouteBuilder extends AbstractChouetteRouteBuilder {
             String[] dateFromCron = trigger.getCronExpression().split(" ");
             JSONObject jsonObject = new JSONObject();
             jsonObject.append("date", trigger.getStartTime().getTime());
-            jsonObject.append("applicationDays", dateFromCron[3]);
+            jsonObject.append("applicationDays", dateFromCron[5]);
             exchange.getIn().setBody(jsonObject.toString());
         }
     }
