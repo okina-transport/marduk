@@ -209,7 +209,7 @@ public class ExportConcertoRouteBuilder extends AbstractChouetteRouteBuilder {
 
                 Trigger concertoTrigger = TriggerBuilder.newTrigger().forJob(concertoJobDetails.getObject())
                         .withIdentity("ConcertoJobTrigger")
-                        .withSchedule(CronScheduleBuilder.cronSchedule(concertoExportSchedulerCron))
+                        .withSchedule(CronScheduleBuilder.cronSchedule(concertoExportSchedulerCron).withMisfireHandlingInstructionDoNothing())
                         .startAt(startDate)
                         .build();
 
