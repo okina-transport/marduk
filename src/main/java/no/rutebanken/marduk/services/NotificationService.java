@@ -17,7 +17,7 @@ public class NotificationService {
 
     private Logger logger = LoggerFactory.getLogger(this.getClass());
 
-    public void sendNotification(@Header(value = Constants.NOTIFICATION_URL) String notificationUrl) throws IOException {
+    public void sendNotification(String notificationUrl) throws IOException {
 
         HttpPost post = new HttpPost(notificationUrl);
         try (CloseableHttpClient httpClient = HttpClients.createDefault();
