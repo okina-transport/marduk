@@ -28,6 +28,7 @@ public class Constants {
     public static final String PROVIDER_IDS = "RutebankenProviderIds";
     public static final String ORIGINAL_PROVIDER_ID = "RutebankenOriginalProviderId"; // The original provider id that started this chain of events
     public static final String EXPORT_LINES_IDS = "EXPORT_LINES_IDS";
+    public static final String EXPORT_REFERENTIALS_NAMES = "EXPORT_REFERENTIALS_NAMES";
     public static final String EXPORT_START_DATE = "EXPORT_START_DATE";
     public static final String EXPORT_END_DATE = "EXPORT_END_DATE";
     public static final String EXPORT_NAME = "EXPORT_NAME";
@@ -52,6 +53,7 @@ public class Constants {
     public static final String STOP_AREA_PREFIX_TO_REMOVE = "stopAreaPrefixToRemove";
     public static final String AREA_CENTROID_PREFIX_TO_REMOVE = "areaCentroidPrefixToRemove";
     public static final String MAPPING_LINES_IDS = "MAPPING_LINES_IDS";
+    public static final String KEEP_ORIGINAL_ID = "KEEP_ORIGINAL_ID";
     public static final String COMMERCIAL_POINT_ID_PREFIX_TO_REMOVE = "commercialPointIdPrefixToRemove";
     public static final String QUAY_ID_PREFIX_TO_REMOVE = "quayIdPrefixToRemove";
     public static final String LINE_PREFIX_TO_REMOVE = "linePrefixToRemove";
@@ -70,6 +72,7 @@ public class Constants {
     public static final String DESCRIPTION = "RutebankenDescription";
     public static final String NO_GTFS_EXPORT = "RutebankenNoGtfsExport";
     public static final String NETEX_EXPORT_GLOBAL = "RutebankenNetexExportGlobal";
+    public static final String GTFS_EXPORT_GLOBAL = "RutebankenGtfsExportGlobal";
     public static final String IMPORT = "RutebankenImport";
 
     public static final String CURRENT_AGGREGATED_GTFS_FILENAME = "aggregated-gtfs.zip";
@@ -129,5 +132,10 @@ public class Constants {
     public static final String ANALYZE_ACTION = "Analyze";
 
     public static final String IMPORT_MODE = "ImportMode";
+
+    public static final String MERGED_NETEX_ROOT_DIR = "mobiiti_technique/netex/merged";
+    public static final String MISSING_EXPORTS = "missingExports";
+    public static final String IS_MERGED_NETEX_FAILED = "isMergedNetexFailed";
+
 }
 

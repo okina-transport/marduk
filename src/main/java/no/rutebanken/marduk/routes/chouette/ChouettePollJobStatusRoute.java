@@ -45,9 +45,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
-import static no.rutebanken.marduk.Constants.CHOUETTE_JOB_STATUS_JOB_TYPE;
-import static no.rutebanken.marduk.Constants.CHOUETTE_REFERENTIAL;
-import static no.rutebanken.marduk.Constants.PROVIDER_ID;
+import static no.rutebanken.marduk.Constants.*;
 import static no.rutebanken.marduk.routes.chouette.json.Status.ABORTED;
 import static no.rutebanken.marduk.routes.chouette.json.Status.CANCELED;
 import static no.rutebanken.marduk.routes.chouette.json.Status.RESCHEDULED;
@@ -287,6 +285,7 @@ public class ChouettePollJobStatusRoute extends AbstractChouetteRouteBuilder {
         from("direct:jobStatusDone")
                 .log(LoggingLevel.DEBUG, correlation() + "Exited retry loop with status ${header.current_status}")
                 .to("log:" + getClass().getName() + "?level=DEBUG&showAll=true&multiline=true")
+                .inOnly("direct:handleGlobalNetexExportCase")
                 .choice()
                     .when(simple("${header.current_status} == '" + SCHEDULED + "' || ${header.current_status} == '" + STARTED + "' || ${header.current_status} == '" + RESCHEDULED + "'"))
                         .log(LoggingLevel.WARN, correlation() + "Job timed out with state ${header.current_status}. Config should probably be tweaked. Stopping route.")
@@ -374,8 +373,13 @@ public class ChouettePollJobStatusRoute extends AbstractChouetteRouteBuilder {
                 .routeId("chouette-process-validation-report");
 
 
+        from("direct:handleGlobalNetexExportCase")
+                .choice()
+                .when(e->  e.getIn().getHeader(NETEX_EXPORT_GLOBAL) != null && (boolean) e.getIn().getHeader(NETEX_EXPORT_GLOBAL))
+                    .inOnly("direct:updateMergedNetexStatus")
+                .end()
+                .routeId("handle-global-netex-export-case");
     }
-
 
 }
 

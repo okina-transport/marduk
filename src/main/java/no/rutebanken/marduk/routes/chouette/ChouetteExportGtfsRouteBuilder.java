@@ -36,14 +36,16 @@ import org.springframework.stereotype.Component;
 import java.io.File;
 import java.io.InputStream;
 import java.io.PrintWriter;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.toList;
 import static no.rutebanken.marduk.Constants.BLOBSTORE_MAKE_BLOB_PUBLIC;
-import static no.rutebanken.marduk.Constants.BLOBSTORE_PATH_OUTBOUND;
 import static no.rutebanken.marduk.Constants.CHOUETTE_JOB_STATUS_URL;
 import static no.rutebanken.marduk.Constants.CHOUETTE_REFERENTIAL;
 import static no.rutebanken.marduk.Constants.COMMERCIAL_POINT_ID_PREFIX;
@@ -52,15 +54,19 @@ import static no.rutebanken.marduk.Constants.EXPORT_END_DATE;
 import static no.rutebanken.marduk.Constants.EXPORT_FILE_NAME;
 import static no.rutebanken.marduk.Constants.EXPORT_LINES_IDS;
 import static no.rutebanken.marduk.Constants.EXPORT_NAME;
+import static no.rutebanken.marduk.Constants.EXPORT_REFERENTIALS_NAMES;
 import static no.rutebanken.marduk.Constants.EXPORT_START_DATE;
 import static no.rutebanken.marduk.Constants.FILE_HANDLE;
 import static no.rutebanken.marduk.Constants.FILE_NAME;
 import static no.rutebanken.marduk.Constants.FILE_TYPE;
+import static no.rutebanken.marduk.Constants.GTFS_EXPORT_GLOBAL;
 import static no.rutebanken.marduk.Constants.ID_FORMAT;
 import static no.rutebanken.marduk.Constants.ID_SUFFIX;
 import static no.rutebanken.marduk.Constants.JSON_PART;
+import static no.rutebanken.marduk.Constants.KEEP_ORIGINAL_ID;
 import static no.rutebanken.marduk.Constants.LINE_ID_PREFIX;
 import static no.rutebanken.marduk.Constants.MAPPING_LINES_IDS;
+import static no.rutebanken.marduk.Constants.OKINA_REFERENTIAL;
 import static no.rutebanken.marduk.Constants.PROVIDER_ID;
 import static no.rutebanken.marduk.Constants.STOP_ID_PREFIX;
 import static no.rutebanken.marduk.Constants.USER;
@@ -102,13 +108,22 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
                     // Force new correlation ID : each export must have its own correlation ID to me displayed correctly in export screen
                     e.getIn().setHeader(Constants.CORRELATION_ID,  UUID.randomUUID().toString());
                     e.getIn().removeHeader(Constants.CHOUETTE_JOB_ID);
-                    String exportName = org.springframework.util.StringUtils.hasText(e.getIn().getHeader(EXPORTED_FILENAME, String.class)) ? (String) e.getIn().getHeader(EXPORTED_FILENAME) : e.getIn().getHeader(EXPORT_NAME, String.class).replace(" ","_");
+                    String exportName;
+                    if(!e.getIn().getHeader(GTFS_EXPORT_GLOBAL, Boolean.class)){
+                        exportName = org.springframework.util.StringUtils.hasText(e.getIn().getHeader(EXPORTED_FILENAME, String.class)) ?
+                                (String) e.getIn().getHeader(EXPORTED_FILENAME) :
+                                e.getIn().getHeader(EXPORT_NAME, String.class).replace(" ","_");
+                    }
+                    else {
+                        exportName = "gtfs";
+                    }
                     e.getIn().setHeader(FILE_NAME, exportName);
                     e.getIn().setHeader(FILE_TYPE, "gtfs");
                 })
                 .process(e -> JobEvent.providerJobBuilder(e).timetableAction(TimetableAction.EXPORT).state(State.PENDING).build())
                 .to("direct:updateStatus")
                 .process(e -> e.getIn().setHeader(CHOUETTE_REFERENTIAL, getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)).chouetteInfo.referential))
+                .process(e -> e.getIn().setHeader(OKINA_REFERENTIAL, getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)).chouetteInfo.referential))
                 .process(e -> {
                     String user = e.getIn().getHeader(USER, String.class);
                     String gtfsParams;
@@ -122,7 +137,13 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
                     String linePrefix = e.getIn().getHeader(LINE_ID_PREFIX) != null ? (String) e.getIn().getHeader(LINE_ID_PREFIX) : null;
                     String commercialPointIdPrefix = e.getIn().getHeader(COMMERCIAL_POINT_ID_PREFIX) != null ? (String) e.getIn().getHeader(COMMERCIAL_POINT_ID_PREFIX) : null;
                     IdParameters idParams = new IdParameters(stopIdPrefix,idFormat,idSuffix,linePrefix,commercialPointIdPrefix);
-                    String exportedFilename = e.getIn().getHeader(EXPORTED_FILENAME) != null ? (String) e.getIn().getHeader(EXPORTED_FILENAME) : exportName.replace(" ","_") + ".zip";
+                    String exportedFilename;
+                    if(!e.getIn().getHeader(GTFS_EXPORT_GLOBAL, Boolean.class)){
+                        exportedFilename = e.getIn().getHeader(EXPORTED_FILENAME) != null ? (String) e.getIn().getHeader(EXPORTED_FILENAME) : exportName.replace(" ","_") + ".zip";
+                    }
+                    else {
+                        exportedFilename = "gtfs.zip";
+                    }
 
 
                     if(e.getIn().getHeader(EXPORT_START_DATE) != null && e.getIn().getHeader(EXPORT_END_DATE) != null){
@@ -132,20 +153,25 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
                         endDate = (end != null) ? new Date(end) : null;
                     }
 
-                    boolean mappingLinesIds= false;
+                    boolean mappingLinesIds = false;
                     if (e.getIn().getHeader(MAPPING_LINES_IDS) != null){
                         mappingLinesIds = (boolean) e.getIn().getHeader(MAPPING_LINES_IDS);
                     }
 
+                    boolean keepOriginalId = true;
+                    if (e.getIn().getHeader(KEEP_ORIGINAL_ID) != null){
+                        keepOriginalId = (boolean) e.getIn().getHeader(KEEP_ORIGINAL_ID);
+                    }
+
 
                     if (e.getIn().getHeader(EXPORT_LINES_IDS) == null && startDate != null && endDate != null) {
-                        gtfsParams = Parameters.getGtfsExportParameters(getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)), exportName, user, null, startDate, endDate, exportedFilename, idParams, mappingLinesIds);
+                        gtfsParams = Parameters.getGtfsExportParameters(getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)), exportName, user, keepOriginalId, null, startDate, endDate, exportedFilename, idParams, mappingLinesIds);
                     } else if (e.getIn().getHeader(EXPORT_LINES_IDS) != null) {
                         String linesIdsS = e.getIn().getHeader(EXPORT_LINES_IDS, String.class);
                         List<Long> linesIds = Arrays.stream(StringUtils.split(linesIdsS, ",")).map(s -> Long.valueOf(s)).collect(toList());
-                        gtfsParams = Parameters.getGtfsExportParameters(getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)), exportName, user, linesIds, startDate, endDate, exportedFilename, idParams, mappingLinesIds);
+                        gtfsParams = Parameters.getGtfsExportParameters(getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)), exportName, user, keepOriginalId, linesIds, startDate, endDate, exportedFilename, idParams, mappingLinesIds);
                     } else {
-                        gtfsParams = Parameters.getGtfsExportParameters(getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)), user, exportedFilename);
+                        gtfsParams = Parameters.getGtfsExportParameters(getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)), user, keepOriginalId, exportedFilename);
                     }
 
                     e.getIn().setHeader(JSON_PART, gtfsParams);
@@ -189,15 +215,14 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
                         File file = fileSystemService.getOfferFile(e);
                         e.getIn().setHeader(EXPORT_FILE_NAME, file.getName());
                     })
-                    .setHeader("fileName", simple("GTFS.zip"))
+                    .choice()
+                        .when(e -> e.getIn().getHeader(GTFS_EXPORT_GLOBAL, Boolean.class))
+                        .setHeader(FILE_HANDLE, simple("mobiiti_technique/gtfs/allFiles/${header." + CHOUETTE_REFERENTIAL + "}-" + Constants.CURRENT_AGGREGATED_GTFS_FILENAME))
+                        .to("direct:uploadBlob")
+                        .to("direct:exportMergedGtfs")
+                .endChoice()
                     .process(exportToConsumersProcessor)
                     .setHeader(BLOBSTORE_MAKE_BLOB_PUBLIC, constant(publicPublication))
-                    .setHeader(FILE_HANDLE, simple(BLOBSTORE_PATH_OUTBOUND + "gtfs/${header." + CHOUETTE_REFERENTIAL + "}-" + Constants.CURRENT_AGGREGATED_GTFS_FILENAME))
-                    .process(e -> {
-                        log.info("Starting gtfs export upload");
-                        e.getIn().setBody(fileSystemService.getOfferFile(e));
-                    })
-                    .to("direct:uploadBlobExport")
                     .process(e -> {
                         log.info("Upload to consumers and blob store completed");
                     })
@@ -246,6 +271,24 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
                     tmpFolder2.delete();
                 })
                 .routeId("chouette-process-export-gtfs-feedinfo");
+
+        from("direct:chouetteGtfsExportForAllProviders")
+                .process(e -> {
+                    if (e.getIn().getHeader(EXPORT_REFERENTIALS_NAMES) != null) {
+                        String allReferentialsNames = e.getIn().getHeader(EXPORT_REFERENTIALS_NAMES, String.class);
+                        List<String> referentialsNames = Arrays.stream(StringUtils.split(allReferentialsNames, ",")).map(s -> "mobiiti_" + s).collect(toList());
+                        Collection<Provider> mobiitiProviders =  getProviderRepository().getMobiitiProviders().stream().filter(provider -> referentialsNames.contains(provider.name)).collect(Collectors.toList());
+                        e.getIn().setBody(mobiitiProviders);
+                    }
+                    else {
+                        e.getIn().setBody(getProviderRepository().getMobiitiProviders());
+                    }
+                })
+                .split().body().parallelProcessing().executorService(allProvidersExecutorService)
+                .setHeader(PROVIDER_ID, simple("${body.id}"))
+                .setBody(constant(null))
+                .inOnly("activemq:queue:ChouetteExportGtfsQueue")
+                .routeId("chouette-gtfs-export-all-providers");
     }
 
 }

@@ -14,6 +14,8 @@ import java.util.List;
 import java.util.UUID;
 
 import static no.rutebanken.marduk.Constants.CHOUETTE_REFERENTIAL;
+import static no.rutebanken.marduk.Constants.NETEX_EXPORT_GLOBAL;
+import static no.rutebanken.marduk.Constants.NO_GTFS_EXPORT;
 import static no.rutebanken.marduk.Constants.ORIGINAL_PROVIDER_ID;
 import static no.rutebanken.marduk.Constants.PROVIDER_ID;
 
@@ -33,6 +35,9 @@ public class PredefinedExportsRouteBuilder extends AbstractChouetteRouteBuilder 
     @Value("${superspace.name}")
     private String superspaceName;
 
+    @Value("${chouette.predefined.exports.mobiiti.technique.provider.schedule:0+0+20+?+*+MON-FRI}")
+    private String chouettePredefinedExportsMobiitiTechniqueProviderCronSchedule;
+
     @Override
     public void configure() throws Exception {
         super.configure();
@@ -42,7 +47,14 @@ public class PredefinedExportsRouteBuilder extends AbstractChouetteRouteBuilder 
                 .log(LoggingLevel.INFO, getClass().getName(), "Starting Chouette all export for provider with id ${header." + PROVIDER_ID + "}")
                 .process(e -> {
                     log.info("predefinedExports : starting predefined exports");
-                    Provider provider = providerRepository.getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class));
+                    Provider provider;
+                    if(e.getIn().getHeader(PROVIDER_ID, Long.class) == null){
+                        provider = providerRepository.findByName("mobiiti_technique");
+                    }
+                    else{
+                        provider = providerRepository.getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class));
+                    }
+
                     Provider mobiitiProvider;
 
                     if (provider.name.contains(superspaceName)) {
@@ -67,6 +79,15 @@ public class PredefinedExportsRouteBuilder extends AbstractChouetteRouteBuilder 
                 })
                 .process(multipleExportProcessor)
                 .routeId("chouette-send-export-all-job");
+
+
+        singletonFrom("quartz2://marduk/chouettePredefinedExportsMobiitiTechniqueProviderCronSchedule?cron=" + chouettePredefinedExportsMobiitiTechniqueProviderCronSchedule + "&trigger.timeZone=" + Constants.TIME_ZONE)
+                .autoStartup("{{chouette.predefined.exports.mobiiti.technique.provider.autoStartup:true}}")
+                .transacted()
+                .filter(e -> shouldQuartzRouteTrigger(e, chouettePredefinedExportsMobiitiTechniqueProviderCronSchedule))
+                .log(LoggingLevel.INFO, "Quartz triggers predefined exports mobiiti technique provider in Chouette.")
+                .inOnly("activemq:queue:predefinedExports")
+                .routeId("chouette-predefined-export-mobiiti_technique-quartz");
     }
 
 
