@@ -73,8 +73,16 @@ public class ChouetteExportNetexRouteBuilder extends AbstractChouetteRouteBuilde
                 .process(e -> JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.EXPORT_NETEX).state(JobEvent.State.PENDING).build())
                 .to("direct:updateStatus")
 
-                .process(e -> e.getIn().setHeader(CHOUETTE_REFERENTIAL, getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)).chouetteInfo.referential))
-                .process(e -> e.getIn().setHeader(OKINA_REFERENTIAL, getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)).chouetteInfo.referential))
+                .process(e -> {
+                    final Boolean isSimulation = e.getIn().getHeader(IS_SIMULATION_EXPORT, Boolean.class);
+                    if (isSimulation != null && isSimulation) {
+                        e.getIn().setHeader(CHOUETTE_REFERENTIAL, "simulation_" + getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)).chouetteInfo.referential);
+                        e.getIn().setHeader(OKINA_REFERENTIAL, "simulation_" + getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)).chouetteInfo.referential);
+                    } else {
+                        e.getIn().setHeader(CHOUETTE_REFERENTIAL, getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)).chouetteInfo.referential);
+                        e.getIn().setHeader(OKINA_REFERENTIAL, getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)).chouetteInfo.referential);
+                    }
+                })
                 .process(e -> {
                     String user = e.getIn().getHeader(USER, String.class);
                     String exportedFilename = e.getIn().getHeader(EXPORTED_FILENAME) != null && !e.getIn().getHeader(NETEX_EXPORT_GLOBAL, Boolean.class) ? (String) e.getIn().getHeader(EXPORTED_FILENAME) : null;
