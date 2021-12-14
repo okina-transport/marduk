@@ -58,6 +58,9 @@ public class Constants {
     public static final String QUAY_ID_PREFIX_TO_REMOVE = "quayIdPrefixToRemove";
     public static final String LINE_PREFIX_TO_REMOVE = "linePrefixToRemove";
 
+    public static final String IS_SIMULATION_EXPORT = "isSimulationExport";
+    public static final String ROLE_EXPORT_SIMULATION = "exportSimulation";
+
 
     // tag for tiamat exports
     public static final String TIAMAT_STOP_PLACES_EXPORT = "TIAMAT_STOP_PLACES_EXPORT";

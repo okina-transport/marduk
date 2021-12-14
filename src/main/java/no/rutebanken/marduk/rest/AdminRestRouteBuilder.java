@@ -849,6 +849,25 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .routeId("admin-chouette-export-netex")
                 .endRest()
 
+                .post("/export/netex/simulation")
+                .description("Triggers Netex Export")
+                .param().name("providerId").type(RestParamType.path).description("").dataType("integer").endParam()
+                .consumes(PLAIN)
+                .produces(PLAIN)
+                .responseMessage().code(200).message("Command accepted").endResponseMessage()
+                .route()
+                .setHeader(NO_GTFS_EXPORT, constant(true))
+                .setHeader(NETEX_EXPORT_GLOBAL, constant(false))
+                .setHeader(IS_SIMULATION_EXPORT, constant(true))
+                .to("direct:authorizeRequest")
+                .validate(e -> e.getIn().getHeader(PROVIDER_ID, Long.class) != null)
+                .log(LoggingLevel.INFO, correlation() + "Chouette start simulation export Netex")
+                .removeHeaders("CamelHttp*")
+                .process(e -> e.getIn().setHeader(USER, getUserNameFromHeaders(e)))
+                .inOnly("activemq:queue:ChouetteExportNetexQueue")
+                .routeId("admin-chouette-export-netex-simulation")
+                .endRest()
+
                 .post("/export/netex_global")
                 .description("Triggers the Netex export global process in Chouette. Note that NO validation is performed before export, and that the data must be guaranteed to be error free")
                 .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the nabu service").dataType("integer").endParam()
@@ -1093,6 +1112,11 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .doTry()
                 .process(e -> authorizationService.verifyAtLeastOne(new AuthorizationClaim(AuthorizationConstants.ROLE_ROUTE_DATA_ADMIN),
                         new AuthorizationClaim(AuthorizationConstants.ROLE_ROUTE_DATA_EDIT, e.getIn().getHeader(PROVIDER_ID, Long.class))))
+                .process(e -> {
+                    if (e.getIn().getHeader(IS_SIMULATION_EXPORT, Boolean.class)) {
+                        authorizationService.verifyAtLeastOne(new AuthorizationClaim(ROLE_EXPORT_SIMULATION));
+                    }
+                })
                 .routeId("admin-authorize-request");
 
 
