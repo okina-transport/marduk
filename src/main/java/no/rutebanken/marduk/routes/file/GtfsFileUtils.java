@@ -64,7 +64,7 @@ public class GtfsFileUtils {
     };
 
     public static File mergeGtfsFilesInDirectory(String path) {
-        logger.debug("List files for merging gtfs in the path:" + path);
+        logger.info("Listing files for merging gtfs in the path:" + path);
         return mergeGtfsFiles(FileUtils.listFiles(new File(path), new String[]{"zip"}, false));
     }
 
