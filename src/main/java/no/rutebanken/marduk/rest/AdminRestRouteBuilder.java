@@ -546,9 +546,11 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
 
 
         rest("/timetable_admin/{providerId}")
+                .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the nabu service").dataType("integer").endParam()
+
                 .post("/import")
                 .description("Triggers the import->validate->export process in Chouette for each blob store file handle. Use /files call to obtain available files. Files are imported in the same order as they are provided")
-                .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the nabu service").dataType("integer").endParam()
+//                .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the nabu service").dataType("integer").endParam()
                 .type(BlobStoreFiles.class)
                 .outType(String.class)
                 .consumes(JSON)
@@ -580,7 +582,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
 
                 .get("/files")
                 .description("List files available for reimport into Chouette")
-                .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the baba service").dataType("integer").endParam()
+//                .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the baba service").dataType("integer").endParam()
                 .outType(BlobStoreFiles.class)
                 .consumes(PLAIN)
                 .produces(JSON)
@@ -598,7 +600,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
 
                 .post("/analyzeFile")
                 .description("Upload file for pre-import analyze into Chouette")
-                .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the nabu service").dataType("integer").endParam()
+//                .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the nabu service").dataType("integer").endParam()
                 .consumes(MULTIPART_FORM_DATA)
                 .produces(PLAIN)
                 .bindingMode(RestBindingMode.off)
@@ -621,7 +623,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
 
                 .post("/files")
                 .description("Upload file for import into Chouette")
-                .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the nabu service").dataType("integer").endParam()
+//                .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the nabu service").dataType("integer").endParam()
                 .consumes(MULTIPART_FORM_DATA)
                 .produces(PLAIN)
                 .bindingMode(RestBindingMode.off)
@@ -651,7 +653,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
 
                 .get("/files/{fileName}")
                 .description("Download file for reimport into Chouette")
-                .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the nabu service").dataType("integer").endParam()
+//                .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the nabu service").dataType("integer").endParam()
                 .param().name("fileName").type(RestParamType.path).description("Name of file to fetch").dataType("string").endParam()
                 .consumes(PLAIN)
                 .produces(X_OCTET_STREAM)
@@ -674,7 +676,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
 
                 .get("/files/stop-places")
                 .description("Download stop places export file (NeTEx stop places)")
-                .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the nabu service").dataType("integer").endParam()
+//                .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the nabu service").dataType("integer").endParam()
                 .consumes(PLAIN)
                 .produces(X_OCTET_STREAM)
                 .responseMessage().code(200).endResponseMessage()
@@ -700,7 +702,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
 
                 .get("/files/offer/{jobId}")
                 .description("Download offer export file (GTFS, NeTEx or Concerto")
-                .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the nabu service").dataType("integer").endParam()
+//                .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the nabu service").dataType("integer").endParam()
                 .param().name("jobId").type(RestParamType.path).description("Job id").dataType("integer").endParam()
                 .consumes(PLAIN)
                 .produces(X_OCTET_STREAM)
@@ -728,7 +730,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
 
                 .get("/line_statistics")
                 .description("List stats about data in chouette for a given provider")
-                .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the nabu service").dataType("integer").endParam()
+//                .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the nabu service").dataType("integer").endParam()
                 .bindingMode(RestBindingMode.off)
                 .consumes(PLAIN)
                 .produces(JSON)
@@ -746,7 +748,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
 
                 .get("/jobs")
                 .description("List Chouette jobs for a given provider")
-                .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the nabu service").dataType("integer").endParam()
+//                .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the nabu service").dataType("integer").endParam()
                 .param()
                 .required(Boolean.FALSE)
                 .name("status")
@@ -778,7 +780,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
 
                 .delete("/jobs")
                 .description("Cancel all Chouette jobs for a given provider")
-                .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the nabu service").dataType("integer").endParam()
+//                .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the nabu service").dataType("integer").endParam()
                 .consumes(PLAIN)
                 .produces(PLAIN)
                 .responseMessage().code(200).message("Job deleted").endResponseMessage()
@@ -795,7 +797,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
 
                 .delete("/jobs/{jobId}")
                 .description("Cancel a Chouette job for a given provider")
-                .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the nabu service").dataType("integer").endParam()
+//                .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the nabu service").dataType("integer").endParam()
                 .param().name("jobId").type(RestParamType.path).description("Job id as returned in any of the /jobs GET calls").dataType("integer").endParam()
                 .consumes(PLAIN)
                 .produces(PLAIN)
@@ -814,7 +816,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
 
                 .post("/export")
                 .description("Triggers the export process in Chouette. Note that NO validation is performed before export, and that the data must be guaranteed to be error free")
-                .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the nabu service").dataType("integer").endParam()
+//                .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the nabu service").dataType("integer").endParam()
                 .consumes(PLAIN)
                 .produces(PLAIN)
                 .responseMessage().code(200).message("Command accepted").endResponseMessage()
@@ -832,7 +834,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
 
                 .post("/export/netex")
                 .description("Triggers the Netex export process in Chouette. Note that NO validation is performed before export, and that the data must be guaranteed to be error free")
-                .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the nabu service").dataType("integer").endParam()
+//                .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the nabu service").dataType("integer").endParam()
                 .consumes(PLAIN)
                 .produces(PLAIN)
                 .responseMessage().code(200).message("Command accepted").endResponseMessage()
@@ -849,9 +851,8 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .routeId("admin-chouette-export-netex")
                 .endRest()
 
-                .post("/export/simulation/netex")
-                .description("Triggers Netex Export for simulation space")
-                .param().name("providerId").type(RestParamType.path).description("Provider id from which we will export simulation").dataType("integer").endParam()
+                .post("/export/netex-simulation")
+//                .param().name("providerId").type(RestParamType.path).dataType("integer").endParam()
                 .consumes(PLAIN)
                 .produces(PLAIN)
                 .responseMessage().code(200).message("Command accepted").endResponseMessage()
@@ -862,16 +863,35 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .setHeader(IS_SIMULATION_EXPORT, constant(true))
                 .to("direct:authorizeRequest")
                 .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
-                .log(LoggingLevel.INFO, correlation() + "Chouette start simulation export Netex")
                 .removeHeaders("CamelHttp*")
                 .process(e -> e.getIn().setHeader(USER, getUserNameFromHeaders(e)))
                 .inOnly("activemq:queue:ChouetteExportNetexQueue")
-                .routeId("admin-chouette-export-netex-simulation")
+                .routeId("simulation-export-netex")
                 .endRest()
+
+//                .post("/export/simulation/netex")
+//                .description("Triggers Netex Export for simulation space")
+//                .param().name("providerId").type(RestParamType.path).description("Provider id from which we will export simulation").dataType("integer").endParam()
+//                .consumes(PLAIN)
+//                .produces(PLAIN)
+//                .responseMessage().code(200).message("Command accepted").endResponseMessage()
+//                .route()
+//                .setHeader(PROVIDER_ID, header("providerId"))
+//                .setHeader(NO_GTFS_EXPORT, constant(true))
+//                .setHeader(NETEX_EXPORT_GLOBAL, constant(false))
+//                .setHeader(IS_SIMULATION_EXPORT, constant(true))
+//                .to("direct:authorizeRequest")
+//                .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
+//                .log(LoggingLevel.INFO, correlation() + "Chouette start simulation export Netex")
+//                .removeHeaders("CamelHttp*")
+//                .process(e -> e.getIn().setHeader(USER, getUserNameFromHeaders(e)))
+//                .inOnly("activemq:queue:ChouetteExportNetexQueue")
+//                .routeId("simulation-export-netex")
+//                .endRest()
 
                 .post("/export/netex_global")
                 .description("Triggers the Netex export global process in Chouette. Note that NO validation is performed before export, and that the data must be guaranteed to be error free")
-                .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the nabu service").dataType("integer").endParam()
+//                .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the nabu service").dataType("integer").endParam()
                 .consumes(PLAIN)
                 .produces(PLAIN)
                 .responseMessage().code(200).message("Command accepted").endResponseMessage()
@@ -889,7 +909,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
 
                 .post("/export/gtfs")
                 .description("Triggers the Gtfs export process in Chouette. Note that NO validation is performed before export, and that the data must be guaranteed to be error free")
-                .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the nabu service").dataType("integer").endParam()
+//                .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the nabu service").dataType("integer").endParam()
                 .consumes(PLAIN)
                 .produces(PLAIN)
                 .responseMessage().code(200).message("Command accepted").endResponseMessage()
@@ -927,7 +947,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
 
                 .post("/export/all")
                 .description("Triggers all exports process in Chouette.")
-                .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the nabu service").dataType("integer").endParam()
+//                .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the nabu service").dataType("integer").endParam()
                 .consumes(PLAIN)
                 .produces(PLAIN)
                 .responseMessage().code(200).message("Command for all exports accepted").endResponseMessage()
@@ -945,7 +965,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
 
                 .post("/export/concerto")
                 .description("Triggers the Concerto export process in Chouette. Note that NO validation is performed before export, and that the data must be guaranteed to be error free")
-                .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the nabu service").dataType("integer").endParam()
+//                .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the nabu service").dataType("integer").endParam()
                 .consumes(PLAIN)
                 .produces(PLAIN)
                 .responseMessage().code(200).message("Command accepted").endResponseMessage()
@@ -962,7 +982,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
 
                 .post("/export/stops")
                 .description("Triggers the stops export process in Tiamat. Note that NO validation is performed before export, and that the data must be guaranteed to be error free")
-                .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the nabu service").dataType("integer").endParam()
+//                .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the nabu service").dataType("integer").endParam()
                 .consumes(PLAIN)
                 .produces(PLAIN)
                 .responseMessage().code(200).message("Command accepted").endResponseMessage()
@@ -979,7 +999,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
 
                 .post("/validate")
                 .description("Triggers the validate->export process in Chouette")
-                .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the nabu service").dataType("integer").endParam()
+//                .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the nabu service").dataType("integer").endParam()
                 .consumes(JSON)
                 .produces(PLAIN)
                 .responseMessage().code(200).message("Command accepted").endResponseMessage()
@@ -1045,7 +1065,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
 
                 .post("/clean")
                 .description("Triggers the clean dataspace process in Chouette. Only timetable data are deleted, not job data (imports, exports, validations)")
-                .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the nabu service").dataType("integer").endParam()
+//                .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the nabu service").dataType("integer").endParam()
                 .consumes(PLAIN)
                 .produces(PLAIN)
                 .responseMessage().code(200).message("Command accepted").endResponseMessage()
@@ -1060,7 +1080,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
 
                 .post("/transfer")
                 .description("Triggers transfer of data from one dataspace to the next")
-                .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the nabu service").dataType("integer").endParam()
+//                .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the nabu service").dataType("integer").endParam()
                 .consumes(PLAIN)
                 .produces(PLAIN)
                 .responseMessage().code(200).message("Command accepted").endResponseMessage()
