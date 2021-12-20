@@ -21,9 +21,11 @@ import no.rutebanken.marduk.domain.Provider;
 import no.rutebanken.marduk.routes.BaseRouteBuilder;
 import no.rutebanken.marduk.routes.file.GtfsFileUtils;
 import no.rutebanken.marduk.routes.status.JobEvent;
+import no.rutebanken.marduk.services.FileSystemService;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.codehaus.plexus.util.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.util.CollectionUtils;
@@ -40,6 +42,7 @@ import static no.rutebanken.marduk.Constants.EXPORT_REFERENTIALS_NAMES;
 import static no.rutebanken.marduk.Constants.FILE_HANDLE;
 import static no.rutebanken.marduk.Constants.FILE_NAME;
 import static no.rutebanken.marduk.Constants.FOLDER_NAME;
+import static no.rutebanken.marduk.Constants.GTFS_EXPORT_GLOBAL;
 import static no.rutebanken.marduk.Constants.PROVIDER_BLACK_LIST;
 import static no.rutebanken.marduk.Constants.PROVIDER_WHITE_LIST;
 import static org.apache.camel.Exchange.FILE_PARENT;
@@ -56,6 +59,9 @@ public class CommonGtfsExportMergedRouteBuilder extends BaseRouteBuilder {
 
     @Value("${google.publish.public:false}")
     private boolean publicPublication;
+
+    @Autowired
+    FileSystemService fileSystemService;
 
     @Override
     public void configure() throws Exception {
@@ -97,6 +103,8 @@ public class CommonGtfsExportMergedRouteBuilder extends BaseRouteBuilder {
                 .log(LoggingLevel.INFO, getClass().getName(), correlation() + "Fetching mobiiti_technique/gtfs/allFiles/${body}")
                 .setProperty("fileName", body())
                 .setHeader(FILE_HANDLE, simple("mobiiti_technique/gtfs/allFiles/${property.fileName}"))
+                .choice()
+                .when(e -> fileSystemService.isExists(e.getIn().getHeader(FILE_HANDLE, String.class)))
                 .to("direct:getBlob")
                 .choice()
                 .when(body().isNotEqualTo(null))
@@ -107,6 +115,7 @@ public class CommonGtfsExportMergedRouteBuilder extends BaseRouteBuilder {
 
         from("direct:mergeGtfs")
                 .log(LoggingLevel.DEBUG, getClass().getName(), "Merging gtfs files for all providers.")
+                .delay(5000)
                 .setBody(simple("${header." + FILE_PARENT + "}"))
                 .bean(method(GtfsFileUtils.class, "mergeGtfsFilesInDirectory"))
                 .toD("file:${exchangeProperty." + FOLDER_NAME + "}/gtfs?fileName=export_global_gtfs.zip")
