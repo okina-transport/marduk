@@ -859,9 +859,9 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .setHeader(PROVIDER_ID, header("providerId"))
                 .setHeader(NO_GTFS_EXPORT, constant(true))
                 .setHeader(NETEX_EXPORT_GLOBAL, constant(false))
-                .setHeader(IS_SIMULATION_EXPORT, constant(true))
                 .to("direct:authorizeRequest")
                 .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
+                .process(e -> authorizationService.verifyAtLeastOne(new AuthorizationClaim(ROLE_EXPORT_SIMULATION)))
                 .removeHeaders("CamelHttp*")
                 .process(e -> e.getIn().setHeader(USER, getUserNameFromHeaders(e)))
                 .inOnly("activemq:queue:ChouetteExportNetexQueue")
@@ -1112,11 +1112,6 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .doTry()
                 .process(e -> authorizationService.verifyAtLeastOne(new AuthorizationClaim(AuthorizationConstants.ROLE_ROUTE_DATA_ADMIN),
                         new AuthorizationClaim(AuthorizationConstants.ROLE_ROUTE_DATA_EDIT, e.getIn().getHeader(PROVIDER_ID, Long.class))))
-                .process(e -> {
-                    if (e.getIn().getHeader(IS_SIMULATION_EXPORT, Boolean.class)) {
-                        authorizationService.verifyAtLeastOne(new AuthorizationClaim(ROLE_EXPORT_SIMULATION));
-                    }
-                })
                 .routeId("admin-authorize-request");
 
 
