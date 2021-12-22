@@ -546,7 +546,6 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
 
 
         rest("/timetable_admin/{providerId}")
-
                 .post("/import")
                 .description("Triggers the import->validate->export process in Chouette for each blob store file handle. Use /files call to obtain available files. Files are imported in the same order as they are provided")
                 .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the nabu service").dataType("integer").endParam()
