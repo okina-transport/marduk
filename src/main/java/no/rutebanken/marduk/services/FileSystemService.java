@@ -147,14 +147,12 @@ public class FileSystemService {
     }
 
     public InputStream getFile(String fileName) {
-
         try {
             return new FileInputStream(getOrCreateFilePath(fileName).toFile());
         } catch (FileNotFoundException e) {
             logger.error("Récupération fichiers localStorage impossible: " + e);
             throw new IllegalArgumentException("Fichier :" + fileName);
         }
-
     }
 
     /**

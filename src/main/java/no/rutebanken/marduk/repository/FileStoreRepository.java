@@ -96,8 +96,7 @@ public class FileStoreRepository implements BlobStoreRepository{
     public BlobStoreFiles listBlobsForProvider(Collection<String> prefixes, Long providerId) {
 
         List<Path> pathList = new ArrayList();
-        prefixes.stream()
-                .forEach(prefix -> pathList.addAll(fileSystemService.getAllFilesFromLocalStorage(prefix, ".zip")));
+        prefixes.forEach(prefix -> pathList.addAll(fileSystemService.getAllFilesFromLocalStorage(prefix, ".zip")));
 
         BlobStoreFiles blobStoreFiles = new BlobStoreFiles();
         pathList.stream()
@@ -120,7 +119,7 @@ public class FileStoreRepository implements BlobStoreRepository{
 
     @Override
     public InputStream getBlob(String objectName) {
-        logger.debug("get blob from file store:"+objectName);
+        logger.debug("get blob from file store: " + objectName);
         return fileSystemService.getFile(objectName);
     }
 

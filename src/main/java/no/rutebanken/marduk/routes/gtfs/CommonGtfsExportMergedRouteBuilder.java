@@ -42,7 +42,6 @@ import static no.rutebanken.marduk.Constants.EXPORT_REFERENTIALS_NAMES;
 import static no.rutebanken.marduk.Constants.FILE_HANDLE;
 import static no.rutebanken.marduk.Constants.FILE_NAME;
 import static no.rutebanken.marduk.Constants.FOLDER_NAME;
-import static no.rutebanken.marduk.Constants.GTFS_EXPORT_GLOBAL;
 import static no.rutebanken.marduk.Constants.PROVIDER_BLACK_LIST;
 import static no.rutebanken.marduk.Constants.PROVIDER_WHITE_LIST;
 import static org.apache.camel.Exchange.FILE_PARENT;
@@ -63,6 +62,9 @@ public class CommonGtfsExportMergedRouteBuilder extends BaseRouteBuilder {
     @Autowired
     FileSystemService fileSystemService;
 
+    @Value("${gtfs.merged.tmp.working.directory:/tmp/mergedGtfs/allFiles}")
+    private String mergedGtfsTmpDirectory;
+
     @Override
     public void configure() throws Exception {
         super.configure();
@@ -72,7 +74,7 @@ public class CommonGtfsExportMergedRouteBuilder extends BaseRouteBuilder {
                 .setProperty(FOLDER_NAME, simple(localWorkingDirectory))
                 .process(e -> JobEvent.systemJobBuilder(e).jobDomain(JobEvent.JobDomain.TIMETABLE_PUBLISH).action("EXPORT_GTFS_MERGED").state(JobEvent.State.STARTED).newCorrelationId().build())
                 .inOnly("direct:updateStatus")
-                .setHeader(Exchange.FILE_PARENT, simple("${exchangeProperty."+FOLDER_NAME+"}" + "/gtfs/merged"))
+                .setHeader(Exchange.FILE_PARENT, simple(mergedGtfsTmpDirectory))
                 .doTry()
                 .to("direct:fetchLatestGtfs")
                 .to("direct:mergeGtfs")
