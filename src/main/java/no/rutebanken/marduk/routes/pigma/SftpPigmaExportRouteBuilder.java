@@ -147,9 +147,7 @@ public class SftpPigmaExportRouteBuilder extends BaseRouteBuilder {
             }
         }
 
-        sendMail.sendEmail("Test", "gfora@okina.fr", "Envoi de fichiers test", files);
-
-//        uploadFiles(files);
+        uploadFiles(files);
     }
 
 
