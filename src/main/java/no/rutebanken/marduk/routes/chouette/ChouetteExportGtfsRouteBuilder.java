@@ -276,7 +276,7 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
                 .process(e -> {
                     if (e.getIn().getHeader(EXPORT_REFERENTIALS_NAMES) != null) {
                         String allReferentialsNames = e.getIn().getHeader(EXPORT_REFERENTIALS_NAMES, String.class);
-                        List<String> referentialsNames = Arrays.stream(StringUtils.split(allReferentialsNames, ",")).map(s -> "mobiiti_" + s).collect(toList());
+                        List<String> referentialsNames = Arrays.stream(StringUtils.split(allReferentialsNames, ",")).map(s -> "mobiiti_" + StringUtils.lowerCase(s)).collect(toList());
                         log.info("GTFS export global with mobi_iti providers => " + referentialsNames);
                         Collection<Provider> mobiitiProviders =  getProviderRepository().getMobiitiProviders().stream().filter(provider -> referentialsNames.contains(provider.name)).collect(Collectors.toList());
                         e.getIn().setBody(mobiitiProviders);
