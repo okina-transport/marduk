@@ -153,7 +153,7 @@ public class MultipleExportProcessor implements Processor {
 
         if("mobiiti_technique".equals(exchange.getIn().getHeader(CHOUETTE_REFERENTIAL, String.class))){
             String referentialsNames = export.getReferentials() != null ? StringUtils.join(export.getReferentials().toArray(), ",") : "";
-            exchange.getIn().getHeaders().put(EXPORT_REFERENTIALS_NAMES, referentialsNames);
+            exchange.getIn().getHeaders().put(EXPORT_REFERENTIALS_NAMES, StringUtils.lowerCase(referentialsNames));
             log.info("Routing to GTFS export global with referentials => " + referentialsNames);
             producer.sendBodyAndHeaders("direct:chouetteGtfsExportForAllProviders", exchange, exchange.getOut().getHeaders());
         }
