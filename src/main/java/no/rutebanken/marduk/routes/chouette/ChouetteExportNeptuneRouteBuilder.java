@@ -145,10 +145,7 @@ public class ChouetteExportNeptuneRouteBuilder extends AbstractChouetteRouteBuil
 
 
         from("direct:processNeptuneExportResult")
-                .to("log:" + getClass().getName() + "?level=DEBUG&showAll=true&multiline=true")
-                .process(e -> {
-                    log.info(getClass().getName() + "?level=DEBUG&showAll=true&multiline=true");
-                })
+                .log(LoggingLevel.INFO, getClass().getName())
                 .choice()
                 .when(simple("${header.action_report_result} == 'OK'"))
                 .log(LoggingLevel.INFO, correlation() + "Export ended with status '${header.action_report_result}'")
@@ -156,9 +153,7 @@ public class ChouetteExportNeptuneRouteBuilder extends AbstractChouetteRouteBuil
                 .removeHeaders("Camel*")
                 .setBody(simple(""))
                 .setHeader(Exchange.HTTP_METHOD, constant(org.apache.camel.component.http4.HttpMethods.GET))
-                .process(e -> {
-                    log.info("Starting export download");
-                })
+                .log(LoggingLevel.INFO, "Starting export download")
                 .toD("${header.data_url}")
                 .process(e -> {
                     File file = fileSystemService.getOfferFile(e);
@@ -167,17 +162,7 @@ public class ChouetteExportNeptuneRouteBuilder extends AbstractChouetteRouteBuil
                 })
                 .setHeader("fileName", simple("NEPTUNE.zip"))
                 .process(exportToConsumersProcessor)
-                .setHeader(BLOBSTORE_MAKE_BLOB_PUBLIC, constant(publicPublication))
-                .setHeader(FILE_HANDLE, simple(BLOBSTORE_PATH_OUTBOUND + "neptune/${header." + CHOUETTE_REFERENTIAL + "}-" + Constants.CURRENT_AGGREGATED_NEPTUNE_FILENAME))
-
-                .process(e -> {
-                    log.info("Starting neptune export upload");
-                    e.getIn().setBody(fileSystemService.getOfferFile(e));
-                })
-                .to("direct:uploadBlobExport")
-                .process(e -> {
-                    log.info("Upload to consumers and blob store completed");
-                })
+                .log(LoggingLevel.INFO, "Upload to consumers and blob store completed")
                 .process(e -> JobEvent.providerJobBuilder(e).timetableAction(TimetableAction.EXPORT).state(State.OK).build())
                 .when(simple("${header.action_report_result} == 'NOK'"))
                 .log(LoggingLevel.WARN, correlation() + "Export failed")

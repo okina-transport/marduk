@@ -277,10 +277,12 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
                     if (e.getIn().getHeader(EXPORT_REFERENTIALS_NAMES) != null) {
                         String allReferentialsNames = e.getIn().getHeader(EXPORT_REFERENTIALS_NAMES, String.class);
                         List<String> referentialsNames = Arrays.stream(StringUtils.split(allReferentialsNames, ",")).map(s -> "mobiiti_" + s).collect(toList());
+                        log.info("GTFS export global with mobi_iti providers => " + referentialsNames);
                         Collection<Provider> mobiitiProviders =  getProviderRepository().getMobiitiProviders().stream().filter(provider -> referentialsNames.contains(provider.name)).collect(Collectors.toList());
                         e.getIn().setBody(mobiitiProviders);
                     }
                     else {
+                        log.info("GTFS export global with all mobi_iti providers");
                         e.getIn().setBody(getProviderRepository().getMobiitiProviders());
                     }
                 })

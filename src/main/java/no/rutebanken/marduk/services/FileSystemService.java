@@ -25,7 +25,10 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import static no.rutebanken.marduk.Constants.*;
+import static no.rutebanken.marduk.Constants.ANALYSIS_JOB_ID;
+import static no.rutebanken.marduk.Constants.CHOUETTE_JOB_ID;
+import static no.rutebanken.marduk.Constants.FILE_NAME;
+import static no.rutebanken.marduk.Constants.OKINA_REFERENTIAL;
 
 @Service
 public class FileSystemService {
@@ -144,14 +147,12 @@ public class FileSystemService {
     }
 
     public InputStream getFile(String fileName) {
-
         try {
             return new FileInputStream(getOrCreateFilePath(fileName).toFile());
         } catch (FileNotFoundException e) {
             logger.error("Récupération fichiers localStorage impossible: " + e);
             throw new IllegalArgumentException("Fichier :" + fileName);
         }
-
     }
 
     /**
@@ -228,6 +229,10 @@ public class FileSystemService {
         return true;
     }
 
+    public boolean isExists(String fileName) {
+        File f = new File(chouetteStoragePath + "/" + fileName);
+        return f.exists() && !f.isDirectory();
+    }
 }
 
 

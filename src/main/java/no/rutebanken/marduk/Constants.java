@@ -137,6 +137,7 @@ public class Constants {
     public static final String IMPORT_MODE = "ImportMode";
 
     public static final String MERGED_NETEX_ROOT_DIR = "mobiiti_technique/netex/merged";
+    public static final String MERGED_NETEX_STOPS_ROOT_DIR = "mobiiti_technique/netex_stops";
     public static final String MISSING_EXPORTS = "missingExports";
     public static final String IS_MERGED_NETEX_FAILED = "isMergedNetexFailed";
 

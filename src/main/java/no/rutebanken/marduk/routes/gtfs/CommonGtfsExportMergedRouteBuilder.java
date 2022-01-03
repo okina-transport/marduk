@@ -21,9 +21,11 @@ import no.rutebanken.marduk.domain.Provider;
 import no.rutebanken.marduk.routes.BaseRouteBuilder;
 import no.rutebanken.marduk.routes.file.GtfsFileUtils;
 import no.rutebanken.marduk.routes.status.JobEvent;
+import no.rutebanken.marduk.services.FileSystemService;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.codehaus.plexus.util.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.util.CollectionUtils;
@@ -57,6 +59,12 @@ public class CommonGtfsExportMergedRouteBuilder extends BaseRouteBuilder {
     @Value("${google.publish.public:false}")
     private boolean publicPublication;
 
+    @Autowired
+    FileSystemService fileSystemService;
+
+    @Value("${gtfs.merged.tmp.working.directory:/tmp/mergedGtfs/allFiles}")
+    private String mergedGtfsTmpDirectory;
+
     @Override
     public void configure() throws Exception {
         super.configure();
@@ -66,7 +74,7 @@ public class CommonGtfsExportMergedRouteBuilder extends BaseRouteBuilder {
                 .setProperty(FOLDER_NAME, simple(localWorkingDirectory))
                 .process(e -> JobEvent.systemJobBuilder(e).jobDomain(JobEvent.JobDomain.TIMETABLE_PUBLISH).action("EXPORT_GTFS_MERGED").state(JobEvent.State.STARTED).newCorrelationId().build())
                 .inOnly("direct:updateStatus")
-                .setHeader(Exchange.FILE_PARENT, simple("${exchangeProperty."+FOLDER_NAME+"}" + "/gtfs/merged"))
+                .setHeader(Exchange.FILE_PARENT, simple(mergedGtfsTmpDirectory))
                 .doTry()
                 .to("direct:fetchLatestGtfs")
                 .to("direct:mergeGtfs")
@@ -97,6 +105,8 @@ public class CommonGtfsExportMergedRouteBuilder extends BaseRouteBuilder {
                 .log(LoggingLevel.INFO, getClass().getName(), correlation() + "Fetching mobiiti_technique/gtfs/allFiles/${body}")
                 .setProperty("fileName", body())
                 .setHeader(FILE_HANDLE, simple("mobiiti_technique/gtfs/allFiles/${property.fileName}"))
+                .choice()
+                .when(e -> fileSystemService.isExists(e.getIn().getHeader(FILE_HANDLE, String.class)))
                 .to("direct:getBlob")
                 .choice()
                 .when(body().isNotEqualTo(null))
@@ -107,6 +117,7 @@ public class CommonGtfsExportMergedRouteBuilder extends BaseRouteBuilder {
 
         from("direct:mergeGtfs")
                 .log(LoggingLevel.DEBUG, getClass().getName(), "Merging gtfs files for all providers.")
+                .delay(5000)
                 .setBody(simple("${header." + FILE_PARENT + "}"))
                 .bean(method(GtfsFileUtils.class, "mergeGtfsFilesInDirectory"))
                 .toD("file:${exchangeProperty." + FOLDER_NAME + "}/gtfs?fileName=export_global_gtfs.zip")
