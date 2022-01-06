@@ -47,6 +47,9 @@ public class FileSystemService {
     @Value("${superspace.name}")
     private String superspaceName;
 
+    @Value("${simulation.name}")
+    private String simulationName;
+
 
     public File getTiamatFile(String filename) {
         return new File(tiamatStoragePath + "/" + filename);
@@ -88,10 +91,12 @@ public class FileSystemService {
     public File getOfferFile(Exchange exchange) {
         ExchangeUtils.addHeadersAndAttachments(exchange);
         String referential = exchange.getIn().getHeader(OKINA_REFERENTIAL, String.class);
-        if (StringUtils.isNotBlank(referential) && !referential.startsWith(superspaceName + "_")) {
+        if (StringUtils.isNotBlank(referential) && !referential.startsWith(superspaceName + "_") && !referential.startsWith(simulationName + "_")) {
             referential = superspaceName + "_" + referential;
         }
+
         String jobId = exchange.getIn().getHeader(CHOUETTE_JOB_ID, String.class);
+
         FileSystemResource fileSystemResource = new FileSystemResource(chouetteStoragePath + "/" + referential + "/data/" + jobId);
 
         File offerFile = null;

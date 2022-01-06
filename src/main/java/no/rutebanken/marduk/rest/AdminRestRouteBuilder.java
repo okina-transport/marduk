@@ -24,6 +24,7 @@ import no.rutebanken.marduk.domain.Provider;
 import no.rutebanken.marduk.routes.BaseRouteBuilder;
 import no.rutebanken.marduk.routes.blobstore.BlobStoreRoute;
 import no.rutebanken.marduk.routes.chouette.ExportJsonMapper;
+import no.rutebanken.marduk.routes.chouette.MultipleExportProcessor;
 import no.rutebanken.marduk.routes.chouette.json.JobResponse;
 import no.rutebanken.marduk.routes.chouette.json.Status;
 import no.rutebanken.marduk.routes.status.JobEvent;
@@ -97,6 +98,9 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
 
     @Value("${superspace.name}")
     private String superspaceName;
+
+    @Value("${simulation.name}")
+    private String simulationName;
 
     @Value("${netex.export.download.directory:files/netex/merged}")
     private String netexWorkingDirectory;
@@ -714,9 +718,9 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
                 .process(e -> {
                     String ref = e.getIn().getHeader(OKINA_REFERENTIAL, String.class);
-                    if (!ref.contains(superspaceName + "_")) {
+                    if (!ref.contains(superspaceName + "_") && !ref.startsWith(simulationName + "_")) {
                         e.getIn().setHeader(OKINA_REFERENTIAL, superspaceName + "_" + ref);
-                    } else {
+                    } else  {
                         e.getIn().setHeader(OKINA_REFERENTIAL, ref);
                     }
                 })
@@ -852,7 +856,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .endRest()
 
                 .post("/export/netex_simulation")
-                .param().name("providerId").type(RestParamType.path).dataType("integer").endParam()
+                .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the nabu service").dataType("integer").endParam()
                 .consumes(PLAIN)
                 .produces(PLAIN)
                 .responseMessage().code(200).message("Command accepted").endResponseMessage()

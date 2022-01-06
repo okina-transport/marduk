@@ -18,9 +18,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Optional;
 
-import static no.rutebanken.marduk.Constants.CHOUETTE_REFERENTIAL;
-import static no.rutebanken.marduk.Constants.CURRENT_EXPORT;
-import static no.rutebanken.marduk.Constants.NETEX_EXPORT_GLOBAL;
+import static no.rutebanken.marduk.Constants.*;
 
 @Component
 public class ExportToConsumersProcessor implements Processor {
@@ -29,6 +27,21 @@ public class ExportToConsumersProcessor implements Processor {
 
     @Value("${marduk.upload.public.path:/tmp}")
     private String publicUploadPath;
+
+    @Value("${simulation.ftp.url}")
+    private String ftpSimulationUrl;
+
+    @Value("${simulation.ftp.user}")
+    private String ftpSimulationUser;
+
+    @Value("${simulation.ftp.password}")
+    private String ftpSimulationPassword;
+
+    @Value("${simulation.ftp.targetDirectory}")
+    private String ftpSimulationTargetDir;
+
+    @Value("${simulation.ftp.port}")
+    private Integer ftpSimulationPort;
 
 //    @Autowired
     private static ExportJsonMapper exportJsonMapper = new ExportJsonMapper();
@@ -55,6 +68,7 @@ public class ExportToConsumersProcessor implements Processor {
         // get the json export string:
         String jsonExport = (String) exchange.getIn().getHeaders().get(CURRENT_EXPORT);
         String referential = exchange.getIn().getHeaders().get(NETEX_EXPORT_GLOBAL) != null && (Boolean) exchange.getIn().getHeaders().get(NETEX_EXPORT_GLOBAL) ? "mobiiti_technique" : (String) exchange.getIn().getHeaders().get(CHOUETTE_REFERENTIAL);
+        Boolean exportSimulation = exchange.getIn().getHeaders().get(IS_SIMULATION_EXPORT) != null && (Boolean) exchange.getIn().getHeaders().get(IS_SIMULATION_EXPORT);
         if (StringUtils.isNotBlank(jsonExport)) {
             ExportTemplate export = exportJsonMapper.fromJson(jsonExport);
             log.info("Found " + export.getConsumers().size() + " for export " + export.getId() + "/" + export.getName());
@@ -92,6 +106,12 @@ public class ExportToConsumersProcessor implements Processor {
                     log.error("Error while uploading to consumer " + consumer.toString(), e);
                 }
             });
+
+        } else if (exportSimulation) {
+            log.info(" Exporting simulation...");
+            InputStream streamToUpload = (InputStream) exchange.getIn().getBody();
+            String filePath = (String) exchange.getIn().getHeaders().get("fileName");
+            ftpService.uploadStream(streamToUpload, ftpSimulationUrl, ftpSimulationUser, ftpSimulationPassword, ftpSimulationPort, ftpSimulationTargetDir, filePath);
         }
 
     }
