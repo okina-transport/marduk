@@ -136,7 +136,7 @@ public class SftpPigmaExportRouteBuilder extends BaseRouteBuilder {
                         zipFile = new File("naq-aggregated-gtfs.zip");
                         break;
                     default :
-                        zipFile = new File(file.getFileNameOnly());
+                        zipFile = new File(file.getFileNameOnly().replace("mobiiti_", ""));
                         break;
                 }
 
