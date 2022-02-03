@@ -1,6 +1,7 @@
 package no.rutebanken.marduk.routes.chouette;
 
 import no.rutebanken.marduk.Utils.CipherEncryption;
+import no.rutebanken.marduk.domain.ConsumerType;
 import no.rutebanken.marduk.domain.ExportTemplate;
 import no.rutebanken.marduk.services.BlobStoreService;
 import no.rutebanken.marduk.services.FtpService;
@@ -42,6 +43,9 @@ public class ExportToConsumersProcessor implements Processor {
 
     @Value("${simulation.ftp.port}")
     private Integer ftpSimulationPort;
+
+    @Value("${simulation.export.type}")
+    private String simulationExportType;
 
 //    @Autowired
     private static ExportJsonMapper exportJsonMapper = new ExportJsonMapper();
@@ -111,9 +115,27 @@ public class ExportToConsumersProcessor implements Processor {
             log.info(" Exporting simulation...");
             InputStream streamToUpload = (InputStream) exchange.getIn().getBody();
             String filePath = (String) exchange.getIn().getHeaders().get("fileName");
-            ftpService.uploadStream(streamToUpload, ftpSimulationUrl, ftpSimulationUser, ftpSimulationPassword, ftpSimulationPort, ftpSimulationTargetDir, filePath);
-        }
 
+            try {
+                switch (ConsumerType.valueOf(simulationExportType)) {
+                    case FTP:
+                        ftpService.uploadStream(streamToUpload, ftpSimulationUrl, ftpSimulationUser, ftpSimulationPassword, ftpSimulationPort, ftpSimulationTargetDir, filePath);
+                        break;
+                    case SFTP:
+                        ftpService.uploadStreamSFTP(streamToUpload, ftpSimulationUrl, ftpSimulationUser, ftpSimulationPassword, ftpSimulationPort, ftpSimulationTargetDir, filePath);
+                        break;
+                    case REST:
+                        restUploadService.uploadStream(streamToUpload, ftpSimulationUrl, filePath, ftpSimulationUser, ftpSimulationPassword);
+                        break;
+                    case URL:
+                        blobStoreService.uploadBlob("/" + publicUploadPath + "/" + referential + "/" + filePath, true, streamToUpload);
+                        break;
+                }
+            } catch (IllegalArgumentException iae) {
+                    log.error("Simulation export type unknown : " + simulationExportType + ".");
+                    log.error("Please use one of this values : FTP, SFTP, REST or URL");
+            }
+        }
     }
 
     public static Optional<ExportTemplate> currentExport(Exchange exchange) throws IOException {
