@@ -18,6 +18,7 @@ package no.rutebanken.marduk.security;
 
 import no.rutebanken.marduk.domain.Provider;
 import no.rutebanken.marduk.repository.ProviderRepository;
+import org.keycloak.adapters.springsecurity.account.SimpleKeycloakAccount;
 import org.rutebanken.helper.organisation.RoleAssignment;
 import org.rutebanken.helper.organisation.RoleAssignmentExtractor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -49,11 +50,13 @@ public class AuthorizationService {
 
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         List<RoleAssignment> roleAssignments = roleAssignmentExtractor.getRoleAssignmentsForUser(authentication);
+        SimpleKeycloakAccount userAccount = (SimpleKeycloakAccount) authentication.getDetails();
 
         boolean authorized = false;
         for (AuthorizationClaim claim : claims) {
             if (claim.getProviderId() == null) {
                 authorized |= roleAssignments.stream().anyMatch(ra -> claim.getRequiredRole().equals(ra.getRole()));
+                authorized |= userAccount.getRoles().contains(claim.getRequiredRole());
             } else {
                 authorized |= hasRoleForProvider(roleAssignments, claim);
             }

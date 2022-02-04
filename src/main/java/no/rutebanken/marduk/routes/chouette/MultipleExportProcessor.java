@@ -21,26 +21,7 @@ import org.springframework.stereotype.Component;
 import java.util.List;
 import java.util.Map;
 
-import static no.rutebanken.marduk.Constants.CHOUETTE_REFERENTIAL;
-import static no.rutebanken.marduk.Constants.COMMERCIAL_POINT_ID_PREFIX;
-import static no.rutebanken.marduk.Constants.EXPORTED_FILENAME;
-import static no.rutebanken.marduk.Constants.EXPORT_END_DATE;
-import static no.rutebanken.marduk.Constants.EXPORT_LINES_IDS;
-import static no.rutebanken.marduk.Constants.EXPORT_NAME;
-import static no.rutebanken.marduk.Constants.EXPORT_REFERENTIALS_NAMES;
-import static no.rutebanken.marduk.Constants.EXPORT_START_DATE;
-import static no.rutebanken.marduk.Constants.GTFS_EXPORT_GLOBAL;
-import static no.rutebanken.marduk.Constants.ID_FORMAT;
-import static no.rutebanken.marduk.Constants.ID_SUFFIX;
-import static no.rutebanken.marduk.Constants.KEEP_ORIGINAL_ID;
-import static no.rutebanken.marduk.Constants.LINE_ID_PREFIX;
-import static no.rutebanken.marduk.Constants.MAPPING_LINES_IDS;
-import static no.rutebanken.marduk.Constants.NETEX_EXPORT_GLOBAL;
-import static no.rutebanken.marduk.Constants.NO_GTFS_EXPORT;
-import static no.rutebanken.marduk.Constants.OKINA_REFERENTIAL;
-import static no.rutebanken.marduk.Constants.ORIGINAL_PROVIDER_ID;
-import static no.rutebanken.marduk.Constants.PROVIDER_ID;
-import static no.rutebanken.marduk.Constants.STOP_ID_PREFIX;
+import static no.rutebanken.marduk.Constants.*;
 
 /**
  * Handles multiple exports
@@ -185,6 +166,7 @@ public class MultipleExportProcessor implements Processor {
         exchange.getIn().getHeaders().put(NO_GTFS_EXPORT, noGtfs);
         exchange.getIn().getHeaders().put(NETEX_EXPORT_GLOBAL, exportGlobal);
         exchange.getIn().getHeaders().put(GTFS_EXPORT_GLOBAL, exportGlobal);
+        exchange.getIn().getHeaders().put(IS_SIMULATION_EXPORT, false);
         boolean keepOriginalId = true;
         if (!exportGlobal){
             keepOriginalId = !IdFormat.SOURCE.equals(export.getIdFormat());
@@ -196,6 +178,7 @@ public class MultipleExportProcessor implements Processor {
         headers.put(NO_GTFS_EXPORT, noGtfs);
         headers.put(NETEX_EXPORT_GLOBAL, exportGlobal);
         headers.put(GTFS_EXPORT_GLOBAL, exportGlobal);
+        headers.put(IS_SIMULATION_EXPORT, false);
         headers.put(KEEP_ORIGINAL_ID, keepOriginalId);
         headers.put(Constants.FILE_NAME, "export-" + export.getId() + "-" + export.getName());
         headers.put(Constants.CURRENT_EXPORT, exportJsonMapper.toJson(export));

@@ -24,6 +24,7 @@ import no.rutebanken.marduk.domain.Provider;
 import no.rutebanken.marduk.routes.BaseRouteBuilder;
 import no.rutebanken.marduk.routes.blobstore.BlobStoreRoute;
 import no.rutebanken.marduk.routes.chouette.ExportJsonMapper;
+import no.rutebanken.marduk.routes.chouette.MultipleExportProcessor;
 import no.rutebanken.marduk.routes.chouette.json.JobResponse;
 import no.rutebanken.marduk.routes.chouette.json.Status;
 import no.rutebanken.marduk.routes.status.JobEvent;
@@ -97,6 +98,9 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
 
     @Value("${superspace.name}")
     private String superspaceName;
+
+    @Value("${simulation.name}")
+    private String simulationName;
 
     @Value("${netex.export.download.directory:files/netex/merged}")
     private String netexWorkingDirectory;
@@ -714,9 +718,9 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
                 .process(e -> {
                     String ref = e.getIn().getHeader(OKINA_REFERENTIAL, String.class);
-                    if (!ref.contains(superspaceName + "_")) {
+                    if (!ref.contains(superspaceName + "_") && !ref.startsWith(simulationName + "_")) {
                         e.getIn().setHeader(OKINA_REFERENTIAL, superspaceName + "_" + ref);
-                    } else {
+                    } else  {
                         e.getIn().setHeader(OKINA_REFERENTIAL, ref);
                     }
                 })
@@ -822,6 +826,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .setHeader(PROVIDER_ID, header("providerId"))
                 .setHeader(NO_GTFS_EXPORT, constant(false))
                 .setHeader(NETEX_EXPORT_GLOBAL, constant(false))
+                .setHeader(IS_SIMULATION_EXPORT, constant(false))
                 .to("direct:authorizeRequest")
                 .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
                 .log(LoggingLevel.INFO, correlation() + "Chouette start export")
@@ -840,6 +845,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .setHeader(PROVIDER_ID, header("providerId"))
                 .setHeader(NO_GTFS_EXPORT, constant(true))
                 .setHeader(NETEX_EXPORT_GLOBAL, constant(false))
+                .setHeader(IS_SIMULATION_EXPORT, constant(false))
                 .to("direct:authorizeRequest")
                 .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
                 .log(LoggingLevel.INFO, correlation() + "Chouette start export Netex")
@@ -847,6 +853,25 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .process(e -> e.getIn().setHeader(USER, getUserNameFromHeaders(e)))
                 .inOnly("activemq:queue:ChouetteExportNetexQueue")
                 .routeId("admin-chouette-export-netex")
+                .endRest()
+
+                .post("/export/netex_simulation")
+                .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the nabu service").dataType("integer").endParam()
+                .consumes(PLAIN)
+                .produces(PLAIN)
+                .responseMessage().code(200).message("Command accepted").endResponseMessage()
+                .route()
+                .setHeader(PROVIDER_ID, header("providerId"))
+                .setHeader(NO_GTFS_EXPORT, constant(true))
+                .setHeader(NETEX_EXPORT_GLOBAL, constant(false))
+                .setHeader(IS_SIMULATION_EXPORT, constant(true))
+                .to("direct:authorizeRequest")
+                .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
+                .process(e -> authorizationService.verifyAtLeastOne(new AuthorizationClaim(ROLE_EXPORT_SIMULATION)))
+                .removeHeaders("CamelHttp*")
+                .process(e -> e.getIn().setHeader(USER, getUserNameFromHeaders(e)))
+                .inOnly("activemq:queue:ChouetteExportNetexQueue")
+                .routeId("simulation-export-netex")
                 .endRest()
 
                 .post("/export/netex_global")
@@ -859,6 +884,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .setHeader(PROVIDER_ID, header("providerId"))
                 .setHeader(NO_GTFS_EXPORT, constant(true))
                 .setHeader(NETEX_EXPORT_GLOBAL, constant(true))
+                .setHeader(IS_SIMULATION_EXPORT, constant(false))
                 .to("direct:authorizeRequest")
                 .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
                 .log(LoggingLevel.INFO, correlation() + "Chouette start export Netex global")
