@@ -97,6 +97,7 @@ public class FileSystemService {
 
         String jobId = exchange.getIn().getHeader(CHOUETTE_JOB_ID, String.class);
 
+        logger.info("Get zip and csv files from path : " + chouetteStoragePath + "/" + referential + "/data/" + jobId);
         FileSystemResource fileSystemResource = new FileSystemResource(chouetteStoragePath + "/" + referential + "/data/" + jobId);
 
         File offerFile = null;
