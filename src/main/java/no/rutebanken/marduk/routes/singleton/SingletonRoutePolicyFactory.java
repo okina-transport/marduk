@@ -41,14 +41,15 @@ public class SingletonRoutePolicyFactory extends HazelCastService implements Rou
     @Value("${rutebanken.route.singleton.policy.ignore:false}")
     private boolean ignorePolicy;
 
-    public SingletonRoutePolicyFactory(@Value("${rutebanken.hazelcast.management.url:}") String managementUrl) {
-        super(null, managementUrl);
+    public SingletonRoutePolicyFactory() {
+        super(null);
     }
 
     /**
      * Create policy ensuring only one route with 'key' is started in cluster.
      */
     private RoutePolicy build(String key) {
+        log.info("CREATING singleton route policy");
         HazelcastRoutePolicy hazelcastRoutePolicy = new HazelcastRoutePolicy(this.hazelcast);
         hazelcastRoutePolicy.setLockMapName("lockMap");
         hazelcastRoutePolicy.setLockKey(key);
@@ -61,6 +62,7 @@ public class SingletonRoutePolicyFactory extends HazelCastService implements Rou
     @Override
     public RoutePolicy createRoutePolicy(CamelContext camelContext, String routeId, RouteDefinition routeDefinition) {
         try {
+
             if (!ignorePolicy && SINGLETON_ROUTE_DEFINITION_GROUP_NAME.equals(routeDefinition.getGroup())) {
                 return build(routeId);
             }
