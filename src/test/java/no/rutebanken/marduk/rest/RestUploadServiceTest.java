@@ -15,6 +15,7 @@ import org.springframework.web.client.RestTemplate;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.InputStream;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Base64;
@@ -58,7 +59,7 @@ public class RestUploadServiceTest {
         assertNotNull(uploadResp);
     }
 
-    @Test
+
     public void restStreamUpload() throws Exception {
         HttpStatus httpStatus = restUploadService.uploadStream(new FileInputStream(this.workingDir.resolve("NRI 20160219.rar").toFile()), REST_IMPORT_URL, "Testupload-export-file.zip", null, null);
         Assertions.assertThat(httpStatus.is2xxSuccessful()).isTrue();

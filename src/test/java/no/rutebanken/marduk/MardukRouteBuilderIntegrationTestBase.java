@@ -56,6 +56,7 @@ public class MardukRouteBuilderIntegrationTestBase {
         List<Provider> providers = new ArrayList<>();
         providers.add(Provider.create(IOUtils.toString(new FileReader("src/test/resources/no/rutebanken/marduk/providerRepository/provider2.json"))));
         providers.add(Provider.create(IOUtils.toString(new FileReader("src/test/resources/no/rutebanken/marduk/providerRepository/provider3.json"))));
+        providers.add(Provider.create(IOUtils.toString(new FileReader("src/test/resources/no/rutebanken/marduk/providerRepository/provider4.json"))));
 
         when(providerRepository.getProviders()).thenReturn(providers);
         when(providerRepository.getProvider(2L)).thenReturn(providers.get(0));

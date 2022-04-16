@@ -114,8 +114,9 @@ public class ChouetteExportNetexRouteBuilder extends AbstractChouetteRouteBuilde
                 .toD("${header.data_url}")
                 .process(e -> {
                     File file = fileSystemService.getOfferFile(e);
-                    e.getIn().setHeader("fileName", file.getName());
-                    e.getIn().setHeader(EXPORT_FILE_NAME, file.getName());
+                    String fileName = file != null ? file.getName() : "defaultFileName";
+                    e.getIn().setHeader("fileName", fileName);
+                    e.getIn().setHeader(EXPORT_FILE_NAME,fileName);
                 })
                 .choice()
                     .when(e -> e.getIn().getHeader(NETEX_EXPORT_GLOBAL, Boolean.class))

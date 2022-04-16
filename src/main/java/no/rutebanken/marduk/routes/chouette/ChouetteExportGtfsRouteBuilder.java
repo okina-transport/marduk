@@ -213,7 +213,8 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
                     .toD("${header.data_url}")
                     .process(e -> {
                         File file = fileSystemService.getOfferFile(e);
-                        e.getIn().setHeader(EXPORT_FILE_NAME, file.getName());
+                        String fileName = file != null ?  file.getName() : "defaultName";
+                        e.getIn().setHeader(EXPORT_FILE_NAME, fileName);
                     })
                     .choice()
                         .when(e -> e.getIn().getHeader(GTFS_EXPORT_GLOBAL, Boolean.class))

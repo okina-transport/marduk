@@ -39,10 +39,10 @@ public class SendMail {
     @Value("${spring.mail.password:test}")
     private String emailPassword;
 
-    @Value("${spring.mail.auth:test}")
+    @Value("${spring.mail.auth:false}")
     private boolean emailAuth;
 
-    @Value("${spring.mail.starttls.enable:test}")
+    @Value("${spring.mail.starttls.enable:false}")
     private boolean emailStartTlsEnable;
 
 

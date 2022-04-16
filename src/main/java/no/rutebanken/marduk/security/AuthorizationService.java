@@ -50,13 +50,13 @@ public class AuthorizationService {
 
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         List<RoleAssignment> roleAssignments = roleAssignmentExtractor.getRoleAssignmentsForUser(authentication);
-        SimpleKeycloakAccount userAccount = (SimpleKeycloakAccount) authentication.getDetails();
+
 
         boolean authorized = false;
         for (AuthorizationClaim claim : claims) {
             if (claim.getProviderId() == null) {
                 authorized |= roleAssignments.stream().anyMatch(ra -> claim.getRequiredRole().equals(ra.getRole()));
-                authorized |= userAccount.getRoles().contains(claim.getRequiredRole());
+                authorized |= isRoleExistingInUserAcount(authentication,claim.getRequiredRole());
             } else {
                 authorized |= hasRoleForProvider(roleAssignments, claim);
             }
@@ -66,7 +66,19 @@ public class AuthorizationService {
             throw new AccessDeniedException("Insufficient privileges for operation");
         }
 
+
     }
+
+    private boolean isRoleExistingInUserAcount( Authentication authentication, String requiredRole){
+
+        if (authentication == null){
+            return false;
+        }
+
+        SimpleKeycloakAccount userAccount = (SimpleKeycloakAccount) authentication.getDetails();
+        return userAccount.getRoles().contains(requiredRole);
+    }
+
 
 
     private boolean hasRoleForProvider(List<RoleAssignment> roleAssignments, AuthorizationClaim claim) {

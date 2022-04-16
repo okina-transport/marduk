@@ -64,18 +64,19 @@ public class GoogleGtfsExportRouteIntegrationTest extends MardukRouteBuilderInte
 
     @Test
     public void testUploadGtfsToGoogle() throws Exception {
-        context.start();
-
-        //populate fake blob repo
-        blobStoreRepository.uploadBlob(BLOBSTORE_PATH_OUTBOUND + "gtfs/rb_rut-aggregated-gtfs.zip", new FileInputStream(new File(testFile)), false);
-
-        startRoute.requestBody(null);
-
-
-        Assert.assertNotNull("Expected transformed gtfs file to have been uploaded", blobStoreRepository.getBlob(BLOBSTORE_PATH_OUTBOUND + "gtfs/" + googleExportFileName));
+        //GOOGLE no longer used. Disabled test
+//        context.start();
+//
+//        //populate fake blob repo
+//        blobStoreRepository.uploadBlob(BLOBSTORE_PATH_OUTBOUND + "gtfs/rb_rut-aggregated-gtfs.zip", new FileInputStream(new File(testFile)), false);
+//
+//        startRoute.requestBody(null);
+//
+//
+//        Assert.assertNotNull("Expected transformed gtfs file to have been uploaded", blobStoreRepository.getBlob(BLOBSTORE_PATH_OUTBOUND + "gtfs/" + googleExportFileName));
     }
 
-    @Test
+   // @Test
     public void testUploadQaGtfsToGoogle() throws Exception {
         context.start();
 

@@ -37,6 +37,9 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
+import static no.rutebanken.marduk.Constants.EXPORT_NAME;
+import static no.rutebanken.marduk.Constants.GTFS_EXPORT_GLOBAL;
+
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,classes = ChouetteExportGtfsRouteBuilder.class, properties = "spring.main.sources=no.rutebanken.marduk.test")
 public class ChouetteExportGtfsFileMardukRouteIntegrationTest extends MardukRouteBuilderIntegrationTestBase {
 
@@ -143,6 +146,8 @@ public class ChouetteExportGtfsFileMardukRouteIntegrationTest extends MardukRout
 
 		Map<String, Object> headers = new HashMap<String, Object>();
 		headers.put(Constants.PROVIDER_ID, "2");
+		headers.put(GTFS_EXPORT_GLOBAL, false);
+		headers.put(EXPORT_NAME, "testExport");
 	
 		importTemplate.sendBodyAndHeaders(null, headers);
 

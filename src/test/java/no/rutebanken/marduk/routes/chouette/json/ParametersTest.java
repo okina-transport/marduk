@@ -18,6 +18,7 @@ package no.rutebanken.marduk.routes.chouette.json;
 
 import com.google.common.collect.Sets;
 import no.rutebanken.marduk.domain.ChouetteInfo;
+import no.rutebanken.marduk.domain.IdFormat;
 import no.rutebanken.marduk.domain.Provider;
 import no.rutebanken.marduk.routes.chouette.json.importer.GtfsImportParameters;
 import no.rutebanken.marduk.routes.chouette.json.importer.RawImportParameters;
@@ -34,11 +35,14 @@ public class ParametersTest {
             "\"testDS\", \"object_id_prefix\": \"tds\", \"max_distance_for_commercial\": \"10\", \"split_id_on_dot\": \"0\", " +
             "\"ignore_last_word\": \"0\", \"ignore_end_chars\": \"0\"," +
             "\"route_type_id_scheme\": \"any\"," +
-            "\"parse_connection_links\": false," +
+            "\"parse_connection_links\": true, \"commercial_point_prefix_to_remove\": null, \"keep_boarding_alighting\":false, " +
+            "\"keep_stop_geolocalisation\":false, \"line_prefix_to_remove\":null, \"quay_id_prefix_to_remove\":null, \"route_merge\":false, \"split_character\":null," +
+
             " \"max_distance_for_connection_link\": \"0\", \"test\": false, \"stop_area_remote_id_mapping\": true, \"stop_area_import_mode\": \"CREATE_NEW\", \"keep_obsolete_lines\": true, \"generate_missing_route_sections_for_modes\": [\"water\",\"bus\"] } } }";
 
     final String regtoppReferenceJson = "{\"parameters\":{\"regtopp-import\":{\"name\":\"test\",\"clean_repository\":\"0\",\"no_save\":\"0\"," +
             "\"user_name\":\"Chouette\",\"organisation_name\":\"Rutebanken\",\"referential_name\":\"testDS\",\"object_id_prefix\":\"tds\"," +
+            "\"description\":null, \"keep_boarding_alighting\":true, \"keep_stop_geolocalisation\":null, " +
 
             "\"references_type\":\"\",\"version\":\"R12\",\"coordinate_projection\":\"EPSG:32632\",\"calendar_strategy\":\"ADD\", \"test\": false, \"stop_area_remote_id_mapping\": false, \"stop_area_import_mode\": \"READ_ONLY\", \"keep_obsolete_lines\": false, \"batch_parse\": true, \"generate_missing_route_sections_for_modes\": [\"water\",\"bus\"] }}}";
 
@@ -66,6 +70,12 @@ public class ParametersTest {
         prov.chouetteInfo = chouetteInfo;
 
         rawInputParameters.setProvider(prov);
+
+        IdParameters idParams = new IdParameters();
+        idParams.setIdFormat(IdFormat.SOURCE);
+
+        rawInputParameters.setIdParameters(idParams);
+
 
         GtfsImportParameters importParameters = GtfsImportParameters.create(rawInputParameters);
         assertJsonEquals(gtfsReferenceJson, importParameters.toJsonString());
