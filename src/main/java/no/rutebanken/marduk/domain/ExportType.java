@@ -5,5 +5,6 @@ public enum ExportType {
     CONCERTO,
     NETEX,
     ARRET,
-    NEPTUNE;
+    NEPTUNE,
+    POI;
 }
