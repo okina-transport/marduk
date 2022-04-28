@@ -61,6 +61,8 @@ public class MultipleExportProcessor implements Processor {
                     toStopPlacesExport(export, exchange.copy(true));
                 } else if (ExportType.NEPTUNE == export.getType()) {
                     toNeptuneExport(export, exchange.copy(true));
+                }else if (ExportType.POI == export.getType()) {
+                    toPointsOfInterestExport(export, exchange.copy(true));
                 } else {
                     log.info("Routing not supported yet for => " + export.getId() + "/" + export.getName() + "/" + export.getType());
                 }
@@ -151,6 +153,15 @@ public class MultipleExportProcessor implements Processor {
         prepareHeadersForExport(exchange, export);
         producer.send("activemq:queue:TiamatStopPlacesExport", exchange);
 
+    }
+
+    private void toPointsOfInterestExport(ExportTemplate export, Exchange exchange) throws Exception {
+        log.info("Routing to Points of Interest export => " + export.getId() + "/" + export.getName());
+        // tiamat export is based on original referential (not the mobiiti one)
+        Long tiamatProviderId = Long.valueOf(exchange.getIn().getHeaders().get(ORIGINAL_PROVIDER_ID).toString());
+        exchange.getIn().getHeaders().put("tiamatProviderId", tiamatProviderId);
+        prepareHeadersForExport(exchange, export);
+        producer.send("activemq:queue:TiamatPointOfInterestExport", exchange);
     }
 
 

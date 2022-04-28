@@ -185,7 +185,7 @@ public class ChouettePollJobStatusRoute extends AbstractChouetteRouteBuilder {
         from("activemq:queue:ChouettePollStatusQueue?transacted=true&maxConcurrentConsumers=" + maxConsumers)
                 .transacted()
                 .validate(header(Constants.CORRELATION_ID).isNotNull())
-//                .validate(header(Constants.PROVIDER_ID).isNotNull())
+                //.validate(header(Constants.PROVIDER_ID).isNotNull())
                 .validate(header(Constants.CHOUETTE_JOB_STATUS_ROUTING_DESTINATION).isNotNull())
                 .validate(header(Constants.CHOUETTE_JOB_STATUS_URL).isNotNull())
                 .validate(header(Constants.CHOUETTE_JOB_STATUS_JOB_TYPE).isNotNull())
@@ -208,12 +208,19 @@ public class ChouettePollJobStatusRoute extends AbstractChouetteRouteBuilder {
                 })
 
                 .choice()
-                    .when(simple("${header.TIAMAT_STOP_PLACES_EXPORT} != null "))
+                    .when(simple("${header.TIAMAT_STOP_PLACES_EXPORT} != null || ${header.TIAMAT_POINTS_OF_INTEREST_EXPORT} != null"))
                         .process(e -> {
-                            String skipJobReportsJobId = e.getIn().getHeader(Constants.TIAMAT_STOP_PLACES_EXPORT).toString();
+
+                            final Boolean isPOI = e.getIn().getHeader(Constants.TIAMAT_POINTS_OF_INTEREST_EXPORT) != null;
+                            String skipJobReportsJobId = isPOI ? e.getIn().getHeader(Constants.TIAMAT_POINTS_OF_INTEREST_EXPORT).toString() : e.getIn().getHeader(Constants.TIAMAT_STOP_PLACES_EXPORT).toString();
+
                             String exportJobId = e.getIn().getHeader(Constants.CHOUETTE_JOB_ID) != null ? e.getIn().getHeader(Constants.CHOUETTE_JOB_ID).toString() : null;
                             if (skipJobReportsJobId.equals(exportJobId)) {
-                                log.info("TIAMAT_STOP_PLACES_EXPORT matching job ids : " + skipJobReportsJobId);
+                                if (isPOI) {
+                                    log.info("TIAMAT_POINTS_OF_INTEREST_EXPORT matching job ids : " + skipJobReportsJobId);
+                                } else {
+                                    log.info("TIAMAT_STOP_PLACES_EXPORT matching job ids : " + skipJobReportsJobId);
+                                }
                                 boolean isExportDone = false;
                                 if(JobEvent.TimetableAction.EXPORT.name().equals(e.getIn().getHeader(CHOUETTE_JOB_STATUS_JOB_TYPE))) {
                                     ExportJob exportJob = e.getIn().getBody(ExportJob.class);
@@ -237,10 +244,12 @@ public class ChouettePollJobStatusRoute extends AbstractChouetteRouteBuilder {
                                 // remove header to ensure we don't fall into a "reschedulejob infinite loop" on aborted/failed jobs
                                 if (isExportDone) {
                                     e.getIn().removeHeader(Constants.TIAMAT_STOP_PLACES_EXPORT);
+                                    e.getIn().removeHeader(Constants.TIAMAT_POINTS_OF_INTEREST_EXPORT);
                                 }
                             } else {
                                 log.warn("ERROR : a non tiamat job should not trigger this camel process. Non matching job ids => " + skipJobReportsJobId + " vs " + exportJobId + " XXXXXXXXXX SHOULD NOT HAPPEN !!");
                                 e.getIn().removeHeader(Constants.TIAMAT_STOP_PLACES_EXPORT);
+                                e.getIn().removeHeader(Constants.TIAMAT_POINTS_OF_INTEREST_EXPORT);
                             }
                         })
                         .choice()
