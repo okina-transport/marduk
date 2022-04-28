@@ -130,7 +130,7 @@ public class Constants {
     public static final String NOTIFICATION = "Notification";
     public static final String NOTIFICATION_URL = "NotificationUrl";
 
-    public static final String CONCERTO_EXPORT_SCHEDULER = "ConcertoExportScheduler";
+    public static final String IMPORT_CONFIGURATION_SCHEDULER = "ImportConfigurationScheduler";
 
     public static final String ANALYZE_ACTION = "Analyze";
 

@@ -115,7 +115,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
 
         RestPropertyDefinition corsAllowedHeaders = new RestPropertyDefinition();
         corsAllowedHeaders.setKey("Access-Control-Allow-Headers");
-        corsAllowedHeaders.setValue("Origin, Accept, X-Requested-With, Content-Type, Access-Control-Request-Method, Access-Control-Request-Headers, Authorization, x-okina-referential, RutebankenUser, RutebankenDescription, EXPORT_LINES_IDS, EXPORT_START_DATE, EXPORT_END_DATE, ImportType, routeMerge, splitCharacter, commercialPointIdPrefixToRemove, quayIdPrefixToRemove, areaCentroidPrefixToRemove, linePrefixToRemove, stopAreaPrefixToRemove,ignoreCommercialPoints,analysisJobId, cleanRepository,keepBoardingAlightingPossibility,keepStopGeolocalisation");
+        corsAllowedHeaders.setValue("Origin, Accept, X-Requested-With, Content-Type, Access-Control-Request-Method, Access-Control-Request-Headers, Authorization, x-okina-referential, RutebankenUser, RutebankenDescription, EXPORT_LINES_IDS, EXPORT_START_DATE, EXPORT_END_DATE, ImportType, routeMerge, splitCharacter, commercialPointIdPrefixToRemove, quayIdPrefixToRemove, areaCentroidPrefixToRemove, linePrefixToRemove, stopAreaPrefixToRemove, ignoreCommercialPoints, analysisJobId, cleanRepository, keepBoardingAlightingPossibility, keepStopGeolocalisation");
 
         RestPropertyDefinition corsAllowedOrigin = new RestPropertyDefinition();
         corsAllowedOrigin.setKey("Access-Control-Allow-Origin");
@@ -1078,6 +1078,36 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
                 .inOnly("activemq:queue:ChouetteTransferExportQueue")
                 .routeId("admin-chouette-transfer")
+                .endRest()
+
+                .post("/update-scheduler-import-configuration")
+                .description("Update scheduler for the import configuration process.")
+                .consumes(PLAIN)
+                .produces(PLAIN)
+                .responseMessage().code(200).message("Command accepted").endResponseMessage()
+                .route()
+                .to("direct:authorizeRequest")
+                .setHeader(PROVIDER_ID, header("providerId"))
+                .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
+                .log(LoggingLevel.INFO, correlation() + "Update scheduler for the import configuration")
+                .removeHeaders("CamelHttp*")
+                .to("direct:updateSchedulerForImportConfiguration")
+                .routeId("admin-import-configuration-scheduler")
+                .endRest()
+
+                .get("/get-cron")
+                .description("Get cron import configuration")
+                .consumes(PLAIN)
+                .produces(JSON)
+                .responseMessage().code(200).message("Command accepted").endResponseMessage()
+                .route()
+                .to("direct:authorizeRequest")
+                .setHeader(PROVIDER_ID, header("providerId"))
+                .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
+                .log(LoggingLevel.INFO, correlation() + "Get cron from scheduler for the import configuration")
+                .removeHeaders("CamelHttp*")
+                .to("direct:getCron")
+                .routeId("admin-get-cron-import-configuration-scheduler")
                 .endRest();
 
 
