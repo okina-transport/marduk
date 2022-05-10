@@ -39,6 +39,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.quartz.SchedulerFactoryBean;
 import org.springframework.stereotype.Component;
 
+import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -50,6 +54,9 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
@@ -144,17 +151,22 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
         if (StringUtils.isNotEmpty(configurationUrl.getLogin()) && configurationUrl.getPassword() != null && configurationUrl.getPassword().length > 0) {
             Authenticator.setDefault(new MyAuthenticator(configurationUrl.getLogin(), cipherEncryption.decrypt(configurationUrl.getPassword())));
         }
+
+        trustAllCertificates();
+
         URL url = new URL(configurationUrl.getUrl());
         if (url.openStream().available() > 0) {
             if (StringUtils.isNotEmpty(configurationUrl.getUrlInfo())) {
                 URL urlInfo = new URL(configurationUrl.getUrlInfo());
-                InputStream inputStream = urlInfo.openStream();
+                InputStream inputStreamUrlInfo = urlInfo.openStream();
                 JSONParser jsonParser = new JSONParser();
-                JSONObject jsonObject = (JSONObject)jsonParser.parse(new InputStreamReader(inputStream, StandardCharsets.UTF_8));
-                String stringDateLastModified = jsonObject.getString("last_up_to_date_at");
-                Date dateLastModified = formatter.parse(stringDateLastModified);
+                org.json.simple.JSONObject jsonObject = (org.json.simple.JSONObject) jsonParser.parse(new InputStreamReader(inputStreamUrlInfo, StandardCharsets.UTF_8));
+                String stringDateLastModified = jsonObject.get("updated").toString();
+                OffsetDateTime offsetDateTime = OffsetDateTime.parse(stringDateLastModified);
+                Date dateLastModified = Date.from(offsetDateTime.toLocalDateTime().atZone(ZoneId.systemDefault()).toInstant());
                 if (configurationUrl.getLastTimestamp() == null || dateLastModified.getTime() > configurationUrl.getLastTimestamp().getTime()) {
                     configurationUrl.setLastTimestamp(dateLastModified);
+                    uploadFileAndUpdateLastTimestampFromUrl(e, referential, importConfiguration, formatter, configurationUrl, url);
                 }
             } else {
                 HttpURLConnection httpCon = (HttpURLConnection) url.openConnection();
@@ -163,18 +175,49 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
                     Date dateLastModified = new Date(date);
                     if (configurationUrl.getLastTimestamp() == null || dateLastModified.getTime() > configurationUrl.getLastTimestamp().getTime()) {
                         configurationUrl.setLastTimestamp(dateLastModified);
+                        uploadFileAndUpdateLastTimestampFromUrl(e, referential, importConfiguration, formatter, configurationUrl, url);
                     }
                 }
                 if (date == 0) {
                     configurationUrl.setLastTimestamp(Date.from(Instant.now()));
+                    uploadFileAndUpdateLastTimestampFromUrl(e, referential, importConfiguration, formatter, configurationUrl, url);
                 }
             }
-            InputStream inputStream = url.openStream();
-            String fileName = url.getPath().substring(url.getPath().lastIndexOf('/') + 1);
-            Date dateDownloadedFile = Date.from(Instant.now());
-            String destinationPath = importConfigurationPath + "/" + publicUploadPath  + "/" + referential + "/for_import/" + formatter.format(dateDownloadedFile) + "-" + formatter.format(configurationUrl.getLastTimestamp()) + "/" + fileName;
-            uploadFileAndUpdateLastTimestamp(e, referential, importConfiguration, inputStream, fileName, destinationPath, dateDownloadedFile);
-            sendMail(importConfiguration.getRecipients(), referential, fileName, appUrl + "/" + referential + "/for_import/" + formatter.format(dateDownloadedFile) + "-" + formatter.format(configurationUrl.getLastTimestamp()) + "/" + fileName);
+        }
+    }
+
+    private void uploadFileAndUpdateLastTimestampFromUrl(Exchange e, String referential, ImportConfiguration importConfiguration, SimpleDateFormat formatter, ConfigurationUrl configurationUrl, URL url) throws IOException {
+        InputStream inputStream = url.openStream();
+        String fileName = url.getPath().substring(url.getPath().lastIndexOf('/') + 1);
+        Date dateDownloadedFile = Date.from(Instant.now());
+        String destinationPath = importConfigurationPath + "/" + publicUploadPath  + "/" + referential + "/for_import/" + formatter.format(dateDownloadedFile) + "-" + formatter.format(configurationUrl.getLastTimestamp()) + "/" + fileName;
+        uploadFileAndUpdateLastTimestamp(e, referential, importConfiguration, inputStream, fileName, destinationPath, dateDownloadedFile);
+        sendMail(importConfiguration.getRecipients(), referential, fileName, appUrl + "/" + referential + "/for_import/" + formatter.format(dateDownloadedFile) + "-" + formatter.format(configurationUrl.getLastTimestamp()) + "/" + fileName);
+    }
+
+    private void trustAllCertificates() {
+        // Create a new trust manager that trust all certificates
+        TrustManager[] trustAllCerts = new TrustManager[]{
+                new X509TrustManager() {
+                    public java.security.cert.X509Certificate[] getAcceptedIssuers() {
+                        return null;
+                    }
+                    public void checkClientTrusted(
+                            java.security.cert.X509Certificate[] certs, String authType) {
+                    }
+                    public void checkServerTrusted(
+                            java.security.cert.X509Certificate[] certs, String authType) {
+                    }
+                }
+        };
+
+        // Activate the new trust manager
+        try {
+            SSLContext sc = SSLContext.getInstance("SSL");
+            sc.init(null, trustAllCerts, new java.security.SecureRandom());
+            HttpsURLConnection.setDefaultSSLSocketFactory(sc.getSocketFactory());
+        } catch (Exception exception) {
+            log.error("Erreur de la gestion des certificats pour télécharger un fichier depuis une URL:", exception);
         }
     }
 
