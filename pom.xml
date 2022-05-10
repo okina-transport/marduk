@@ -58,7 +58,7 @@
 
         <!-- Holding back activemq version as newest version3.15.0 no long support spring wired broker config-->
         <activemq.version>5.13.4</activemq.version>
-        <netex-java-model.version>1.0.9-SNAPSHOT</netex-java-model.version>
+        <netex-java-model.version>2.0.4-NETEX-FR</netex-java-model.version>
         <fabric8.version>2.3.4</fabric8.version>
 
         <!-- The guava version seems to affect serialisation of OTP graph. Somehow, it leaks into
