@@ -92,7 +92,7 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
     @Value("${app.url}")
     private String appUrl;
 
-    @Value("${client.name")
+    @Value("${client.name}")
     private String client;
 
     @Override
