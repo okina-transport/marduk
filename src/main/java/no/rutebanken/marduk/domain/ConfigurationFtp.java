@@ -1,8 +1,12 @@
 package no.rutebanken.marduk.domain;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+import no.rutebanken.marduk.Utils.LocalDateTimeDeserializer;
+import no.rutebanken.marduk.Utils.LocalDateTimeSerializer;
 
-import java.util.Date;
+import java.time.LocalDateTime;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class ConfigurationFtp {
@@ -14,7 +18,10 @@ public class ConfigurationFtp {
     private byte[] password;
     private String folder;
     private String filename;
-    private Date lastTimestamp;
+
+    @JsonSerialize(using = LocalDateTimeSerializer.class)
+    @JsonDeserialize(using = LocalDateTimeDeserializer.class)
+    private LocalDateTime lastTimestamp;
 
     public Long getId() {
         return id;
@@ -80,11 +87,11 @@ public class ConfigurationFtp {
         this.filename = filename;
     }
 
-    public Date getLastTimestamp() {
+    public LocalDateTime getLastTimestamp() {
         return lastTimestamp;
     }
 
-    public void setLastTimestamp(Date lastTimestamp) {
+    public void setLastTimestamp(LocalDateTime lastTimestamp) {
         this.lastTimestamp = lastTimestamp;
     }
 }
