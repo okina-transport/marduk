@@ -63,6 +63,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.TimeZone;
 
 import static no.rutebanken.marduk.Constants.CHOUETTE_REFERENTIAL;
 import static no.rutebanken.marduk.Constants.FILE_HANDLE;
@@ -163,24 +164,33 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
                 org.json.simple.JSONObject jsonObject = (org.json.simple.JSONObject) jsonParser.parse(new InputStreamReader(inputStreamUrlInfo, StandardCharsets.UTF_8));
                 String stringDateLastModified = jsonObject.get("updated").toString();
                 OffsetDateTime offsetDateTime = OffsetDateTime.parse(stringDateLastModified);
-                Date dateLastModified = Date.from(offsetDateTime.toLocalDateTime().atZone(ZoneId.systemDefault()).toInstant());
-                if (configurationUrl.getLastTimestamp() == null || dateLastModified.getTime() > configurationUrl.getLastTimestamp().getTime()) {
+                LocalDateTime dateLastModified = offsetDateTime.toLocalDateTime();
+                if (configurationUrl.getLastTimestamp() == null || dateLastModified.isAfter(configurationUrl.getLastTimestamp())) {
                     configurationUrl.setLastTimestamp(dateLastModified);
                     uploadFileAndUpdateLastTimestampFromUrl(e, referential, importConfiguration, formatter, configurationUrl, url);
+                }
+                else{
+                    log.info("No new file to import for the referential : " + referential + " for the import configuration URL : " + configurationUrl.getUrl());
                 }
             } else {
                 HttpURLConnection httpCon = (HttpURLConnection) url.openConnection();
                 long date = httpCon.getLastModified();
                 if (date != 0) {
-                    Date dateLastModified = new Date(date);
-                    if (configurationUrl.getLastTimestamp() == null || dateLastModified.getTime() > configurationUrl.getLastTimestamp().getTime()) {
+                    LocalDateTime dateLastModified = LocalDateTime.ofInstant(Instant.ofEpochSecond(date), TimeZone.getDefault().toZoneId());
+                    if (configurationUrl.getLastTimestamp() == null || dateLastModified.isAfter(configurationUrl.getLastTimestamp())) {
                         configurationUrl.setLastTimestamp(dateLastModified);
                         uploadFileAndUpdateLastTimestampFromUrl(e, referential, importConfiguration, formatter, configurationUrl, url);
                     }
+                    else{
+                        log.info("No file to import for the dataspace : " + referential + " for the import configuration URL : " + configurationUrl.getUrl());
+                    }
                 }
                 if (date == 0) {
-                    configurationUrl.setLastTimestamp(Date.from(Instant.now()));
+                    configurationUrl.setLastTimestamp(LocalDateTime.now());
                     uploadFileAndUpdateLastTimestampFromUrl(e, referential, importConfiguration, formatter, configurationUrl, url);
+                }
+                else{
+                    log.info("No file to import for the dataspace : " + referential + " for the import configuration URL : " + configurationUrl.getUrl());
                 }
             }
         }
@@ -190,9 +200,9 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
         InputStream inputStream = url.openStream();
         String fileName = url.getPath().substring(url.getPath().lastIndexOf('/') + 1);
         Date dateDownloadedFile = Date.from(Instant.now());
-        String destinationPath = importConfigurationPath + "/" + publicUploadPath  + "/" + referential + "/for_import/" + formatter.format(dateDownloadedFile) + "-" + formatter.format(configurationUrl.getLastTimestamp()) + "/" + fileName;
+        String destinationPath = importConfigurationPath + "/" + publicUploadPath  + "/" + referential + "/for_import/" + formatter.format(dateDownloadedFile) + "-" + formatter.format(Date.from(configurationUrl.getLastTimestamp().atZone(ZoneId.systemDefault()).toInstant())) + "/" + fileName;
         uploadFileAndUpdateLastTimestamp(e, referential, importConfiguration, inputStream, fileName, destinationPath, dateDownloadedFile);
-        sendMail(importConfiguration.getRecipients(), referential, fileName, appUrl + "/" + referential + "/for_import/" + formatter.format(dateDownloadedFile) + "-" + formatter.format(configurationUrl.getLastTimestamp()) + "/" + fileName);
+        sendMail(importConfiguration.getRecipients(), referential, fileName, appUrl + "/" + referential + "/for_import/" + formatter.format(dateDownloadedFile) + "-" + formatter.format(Date.from(configurationUrl.getLastTimestamp().atZone(ZoneId.systemDefault()).toInstant())) + "/" + fileName);
     }
 
     private void trustAllCertificates() {
@@ -217,7 +227,7 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
             sc.init(null, trustAllCerts, new java.security.SecureRandom());
             HttpsURLConnection.setDefaultSSLSocketFactory(sc.getSocketFactory());
         } catch (Exception exception) {
-            log.error("Erreur de la gestion des certificats pour télécharger un fichier depuis une URL:", exception);
+            log.error("Certificate management error to download a file from a URL :", exception);
         }
     }
 
@@ -243,19 +253,22 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
             }
 
             InputStream inputStream = channelSftp.get(configurationFtp.getFilename());
-            Date date = new Date(channelSftp.stat(configurationFtp.getFilename()).getMTime() * 1000L);
+            LocalDateTime localDateTime = LocalDateTime.ofInstant(Instant.ofEpochSecond(channelSftp.stat(configurationFtp.getFilename()).getMTime()), TimeZone.getDefault().toZoneId());
 
             File targetFile = new File(configurationFtp.getFilename());
 
             FileUtils.copyInputStreamToFile(inputStream, targetFile);
 
             if (targetFile.length() > 0) {
-                if (configurationFtp.getLastTimestamp() == null || date.getTime() > configurationFtp.getLastTimestamp().getTime()) {
-                    configurationFtp.setLastTimestamp(date);
+                if (configurationFtp.getLastTimestamp() == null || localDateTime.isAfter(configurationFtp.getLastTimestamp())) {
+                    configurationFtp.setLastTimestamp(localDateTime);
                     Date dateDownloadedFile = Date.from(Instant.now());
-                    String destinationPath = importConfigurationPath + "/" + publicUploadPath  + "/" + referential + "/for_import/" + formatter.format(dateDownloadedFile) + "-" + formatter.format(configurationFtp.getLastTimestamp()) + "/" + configurationFtp.getFilename();
+                    String destinationPath = importConfigurationPath + "/" + publicUploadPath  + "/" + referential + "/for_import/" + formatter.format(dateDownloadedFile) + "-" + formatter.format(Date.from(configurationFtp.getLastTimestamp().atZone(ZoneId.systemDefault()).toInstant())) + "/" + configurationFtp.getFilename();
                     uploadFileAndUpdateLastTimestamp(e, referential, importConfiguration, new FileInputStream(targetFile), configurationFtp.getFilename(), destinationPath, dateDownloadedFile);
-                    sendMail(importConfiguration.getRecipients(), referential, configurationFtp.getFilename(), appUrl + "/" + referential + "/for_import/" + formatter.format(dateDownloadedFile) + "-" + formatter.format(configurationFtp.getLastTimestamp()) + "/" + configurationFtp.getFilename());
+                    sendMail(importConfiguration.getRecipients(), referential, configurationFtp.getFilename(), appUrl + "/" + referential + "/for_import/" + formatter.format(dateDownloadedFile) + "-" + formatter.format(Date.from(configurationFtp.getLastTimestamp().atZone(ZoneId.systemDefault()).toInstant())) + "/" + configurationFtp.getFilename());
+                }
+                else{
+                    log.info("No new file to import for the dataspace : " + referential + " for the import configuration SFTP : " + configurationFtp.getUrl());
                 }
             }
             else {
@@ -287,12 +300,16 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
 
             if (optionalFTPFile.isPresent()) {
                 FTPFile file = optionalFTPFile.get();
-                if (configurationFtp.getLastTimestamp() == null || file.getTimestamp().getTime().getTime() > configurationFtp.getLastTimestamp().getTime()) {
-                    configurationFtp.setLastTimestamp(file.getTimestamp().getTime());
+                LocalDateTime localDateTime = LocalDateTime.ofInstant(file.getTimestamp().toInstant(), file.getTimestamp().getTimeZone().toZoneId());
+                if (configurationFtp.getLastTimestamp() == null || localDateTime.isAfter(configurationFtp.getLastTimestamp())) {
+                    configurationFtp.setLastTimestamp(localDateTime);
                     Date dateDownloadedFile = Date.from(Instant.now());
-                    String destinationPath = importConfigurationPath + "/" + publicUploadPath  + "/" + referential + "/for_import/" + formatter.format(dateDownloadedFile) + "-" + formatter.format(configurationFtp.getLastTimestamp()) + "/" + configurationFtp.getFilename();
+                    String destinationPath = importConfigurationPath + "/" + publicUploadPath  + "/" + referential + "/for_import/" + formatter.format(dateDownloadedFile) + "-" + formatter.format(Date.from(configurationFtp.getLastTimestamp().atZone(ZoneId.systemDefault()).toInstant())) + "/" + configurationFtp.getFilename();
                     uploadFileAndUpdateLastTimestamp(e, referential, importConfiguration, client.retrieveFileStream(configurationFtp.getFolder() + "/" + file.getName()), file.getName(), destinationPath, dateDownloadedFile);
-                    sendMail(importConfiguration.getRecipients(), referential, file.getName(), appUrl + "/" + referential + "/for_import/" + formatter.format(dateDownloadedFile) + "-" + formatter.format(configurationFtp.getLastTimestamp()) + "/" + configurationFtp.getFilename());
+                    sendMail(importConfiguration.getRecipients(), referential, file.getName(), appUrl + "/" + referential + "/for_import/" + formatter.format(dateDownloadedFile) + "-" + formatter.format(Date.from(configurationFtp.getLastTimestamp().atZone(ZoneId.systemDefault()).toInstant())) + "/" + configurationFtp.getFilename());
+                }
+                else{
+                    log.info("No new file to import for the dataspace : " + referential + " for the import configuration FTP : " + configurationFtp.getUrl());
                 }
             } else {
                 log.info("File " + configurationFtp.getFilename() + " not founded for the dataspace " + referential);
