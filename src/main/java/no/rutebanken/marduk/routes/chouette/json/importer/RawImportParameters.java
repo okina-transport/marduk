@@ -17,13 +17,13 @@ public class RawImportParameters {
     private boolean routeMerge;
     private String splitCharacter;
     private IdParameters idParameters;
-    private boolean cleanRepository;
     private boolean ignoreCommercialPoints;
     private boolean isAnalyzeJob;
     private boolean keepBoardingAlighting;
     private boolean keepStopGeolocalisation;
     private ImportMode importMode;
     private Provider provider;
+    private String cleanMode;
 
     public String getFileName() {
         return fileName;
@@ -89,13 +89,6 @@ public class RawImportParameters {
         this.idParameters = idParameters;
     }
 
-    public boolean isCleanRepository() {
-        return cleanRepository;
-    }
-
-    public void setCleanRepository(boolean cleanRepository) {
-        this.cleanRepository = cleanRepository;
-    }
 
     public boolean isIgnoreCommercialPoints() {
         return ignoreCommercialPoints;
@@ -143,5 +136,13 @@ public class RawImportParameters {
 
     public void setImportMode(ImportMode importMode) {
         this.importMode = importMode;
+    }
+
+    public String getCleanMode() {
+        return cleanMode;
+    }
+
+    public void setCleanMode(String cleanMode) {
+        this.cleanMode = cleanMode;
     }
 }

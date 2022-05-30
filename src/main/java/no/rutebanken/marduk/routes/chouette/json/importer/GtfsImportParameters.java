@@ -99,7 +99,7 @@ public class GtfsImportParameters extends ChouetteJobParameters {
         gtfsImport.organisationName = chouetteInfo.organisation;
         gtfsImport.userName = rawImportParameters.getUser();
         gtfsImport.description = rawImportParameters.getDescription();
-        gtfsImport.cleanRepository = rawImportParameters.isCleanRepository() ? "1" : "0";
+        gtfsImport.cleanMode = rawImportParameters.getCleanMode();
         gtfsImport.stopAreaRemoteIdMapping = chouetteInfo.enableStopPlaceIdMapping;
         gtfsImport.generateMissingRouteSectionsForModes = chouetteInfo.generateMissingServiceLinksForModes;
         if (chouetteInfo.allowCreateMissingStopPlace && !rawImportParameters.isAnalyzeJob()) {

@@ -153,8 +153,8 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
                     String routeMergeStr = e.getIn().getHeader(ROUTE_MERGE, String.class);
                     boolean routeMerge = !StringUtils.isEmpty(routeMergeStr) && Boolean.parseBoolean(routeMergeStr);
 
-                    String cleanRepositoryStr = e.getIn().getHeader(CLEAN_REPOSITORY, String.class);
-                    boolean cleanRepository = !StringUtils.isEmpty(cleanRepositoryStr) && Boolean.parseBoolean(cleanRepositoryStr);
+                    String cleanMode = e.getIn().getHeader(CLEAN_MODE, String.class);
+
 
                     String keepBoardingAlightingPossibilityStr = e.getIn().getHeader(KEEP_BOARDING_ALIGHTING_POSSIBILITY, String.class);
                     boolean keepBoardingAlightingPossibility = !StringUtils.isEmpty(keepBoardingAlightingPossibilityStr) && Boolean.parseBoolean(keepBoardingAlightingPossibilityStr);
@@ -204,7 +204,7 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
                     rawImportParameters.setRouteMerge(routeMerge);
                     rawImportParameters.setSplitCharacter(splitCharacter);
                     rawImportParameters.setIdParameters(idParams);
-                    rawImportParameters.setCleanRepository(cleanRepository);
+                    rawImportParameters.setCleanMode(cleanMode);
                     rawImportParameters.setIgnoreCommercialPoints(ignoreCommercialPoints);
                     rawImportParameters.setAnalyzeJob(isAnalyzeJob);
                     rawImportParameters.setKeepBoardingAlighting(keepBoardingAlightingPossibility);

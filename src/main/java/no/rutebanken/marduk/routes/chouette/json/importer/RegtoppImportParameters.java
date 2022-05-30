@@ -61,7 +61,7 @@ public class RegtoppImportParameters extends ChouetteJobParameters {
 			String organisationName, String userName, String version, String coordinateProjection,
 			String calendarStrategy, boolean cleanRepository, boolean enableValidation, boolean allowCreateMissingStopPlace,
 			                                            boolean enableStopPlaceIdMapping, boolean keepObsoleteLines,
-			                                            boolean batchParse, Set<String> generateMissingRouteSectionsForModes) {
+			                                            boolean batchParse, Set<String> generateMissingRouteSectionsForModes, String cleanMode) {
 		Regtopp regtoppImport = new Regtopp();
 		regtoppImport.name = name;
 		regtoppImport.objectIdPrefix = objectIdPrefix;
@@ -72,7 +72,7 @@ public class RegtoppImportParameters extends ChouetteJobParameters {
 		regtoppImport.coordinateProjection = coordinateProjection; // EPSG:32632
 																	// (UTM32_N)
 		regtoppImport.calendarStrategy = calendarStrategy;
-		regtoppImport.cleanRepository = cleanRepository ? "1" : "0";
+		regtoppImport.cleanMode = cleanMode;
 		regtoppImport.keepObsoleteLines = keepObsoleteLines;
 		regtoppImport.batchParse = batchParse;
 		regtoppImport.stopAreaRemoteIdMapping = enableStopPlaceIdMapping;

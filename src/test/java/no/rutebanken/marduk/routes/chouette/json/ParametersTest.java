@@ -51,7 +51,7 @@ public class ParametersTest {
         RawImportParameters rawInputParameters = new RawImportParameters();
         rawInputParameters.setFileName("test");
         rawInputParameters.setUser("Chouette");
-        rawInputParameters.setCleanRepository(false);
+        rawInputParameters.setCleanMode("purge");
         rawInputParameters.setDescription("testdescription");
         rawInputParameters.setRouteMerge(false);
         rawInputParameters.setAnalyzeJob(false);
@@ -83,14 +83,14 @@ public class ParametersTest {
 
     @Test
     public void createRegtoppImportParameters() throws Exception {
-        RegtoppImportParameters importParameters = RegtoppImportParameters.create("test", "tds", "testDS", "Rutebanken", "Chouette", "R12", "EPSG:32632", "ADD", false, false, false, false, false, true, Sets.newHashSet("water", "bus"));
+        RegtoppImportParameters importParameters = RegtoppImportParameters.create("test", "tds", "testDS", "Rutebanken", "Chouette", "R12", "EPSG:32632", "ADD", false, false, false, false, false, true, Sets.newHashSet("water", "bus"), "purge");
         System.out.println(importParameters.toJsonString());
         assertJsonEquals(regtoppReferenceJson, importParameters.toJsonString());
     }
 
     @Test
     public void createRegtoppImportParametersWithValidation() throws Exception {
-        RegtoppImportParameters importParameters = RegtoppImportParameters.create("test", "tds", "testDS", "Rutebanken", "Chouette", "R12", "EPSG:32632", "ADD", false, false, true, true, false, true, Sets.newHashSet("water", "bus"));
+        RegtoppImportParameters importParameters = RegtoppImportParameters.create("test", "tds", "testDS", "Rutebanken", "Chouette", "R12", "EPSG:32632", "ADD", false, false, true, true, false, true, Sets.newHashSet("water", "bus"), "purge");
         System.out.println(importParameters.toJsonString());
 
     }

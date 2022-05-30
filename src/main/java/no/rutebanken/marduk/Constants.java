@@ -41,7 +41,7 @@ public class Constants {
     public static final String IMPORT_TYPE = "ImportType";
     public static final String SPLIT_CHARACTER = "splitCharacter";
     public static final String ROUTE_MERGE = "routeMerge";
-    public static final String CLEAN_REPOSITORY = "cleanRepository";
+    public static final String CLEAN_MODE = "cleanMode";
     public static final String IGNORE_COMMERCIAL_POINTS = "ignoreCommercialPoints";
     public static final String ANALYSIS_JOB_ID = "analysisJobId";
     public static final String KEEP_BOARDING_ALIGHTING_POSSIBILITY = "keepBoardingAlightingPossibility";

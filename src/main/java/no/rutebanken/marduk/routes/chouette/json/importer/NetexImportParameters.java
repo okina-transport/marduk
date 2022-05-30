@@ -71,7 +71,7 @@ public class NetexImportParameters extends ChouetteJobParameters {
         netexImport.referentialName = provider.name;
         netexImport.organisationName = chouetteInfo.organisation;
         netexImport.userName = rawImportParameters.getUser();
-        netexImport.cleanRepository = rawImportParameters.isCleanRepository() ? "1" : "0";
+        netexImport.cleanMode = rawImportParameters.getCleanMode();
         netexImport.stopAreaRemoteIdMapping = chouetteInfo.enableStopPlaceIdMapping;
         netexImport.objectIdPrefix = chouetteInfo.xmlns;
         netexImport.generateMissingRouteSectionsForModes = chouetteInfo.generateMissingServiceLinksForModes;

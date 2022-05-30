@@ -71,7 +71,7 @@ public class Parameters {
                 chouetteInfo.referential, chouetteInfo.organisation, chouetteInfo.user, chouetteInfo.regtoppVersion,
                 chouetteInfo.regtoppCoordinateProjection, chouetteInfo.regtoppCalendarStrategy, chouetteInfo.enableCleanImport,
                 chouetteInfo.enableValidation, chouetteInfo.allowCreateMissingStopPlace,
-                chouetteInfo.enableStopPlaceIdMapping, false, true, chouetteInfo.generateMissingServiceLinksForModes);
+                chouetteInfo.enableStopPlaceIdMapping, false, true, chouetteInfo.generateMissingServiceLinksForModes, rawImportParameters.getCleanMode());
         return regtoppImportParameters.toJsonString();
     }
 

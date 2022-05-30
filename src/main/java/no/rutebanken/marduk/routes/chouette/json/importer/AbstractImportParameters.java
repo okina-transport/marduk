@@ -39,8 +39,6 @@ public class AbstractImportParameters extends AbstractParameters {
         CREATE_OR_UPDATE
     }
 
-    @JsonProperty("clean_repository")
-    public String cleanRepository = "0";
 
     @JsonProperty("no_save")
     public String noSave = "0";
@@ -70,6 +68,9 @@ public class AbstractImportParameters extends AbstractParameters {
     @JsonProperty("keep_stop_geolocalisation")
     @JsonInclude(JsonInclude.Include.ALWAYS)
     public Boolean keepStopGeolocalisation;
+
+    @JsonProperty("clean_mode")
+    public String cleanMode ;
 
 
 }

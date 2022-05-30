@@ -70,7 +70,7 @@ public class NeptuneImportParameters extends ChouetteJobParameters {
         neptuneImport.organisationName = chouetteInfo.organisation;
         neptuneImport.userName = rawImportParameters.getUser();
         neptuneImport.description = rawImportParameters.getDescription();
-        neptuneImport.cleanRepository = rawImportParameters.isCleanRepository() ? "1" : "0";
+        neptuneImport.cleanMode = rawImportParameters.getCleanMode();
         neptuneImport.stopAreaRemoteIdMapping = chouetteInfo.enableStopPlaceIdMapping;
         neptuneImport.generateMissingRouteSectionsForModes = chouetteInfo.generateMissingServiceLinksForModes;
         if (chouetteInfo.allowCreateMissingStopPlace && !rawImportParameters.isAnalyzeJob()) {
