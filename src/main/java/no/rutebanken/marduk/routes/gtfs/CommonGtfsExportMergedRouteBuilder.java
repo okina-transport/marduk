@@ -24,7 +24,7 @@ import no.rutebanken.marduk.routes.status.JobEvent;
 import no.rutebanken.marduk.services.FileSystemService;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
-import org.codehaus.plexus.util.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -121,6 +121,7 @@ public class CommonGtfsExportMergedRouteBuilder extends BaseRouteBuilder {
                 .setBody(simple("${header." + FILE_PARENT + "}"))
                 .bean(method(GtfsFileUtils.class, "mergeGtfsFilesInDirectory"))
                 .toD("file:${exchangeProperty." + FOLDER_NAME + "}/gtfs?fileName=export_global_gtfs.zip")
+                .delay(10000)
                 .setHeader(FILE_HANDLE, simple("mobiiti_technique/gtfs/export_global_gtfs.zip"))
                 .to("direct:getBlob")
                 .routeId("gtfs-export-merge");
@@ -140,12 +141,20 @@ public class CommonGtfsExportMergedRouteBuilder extends BaseRouteBuilder {
     }
 
     String getAggregatedGtfsFiles(String allReferentialsNames) {
-        List<String> referentialsNames = Arrays.stream(StringUtils.split(allReferentialsNames, ",")).map(s -> "mobiiti_" + s).collect(toList());
-        return getProviderRepository().getProviders().stream()
-                .filter(p -> p.chouetteInfo.migrateDataToProvider == null && !p.chouetteInfo.referential.equals("mobiiti_technique"))
-                .filter(provider -> referentialsNames.contains(provider.name))
-                .map(p -> p.chouetteInfo.referential + "-" + CURRENT_AGGREGATED_GTFS_FILENAME)
-                .collect(Collectors.joining(","));
+        if(StringUtils.isNotEmpty(allReferentialsNames)){
+            List<String> referentialsNames = Arrays.stream(StringUtils.split(allReferentialsNames, ",")).map(s -> "mobiiti_" + s).collect(toList());
+            return getProviderRepository().getProviders().stream()
+                    .filter(p -> p.chouetteInfo.migrateDataToProvider == null && !p.chouetteInfo.referential.equals("mobiiti_technique"))
+                    .filter(provider -> referentialsNames.contains(provider.name))
+                    .map(p -> p.chouetteInfo.referential + "-" + CURRENT_AGGREGATED_GTFS_FILENAME)
+                    .collect(Collectors.joining(","));
+        }
+        else{
+            return getProviderRepository().getProviders().stream()
+                    .filter(p -> p.chouetteInfo.migrateDataToProvider == null && !p.chouetteInfo.referential.equals("mobiiti_technique"))
+                    .map(p -> p.chouetteInfo.referential + "-" + CURRENT_AGGREGATED_GTFS_FILENAME)
+                    .collect(Collectors.joining(","));
+        }
     }
 
     private boolean isMatch(Provider p, List<String> providerBlackList, List<String> providerWhiteList) {
