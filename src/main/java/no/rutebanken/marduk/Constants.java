@@ -50,6 +50,7 @@ public class Constants {
 
     public static final String ID_SUFFIX = "ID_SUFFIX";
     public static final String COMMERCIAL_POINT_ID_PREFIX = "COMMERCIAL_POINT_ID_PREFIX";
+    public static final String COMMERCIAL_POINT_EXPORT = "COMMERCIAL_POINT_EXPORT";
     public static final String STOP_AREA_PREFIX_TO_REMOVE = "stopAreaPrefixToRemove";
     public static final String AREA_CENTROID_PREFIX_TO_REMOVE = "areaCentroidPrefixToRemove";
     public static final String MAPPING_LINES_IDS = "MAPPING_LINES_IDS";

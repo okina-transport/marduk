@@ -25,7 +25,6 @@ public class PredefinedExportsRouteBuilder extends AbstractChouetteRouteBuilder 
     @Autowired
     private MultipleExportProcessor multipleExportProcessor;
 
-
     @Autowired
     private ProviderRepository providerRepository;
 

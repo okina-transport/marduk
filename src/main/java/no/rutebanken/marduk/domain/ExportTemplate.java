@@ -30,6 +30,8 @@ public class ExportTemplate implements Serializable {
     private String idSuffix;
     private String commercialPointIdPrefix;
 
+    private Boolean commercialPointExport;
+
     public Long getId() {
         return id;
     }
@@ -141,6 +143,14 @@ public class ExportTemplate implements Serializable {
 
     public void setCommercialPointIdPrefix(String commercialPointIdPrefix) {
         this.commercialPointIdPrefix = commercialPointIdPrefix;
+    }
+
+    public Boolean getCommercialPointExport() {
+        return commercialPointExport;
+    }
+
+    public void setCommercialPointExport(Boolean commercialPointExport) {
+        this.commercialPointExport = commercialPointExport;
     }
 
     public List<String> getReferentials() {
