@@ -51,6 +51,12 @@ public class MultipleExportProcessor implements Processor {
         List<ExportTemplate> exports = (List<ExportTemplate>) exchange.getIn().getBody();
         exchange.getIn().setBody(null);
         exports.forEach(export -> {
+
+            if (!export.getExportEnabled()){
+                log.info("Multiple export : not launching disabled export :" + export.getId() + "/" + export.getName());
+                return;
+            }
+
             log.info("Multiple export : export => " + export.getId() + "/" + export.getName());
             try {
                 if (ExportType.NETEX.equals(export.getType())) {

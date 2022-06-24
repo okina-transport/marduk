@@ -32,6 +32,8 @@ public class ExportTemplate implements Serializable {
 
     private Boolean commercialPointExport;
 
+    private Boolean exportEnabled;
+
     public Long getId() {
         return id;
     }
@@ -151,6 +153,14 @@ public class ExportTemplate implements Serializable {
 
     public void setCommercialPointExport(Boolean commercialPointExport) {
         this.commercialPointExport = commercialPointExport;
+    }
+
+    public Boolean getExportEnabled() {
+        return exportEnabled;
+    }
+
+    public void setExportEnabled(Boolean exportEnabled) {
+        this.exportEnabled = exportEnabled;
     }
 
     public List<String> getReferentials() {
