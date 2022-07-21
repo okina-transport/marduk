@@ -66,6 +66,7 @@ public class Constants {
     // tag for tiamat exports
     public static final String TIAMAT_STOP_PLACES_EXPORT = "TIAMAT_STOP_PLACES_EXPORT";
     public static final String TIAMAT_POINTS_OF_INTEREST_EXPORT = "TIAMAT_POINTS_OF_INTEREST_EXPORT";
+    public static final String TIAMAT_PARKINGS_EXPORT = "TIAMAT_PARKINGS_EXPORT";
 
     // (providerId can change during the process when transferring data from one referential to another
     public static final String CORRELATION_ID = "RutebankenCorrelationId";
@@ -141,6 +142,7 @@ public class Constants {
     public static final String MERGED_NETEX_ROOT_DIR = "mobiiti_technique/netex/merged";
     public static final String MERGED_NETEX_STOPS_ROOT_DIR = "mobiiti_technique/netex_stops";
     public static final String MERGED_NETEX_POI_ROOT_DIR = "mobiiti_technique/netex_poi";
+    public static final String MERGED_NETEX_PARKINGS_ROOT_DIR = "mobiiti_technique/netex_parkings";
     public static final String MISSING_EXPORTS = "missingExports";
     public static final String IS_MERGED_NETEX_FAILED = "isMergedNetexFailed";
 

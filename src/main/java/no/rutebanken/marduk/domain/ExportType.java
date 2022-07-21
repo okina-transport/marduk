@@ -6,5 +6,6 @@ public enum ExportType {
     NETEX,
     ARRET,
     NEPTUNE,
-    POI;
+    POI,
+    PARKING;
 }
