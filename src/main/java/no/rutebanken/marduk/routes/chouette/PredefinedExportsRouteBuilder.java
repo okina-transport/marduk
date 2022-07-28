@@ -37,6 +37,10 @@ public class PredefinedExportsRouteBuilder extends AbstractChouetteRouteBuilder 
     @Value("${chouette.predefined.exports.mobiiti.technique.provider.schedule:0+0+20+?+*+MON-FRI}")
     private String chouettePredefinedExportsMobiitiTechniqueProviderCronSchedule;
 
+
+    @Value("${parking.predefined.exports.mobiiti.technique.schedule:0+0+20+?+*+MON-FRI}")
+    private String parkingPredefinedExportsMobiitiTechniqueCronSchedule;
+
     @Override
     public void configure() throws Exception {
         super.configure();
@@ -87,6 +91,25 @@ public class PredefinedExportsRouteBuilder extends AbstractChouetteRouteBuilder 
                 .log(LoggingLevel.INFO, "Quartz triggers predefined exports mobiiti technique provider in Chouette.")
                 .inOnly("activemq:queue:predefinedExports")
                 .routeId("chouette-predefined-export-mobiiti_technique-quartz");
+
+
+        singletonFrom("quartz2://marduk/parkingPredefinedExportsMobiitiTechniqueCronSchedule?cron=" + parkingPredefinedExportsMobiitiTechniqueCronSchedule + "&trigger.timeZone=" + Constants.TIME_ZONE)
+                .autoStartup("{{parking.predefined.exports.mobiiti.technique.autoStartup:true}}")
+                .transacted()
+                .filter(e -> shouldQuartzRouteTrigger(e, parkingPredefinedExportsMobiitiTechniqueCronSchedule))
+                .log(LoggingLevel.INFO, "Quartz triggers predefined export for parkings.")
+                .process(e -> {
+                    Provider provider = providerRepository.findByName("mobiiti_technique");
+                    e.getOut().getHeaders().put(PROVIDER_ID, provider.getId());
+                })
+                .inOnly("activemq:queue:TiamatParkingsExport")
+                .routeId("parkings-predefined-export-mobiiti_technique-quartz");
+
+
+
+
+
+
     }
 
 
