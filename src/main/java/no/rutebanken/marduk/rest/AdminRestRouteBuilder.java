@@ -24,7 +24,6 @@ import no.rutebanken.marduk.domain.Provider;
 import no.rutebanken.marduk.routes.BaseRouteBuilder;
 import no.rutebanken.marduk.routes.blobstore.BlobStoreRoute;
 import no.rutebanken.marduk.routes.chouette.ExportJsonMapper;
-import no.rutebanken.marduk.routes.chouette.MultipleExportProcessor;
 import no.rutebanken.marduk.routes.chouette.json.JobResponse;
 import no.rutebanken.marduk.routes.chouette.json.Status;
 import no.rutebanken.marduk.routes.status.JobEvent;
@@ -36,7 +35,6 @@ import org.apache.camel.Body;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.model.rest.RestBindingMode;
-import org.apache.commons.io.FileUtils;
 import org.apache.camel.model.rest.RestParamType;
 import org.apache.camel.model.rest.RestPropertyDefinition;
 import org.apache.tomcat.util.http.fileupload.FileItem;
@@ -52,7 +50,6 @@ import org.springframework.stereotype.Component;
 
 import javax.ws.rs.NotFoundException;
 import java.io.FileInputStream;
-import java.io.IOException;
 import java.net.URLDecoder;
 import java.text.SimpleDateFormat;
 import java.util.Arrays;
@@ -644,7 +641,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                     String analysisJobId = e.getIn().getHeader(ANALYSIS_JOB_ID, String.class);
                     java.io.File file = fileSystemService.getAnalysisFile(e);
                     FileItemFactory fac = new DiskFileItemFactory();
-                    FileItem fileItem = fac.createItem("file", "application/zip",false, file.getName());
+                    FileItem fileItem = fac.createItem("file", "application/zip", false, file.getName());
                     Streams.copy(new FileInputStream(file), fileItem.getOutputStream(), true);
                     e.getIn().setBody(fileItem);
                 })
@@ -721,7 +718,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                     String ref = e.getIn().getHeader(OKINA_REFERENTIAL, String.class);
                     if (!ref.contains(superspaceName + "_") && !ref.startsWith(simulationName + "_")) {
                         e.getIn().setHeader(OKINA_REFERENTIAL, superspaceName + "_" + ref);
-                    } else  {
+                    } else {
                         e.getIn().setHeader(OKINA_REFERENTIAL, ref);
                     }
                 })
@@ -1187,8 +1184,17 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
 
         from("direct:authorizeRequest")
                 .doTry()
-                .process(e -> authorizationService.verifyAtLeastOne(new AuthorizationClaim(AuthorizationConstants.ROLE_ROUTE_DATA_ADMIN),
-                        new AuthorizationClaim(AuthorizationConstants.ROLE_ROUTE_DATA_EDIT, e.getIn().getHeader(PROVIDER_ID, Long.class))))
+                .process(e -> authorizationService.verifyAtLeastOne(
+                                new AuthorizationClaim(AuthorizationConstants.ROLE_ROUTE_DATA_ADMIN),
+                                new AuthorizationClaim(AuthorizationConstants.ROLE_ROUTE_DATA_EDIT, e.getIn().getHeader(PROVIDER_ID, Long.class)),
+
+                                /*
+                                 * Hack le temps de régler l'auth avec Lumiplan.
+                                 * TODO : nettoyez ça une fois le process d'authentification calé.
+                                 */
+                                new AuthorizationClaim("ADMINEDITROUTEDATA")
+                        )
+                )
                 .routeId("admin-authorize-request");
 
 
@@ -1212,7 +1218,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
     private String getUserNameFromHeaders(Exchange e) {
         Map body = (Map) e.getIn().getBody(Map.class);
         Map headers;
-        headers = body == null ?  e.getIn().getHeaders() : (Map) body.get("headers");
+        headers = body == null ? e.getIn().getHeaders() : (Map) body.get("headers");
 
         if (headers != null) {
             return (String) headers.get(USER);
