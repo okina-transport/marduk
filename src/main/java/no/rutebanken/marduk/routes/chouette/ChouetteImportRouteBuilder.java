@@ -162,6 +162,10 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
                     String keepStopGeolocalisationStr = e.getIn().getHeader(KEEP_STOP_GEOLOCALISATION, String.class);
                     boolean keepStopGeolocalisation = !StringUtils.isEmpty(keepStopGeolocalisationStr) && Boolean.parseBoolean(keepStopGeolocalisationStr);
 
+
+                    String keepStopNamestr = e.getIn().getHeader(KEEP_STOP_NAMES, String.class);
+                    boolean keepStopNames = !StringUtils.isEmpty(keepStopNamestr) && Boolean.parseBoolean(keepStopNamestr);
+
                     String commercialPointIdPrefixToRemove = e.getIn().getHeader(COMMERCIAL_POINT_ID_PREFIX_TO_REMOVE, String.class);
                     String quayPrefixToRemove = e.getIn().getHeader(QUAY_ID_PREFIX_TO_REMOVE, String.class);
                     String stopAreaPrefixToRemove = e.getIn().getHeader(STOP_AREA_PREFIX_TO_REMOVE, String.class);
@@ -209,6 +213,7 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
                     rawImportParameters.setAnalyzeJob(isAnalyzeJob);
                     rawImportParameters.setKeepBoardingAlighting(keepBoardingAlightingPossibility);
                     rawImportParameters.setKeepStopGeolocalisation(keepStopGeolocalisation);
+                    rawImportParameters.setKeepStopNames(keepStopNames);
 
 
                     e.getIn().setHeader(JSON_PART, getStringImportParameters(rawImportParameters));

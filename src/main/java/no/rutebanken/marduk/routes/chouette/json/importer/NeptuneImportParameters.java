@@ -84,6 +84,7 @@ public class NeptuneImportParameters extends ChouetteJobParameters {
         neptuneImport.ignoreCommercialPoints = rawImportParameters.isIgnoreCommercialPoints();
         neptuneImport.keepStopGeolocalisation = rawImportParameters.isKeepStopGeolocalisation();
         neptuneImport.keepBoardingAlighting = rawImportParameters.isKeepBoardingAlighting();
+        neptuneImport.keepStopNames = rawImportParameters.isKeepStopNames();
 
         Parameters parameters = new Parameters();
         parameters.neptuneImport = neptuneImport;

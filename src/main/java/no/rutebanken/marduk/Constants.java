@@ -46,6 +46,7 @@ public class Constants {
     public static final String ANALYSIS_JOB_ID = "analysisJobId";
     public static final String KEEP_BOARDING_ALIGHTING_POSSIBILITY = "keepBoardingAlightingPossibility";
     public static final String KEEP_STOP_GEOLOCALISATION = "keepStopGeolocalisation";
+    public static final String KEEP_STOP_NAMES = "keepStopNames";
 
 
     public static final String ID_SUFFIX = "ID_SUFFIX";

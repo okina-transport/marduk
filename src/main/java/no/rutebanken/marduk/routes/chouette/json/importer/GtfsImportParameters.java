@@ -114,6 +114,7 @@ public class GtfsImportParameters extends ChouetteJobParameters {
         gtfsImport.linePrefixToRemove = rawImportParameters.getIdParameters().getLinePrefixToRemove();
         gtfsImport.keepBoardingAlighting = rawImportParameters.isKeepBoardingAlighting();
         gtfsImport.keepStopGeolocalisation = rawImportParameters.isKeepStopGeolocalisation();
+        gtfsImport.keepStopNames = rawImportParameters.isKeepStopNames();
         Parameters parameters = new Parameters();
         parameters.gtfsImport = gtfsImport;
         GtfsImportParameters gtfsImportParameters = new GtfsImportParameters();

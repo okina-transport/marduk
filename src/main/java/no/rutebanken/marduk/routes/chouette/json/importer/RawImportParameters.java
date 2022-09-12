@@ -21,6 +21,7 @@ public class RawImportParameters {
     private boolean isAnalyzeJob;
     private boolean keepBoardingAlighting;
     private boolean keepStopGeolocalisation;
+    private boolean keepStopNames;
     private ImportMode importMode;
     private Provider provider;
     private String cleanMode;
@@ -144,5 +145,13 @@ public class RawImportParameters {
 
     public void setCleanMode(String cleanMode) {
         this.cleanMode = cleanMode;
+    }
+
+    public boolean isKeepStopNames() {
+        return keepStopNames;
+    }
+
+    public void setKeepStopNames(boolean keepStopNames) {
+        this.keepStopNames = keepStopNames;
     }
 }

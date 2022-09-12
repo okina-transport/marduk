@@ -69,6 +69,10 @@ public class AbstractImportParameters extends AbstractParameters {
     @JsonInclude(JsonInclude.Include.ALWAYS)
     public Boolean keepStopGeolocalisation;
 
+    @JsonProperty("keep_stop_names")
+    @JsonInclude(JsonInclude.Include.ALWAYS)
+    public Boolean keepStopNames;
+
     @JsonProperty("clean_mode")
     public String cleanMode ;
 
