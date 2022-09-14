@@ -723,8 +723,8 @@
                         <artifactId>maven-compiler-plugin</artifactId>
                         <version>${maven.compiler.plugin.version}</version>
                         <configuration>
-                            <source>1.8</source>
-                            <target>1.8</target>
+<!--                            <source>1.8</source>-->
+<!--                            <target>1.8</target>-->
                             <encoding>UTF-8</encoding>
                             <compilerArgs>
                                 <!--arg>-Werror</arg-->
@@ -804,6 +804,28 @@
                                 </goals>
                             </execution>
                         </executions>
+                    </plugin>
+
+
+
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-toolchains-plugin</artifactId>
+                        <version>1.1</version>
+                        <executions>
+                            <execution>
+                                <goals>
+                                    <goal>toolchain</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                        <configuration>
+                            <toolchains>
+                                <jdk>
+                                    <version>1.6</version>
+                                </jdk>
+                            </toolchains>
+                        </configuration>
                     </plugin>
 
 
