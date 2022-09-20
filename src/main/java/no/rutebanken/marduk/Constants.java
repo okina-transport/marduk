@@ -134,7 +134,7 @@ public class Constants {
     public static final String NOTIFICATION = "Notification";
     public static final String NOTIFICATION_URL = "NotificationUrl";
 
-    public static final String IMPORT_CONFIGURATION_SCHEDULER = "ImportConfigurationScheduler";
+    public static final String IMPORT_CONFIGURATION_SCHEDULER = "importConfigurationScheduler";
 
     public static final String ANALYZE_ACTION = "Analyze";
 
@@ -146,6 +146,9 @@ public class Constants {
     public static final String MERGED_NETEX_PARKINGS_ROOT_DIR = "mobiiti_technique/netex_parkings";
     public static final String MISSING_EXPORTS = "missingExports";
     public static final String IS_MERGED_NETEX_FAILED = "isMergedNetexFailed";
+
+    public static final String IMPORT_CONFIGURATION_ID = "importConfigurationId";
+
 
 }
 

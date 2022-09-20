@@ -67,6 +67,7 @@ import java.util.TimeZone;
 
 import static no.rutebanken.marduk.Constants.CHOUETTE_REFERENTIAL;
 import static no.rutebanken.marduk.Constants.FILE_HANDLE;
+import static no.rutebanken.marduk.Constants.IMPORT_CONFIGURATION_ID;
 import static no.rutebanken.marduk.Constants.IMPORT_CONFIGURATION_SCHEDULER;
 import static no.rutebanken.marduk.Constants.PROVIDER_ID;
 
@@ -119,12 +120,12 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
 
                     // FTP
                     for (ConfigurationFtp configurationFtp : importConfiguration.getConfigurationFtpList()) {
-                        if("FTP".equals(configurationFtp.getType())){
+                        if ("FTP".equals(configurationFtp.getType())) {
                             FTPClient client = new FTPClient();
                             getFileFromFTP(e, referential, importConfiguration, formatter, configurationFtp, client);
                         }
 
-                        if("SFTP".equals(configurationFtp.getType())){
+                        if ("SFTP".equals(configurationFtp.getType())) {
                             getFileFromSFTP(e, referential, importConfiguration, formatter, configurationFtp);
                         }
                     }
@@ -137,10 +138,15 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
                 .routeId("import-configuration-job");
 
 
-        from("direct:updateSchedulerForImportConfiguration")
+        from("direct:updateSchedulerImportConfiguration")
                 .log(LoggingLevel.INFO, getClass().getName(), "Update scheduler Import configuration")
-                .process(this::updateSchedulerForImportConfiguration)
+                .process(this::updateSchedulerImportConfiguration)
                 .routeId("update-scheduler-process-import-configuration");
+
+        from("direct:deleteSchedulerImportConfiguration")
+                .log(LoggingLevel.INFO, getClass().getName(), "Delete scheduler Import configuration")
+                .process(this::deleteSchedulerImportConfiguration)
+                .routeId("delete-scheduler-process-import-configuration");
 
         from("direct:getCron")
                 .log(LoggingLevel.INFO, getClass().getName(), "Get scheduler Import Configuration")
@@ -168,8 +174,7 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
                 if (configurationUrl.getLastTimestamp() == null || dateLastModified.isAfter(configurationUrl.getLastTimestamp())) {
                     configurationUrl.setLastTimestamp(dateLastModified);
                     uploadFileAndUpdateLastTimestampFromUrl(e, referential, importConfiguration, formatter, configurationUrl, url);
-                }
-                else{
+                } else {
                     log.info("No new file to import for the referential : " + referential + " for the import configuration URL : " + configurationUrl.getUrl());
                 }
             } else {
@@ -180,16 +185,14 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
                     if (configurationUrl.getLastTimestamp() == null || dateLastModified.isAfter(configurationUrl.getLastTimestamp())) {
                         configurationUrl.setLastTimestamp(dateLastModified);
                         uploadFileAndUpdateLastTimestampFromUrl(e, referential, importConfiguration, formatter, configurationUrl, url);
-                    }
-                    else{
+                    } else {
                         log.info("No file to import for the dataspace : " + referential + " for the import configuration URL : " + configurationUrl.getUrl());
                     }
                 }
                 if (date == 0) {
                     configurationUrl.setLastTimestamp(LocalDateTime.now());
                     uploadFileAndUpdateLastTimestampFromUrl(e, referential, importConfiguration, formatter, configurationUrl, url);
-                }
-                else{
+                } else {
                     log.info("No file to import for the dataspace : " + referential + " for the import configuration URL : " + configurationUrl.getUrl());
                 }
             }
@@ -200,7 +203,7 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
         InputStream inputStream = url.openStream();
         String fileName = url.getPath().substring(url.getPath().lastIndexOf('/') + 1);
         Date dateDownloadedFile = Date.from(Instant.now());
-        String destinationPath = importConfigurationPath + "/" + publicUploadPath  + "/" + referential + "/for_import/" + formatter.format(dateDownloadedFile) + "-" + formatter.format(Date.from(configurationUrl.getLastTimestamp().atZone(ZoneId.systemDefault()).toInstant())) + "/" + fileName;
+        String destinationPath = importConfigurationPath + "/" + publicUploadPath + "/" + referential + "/for_import/" + formatter.format(dateDownloadedFile) + "-" + formatter.format(Date.from(configurationUrl.getLastTimestamp().atZone(ZoneId.systemDefault()).toInstant())) + "/" + fileName;
         uploadFileAndUpdateLastTimestamp(e, referential, importConfiguration, inputStream, fileName, destinationPath, dateDownloadedFile);
         sendMail(importConfiguration.getRecipients(), referential, fileName, appUrl + "/" + referential + "/for_import/" + formatter.format(dateDownloadedFile) + "-" + formatter.format(Date.from(configurationUrl.getLastTimestamp().atZone(ZoneId.systemDefault()).toInstant())) + "/" + fileName);
     }
@@ -212,9 +215,11 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
                     public java.security.cert.X509Certificate[] getAcceptedIssuers() {
                         return null;
                     }
+
                     public void checkClientTrusted(
                             java.security.cert.X509Certificate[] certs, String authType) {
                     }
+
                     public void checkServerTrusted(
                             java.security.cert.X509Certificate[] certs, String authType) {
                     }
@@ -263,15 +268,13 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
                 if (configurationFtp.getLastTimestamp() == null || localDateTime.isAfter(configurationFtp.getLastTimestamp())) {
                     configurationFtp.setLastTimestamp(localDateTime);
                     Date dateDownloadedFile = Date.from(Instant.now());
-                    String destinationPath = importConfigurationPath + "/" + publicUploadPath  + "/" + referential + "/for_import/" + formatter.format(dateDownloadedFile) + "-" + formatter.format(Date.from(configurationFtp.getLastTimestamp().atZone(ZoneId.systemDefault()).toInstant())) + "/" + configurationFtp.getFilename();
+                    String destinationPath = importConfigurationPath + "/" + publicUploadPath + "/" + referential + "/for_import/" + formatter.format(dateDownloadedFile) + "-" + formatter.format(Date.from(configurationFtp.getLastTimestamp().atZone(ZoneId.systemDefault()).toInstant())) + "/" + configurationFtp.getFilename();
                     uploadFileAndUpdateLastTimestamp(e, referential, importConfiguration, new FileInputStream(targetFile), configurationFtp.getFilename(), destinationPath, dateDownloadedFile);
                     sendMail(importConfiguration.getRecipients(), referential, configurationFtp.getFilename(), appUrl + "/" + referential + "/for_import/" + formatter.format(dateDownloadedFile) + "-" + formatter.format(Date.from(configurationFtp.getLastTimestamp().atZone(ZoneId.systemDefault()).toInstant())) + "/" + configurationFtp.getFilename());
-                }
-                else{
+                } else {
                     log.info("No new file to import for the dataspace : " + referential + " for the import configuration SFTP : " + configurationFtp.getUrl());
                 }
-            }
-            else {
+            } else {
                 log.info("File " + configurationFtp.getFilename() + " not founded for the dataspace " + referential);
             }
         } catch (Exception ex) {
@@ -304,11 +307,10 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
                 if (configurationFtp.getLastTimestamp() == null || localDateTime.isAfter(configurationFtp.getLastTimestamp())) {
                     configurationFtp.setLastTimestamp(localDateTime);
                     Date dateDownloadedFile = Date.from(Instant.now());
-                    String destinationPath = importConfigurationPath + "/" + publicUploadPath  + "/" + referential + "/for_import/" + formatter.format(dateDownloadedFile) + "-" + formatter.format(Date.from(configurationFtp.getLastTimestamp().atZone(ZoneId.systemDefault()).toInstant())) + "/" + configurationFtp.getFilename();
+                    String destinationPath = importConfigurationPath + "/" + publicUploadPath + "/" + referential + "/for_import/" + formatter.format(dateDownloadedFile) + "-" + formatter.format(Date.from(configurationFtp.getLastTimestamp().atZone(ZoneId.systemDefault()).toInstant())) + "/" + configurationFtp.getFilename();
                     uploadFileAndUpdateLastTimestamp(e, referential, importConfiguration, client.retrieveFileStream(configurationFtp.getFolder() + "/" + file.getName()), file.getName(), destinationPath, dateDownloadedFile);
                     sendMail(importConfiguration.getRecipients(), referential, file.getName(), appUrl + "/" + referential + "/for_import/" + formatter.format(dateDownloadedFile) + "-" + formatter.format(Date.from(configurationFtp.getLastTimestamp().atZone(ZoneId.systemDefault()).toInstant())) + "/" + configurationFtp.getFilename());
-                }
-                else{
+                } else {
                     log.info("No new file to import for the dataspace : " + referential + " for the import configuration FTP : " + configurationFtp.getUrl());
                 }
             } else {
@@ -331,7 +333,8 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
     private void getCron(Exchange e) throws SchedulerException {
         SchedulerFactoryBean scheduler = schedulerImportConfiguration.getSchedulerImportConfiguration();
         Provider provider = getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class));
-        CronTrigger trigger = (CronTrigger) scheduler.getScheduler().getTrigger(TriggerKey.triggerKey("ImportConfigurationJobTrigger-" + provider.chouetteInfo.referential));
+        Integer importConfigurationId = e.getIn().getHeader(IMPORT_CONFIGURATION_ID, Integer.class);
+        CronTrigger trigger = (CronTrigger) scheduler.getScheduler().getTrigger(TriggerKey.triggerKey("ImportConfigurationJobTrigger-" + provider.chouetteInfo.referential + "-" + importConfigurationId));
         if (trigger != null) {
             String[] dateFromCron = trigger.getCronExpression().split(" ");
             JSONObject jsonObject = new JSONObject();
@@ -343,16 +346,19 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
         }
     }
 
-    private void updateSchedulerForImportConfiguration(Exchange e) throws SchedulerException {
+    private void updateSchedulerImportConfiguration(Exchange e) throws SchedulerException {
         Map headers = (Map) e.getIn().getBody(Map.class).get("headers");
         Provider provider = getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class));
         if (headers != null) {
-            if (headers.get(IMPORT_CONFIGURATION_SCHEDULER) != null && provider.chouetteInfo.referential != null) {
+            if (headers.get(IMPORT_CONFIGURATION_SCHEDULER) != null &&
+                    provider.chouetteInfo.referential != null &&
+                    headers.get(IMPORT_CONFIGURATION_ID) != null) {
                 SchedulerFactoryBean scheduler = schedulerImportConfiguration.getSchedulerImportConfiguration();
 
                 String importConfigurationSchedulerCron = (String) headers.get(IMPORT_CONFIGURATION_SCHEDULER);
+                Integer importConfigurationId = (Integer) headers.get(IMPORT_CONFIGURATION_ID);
 
-                if(StringUtils.isNotEmpty(importConfigurationSchedulerCron)){
+                if (StringUtils.isNotEmpty(importConfigurationSchedulerCron)) {
                     String[] dateFromCron = importConfigurationSchedulerCron.split(" ");
 
                     Date startDate = getStartDate();
@@ -360,13 +366,13 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
                     importConfigurationSchedulerCron = dateFromCron[0] + " " + dateFromCron[1] + " " + dateFromCron[2] + " ? * " + dateFromCron[5] + " " + dateFromCron[6];
 
                     JobDetail importConfigurationJobDetails = JobBuilder.newJob(ImportConfigurationJob.class)
-                            .withIdentity("ImportConfigurationJobDetails-" + provider.chouetteInfo.referential)
+                            .withIdentity("ImportConfigurationJobDetails-" + provider.chouetteInfo.referential + "-" + importConfigurationId)
                             .storeDurably(true)
                             .build();
 
                     Trigger importConfigurationTrigger = TriggerBuilder.newTrigger()
                             .forJob(importConfigurationJobDetails)
-                            .withIdentity("ImportConfigurationJobTrigger-" + provider.chouetteInfo.referential)
+                            .withIdentity("ImportConfigurationJobTrigger-" + provider.chouetteInfo.referential + "-" + importConfigurationId)
                             .withSchedule(CronScheduleBuilder.cronSchedule(importConfigurationSchedulerCron).withMisfireHandlingInstructionDoNothing())
                             .startAt(startDate)
                             .build();
@@ -379,21 +385,32 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
 
                     scheduler.getScheduler().scheduleJob(importConfigurationJobDetails, importConfigurationTrigger);
 
-                    log.info("Import Configuration Scheduler for " + provider.chouetteInfo.referential + " created with cron expression: " + importConfigurationSchedulerCron);
-                }
-                else {
-                    JobDetail importConfigurationJobDetails = JobBuilder.newJob(ImportConfigurationJob.class)
-                            .withIdentity("ImportConfigurationJobDetails-" + provider.chouetteInfo.referential)
-                            .build();
-                    if (scheduler.getScheduler().checkExists(importConfigurationJobDetails.getKey())) {
-                        scheduler.getScheduler().deleteJob(importConfigurationJobDetails.getKey());
-                        log.info("Import Configuration Scheduler for " + provider.chouetteInfo.referential + " deleted");
-                    }
-                    else{
-                        log.info("Import Configuration Scheduler for " + provider.chouetteInfo.referential + " not deleted because not existed");
-                    }
+                    log.info("Import Configuration Scheduler for " + provider.chouetteInfo.referential + "-" + importConfigurationId + " created with cron expression: " + importConfigurationSchedulerCron);
+                } else {
+                    deleteScheduler(provider, scheduler, importConfigurationId);
                 }
             }
+        }
+    }
+
+    private void deleteScheduler(Provider provider, SchedulerFactoryBean scheduler, Integer importConfigurationId) throws SchedulerException {
+        JobDetail importConfigurationJobDetails = JobBuilder.newJob(ImportConfigurationJob.class)
+                .withIdentity("ImportConfigurationJobDetails-" + provider.chouetteInfo.referential + "-" + importConfigurationId)
+                .build();
+        if (scheduler.getScheduler().checkExists(importConfigurationJobDetails.getKey())) {
+            scheduler.getScheduler().deleteJob(importConfigurationJobDetails.getKey());
+            log.info("Import Configuration Scheduler for " + provider.chouetteInfo.referential + "-" + importConfigurationId + " deleted");
+        } else {
+            log.info("Import Configuration Scheduler for " + provider.chouetteInfo.referential + "-" + importConfigurationId + " not deleted because not existed");
+        }
+    }
+
+    private void deleteSchedulerImportConfiguration(Exchange e) throws SchedulerException {
+        Provider provider = getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class));
+        Integer importConfigurationId = e.getIn().getHeader(IMPORT_CONFIGURATION_ID, Integer.class);
+        if (provider.chouetteInfo.referential != null && importConfigurationId != null) {
+            SchedulerFactoryBean scheduler = schedulerImportConfiguration.getSchedulerImportConfiguration();
+            deleteScheduler(provider, scheduler, importConfigurationId);
         }
     }
 

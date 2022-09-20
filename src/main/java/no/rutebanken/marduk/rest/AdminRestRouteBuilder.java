@@ -99,9 +99,6 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
     @Value("${simulation.name}")
     private String simulationName;
 
-    @Value("${netex.export.download.directory:files/netex/merged}")
-    private String netexWorkingDirectory;
-
     @Value("${netex.merged.tmp.working.directory:/tmp/mergedNetex/allFiles}")
     private String mergedNetexTmpDirectory;
 
@@ -1149,11 +1146,11 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
                 .log(LoggingLevel.INFO, correlation() + "Update scheduler for the import configuration")
                 .removeHeaders("CamelHttp*")
-                .to("direct:updateSchedulerForImportConfiguration")
+                .to("direct:updateSchedulerImportConfiguration")
                 .routeId("admin-import-configuration-scheduler")
                 .endRest()
 
-                .get("/get-cron")
+                .get("/get-cron/{importConfigurationId}")
                 .description("Get cron import configuration")
                 .consumes(PLAIN)
                 .produces(JSON)
@@ -1162,10 +1159,24 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .to("direct:authorizeRequest")
                 .setHeader(PROVIDER_ID, header("providerId"))
                 .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
+                .setHeader(IMPORT_CONFIGURATION_ID, header("importConfigurationId"))
                 .log(LoggingLevel.INFO, correlation() + "Get cron from scheduler for the import configuration")
                 .removeHeaders("CamelHttp*")
                 .to("direct:getCron")
                 .routeId("admin-get-cron-import-configuration-scheduler")
+                .endRest()
+
+                .post("/delete-scheduler-import-configuration/{importConfigurationId}")
+                .description("Delete scheduler import configuration process.")
+                .responseMessage().code(200).message("Delete scheduler import configuration command accepted").endResponseMessage()
+                .route()
+                .setHeader(PROVIDER_ID, header("providerId"))
+                .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
+                .setHeader(IMPORT_CONFIGURATION_ID, header("importConfigurationId"))
+                .log(LoggingLevel.INFO, correlation() + "Delete scheduler import configuration")
+                .removeHeaders("CamelHttp*")
+                .to("direct:deleteSchedulerImportConfiguration")
+                .routeId("admin-delete-import-configuration-scheduler")
                 .endRest();
 
 
