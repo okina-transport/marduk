@@ -18,7 +18,7 @@ import java.util.List;
 
 public class FileInformations {
 
-    public static void getObjectUpload(Exchange e) throws IOException {
+    public static void getObjectUpload(Exchange e) {
         byte[] bytes;
         try {
             bytes = IOUtils.toByteArray(e.getIn().getBody(InputStream.class));

@@ -607,9 +607,9 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .streamCaching()
                 .setHeader(PROVIDER_ID, header("providerId"))
                 .to("direct:authorizeRequest")
-                .process(e -> log.info("Authorized request passed"))
+                .log(LoggingLevel.INFO, "Authorized request passed")
                 .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
-                .process(e -> log.info("validation passed"))
+                .log(LoggingLevel.INFO, "Validation passed")
                 .process(e -> e.getIn().setHeader(ANALYZE_ACTION, true))
                 .log(LoggingLevel.INFO, correlation() + "upload files and start import pipeline")
                 .removeHeaders("CamelHttp*")
@@ -635,7 +635,6 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .process(e -> log.info("validation passed"))
                 .process(e -> {
                     e.getIn().setHeader(CHOUETTE_REFERENTIAL, getProviderRepository().getReferential(e.getIn().getHeader(PROVIDER_ID, Long.class)));
-                    String analysisJobId = e.getIn().getHeader(ANALYSIS_JOB_ID, String.class);
                     java.io.File file = fileSystemService.getAnalysisFile(e);
                     FileItemFactory fac = new DiskFileItemFactory();
                     FileItem fileItem = fac.createItem("file", "application/zip", false, file.getName());
@@ -1050,10 +1049,11 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .log(LoggingLevel.INFO, correlation() + "Chouette start validation")
                 .removeHeaders("CamelHttp*")
                 .process(e -> e.getIn().setHeader(USER, getUserNameFromHeaders(e)))
-                .choice().when(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)).chouetteInfo.migrateDataToProvider == null)
-                .setHeader(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL, constant(JobEvent.TimetableAction.VALIDATION_LEVEL_2.name()))
-                .otherwise()
-                .setHeader(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL, constant(JobEvent.TimetableAction.VALIDATION_LEVEL_1.name()))
+                .choice()
+                    .when(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)).chouetteInfo.migrateDataToProvider == null)
+                        .setHeader(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL, constant(JobEvent.TimetableAction.VALIDATION_LEVEL_2.name()))
+                    .otherwise()
+                        .setHeader(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL, constant(JobEvent.TimetableAction.VALIDATION_LEVEL_1.name()))
                 .end()
                 .removeHeader("Authorization")
                 .inOnly("activemq:queue:ChouetteValidationQueue")

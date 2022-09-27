@@ -4,7 +4,6 @@ import no.rutebanken.marduk.Constants;
 import no.rutebanken.marduk.domain.Provider;
 import no.rutebanken.marduk.repository.ImportConfigurationDAO;
 import no.rutebanken.marduk.repository.ProviderRepository;
-import no.rutebanken.marduk.routes.chouette.ExportJsonMapper;
 import org.apache.camel.ProducerTemplate;
 import org.quartz.Job;
 import org.quartz.JobExecutionContext;
@@ -35,11 +34,13 @@ public class ImportConfigurationJob implements Job {
 
         logger.info("Job import configuration");
 
-        Provider provider = providerRepository.findByName(context.getJobDetail().getKey().getName().split("-", 2)[1]);
+        Provider provider = providerRepository.findByName(context.getJobDetail().getKey().getName().split("-", 3)[1]);
+        String importConfigurationId = context.getJobDetail().getKey().getName().split("-", 3)[2];
 
         Map<String, Object> headers = new HashMap<>();
         headers.put(Constants.USER, "Mobi-iti");
         headers.put(Constants.PROVIDER_ID, provider.getId());
+        headers.put(Constants.IMPORT_CONFIGURATION_ID, importConfigurationId);
 
         producer.sendBodyAndHeaders("activemq:queue:ImportConfigurationQueue", null, headers);
     }

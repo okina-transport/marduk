@@ -14,8 +14,8 @@ public class ImportConfigurationDAO extends RestDAO<ImportConfiguration> {
         private String importConfigurationUrl;
 
 
-        public ImportConfiguration getImportConfiguration(String providerReferential) {
-                return super.getEntity(this.importConfigurationUrl, providerReferential, ImportConfiguration.class);
+        public ImportConfiguration getImportConfiguration(String providerReferential, String importConfigurationId) {
+                return super.getEntity(this.importConfigurationUrl + "/" + importConfigurationId, providerReferential, ImportConfiguration.class);
         }
 
         public ImportConfiguration update(String providerReferential, ImportConfiguration importConfiguration) throws JsonProcessingException {

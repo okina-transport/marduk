@@ -17,12 +17,16 @@
 package no.rutebanken.marduk.routes.chouette;
 
 import no.rutebanken.marduk.Constants;
+import no.rutebanken.marduk.Utils.SendMail;
 import no.rutebanken.marduk.domain.Provider;
 import no.rutebanken.marduk.routes.chouette.json.Parameters;
 import no.rutebanken.marduk.routes.status.JobEvent;
 import no.rutebanken.marduk.routes.status.JobEvent.State;
 import no.rutebanken.marduk.routes.status.JobEvent.TimetableAction;
+import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
+import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -30,8 +34,11 @@ import java.util.UUID;
 
 import static no.rutebanken.marduk.Constants.CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL;
 import static no.rutebanken.marduk.Constants.CHOUETTE_REFERENTIAL;
+import static no.rutebanken.marduk.Constants.FILE_NAME;
 import static no.rutebanken.marduk.Constants.JSON_PART;
 import static no.rutebanken.marduk.Constants.PROVIDER_ID;
+import static no.rutebanken.marduk.Constants.RECIPIENTS;
+import static no.rutebanken.marduk.Constants.WORKLOW;
 import static no.rutebanken.marduk.Utils.Utils.getLastPathElementOfUrl;
 
 /**
@@ -42,6 +49,15 @@ public class ChouetteTransferToDataspaceRouteBuilder extends AbstractChouetteRou
 
     @Value("${chouette.url}")
     private String chouetteUrl;
+
+	@Value("${client.name}")
+	private String client;
+
+	@Value("${server.name}")
+	private String server;
+
+	@Autowired
+	SendMail sendMail;
 
     @Override
     public void configure() throws Exception {
@@ -63,7 +79,7 @@ public class ChouetteTransferToDataspaceRouteBuilder extends AbstractChouetteRou
 				.process(e -> JobEvent.providerJobBuilder(e).timetableAction(TimetableAction.DATASPACE_TRANSFER).state(State.PENDING).build())
 		        .to("direct:updateStatus")
                 .log(LoggingLevel.INFO,correlation()+"Creating multipart request")
-                .process(e -> toGenericChouetteMultipart(e))
+                .process(this::toGenericChouetteMultipart)
                 .toD(chouetteUrl + "/chouette_iev/referentials/${header." + CHOUETTE_REFERENTIAL + "}/exporter/transfer")
                 .process(e -> {
                     e.getIn().setHeader(Constants.CHOUETTE_JOB_STATUS_URL, e.getIn().getHeader("Location").toString().replaceFirst("http", "http4"));
@@ -81,26 +97,23 @@ public class ChouetteTransferToDataspaceRouteBuilder extends AbstractChouetteRou
  		        .to("log:" + getClass().getName() + "?level=DEBUG&showAll=true&multiline=true")
  		        .setBody(constant(""))
  		        .choice()
-// 				.when(PredicateBuilder.and(constant("false").isEqualTo(header(Constants.ENABLE_VALIDATION)),simple("${header.action_report_result} == 'OK'")))
-// 		            .to("direct:checkScheduledJobsBeforeTriggeringRBSpaceValidation")
-// 		            .process(e -> Status.addStatus(e, TimetableAction.DATASPACE_TRANSFER, State.OK))
  		        .when(simple("${header.action_report_result} == 'OK'"))
 				 	.process(e -> JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.DATASPACE_TRANSFER).state(State.OK).build())
-	 		        .to("direct:updateStatus")
-	                .process(e -> {
-	                	// Update provider, now context switches to next provider level
-	                	Provider currentProvider = getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class));
-	                	e.getIn().setHeader(Constants.ORIGINAL_PROVIDER_ID,e.getIn().getHeader(Constants.ORIGINAL_PROVIDER_ID,e.getIn().getHeader(Constants.PROVIDER_ID)));
-	                	e.getIn().setHeader(Constants.PROVIDER_ID, currentProvider.chouetteInfo.migrateDataToProvider);
-	                }) 
- 		            .to("direct:checkScheduledJobsBeforeTriggeringRBSpaceValidation")
+					.to("direct:updateStatus")
+					.process(e -> {
+	            		// Update provider, now context switches to next provider level
+	            		Provider currentProvider = getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class));
+	            		e.getIn().setHeader(Constants.ORIGINAL_PROVIDER_ID,e.getIn().getHeader(Constants.ORIGINAL_PROVIDER_ID,e.getIn().getHeader(Constants.PROVIDER_ID)));
+	            		e.getIn().setHeader(Constants.PROVIDER_ID, currentProvider.chouetteInfo.migrateDataToProvider);
+					})
+					.to("direct:checkScheduledJobsBeforeTriggeringRBSpaceValidation")
  		        .when(simple("${header.action_report_result} == 'NOK'"))
- 		        	.log(LoggingLevel.INFO,correlation()+"Transfer failed")
-				 	.process(e -> JobEvent.providerJobBuilder(e).timetableAction(TimetableAction.DATASPACE_TRANSFER).state(State.FAILED).build())
+ 		        	.log(LoggingLevel.INFO,correlation() + "Transfer failed")
+				 	.process(this::setStateAndSendMailFailed)
  	 		        .to("direct:updateStatus")
  		        .otherwise()
- 		            .log(LoggingLevel.ERROR,correlation()+"Something went wrong on transfer")
-				 	.process(e -> JobEvent.providerJobBuilder(e).timetableAction(TimetableAction.DATASPACE_TRANSFER).state(State.FAILED).build())
+ 		            .log(LoggingLevel.ERROR,correlation() + "Something went wrong on transfer")
+				 	.process(this::setStateAndSendMailFailed)
  	 		        .to("direct:updateStatus")
  		        .end()
  		        .routeId("chouette-process-transfer-status");
@@ -115,7 +128,6 @@ public class ChouetteTransferToDataspaceRouteBuilder extends AbstractChouetteRou
              .otherwise()
  				.log(LoggingLevel.INFO,correlation()+"Transfer ok, triggering validation.")
  		        .setBody(constant(""))
- 		        
  		        .to("log:" + getClass().getName() + "?level=DEBUG&showAll=true&multiline=true")
 				.setHeader(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL,constant(JobEvent.TimetableAction.VALIDATION_LEVEL_2.name()))
 				.to("activemq:queue:ChouetteValidationQueue")
@@ -123,6 +135,28 @@ public class ChouetteTransferToDataspaceRouteBuilder extends AbstractChouetteRou
              .routeId("chouette-process-job-list-after-transfer");
 
     }
+
+	private void sendMailTransferFailed(Exchange e) {
+		String[] recipients = e.getIn().getHeader(RECIPIENTS, String.class).trim().split(",");
+		String referential = e.getIn().getHeader(CHOUETTE_REFERENTIAL, String.class);
+		String fileName = e.getIn().getHeader(FILE_NAME, String.class);
+		for (String recipient : recipients) {
+			if (StringUtils.isNotEmpty(recipient)) {
+				sendMail.sendEmail(client.toUpperCase() + " - " + server.toUpperCase() + " Referentiel Mobi-iti - Nouvelle integration de donnees du reseau de " + referential,
+						recipient,
+						"Bonjour,"
+								+ "\nLe transfert du fichier: " + fileName + " a échoué.",
+						null);
+			}
+		}
+	}
+
+	private void setStateAndSendMailFailed(Exchange e) {
+		JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.DATASPACE_TRANSFER).state(State.FAILED).build();
+		if (e.getIn().getHeader(WORKLOW, String.class) != null) {
+			sendMailTransferFailed(e);
+		}
+	}
 
 }
 

@@ -148,6 +148,9 @@ public class Constants {
     public static final String IS_MERGED_NETEX_FAILED = "isMergedNetexFailed";
 
     public static final String IMPORT_CONFIGURATION_ID = "importConfigurationId";
+    public static final String WORKLOW = "worklow";
+    public static final String RECIPIENTS = "recipients";
+    public static final String MULTIPLE_EXPORT = "multipleExport";
 
 
 }

@@ -17,6 +17,7 @@
 package no.rutebanken.marduk.routes.chouette;
 
 import no.rutebanken.marduk.Constants;
+import no.rutebanken.marduk.Utils.SendMail;
 import no.rutebanken.marduk.routes.chouette.json.Parameters;
 import no.rutebanken.marduk.routes.status.JobEvent;
 import no.rutebanken.marduk.routes.status.JobEvent.State;
@@ -36,8 +37,6 @@ import java.util.List;
 import java.util.UUID;
 
 import static java.util.stream.Collectors.toList;
-import static no.rutebanken.marduk.Constants.BLOBSTORE_MAKE_BLOB_PUBLIC;
-import static no.rutebanken.marduk.Constants.BLOBSTORE_PATH_OUTBOUND;
 import static no.rutebanken.marduk.Constants.CHOUETTE_JOB_STATUS_URL;
 import static no.rutebanken.marduk.Constants.CHOUETTE_REFERENTIAL;
 import static no.rutebanken.marduk.Constants.EXPORTED_FILENAME;
@@ -46,12 +45,13 @@ import static no.rutebanken.marduk.Constants.EXPORT_FILE_NAME;
 import static no.rutebanken.marduk.Constants.EXPORT_LINES_IDS;
 import static no.rutebanken.marduk.Constants.EXPORT_NAME;
 import static no.rutebanken.marduk.Constants.EXPORT_START_DATE;
-import static no.rutebanken.marduk.Constants.FILE_HANDLE;
 import static no.rutebanken.marduk.Constants.FILE_NAME;
 import static no.rutebanken.marduk.Constants.FILE_TYPE;
 import static no.rutebanken.marduk.Constants.JSON_PART;
 import static no.rutebanken.marduk.Constants.PROVIDER_ID;
+import static no.rutebanken.marduk.Constants.RECIPIENTS;
 import static no.rutebanken.marduk.Constants.USER;
+import static no.rutebanken.marduk.Constants.WORKLOW;
 import static no.rutebanken.marduk.Utils.Utils.getLastPathElementOfUrl;
 
 /**
@@ -63,20 +63,20 @@ public class ChouetteExportNeptuneRouteBuilder extends AbstractChouetteRouteBuil
     @Value("${chouette.url}")
     private String chouetteUrl;
 
-    @Value("${chouette.export.days.forward:365}")
-    private int daysForward;
+    @Value("${client.name}")
+    private String client;
 
-    @Value("${chouette.export.days.back:365}")
-    private int daysBack;
-
-    @Value("${google.publish.public:false}")
-    private boolean publicPublication;
+    @Value("${server.name}")
+    private String server;
 
     @Autowired
     ExportToConsumersProcessor exportToConsumersProcessor;
 
     @Autowired
     FileSystemService fileSystemService;
+
+    @Autowired
+    SendMail sendMail;
 
     @Override
     public void configure() throws Exception {
@@ -127,7 +127,7 @@ public class ChouetteExportNeptuneRouteBuilder extends AbstractChouetteRouteBuil
                 }) //Using header to addToExchange json data
                 .log(LoggingLevel.INFO, correlation() + "Creating multipart request")
                 .to("log:" + getClass().getName() + "?level=DEBUG&showAll=true&multiline=true")
-                .process(e -> toGenericChouetteMultipart(e))
+                .process(this::toGenericChouetteMultipart)
                 .to("log:" + getClass().getName() + "?level=DEBUG&showAll=true&multiline=true")
                 .setHeader(Exchange.CONTENT_TYPE, simple("multipart/form-data"))
                 .to("log:" + getClass().getName() + "?level=DEBUG&showAll=true&multiline=true")
@@ -147,33 +147,80 @@ public class ChouetteExportNeptuneRouteBuilder extends AbstractChouetteRouteBuil
         from("direct:processNeptuneExportResult")
                 .log(LoggingLevel.INFO, getClass().getName())
                 .choice()
-                .when(simple("${header.action_report_result} == 'OK'"))
-                .log(LoggingLevel.INFO, correlation() + "Export ended with status '${header.action_report_result}'")
-                .log(LoggingLevel.INFO, correlation() + "Calling url ${header.data_url}")
-                .removeHeaders("Camel*")
-                .setBody(simple(""))
-                .setHeader(Exchange.HTTP_METHOD, constant(org.apache.camel.component.http4.HttpMethods.GET))
-                .log(LoggingLevel.INFO, "Starting export download")
-                .toD("${header.data_url}")
-                .process(e -> {
-                    File file = fileSystemService.getOfferFile(e);
-                    e.getIn().setHeader("fileName", file.getName());
-                    e.getIn().setHeader(EXPORT_FILE_NAME, file.getName());
-                })
-                .setHeader("fileName", simple("NEPTUNE.zip"))
-                .process(exportToConsumersProcessor)
-                .log(LoggingLevel.INFO, "Upload to consumers and blob store completed")
-                .process(e -> JobEvent.providerJobBuilder(e).timetableAction(TimetableAction.EXPORT).state(State.OK).build())
-                .when(simple("${header.action_report_result} == 'NOK'"))
-                .log(LoggingLevel.WARN, correlation() + "Export failed")
-                .process(e -> JobEvent.providerJobBuilder(e).timetableAction(TimetableAction.EXPORT).state(State.FAILED).build())
-                .otherwise()
-                .log(LoggingLevel.ERROR, correlation() + "Something went wrong on export")
-                .process(e -> JobEvent.providerJobBuilder(e).timetableAction(TimetableAction.EXPORT).state(State.FAILED).build())
+                    .when(simple("${header.action_report_result} == 'OK'"))
+                        .log(LoggingLevel.INFO, correlation() + "Export ended with status '${header.action_report_result}'")
+                        .log(LoggingLevel.INFO, correlation() + "Calling url ${header.data_url}")
+                        .removeHeaders("Camel*")
+                        .setBody(simple(""))
+                        .setHeader(Exchange.HTTP_METHOD, constant(org.apache.camel.component.http4.HttpMethods.GET))
+                        .log(LoggingLevel.INFO, "Starting export download")
+                        .toD("${header.data_url}")
+                        .process(e -> {
+                            File file = fileSystemService.getOfferFile(e);
+                            e.getIn().setHeader("fileName", file.getName());
+                            e.getIn().setHeader(EXPORT_FILE_NAME, file.getName());
+                        })
+                        .setHeader("fileName", simple("NEPTUNE.zip"))
+                        .process(exportToConsumersProcessor)
+                        .log(LoggingLevel.INFO, "Upload to consumers and blob store completed")
+                        .process(this::setStateAndSendMailOk)
+                    .when(simple("${header.action_report_result} == 'NOK'"))
+                        .log(LoggingLevel.WARN, correlation() + "Export failed")
+                        .process(this::setStateAndSendMailFailed)
+                    .otherwise()
+                        .log(LoggingLevel.ERROR, correlation() + "Something went wrong on export")
+                        .process(this::setStateAndSendMailFailed)
                 .end()
                 .to("direct:updateStatus")
                 .routeId("chouette-process-export-neptune-status");
 
+    }
+
+    private void setStateAndSendMailOk(Exchange e) {
+        JobEvent.providerJobBuilder(e).timetableAction(TimetableAction.EXPORT).state(State.OK).build();
+        if (e.getIn().getHeader(WORKLOW, String.class) != null) {
+            sendMailExportOk(e);
+        }
+    }
+
+    private void sendMailExportOk(Exchange e) {
+        String[] recipients = e.getIn().getHeader(RECIPIENTS, String.class).trim().split(",");
+        String referential = e.getIn().getHeader(CHOUETTE_REFERENTIAL, String.class);
+        String fileName = e.getIn().getHeader(FILE_NAME, String.class);
+        String exportName = e.getIn().getHeader(EXPORT_NAME, String.class);
+        for (String recipient : recipients) {
+            if (org.apache.commons.lang3.StringUtils.isNotEmpty(recipient)) {
+                sendMail.sendEmail(client.toUpperCase() + " - " + server.toUpperCase() + " Referentiel Mobi-iti - Nouvelle integration de donnees du reseau de " + referential,
+                        recipient,
+                        "Bonjour,"
+                                + "\nL'export Neptune : " + exportName + "suite à l'import du fichier : " + fileName + " s'est correctement effectué.",
+                        null);
+            }
+        }
+    }
+
+    private void sendMailExportFailed(Exchange e) {
+        String[] recipients = e.getIn().getHeader(RECIPIENTS, String.class).trim().split(",");
+        String referential = e.getIn().getHeader(CHOUETTE_REFERENTIAL, String.class);
+        String fileName = e.getIn().getHeader(FILE_NAME, String.class);
+        String exportName = e.getIn().getHeader(EXPORT_NAME, String.class);
+        for (String recipient : recipients) {
+            if (org.apache.commons.lang3.StringUtils.isNotEmpty(recipient)) {
+                sendMail.sendEmail(client.toUpperCase() + " - " + server.toUpperCase() + " Referentiel Mobi-iti - Nouvelle integration de donnees du reseau de " + referential,
+                        recipient,
+                        "Bonjour,"
+                                + "\nL'export Neptune : " + exportName + " suite à l'import du fichier : " + fileName + " a échoué.",
+                        null);
+            }
+        }
+    }
+
+
+    private void setStateAndSendMailFailed(Exchange e) {
+        JobEvent.providerJobBuilder(e).timetableAction(TimetableAction.EXPORT).state(State.FAILED).build();
+        if (e.getIn().getHeader(WORKLOW, String.class) != null) {
+            sendMailExportFailed(e);
+        }
     }
 
 }

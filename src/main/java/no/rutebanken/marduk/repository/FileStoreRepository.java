@@ -129,10 +129,10 @@ public class FileStoreRepository implements BlobStoreRepository{
             Path newPath = fileSystemService.getOrCreateFilePath(objectName);
             File targetFile = new File(newPath.toUri());
             OutputStream outStream = new FileOutputStream(targetFile);
-            Util.copyStream(inputStream,outStream);
+            Util.copyStream(inputStream, outStream);
 
         } catch (IOException e) {
-            logger.error("Erreur upload blob fichier:"+objectName);
+            logger.error("Erreur upload blob fichier: " + objectName);
             logger.error(e.toString());
         }
     }

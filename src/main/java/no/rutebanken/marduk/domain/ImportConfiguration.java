@@ -14,6 +14,8 @@ public class ImportConfiguration implements Serializable {
     private List<ConfigurationFtp> configurationFtpList;
     private List<ConfigurationUrl> configurationUrlList;
     private List<Recipient> recipients;
+    private List<ImportParameters> importParameters;
+    private WorkflowEnum workflow;
 
 
     public Long getId() {
@@ -62,5 +64,21 @@ public class ImportConfiguration implements Serializable {
 
     public void setRecipients(List<Recipient> recipients) {
         this.recipients = recipients;
+    }
+
+    public List<ImportParameters> getImportParameters() {
+        return importParameters;
+    }
+
+    public void setImportParameters(List<ImportParameters> importParameters) {
+        this.importParameters = importParameters;
+    }
+
+    public WorkflowEnum getWorkflow() {
+        return workflow;
+    }
+
+    public void setWorkflow(WorkflowEnum workflow) {
+        this.workflow = workflow;
     }
 }

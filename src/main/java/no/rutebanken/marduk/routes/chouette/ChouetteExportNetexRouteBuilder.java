@@ -17,6 +17,7 @@
 package no.rutebanken.marduk.routes.chouette;
 
 import no.rutebanken.marduk.Constants;
+import no.rutebanken.marduk.Utils.SendMail;
 import no.rutebanken.marduk.routes.chouette.json.Parameters;
 import no.rutebanken.marduk.routes.status.JobEvent;
 import no.rutebanken.marduk.services.FileSystemService;
@@ -37,23 +38,26 @@ public class ChouetteExportNetexRouteBuilder extends AbstractChouetteRouteBuilde
     @Value("${chouette.url}")
     private String chouetteUrl;
 
-    @Value("${chouette.export.days.forward:365}")
-    private int daysForward;
-
-    @Value("${chouette.export.days.back:365}")
-    private int daysBack;
-
     @Value("${chouette.netex.export.stops:false}")
     private boolean exportStops;
 
     @Value("${google.publish.public:false}")
     private boolean publicPublication;
 
+    @Value("${client.name}")
+    private String client;
+
+    @Value("${server.name}")
+    private String server;
+
     @Autowired
     ExportToConsumersProcessor exportToConsumersProcessor;
 
     @Autowired
     FileSystemService fileSystemService;
+
+    @Autowired
+    SendMail sendMail;
 
     @Override
     public void configure() throws Exception {
@@ -105,52 +109,46 @@ public class ChouetteExportNetexRouteBuilder extends AbstractChouetteRouteBuilde
 
         from("direct:processNetexExportResult")
                 .choice()
-                .when(simple("${header.action_report_result} == 'OK'"))
-                .log(LoggingLevel.INFO, correlation() + "Export ended with status '${header.action_report_result}'")
-                .log(LoggingLevel.DEBUG, correlation() + "Calling url ${header.data_url}")
-                .removeHeaders("Camel*")
-                .setBody(simple(""))
-                .setHeader(Exchange.HTTP_METHOD, constant(org.apache.camel.component.http4.HttpMethods.GET))
-                .toD("${header.data_url}")
-                .process(e -> {
-                    File file = fileSystemService.getOfferFile(e);
-                    String fileName = file != null ? file.getName() : "defaultFileName";
-                    e.getIn().setHeader("fileName", fileName);
-                    e.getIn().setHeader(EXPORT_FILE_NAME,fileName);
-                })
-                .choice()
-                    .when(e -> e.getIn().getHeader(NETEX_EXPORT_GLOBAL, Boolean.class))
-                        .setHeader(FILE_HANDLE, simple(MERGED_NETEX_ROOT_DIR+"/${header." + CHOUETTE_REFERENTIAL + "}-" + Constants.CURRENT_AGGREGATED_NETEX_FILENAME))
-                        .to("direct:uploadBlob")
+                    .when(simple("${header.action_report_result} == 'OK'"))
+                        .log(LoggingLevel.INFO, correlation() + "Export ended with status '${header.action_report_result}'")
+                        .log(LoggingLevel.DEBUG, correlation() + "Calling url ${header.data_url}")
+                        .removeHeaders("Camel*")
+                        .setBody(simple(""))
+                        .setHeader(Exchange.HTTP_METHOD, constant(org.apache.camel.component.http4.HttpMethods.GET))
+                        .toD("${header.data_url}")
+                        .process(e -> {
+                            File file = fileSystemService.getOfferFile(e);
+                            String fileName = file != null ? file.getName() : "defaultFileName";
+                            e.getIn().setHeader("fileName", fileName);
+                            e.getIn().setHeader(EXPORT_FILE_NAME,fileName);
+                        })
+                        .choice()
+                            .when(e -> e.getIn().getHeader(NETEX_EXPORT_GLOBAL, Boolean.class))
+                                .setHeader(FILE_HANDLE, simple(MERGED_NETEX_ROOT_DIR+"/${header." + CHOUETTE_REFERENTIAL + "}-" + Constants.CURRENT_AGGREGATED_NETEX_FILENAME))
+                                .to("direct:uploadBlob")
+                                .to("direct:updateStatus")
+                            .otherwise()
+                                .process(exportToConsumersProcessor)
+                                .log(LoggingLevel.INFO, "Upload to consumers and blob store completed")
+                                .process(this::setStateAndSendMailOk)
+                        .endChoice()
+                        .setHeader(BLOBSTORE_MAKE_BLOB_PUBLIC, constant(publicPublication))
                         .to("direct:updateStatus")
+                        .removeHeader(Constants.CHOUETTE_JOB_ID)
+                        .setBody(constant(null))
+                        .choice()
+                            .when(e -> !e.getIn().getHeader(NO_GTFS_EXPORT, Boolean.class))
+                                .to("activemq:queue:ChouetteExportGtfsQueue")
+                            .end()
+                        .endChoice()
+                    .endChoice()
+                    .when(simple("${header.action_report_result} == 'NOK'"))
+                        .log(LoggingLevel.WARN, correlation() + "Netex export failed")
+                        .process(this::setStateAndSendMailFailed)
                     .otherwise()
-                        .process(exportToConsumersProcessor)
-                 //   .to("direct:exportMergedNetex")
-                .endChoice()
-                .choice()
-                .when(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)).chouetteInfo.generateDatedServiceJourneyIds)
-                .endChoice()
-                .setHeader(BLOBSTORE_MAKE_BLOB_PUBLIC, constant(publicPublication))
-                .process(e -> {
-                    log.info("Upload to consumers and blob store completed");
-                })
-                .process(e -> JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.EXPORT_NETEX).state(JobEvent.State.OK).build())
-                .to("direct:updateStatus")
-                .removeHeader(Constants.CHOUETTE_JOB_ID)
-                .setBody(constant(null))
-                .choice()
-                .when(e -> !e.getIn().getHeader(NO_GTFS_EXPORT, Boolean.class))
-                .to("activemq:queue:ChouetteExportGtfsQueue")
-                .end()
-                .endChoice()
-                .endChoice()
-                .when(simple("${header.action_report_result} == 'NOK'"))
-                .log(LoggingLevel.WARN, correlation() + "Netex export failed")
-                .process(e -> JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.EXPORT_NETEX).state(JobEvent.State.FAILED).build())
-                .otherwise()
-                .log(LoggingLevel.ERROR, correlation() + "Something went wrong on Netex export")
-                .process(e -> JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.EXPORT_NETEX).state(JobEvent.State.FAILED).build())
-                .end()
+                        .log(LoggingLevel.ERROR, correlation() + "Something went wrong on Netex export")
+                        .process(this::setStateAndSendMailFailed)
+                    .end()
                 .to("direct:updateStatus")
                 .removeHeader(Constants.CHOUETTE_JOB_ID)
                 .routeId("chouette-process-export-netex-status");
@@ -162,5 +160,51 @@ public class ChouetteExportNetexRouteBuilder extends AbstractChouetteRouteBuilde
                 .setBody(constant(null))
                 .inOnly("activemq:queue:ChouetteExportNetexQueue")
                 .routeId("chouette-netex-export-all-providers");
+    }
+
+    private void setStateAndSendMailOk(Exchange e) {
+        JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.EXPORT_NETEX).state(JobEvent.State.OK).build();
+        if (e.getIn().getHeader(WORKLOW, String.class) != null) {
+            sendMailExportOk(e);
+        }
+    }
+
+    private void setStateAndSendMailFailed(Exchange e) {
+        JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.EXPORT_NETEX).state(JobEvent.State.FAILED).build();
+        if (e.getIn().getHeader(WORKLOW, String.class) != null) {
+            sendMailExportFailed(e);
+        }
+    }
+
+    private void sendMailExportOk(Exchange e) {
+        String[] recipients = e.getIn().getHeader(RECIPIENTS, String.class).trim().split(",");
+        String referential = e.getIn().getHeader(CHOUETTE_REFERENTIAL, String.class);
+        String fileName = e.getIn().getHeader(FILE_NAME, String.class);
+        String exportName = e.getIn().getHeader(EXPORT_NAME, String.class);
+        for (String recipient : recipients) {
+            if (org.apache.commons.lang3.StringUtils.isNotEmpty(recipient)) {
+                sendMail.sendEmail(client.toUpperCase() + " - " + server.toUpperCase() + " Referentiel Mobi-iti - Nouvelle integration de donnees du reseau de " + referential,
+                        recipient,
+                        "Bonjour,"
+                                + "\nL'export Netex : " + exportName + " suite à l'import du fichier : " + fileName + " s'est correctement effectué.",
+                        null);
+            }
+        }
+    }
+
+    private void sendMailExportFailed(Exchange e) {
+        String[] recipients = e.getIn().getHeader(RECIPIENTS, String.class).trim().split(",");
+        String referential = e.getIn().getHeader(CHOUETTE_REFERENTIAL, String.class);
+        String fileName = e.getIn().getHeader(FILE_NAME, String.class);
+        String exportName = e.getIn().getHeader(EXPORT_NAME, String.class);
+        for (String recipient : recipients) {
+            if (org.apache.commons.lang3.StringUtils.isNotEmpty(recipient)) {
+                sendMail.sendEmail(client.toUpperCase() + " - " + server.toUpperCase() + " Referentiel Mobi-iti - Nouvelle integration de donnees du reseau de " + referential,
+                        recipient,
+                        "Bonjour,"
+                                + "\nL'export Netex : " + exportName + " suite à l'import du fichier : " + fileName + " a échoué.",
+                        null);
+            }
+        }
     }
 }

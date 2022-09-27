@@ -10,6 +10,7 @@ import no.rutebanken.marduk.config.SchedulerImportConfiguration;
 import no.rutebanken.marduk.domain.ConfigurationFtp;
 import no.rutebanken.marduk.domain.ConfigurationUrl;
 import no.rutebanken.marduk.domain.ImportConfiguration;
+import no.rutebanken.marduk.domain.ImportParameters;
 import no.rutebanken.marduk.domain.Provider;
 import no.rutebanken.marduk.domain.Recipient;
 import no.rutebanken.marduk.repository.ImportConfigurationDAO;
@@ -24,6 +25,10 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.net.ftp.FTPClient;
 import org.apache.commons.net.ftp.FTPClientConfig;
 import org.apache.commons.net.ftp.FTPFile;
+import org.apache.tomcat.util.http.fileupload.FileItem;
+import org.apache.tomcat.util.http.fileupload.FileItemFactory;
+import org.apache.tomcat.util.http.fileupload.disk.DiskFileItemFactory;
+import org.apache.tomcat.util.http.fileupload.util.Streams;
 import org.json.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.quartz.CronScheduleBuilder;
@@ -35,7 +40,6 @@ import org.quartz.Trigger;
 import org.quartz.TriggerBuilder;
 import org.quartz.TriggerKey;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.quartz.SchedulerFactoryBean;
 import org.springframework.stereotype.Component;
 
@@ -56,20 +60,35 @@ import java.text.SimpleDateFormat;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
-import java.time.ZoneId;
 import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
-import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.TimeZone;
 
+import static no.rutebanken.marduk.Constants.ANALYZE_ACTION;
+import static no.rutebanken.marduk.Constants.AREA_CENTROID_PREFIX_TO_REMOVE;
 import static no.rutebanken.marduk.Constants.CHOUETTE_REFERENTIAL;
-import static no.rutebanken.marduk.Constants.FILE_HANDLE;
+import static no.rutebanken.marduk.Constants.CLEAN_MODE;
+import static no.rutebanken.marduk.Constants.COMMERCIAL_POINT_ID_PREFIX_TO_REMOVE;
+import static no.rutebanken.marduk.Constants.FILE_TYPE;
+import static no.rutebanken.marduk.Constants.IGNORE_COMMERCIAL_POINTS;
 import static no.rutebanken.marduk.Constants.IMPORT_CONFIGURATION_ID;
 import static no.rutebanken.marduk.Constants.IMPORT_CONFIGURATION_SCHEDULER;
+import static no.rutebanken.marduk.Constants.IMPORT_MODE;
+import static no.rutebanken.marduk.Constants.IMPORT_TYPE;
+import static no.rutebanken.marduk.Constants.KEEP_BOARDING_ALIGHTING_POSSIBILITY;
+import static no.rutebanken.marduk.Constants.KEEP_STOP_GEOLOCALISATION;
+import static no.rutebanken.marduk.Constants.KEEP_STOP_NAMES;
+import static no.rutebanken.marduk.Constants.LINE_PREFIX_TO_REMOVE;
 import static no.rutebanken.marduk.Constants.PROVIDER_ID;
+import static no.rutebanken.marduk.Constants.QUAY_ID_PREFIX_TO_REMOVE;
+import static no.rutebanken.marduk.Constants.RECIPIENTS;
+import static no.rutebanken.marduk.Constants.ROUTE_MERGE;
+import static no.rutebanken.marduk.Constants.SPLIT_CHARACTER;
+import static no.rutebanken.marduk.Constants.STOP_AREA_PREFIX_TO_REMOVE;
+import static no.rutebanken.marduk.Constants.WORKLOW;
 
 @Component
 public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilder {
@@ -92,18 +111,6 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
     @Autowired
     BlobStoreService blobStoreService;
 
-    @Value("${marduk.upload.import.configuration.path}")
-    private String importConfigurationPath;
-
-    @Value("${marduk.upload.public.path:/tmp}")
-    private String publicUploadPath;
-
-    @Value("${app.url}")
-    private String appUrl;
-
-    @Value("${client.name}")
-    private String client;
-
     @Override
     public void configure() throws Exception {
         super.configure();
@@ -115,7 +122,9 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
                     Provider provider = getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class));
                     e.getIn().setHeader(CHOUETTE_REFERENTIAL, provider.chouetteInfo.referential);
                     String referential = e.getIn().getHeader(CHOUETTE_REFERENTIAL, String.class);
-                    ImportConfiguration importConfiguration = importConfigurationDAO.getImportConfiguration(referential);
+                    String importConfigurationId = e.getIn().getHeader(IMPORT_CONFIGURATION_ID, String.class);
+                    ImportConfiguration importConfiguration = importConfigurationDAO.getImportConfiguration(referential, importConfigurationId);
+
                     SimpleDateFormat formatter = new SimpleDateFormat("yyyyMMdd");
 
                     // FTP
@@ -135,6 +144,10 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
                         getFileFromUrl(e, referential, importConfiguration, formatter, configurationUrl);
                     }
                 })
+                .choice()
+                .when(header(WORKLOW).isNotNull())
+                    .to("direct:importLaunch")
+                .endChoice()
                 .routeId("import-configuration-job");
 
 
@@ -152,6 +165,36 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
                 .log(LoggingLevel.INFO, getClass().getName(), "Get scheduler Import Configuration")
                 .process(this::getCron)
                 .routeId("get-cron-scheduler-process-import-configuration");
+    }
+
+    private void parseImportParameters(Exchange e, ImportConfiguration importConfiguration) {
+        ImportParameters importParameters = importConfiguration.getImportParameters().size() > 0 ? importConfiguration.getImportParameters().get(0) : null;
+        if (importParameters != null) {
+            e.getIn().setHeader(ANALYZE_ACTION, true);
+            e.getIn().setHeader(FILE_TYPE, importParameters.getImportType());
+            e.getIn().setHeader(IMPORT_TYPE, importParameters.getImportType());
+            e.getIn().setHeader(SPLIT_CHARACTER, importParameters.getSplitCharacter());
+            e.getIn().setHeader(ROUTE_MERGE, importParameters.getRouteMerge());
+            e.getIn().setHeader(CLEAN_MODE, importParameters.getImportMode());
+            e.getIn().setHeader(KEEP_BOARDING_ALIGHTING_POSSIBILITY, importParameters.getKeepBoardingAlighting());
+            e.getIn().setHeader(KEEP_STOP_GEOLOCALISATION, importParameters.getKeepStopGeolocalisation());
+            e.getIn().setHeader(KEEP_STOP_NAMES, importParameters.getKeepStopNames());
+            e.getIn().setHeader(COMMERCIAL_POINT_ID_PREFIX_TO_REMOVE, importParameters.getCommercialPointPrefixToRemove());
+            e.getIn().setHeader(QUAY_ID_PREFIX_TO_REMOVE, importParameters.getQuayIdPrefixToRemove());
+            e.getIn().setHeader(STOP_AREA_PREFIX_TO_REMOVE, importParameters.getStopAreaPrefixToRemove());
+            e.getIn().setHeader(AREA_CENTROID_PREFIX_TO_REMOVE, importParameters.getAreaCentroidPrefixToRemove());
+            e.getIn().setHeader(LINE_PREFIX_TO_REMOVE, importParameters.getLinePrefixToRemove());
+            e.getIn().setHeader(IGNORE_COMMERCIAL_POINTS, importParameters.getIgnoreCommercialPoints());
+            e.getIn().setHeader(IMPORT_MODE, importParameters.getImportMode());
+            e.getIn().setHeader(WORKLOW, importConfiguration.getWorkflow().toString());
+            StringBuilder recipients = new StringBuilder();
+            for (Recipient recipient : importConfiguration.getRecipients()) {
+                recipients.append(recipient.getEmail());
+            }
+            if (StringUtils.isNotEmpty(recipients.toString())) {
+                e.getIn().setHeader(RECIPIENTS, recipients.toString());
+            }
+        }
     }
 
     private void getFileFromUrl(Exchange e, String referential, ImportConfiguration importConfiguration, SimpleDateFormat formatter, ConfigurationUrl configurationUrl) throws Exception {
@@ -199,13 +242,10 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
         }
     }
 
-    private void uploadFileAndUpdateLastTimestampFromUrl(Exchange e, String referential, ImportConfiguration importConfiguration, SimpleDateFormat formatter, ConfigurationUrl configurationUrl, URL url) throws IOException {
+    private void uploadFileAndUpdateLastTimestampFromUrl(Exchange e, String referential, ImportConfiguration importConfiguration, SimpleDateFormat formatter, ConfigurationUrl configurationUrl, URL url) throws IOException, InterruptedException {
         InputStream inputStream = url.openStream();
         String fileName = url.getPath().substring(url.getPath().lastIndexOf('/') + 1);
-        Date dateDownloadedFile = Date.from(Instant.now());
-        String destinationPath = importConfigurationPath + "/" + publicUploadPath + "/" + referential + "/for_import/" + formatter.format(dateDownloadedFile) + "-" + formatter.format(Date.from(configurationUrl.getLastTimestamp().atZone(ZoneId.systemDefault()).toInstant())) + "/" + fileName;
-        uploadFileAndUpdateLastTimestamp(e, referential, importConfiguration, inputStream, fileName, destinationPath, dateDownloadedFile);
-        sendMail(importConfiguration.getRecipients(), referential, fileName, appUrl + "/" + referential + "/for_import/" + formatter.format(dateDownloadedFile) + "-" + formatter.format(Date.from(configurationUrl.getLastTimestamp().atZone(ZoneId.systemDefault()).toInstant())) + "/" + fileName);
+        setBodyWithFileAndUpdateLastTimestamp(e, referential, importConfiguration, inputStream, fileName);
     }
 
     private void trustAllCertificates() {
@@ -267,10 +307,7 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
             if (targetFile.length() > 0) {
                 if (configurationFtp.getLastTimestamp() == null || localDateTime.isAfter(configurationFtp.getLastTimestamp())) {
                     configurationFtp.setLastTimestamp(localDateTime);
-                    Date dateDownloadedFile = Date.from(Instant.now());
-                    String destinationPath = importConfigurationPath + "/" + publicUploadPath + "/" + referential + "/for_import/" + formatter.format(dateDownloadedFile) + "-" + formatter.format(Date.from(configurationFtp.getLastTimestamp().atZone(ZoneId.systemDefault()).toInstant())) + "/" + configurationFtp.getFilename();
-                    uploadFileAndUpdateLastTimestamp(e, referential, importConfiguration, new FileInputStream(targetFile), configurationFtp.getFilename(), destinationPath, dateDownloadedFile);
-                    sendMail(importConfiguration.getRecipients(), referential, configurationFtp.getFilename(), appUrl + "/" + referential + "/for_import/" + formatter.format(dateDownloadedFile) + "-" + formatter.format(Date.from(configurationFtp.getLastTimestamp().atZone(ZoneId.systemDefault()).toInstant())) + "/" + configurationFtp.getFilename());
+                    setBodyWithFileAndUpdateLastTimestamp(e, referential, importConfiguration, new FileInputStream(targetFile), configurationFtp.getFilename());
                 } else {
                     log.info("No new file to import for the dataspace : " + referential + " for the import configuration SFTP : " + configurationFtp.getUrl());
                 }
@@ -306,10 +343,7 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
                 LocalDateTime localDateTime = LocalDateTime.ofInstant(file.getTimestamp().toInstant(), file.getTimestamp().getTimeZone().toZoneId());
                 if (configurationFtp.getLastTimestamp() == null || localDateTime.isAfter(configurationFtp.getLastTimestamp())) {
                     configurationFtp.setLastTimestamp(localDateTime);
-                    Date dateDownloadedFile = Date.from(Instant.now());
-                    String destinationPath = importConfigurationPath + "/" + publicUploadPath + "/" + referential + "/for_import/" + formatter.format(dateDownloadedFile) + "-" + formatter.format(Date.from(configurationFtp.getLastTimestamp().atZone(ZoneId.systemDefault()).toInstant())) + "/" + configurationFtp.getFilename();
-                    uploadFileAndUpdateLastTimestamp(e, referential, importConfiguration, client.retrieveFileStream(configurationFtp.getFolder() + "/" + file.getName()), file.getName(), destinationPath, dateDownloadedFile);
-                    sendMail(importConfiguration.getRecipients(), referential, file.getName(), appUrl + "/" + referential + "/for_import/" + formatter.format(dateDownloadedFile) + "-" + formatter.format(Date.from(configurationFtp.getLastTimestamp().atZone(ZoneId.systemDefault()).toInstant())) + "/" + configurationFtp.getFilename());
+                    setBodyWithFileAndUpdateLastTimestamp(e, referential, importConfiguration, client.retrieveFileStream(configurationFtp.getFolder() + "/" + file.getName()), file.getName());
                 } else {
                     log.info("No new file to import for the dataspace : " + referential + " for the import configuration FTP : " + configurationFtp.getUrl());
                 }
@@ -319,15 +353,19 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
         }
     }
 
-    private void uploadFileAndUpdateLastTimestamp(Exchange e, String referential, ImportConfiguration importConfiguration, InputStream inputStream, String fileName, String destinationPath, Date dateDownloadedFile) throws IOException {
-        //Upload file on filesystem
-        e.getIn().setHeader(FILE_HANDLE, getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)).mobiitiId + "/imports/" + e.getIn().getBody(String.class));
-        blobStoreService.uploadBlob(destinationPath, true, inputStream);
-        log.info("File : " + fileName + " uploaded on " + destinationPath);
+    private void setBodyWithFileAndUpdateLastTimestamp(Exchange e, String referential, ImportConfiguration importConfiguration, InputStream inputStream, String fileName) throws IOException, InterruptedException {
+        java.io.File file = new File(fileName);
+        FileItemFactory fac = new DiskFileItemFactory();
+        FileItem fileItem = fac.createItem("file", "application/zip", false, file.getName());
+        Streams.copy(inputStream, fileItem.getOutputStream(), true);
+        e.getIn().setBody(fileItem);
 
         //Update last timestamp
         importConfigurationDAO.update(referential, importConfiguration);
         log.info("Import configuration of " + referential + " updated");
+
+        // Parse import parameters from import configuration
+        parseImportParameters(e, importConfiguration);
     }
 
     private void getCron(Exchange e) throws SchedulerException {
@@ -429,19 +467,6 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
         startDate.set(Calendar.MONTH, month);
         startDate.set(Calendar.YEAR, year);
         return startDate.getTime();
-    }
-
-    private void sendMail(List<Recipient> recipients, String referential, String fileName, String destinationPath) {
-        for (Recipient recipient : recipients) {
-            if (StringUtils.isNotEmpty(recipient.getEmail())) {
-                sendMail.sendEmail(client.toUpperCase() + " Referentiel Mobi-iti - Nouvelle integration de donnees du reseau de " + referential,
-                        recipient.getEmail(),
-                        "Bonjour,"
-                                + "\nUn nouveau fichier de données est disponible pour intégration dans le Référentiel Mobi-iti. Voici le lien de téléchargement : "
-                                + "\n<a target=\"_blank\" href=\"" + destinationPath + "\">" + fileName + "</a>",
-                        null);
-            }
-        }
     }
 }
 

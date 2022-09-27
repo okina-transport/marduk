@@ -17,6 +17,7 @@
 package no.rutebanken.marduk.routes.chouette;
 
 import no.rutebanken.marduk.Constants;
+import no.rutebanken.marduk.Utils.SendMail;
 import no.rutebanken.marduk.domain.IdFormat;
 import no.rutebanken.marduk.domain.Provider;
 import no.rutebanken.marduk.routes.chouette.json.IdParameters;
@@ -36,7 +37,6 @@ import org.springframework.stereotype.Component;
 import java.io.File;
 import java.io.InputStream;
 import java.io.PrintWriter;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Date;
@@ -51,27 +51,29 @@ import static no.rutebanken.marduk.Utils.Utils.getLastPathElementOfUrl;
 /**
  * Exports gtfs files from Chouette
  */
-// @formatter:off
 @Component
 public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder {
 
     @Value("${chouette.url}")
     private String chouetteUrl;
 
-    @Value("${chouette.export.days.forward:365}")
-    private int daysForward;
-
-    @Value("${chouette.export.days.back:365}")
-    private int daysBack;
-
     @Value("${google.publish.public:false}")
     private boolean publicPublication;
+
+    @Value("${client.name}")
+    private String client;
+
+    @Value("${server.name}")
+    private String server;
 
     @Autowired
     ExportToConsumersProcessor exportToConsumersProcessor;
 
     @Autowired
     FileSystemService fileSystemService;
+
+    @Autowired
+    SendMail sendMail;
 
     @Override
     public void configure() throws Exception {
@@ -84,14 +86,11 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
                     // Force new correlation ID : each export must have its own correlation ID to me displayed correctly in export screen
                     e.getIn().setHeader(Constants.CORRELATION_ID,  UUID.randomUUID().toString());
                     e.getIn().removeHeader(Constants.CHOUETTE_JOB_ID);
-                    String exportName;
+                    String exportName = "gtfs";
                     if(!e.getIn().getHeader(GTFS_EXPORT_GLOBAL, Boolean.class)){
                         exportName = org.springframework.util.StringUtils.hasText(e.getIn().getHeader(EXPORTED_FILENAME, String.class)) ?
                                 (String) e.getIn().getHeader(EXPORTED_FILENAME) :
                                 e.getIn().getHeader(EXPORT_NAME, String.class).replace(" ","_");
-                    }
-                    else {
-                        exportName = "gtfs";
                     }
                     e.getIn().setHeader(FILE_NAME, exportName);
                     e.getIn().setHeader(FILE_TYPE, "gtfs");
@@ -114,12 +113,9 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
                     String commercialPointIdPrefix = e.getIn().getHeader(COMMERCIAL_POINT_ID_PREFIX) != null ? (String) e.getIn().getHeader(COMMERCIAL_POINT_ID_PREFIX) : null;
                     Boolean commercialPointExport = e.getIn().getHeader(COMMERCIAL_POINT_EXPORT) != null ? (Boolean) e.getIn().getHeader(COMMERCIAL_POINT_EXPORT) : null;
                     IdParameters idParams = new IdParameters(stopIdPrefix,idFormat,idSuffix,linePrefix,commercialPointIdPrefix);
-                    String exportedFilename;
+                    String exportedFilename = "gtfs.zip";;
                     if(!e.getIn().getHeader(GTFS_EXPORT_GLOBAL, Boolean.class)){
                         exportedFilename = e.getIn().getHeader(EXPORTED_FILENAME) != null ? (String) e.getIn().getHeader(EXPORTED_FILENAME) : exportName.replace(" ","_") + ".zip";
-                    }
-                    else {
-                        exportedFilename = "gtfs.zip";
                     }
 
 
@@ -145,7 +141,7 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
                         gtfsParams = Parameters.getGtfsExportParameters(getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)), exportName, user, keepOriginalId, null, startDate, endDate, exportedFilename, idParams, mappingLinesIds, commercialPointExport);
                     } else if (e.getIn().getHeader(EXPORT_LINES_IDS) != null) {
                         String linesIdsS = e.getIn().getHeader(EXPORT_LINES_IDS, String.class);
-                        List<Long> linesIds = Arrays.stream(StringUtils.split(linesIdsS, ",")).map(s -> Long.valueOf(s)).collect(toList());
+                        List<Long> linesIds = Arrays.stream(StringUtils.split(linesIdsS, ",")).map(Long::valueOf).collect(toList());
                         gtfsParams = Parameters.getGtfsExportParameters(getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)), exportName, user, keepOriginalId, linesIds, startDate, endDate, exportedFilename, idParams, mappingLinesIds, commercialPointExport);
                     } else {
                         gtfsParams = Parameters.getGtfsExportParameters(getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)), user, keepOriginalId, exportedFilename, commercialPointExport);
@@ -155,7 +151,7 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
                 }) //Using header to addToExchange json data
                 .log(LoggingLevel.INFO, correlation() + "Creating multipart request")
                 .to("log:" + getClass().getName() + "?level=DEBUG&showAll=true&multiline=true")
-                .process(e -> toGenericChouetteMultipart(e))
+                .process(this::toGenericChouetteMultipart)
                 .to("log:" + getClass().getName() + "?level=DEBUG&showAll=true&multiline=true")
                 .setHeader(Exchange.CONTENT_TYPE, simple("multipart/form-data"))
                 .to("log:" + getClass().getName() + "?level=DEBUG&showAll=true&multiline=true")
@@ -174,43 +170,36 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
 
         from("direct:processExportResult")
                 .to("log:" + getClass().getName() + "?level=DEBUG&showAll=true&multiline=true")
-                .process(e -> {
-                    log.info(getClass().getName() + "?level=DEBUG&showAll=true&multiline=true");
-                })
                 .choice()
-                .when(simple("${header.action_report_result} == 'OK'"))
-                    .log(LoggingLevel.INFO, correlation() + "Export ended with status '${header.action_report_result}'")
-                    .log(LoggingLevel.INFO, correlation() + "Calling url ${header.data_url}")
-                    .removeHeaders("Camel*")
-                    .setBody(simple(""))
-                    .setHeader(Exchange.HTTP_METHOD, constant(org.apache.camel.component.http4.HttpMethods.GET))
-                    .process(e -> {
-                        log.info("Starting export download");
-                    })
-                    .toD("${header.data_url}")
-                    .process(e -> {
-                        File file = fileSystemService.getOfferFile(e);
-                        String fileName = file != null ?  file.getName() : "defaultName";
-                        e.getIn().setHeader(EXPORT_FILE_NAME, fileName);
-                    })
-                    .choice()
-                        .when(e -> e.getIn().getHeader(GTFS_EXPORT_GLOBAL, Boolean.class))
-                        .setHeader(FILE_HANDLE, simple("mobiiti_technique/gtfs/allFiles/${header." + CHOUETTE_REFERENTIAL + "}-" + Constants.CURRENT_AGGREGATED_GTFS_FILENAME))
-                        .to("direct:uploadBlob")
-                        .to("direct:exportMergedGtfs")
-                .endChoice()
-                    .process(exportToConsumersProcessor)
-                    .setHeader(BLOBSTORE_MAKE_BLOB_PUBLIC, constant(publicPublication))
-                    .process(e -> {
-                        log.info("Upload to consumers and blob store completed");
-                    })
-                    .process(e -> JobEvent.providerJobBuilder(e).timetableAction(TimetableAction.EXPORT).state(State.OK).build())
-                .when(simple("${header.action_report_result} == 'NOK'"))
-                    .log(LoggingLevel.WARN, correlation() + "Export failed")
-                    .process(e -> JobEvent.providerJobBuilder(e).timetableAction(TimetableAction.EXPORT).state(State.FAILED).build())
-                .otherwise()
-                    .log(LoggingLevel.ERROR, correlation() + "Something went wrong on export")
-                    .process(e -> JobEvent.providerJobBuilder(e).timetableAction(TimetableAction.EXPORT).state(State.FAILED).build())
+                    .when(simple("${header.action_report_result} == 'OK'"))
+                        .log(LoggingLevel.INFO, correlation() + "Export ended with status '${header.action_report_result}'")
+                        .log(LoggingLevel.INFO, correlation() + "Calling url ${header.data_url}")
+                        .removeHeaders("Camel*")
+                        .setBody(simple(""))
+                        .setHeader(Exchange.HTTP_METHOD, constant(org.apache.camel.component.http4.HttpMethods.GET))
+                        .log(LoggingLevel.INFO, "Starting export download")
+                        .toD("${header.data_url}")
+                        .process(e -> {
+                            File file = fileSystemService.getOfferFile(e);
+                            String fileName = file != null ?  file.getName() : "defaultName";
+                            e.getIn().setHeader(EXPORT_FILE_NAME, fileName);
+                        })
+                        .choice()
+                            .when(e -> e.getIn().getHeader(GTFS_EXPORT_GLOBAL, Boolean.class))
+                                .setHeader(FILE_HANDLE, simple("mobiiti_technique/gtfs/allFiles/${header." + CHOUETTE_REFERENTIAL + "}-" + Constants.CURRENT_AGGREGATED_GTFS_FILENAME))
+                                .to("direct:uploadBlob")
+                                .to("direct:exportMergedGtfs")
+                        .endChoice()
+                        .process(exportToConsumersProcessor)
+                        .setHeader(BLOBSTORE_MAKE_BLOB_PUBLIC, constant(publicPublication))
+                        .log(LoggingLevel.INFO,"Upload to consumers and blob store completed")
+                        .process(this::setStateAndSendMailOk)
+                    .when(simple("${header.action_report_result} == 'NOK'"))
+                        .log(LoggingLevel.WARN, correlation() + "Export failed")
+                        .process(this::setStateAndSendMailFailed)
+                    .otherwise()
+                        .log(LoggingLevel.ERROR, correlation() + "Something went wrong on export")
+                        .process(this::setStateAndSendMailFailed)
                 .end()
                 .to("direct:updateStatus")
                 .routeId("chouette-process-export-status");
@@ -219,9 +208,6 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
                 .log(LoggingLevel.INFO, correlation() + "Adding feed_info.txt to GTFS file")
                 .process(e -> {
                     // Add feed info
-                    Provider provider = getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class));
-                    provider.getChouetteInfo();
-
                     String feedInfoContent = "feed_publisher_name,feed_publisher_url,feed_lang,feed_start_date,feed_end_date,feed_version,feed_contact_email,feed_contact_url\n";
 
                     feedInfoContent += "MOBIITI_A_CORRIGER" + ",";                     // feed_publisher_name
@@ -269,6 +255,52 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
                 .setBody(constant(null))
                 .inOnly("activemq:queue:ChouetteExportGtfsQueue")
                 .routeId("chouette-gtfs-export-all-providers");
+    }
+
+    private void sendMailExportOk(Exchange e) {
+        String[] recipients = e.getIn().getHeader(RECIPIENTS, String.class).trim().split(",");
+        String referential = e.getIn().getHeader(CHOUETTE_REFERENTIAL, String.class);
+        String fileName = e.getIn().getHeader(FILE_NAME, String.class);
+        String exportName = e.getIn().getHeader(EXPORT_NAME, String.class);
+        for (String recipient : recipients) {
+            if (org.apache.commons.lang3.StringUtils.isNotEmpty(recipient)) {
+                sendMail.sendEmail(client.toUpperCase() + " - " + server.toUpperCase() + " Referentiel Mobi-iti - Nouvelle integration de donnees du reseau de " + referential,
+                        recipient,
+                        "Bonjour,"
+                                + "\nL'export GTFS : " + exportName + " suite à l'import du fichier : " + fileName + " s'est correctement effectué.",
+                        null);
+            }
+        }
+    }
+
+    private void sendMailExportFailed(Exchange e) {
+        String[] recipients = e.getIn().getHeader(RECIPIENTS, String.class).trim().split(",");
+        String referential = e.getIn().getHeader(CHOUETTE_REFERENTIAL, String.class);
+        String fileName = e.getIn().getHeader(FILE_NAME, String.class);
+        String exportName = e.getIn().getHeader(EXPORT_NAME, String.class);
+        for (String recipient : recipients) {
+            if (org.apache.commons.lang3.StringUtils.isNotEmpty(recipient)) {
+                sendMail.sendEmail(client.toUpperCase() + " - " + server.toUpperCase() + " Referentiel Mobi-iti - Nouvelle integration de donnees du reseau de " + referential,
+                        recipient,
+                        "Bonjour,"
+                                + "\nL'export GTFS : " + exportName + " suite à l'import du fichier : " + fileName + " a échoué.",
+                        null);
+            }
+        }
+    }
+
+    private void setStateAndSendMailOk(Exchange e) {
+        JobEvent.providerJobBuilder(e).timetableAction(TimetableAction.EXPORT).state(State.OK).build();
+        if (e.getIn().getHeader(WORKLOW, String.class) != null) {
+            sendMailExportOk(e);
+        }
+    }
+
+    private void setStateAndSendMailFailed(Exchange e) {
+        JobEvent.providerJobBuilder(e).timetableAction(TimetableAction.EXPORT).state(State.FAILED).build();
+        if (e.getIn().getHeader(WORKLOW, String.class) != null) {
+            sendMailExportFailed(e);
+        }
     }
 
 }

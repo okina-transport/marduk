@@ -108,12 +108,9 @@ public class MultipleExportProcessor implements Processor {
         if (export.getStartDate() != null) {
             exchange.getIn().getHeaders().put(EXPORT_START_DATE, export.getStartDate());
         }
+
         if (export.getEndDate() != null) {
             exchange.getIn().getHeaders().put(EXPORT_END_DATE, export.getEndDate());
-        }
-
-        if (export.getName() != null) {
-            exchange.getIn().getHeaders().put(EXPORT_NAME, export.getName());
         }
 
         if (export.getExportedFileName() != null) {
@@ -195,6 +192,7 @@ public class MultipleExportProcessor implements Processor {
     public void prepareHeadersForExport(Exchange exchange, ExportTemplate export) throws Exception {
         boolean noGtfs = export.getType() != ExportType.GTFS;
         boolean exportGlobal = "mobiiti_technique".equals(exchange.getIn().getHeader(CHOUETTE_REFERENTIAL, String.class));
+        exchange.getIn().getHeaders().put(EXPORT_NAME, export.getName());
         exchange.getIn().getHeaders().put(NO_GTFS_EXPORT, noGtfs);
         exchange.getIn().getHeaders().put(NETEX_EXPORT_GLOBAL, exportGlobal);
         exchange.getIn().getHeaders().put(GTFS_EXPORT_GLOBAL, exportGlobal);
@@ -206,7 +204,7 @@ public class MultipleExportProcessor implements Processor {
         exchange.getIn().getHeaders().put(KEEP_ORIGINAL_ID, keepOriginalId);
         exchange.getOut().setBody("Export id : " + export.getId());
         Map<String, Object> headers = exchange.getIn().getHeaders();
-        headers.put(PROVIDER_ID, headers.get("providerId"));
+        headers.put(PROVIDER_ID, headers.get("providerId") != null ? headers.get("providerId") : exchange.getIn().getHeader(PROVIDER_ID));
         headers.put(NO_GTFS_EXPORT, noGtfs);
         headers.put(NETEX_EXPORT_GLOBAL, exportGlobal);
         headers.put(GTFS_EXPORT_GLOBAL, exportGlobal);
