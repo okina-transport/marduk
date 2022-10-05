@@ -353,7 +353,8 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
         }
     }
 
-    private void setBodyWithFileAndUpdateLastTimestamp(Exchange e, String referential, ImportConfiguration importConfiguration, InputStream inputStream, String fileName) throws IOException, InterruptedException {
+    private void setBodyWithFileAndUpdateLastTimestamp(Exchange e, String referential, ImportConfiguration importConfiguration, InputStream inputStream, String fileName) throws IOException {
+        StringUtils.appendIfMissing(fileName, ".zip");
         java.io.File file = new File(fileName);
         FileItemFactory fac = new DiskFileItemFactory();
         FileItem fileItem = fac.createItem("file", "application/zip", false, file.getName());
