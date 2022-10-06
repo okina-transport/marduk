@@ -209,11 +209,12 @@ public class ChouetteValidationRouteBuilder extends AbstractChouetteRouteBuilder
                 .when(simple("${header.action_report_result} == 'OK' and ${header.validation_report_result} == 'NOK'"))
                     .log(LoggingLevel.INFO, correlation() + "Validation failed (processed ok, but timetable data is faulty)")
                     .process(this::setStateAndSendMailFailed)
+                    .to("direct:updateStatus")
                 .otherwise()
                     .log(LoggingLevel.ERROR, correlation() + "Validation went wrong")
                     .process(this::setStateAndSendMailFailed)
+                    .to("direct:updateStatus")
                 .end()
-                .to("direct:updateStatus")
                 .routeId("chouette-process-validation-status");
 
         // Check that no other import jobs in status SCHEDULED exists for this referential. If so, do not trigger export
