@@ -125,23 +125,21 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
                     String importConfigurationId = e.getIn().getHeader(IMPORT_CONFIGURATION_ID, String.class);
                     ImportConfiguration importConfiguration = importConfigurationDAO.getImportConfiguration(referential, importConfigurationId);
 
-                    SimpleDateFormat formatter = new SimpleDateFormat("yyyyMMdd");
-
                     // FTP
                     for (ConfigurationFtp configurationFtp : importConfiguration.getConfigurationFtpList()) {
                         if ("FTP".equals(configurationFtp.getType())) {
                             FTPClient client = new FTPClient();
-                            getFileFromFTP(e, referential, importConfiguration, formatter, configurationFtp, client);
+                            getFileFromFTP(e, referential, importConfiguration, configurationFtp, client);
                         }
 
                         if ("SFTP".equals(configurationFtp.getType())) {
-                            getFileFromSFTP(e, referential, importConfiguration, formatter, configurationFtp);
+                            getFileFromSFTP(e, referential, importConfiguration, configurationFtp);
                         }
                     }
 
                     // URL
                     for (ConfigurationUrl configurationUrl : importConfiguration.getConfigurationUrlList()) {
-                        getFileFromUrl(e, referential, importConfiguration, formatter, configurationUrl);
+                        getFileFromUrl(e, referential, importConfiguration, configurationUrl);
                     }
                 })
                 .choice()
@@ -197,7 +195,7 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
         }
     }
 
-    private void getFileFromUrl(Exchange e, String referential, ImportConfiguration importConfiguration, SimpleDateFormat formatter, ConfigurationUrl configurationUrl) throws Exception {
+    private void getFileFromUrl(Exchange e, String referential, ImportConfiguration importConfiguration, ConfigurationUrl configurationUrl) throws Exception {
         if (StringUtils.isNotEmpty(configurationUrl.getLogin()) && configurationUrl.getPassword() != null && configurationUrl.getPassword().length > 0) {
             Authenticator.setDefault(new MyAuthenticator(configurationUrl.getLogin(), cipherEncryption.decrypt(configurationUrl.getPassword())));
         }
@@ -216,7 +214,7 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
                 LocalDateTime dateLastModified = offsetDateTime.toLocalDateTime();
                 if (configurationUrl.getLastTimestamp() == null || dateLastModified.isAfter(configurationUrl.getLastTimestamp())) {
                     configurationUrl.setLastTimestamp(dateLastModified);
-                    uploadFileAndUpdateLastTimestampFromUrl(e, referential, importConfiguration, formatter, configurationUrl, url);
+                    uploadFileAndUpdateLastTimestampFromUrl(e, referential, importConfiguration, url);
                 } else {
                     log.info("No new file to import for the referential : " + referential + " for the import configuration URL : " + configurationUrl.getUrl());
                 }
@@ -227,14 +225,14 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
                     LocalDateTime dateLastModified = LocalDateTime.ofInstant(Instant.ofEpochSecond(date), TimeZone.getDefault().toZoneId());
                     if (configurationUrl.getLastTimestamp() == null || dateLastModified.isAfter(configurationUrl.getLastTimestamp())) {
                         configurationUrl.setLastTimestamp(dateLastModified);
-                        uploadFileAndUpdateLastTimestampFromUrl(e, referential, importConfiguration, formatter, configurationUrl, url);
+                        uploadFileAndUpdateLastTimestampFromUrl(e, referential, importConfiguration, url);
                     } else {
                         log.info("No file to import for the dataspace : " + referential + " for the import configuration URL : " + configurationUrl.getUrl());
                     }
                 }
                 if (date == 0) {
                     configurationUrl.setLastTimestamp(LocalDateTime.now());
-                    uploadFileAndUpdateLastTimestampFromUrl(e, referential, importConfiguration, formatter, configurationUrl, url);
+                    uploadFileAndUpdateLastTimestampFromUrl(e, referential, importConfiguration, url);
                 } else {
                     log.info("No file to import for the dataspace : " + referential + " for the import configuration URL : " + configurationUrl.getUrl());
                 }
@@ -242,7 +240,7 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
         }
     }
 
-    private void uploadFileAndUpdateLastTimestampFromUrl(Exchange e, String referential, ImportConfiguration importConfiguration, SimpleDateFormat formatter, ConfigurationUrl configurationUrl, URL url) throws IOException, InterruptedException {
+    private void uploadFileAndUpdateLastTimestampFromUrl(Exchange e, String referential, ImportConfiguration importConfiguration, URL url) throws IOException {
         InputStream inputStream = url.openStream();
         String fileName = url.getPath().substring(url.getPath().lastIndexOf('/') + 1);
         setBodyWithFileAndUpdateLastTimestamp(e, referential, importConfiguration, inputStream, fileName);
@@ -276,7 +274,7 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
         }
     }
 
-    private void getFileFromSFTP(Exchange e, String referential, ImportConfiguration importConfiguration, SimpleDateFormat formatter, ConfigurationFtp configurationFtp) {
+    private void getFileFromSFTP(Exchange e, String referential, ImportConfiguration importConfiguration, ConfigurationFtp configurationFtp) {
         Session session = null;
         Channel channel = null;
         ChannelSftp channelSftp = null;
@@ -327,7 +325,7 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
         }
     }
 
-    private void getFileFromFTP(Exchange e, String referential, ImportConfiguration importConfiguration, SimpleDateFormat formatter, ConfigurationFtp configurationFtp, FTPClient client) throws Exception {
+    private void getFileFromFTP(Exchange e, String referential, ImportConfiguration importConfiguration, ConfigurationFtp configurationFtp, FTPClient client) throws Exception {
         FTPClientConfig ftpClientConfig = new FTPClientConfig();
         client.configure(ftpClientConfig);
         client.connect(configurationFtp.getUrl(), Math.toIntExact(configurationFtp.getPort()));

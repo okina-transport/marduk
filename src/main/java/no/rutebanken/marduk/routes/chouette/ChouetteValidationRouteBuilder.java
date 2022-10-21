@@ -136,14 +136,8 @@ public class ChouetteValidationRouteBuilder extends AbstractChouetteRouteBuilder
                 .transacted()
                 .log(LoggingLevel.INFO, correlation() + "Starting Chouette validation")
                 .process(e -> {
-                    if (e.getIn().getHeader(WORKLOW, String.class) != null &&
-                            e.getIn().getHeader(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL, String.class).equals(VALIDATION_LEVEL_1.name())){
-                        e.getIn().setHeader(Constants.CORRELATION_ID, UUID.randomUUID().toString());
-                    }
-                    else{
-                        // Add correlation id only if missing
-                        e.getIn().setHeader(Constants.CORRELATION_ID, e.getIn().getHeader(Constants.CORRELATION_ID, UUID.randomUUID().toString()));
-                    }
+                    // Add correlation id only if missing
+                    e.getIn().setHeader(Constants.CORRELATION_ID, e.getIn().getHeader(Constants.CORRELATION_ID, UUID.randomUUID().toString()));
                     e.getIn().removeHeader(Constants.CHOUETTE_JOB_ID);
                     JobEvent.providerJobBuilder(e).timetableAction(e.getIn().getHeader(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL, JobEvent.TimetableAction.class)).state(State.PENDING).build();
                 })
