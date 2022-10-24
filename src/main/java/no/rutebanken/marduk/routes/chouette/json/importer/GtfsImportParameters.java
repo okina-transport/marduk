@@ -85,6 +85,10 @@ public class GtfsImportParameters extends ChouetteJobParameters {
         @JsonInclude(JsonInclude.Include.ALWAYS)
         public String linePrefixToRemove = "";
 
+        @JsonProperty("import_shapes_file")
+        @JsonInclude(JsonInclude.Include.ALWAYS)
+        public Boolean importShapesFile = true;
+
 
     }
 
@@ -115,6 +119,7 @@ public class GtfsImportParameters extends ChouetteJobParameters {
         gtfsImport.keepBoardingAlighting = rawImportParameters.isKeepBoardingAlighting();
         gtfsImport.keepStopGeolocalisation = rawImportParameters.isKeepStopGeolocalisation();
         gtfsImport.keepStopNames = rawImportParameters.isKeepStopNames();
+        gtfsImport.importShapesFile = rawImportParameters.isImportShapesFile();
         Parameters parameters = new Parameters();
         parameters.gtfsImport = gtfsImport;
         GtfsImportParameters gtfsImportParameters = new GtfsImportParameters();

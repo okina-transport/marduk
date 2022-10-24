@@ -16,6 +16,7 @@ public class ImportParameters {
     private String areaCentroidPrefixToRemove;
     private String objectIdPrefix;
     private Boolean keepStopNames;
+    private Boolean importShapesFile;
     private Long importConfigurationId;
 
     public Long getId() {
@@ -144,5 +145,13 @@ public class ImportParameters {
 
     public void setImportConfigurationId(Long importConfigurationId) {
         this.importConfigurationId = importConfigurationId;
+    }
+
+    public Boolean getImportShapesFile() {
+        return importShapesFile;
+    }
+
+    public void setImportShapesFile(Boolean importShapesFile) {
+        this.importShapesFile = importShapesFile;
     }
 }

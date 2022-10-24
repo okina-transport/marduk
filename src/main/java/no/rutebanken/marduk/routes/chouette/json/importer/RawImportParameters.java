@@ -25,6 +25,7 @@ public class RawImportParameters {
     private ImportMode importMode;
     private Provider provider;
     private String cleanMode;
+    private boolean importShapesFile;
 
     public String getFileName() {
         return fileName;
@@ -153,5 +154,13 @@ public class RawImportParameters {
 
     public void setKeepStopNames(boolean keepStopNames) {
         this.keepStopNames = keepStopNames;
+    }
+
+    public boolean isImportShapesFile() {
+        return importShapesFile;
+    }
+
+    public void setImportShapesFile(boolean importShapesFile) {
+        this.importShapesFile = importShapesFile;
     }
 }

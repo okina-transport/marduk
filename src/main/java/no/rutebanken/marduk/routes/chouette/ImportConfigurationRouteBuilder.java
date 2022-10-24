@@ -89,6 +89,7 @@ import static no.rutebanken.marduk.Constants.ROUTE_MERGE;
 import static no.rutebanken.marduk.Constants.SPLIT_CHARACTER;
 import static no.rutebanken.marduk.Constants.STOP_AREA_PREFIX_TO_REMOVE;
 import static no.rutebanken.marduk.Constants.WORKLOW;
+import static no.rutebanken.marduk.Constants.IMPORT_SHAPES_FILE;
 
 @Component
 public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilder {
@@ -177,6 +178,7 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
             e.getIn().setHeader(KEEP_BOARDING_ALIGHTING_POSSIBILITY, importParameters.getKeepBoardingAlighting());
             e.getIn().setHeader(KEEP_STOP_GEOLOCALISATION, importParameters.getKeepStopGeolocalisation());
             e.getIn().setHeader(KEEP_STOP_NAMES, importParameters.getKeepStopNames());
+            e.getIn().setHeader(IMPORT_SHAPES_FILE, importParameters.getImportShapesFile());
             e.getIn().setHeader(COMMERCIAL_POINT_ID_PREFIX_TO_REMOVE, importParameters.getCommercialPointPrefixToRemove());
             e.getIn().setHeader(QUAY_ID_PREFIX_TO_REMOVE, importParameters.getQuayIdPrefixToRemove());
             e.getIn().setHeader(STOP_AREA_PREFIX_TO_REMOVE, importParameters.getStopAreaPrefixToRemove());
