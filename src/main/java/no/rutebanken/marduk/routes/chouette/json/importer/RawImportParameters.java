@@ -25,6 +25,7 @@ public class RawImportParameters {
     private ImportMode importMode;
     private Provider provider;
     private String cleanMode;
+    private boolean removeParentStations;
 
     public String getFileName() {
         return fileName;
@@ -153,5 +154,13 @@ public class RawImportParameters {
 
     public void setKeepStopNames(boolean keepStopNames) {
         this.keepStopNames = keepStopNames;
+    }
+
+    public boolean isRemoveParentStations() {
+        return removeParentStations;
+    }
+
+    public void setRemoveParentStations(boolean removeParentStations) {
+        this.removeParentStations = removeParentStations;
     }
 }

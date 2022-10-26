@@ -76,5 +76,10 @@ public class AbstractImportParameters extends AbstractParameters {
     @JsonProperty("clean_mode")
     public String cleanMode ;
 
+    @JsonProperty("remove_parent_stations")
+    @JsonInclude(JsonInclude.Include.ALWAYS)
+    public Boolean removeParentStations;
+
+
 
 }

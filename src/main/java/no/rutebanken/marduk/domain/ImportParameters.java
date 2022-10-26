@@ -17,6 +17,7 @@ public class ImportParameters {
     private String objectIdPrefix;
     private Boolean keepStopNames;
     private Long importConfigurationId;
+    private Boolean removeParentStations;
 
     public Long getId() {
         return id;
@@ -72,6 +73,14 @@ public class ImportParameters {
 
     public void setCommercialPointPrefixToRemove(String commercialPointPrefixToRemove) {
         this.commercialPointPrefixToRemove = commercialPointPrefixToRemove;
+    }
+
+    public Boolean getRemoveParentStations() {
+        return removeParentStations;
+    }
+
+    public void setRemoveParentStations(Boolean removeParentStations) {
+        this.removeParentStations = removeParentStations;
     }
 
     public String getQuayIdPrefixToRemove() {

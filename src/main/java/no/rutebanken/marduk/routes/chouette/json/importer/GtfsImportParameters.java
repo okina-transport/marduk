@@ -120,6 +120,8 @@ public class GtfsImportParameters extends ChouetteJobParameters {
         GtfsImportParameters gtfsImportParameters = new GtfsImportParameters();
         gtfsImportParameters.parameters = parameters;
         gtfsImportParameters.enableValidation = chouetteInfo.enableValidation;
+        gtfsImport.removeParentStations = rawImportParameters.isRemoveParentStations();
+
 
         return gtfsImportParameters;
     }

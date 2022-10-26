@@ -173,6 +173,10 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
                     String ignoreCommercialPointsStr = e.getIn().getHeader(IGNORE_COMMERCIAL_POINTS, String.class);
                     boolean ignoreCommercialPoints = !StringUtils.isEmpty(ignoreCommercialPointsStr) && Boolean.parseBoolean(ignoreCommercialPointsStr);
 
+
+                    String removeParentStationStr = e.getIn().getHeader(REMOVE_PARENT_STATIONS, String.class);
+                    boolean removeParentStations = !StringUtils.isEmpty(removeParentStationStr) && Boolean.parseBoolean(removeParentStationStr);
+
                     if (StringUtils.isNotEmpty(commercialPointIdPrefixToRemove)) {
                         idParams.setCommercialPointIdPrefixToRemove(commercialPointIdPrefixToRemove);
                     } else {
@@ -203,6 +207,7 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
                     rawImportParameters.setKeepBoardingAlighting(keepBoardingAlightingPossibility);
                     rawImportParameters.setKeepStopGeolocalisation(keepStopGeolocalisation);
                     rawImportParameters.setKeepStopNames(keepStopNames);
+                    rawImportParameters.setRemoveParentStations(removeParentStations);
 
 
                     e.getIn().setHeader(JSON_PART, getStringImportParameters(rawImportParameters));
