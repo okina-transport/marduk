@@ -26,6 +26,7 @@ public class RawImportParameters {
     private Provider provider;
     private String cleanMode;
     private boolean removeParentStations;
+    private boolean importShapesFile;
 
     public String getFileName() {
         return fileName;
@@ -162,5 +163,13 @@ public class RawImportParameters {
 
     public void setRemoveParentStations(boolean removeParentStations) {
         this.removeParentStations = removeParentStations;
+    }
+
+    public boolean isImportShapesFile() {
+        return importShapesFile;
+    }
+
+    public void setImportShapesFile(boolean importShapesFile) {
+        this.importShapesFile = importShapesFile;
     }
 }

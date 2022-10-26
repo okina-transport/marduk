@@ -155,6 +155,9 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
                     String keepStopNamestr = e.getIn().getHeader(KEEP_STOP_NAMES, String.class);
                     boolean keepStopNames = !StringUtils.isEmpty(keepStopNamestr) && Boolean.parseBoolean(keepStopNamestr);
 
+                    String importShapesFileStr = e.getIn().getHeader(IMPORT_SHAPES_FILE, String.class);
+                    boolean importShapesFile = !StringUtils.isEmpty(importShapesFileStr) && Boolean.parseBoolean(importShapesFileStr);
+
                     String commercialPointIdPrefixToRemove = e.getIn().getHeader(COMMERCIAL_POINT_ID_PREFIX_TO_REMOVE, String.class);
                     String quayPrefixToRemove = e.getIn().getHeader(QUAY_ID_PREFIX_TO_REMOVE, String.class);
                     String stopAreaPrefixToRemove = e.getIn().getHeader(STOP_AREA_PREFIX_TO_REMOVE, String.class);
@@ -208,7 +211,7 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
                     rawImportParameters.setKeepStopGeolocalisation(keepStopGeolocalisation);
                     rawImportParameters.setKeepStopNames(keepStopNames);
                     rawImportParameters.setRemoveParentStations(removeParentStations);
-
+                    rawImportParameters.setImportShapesFile(importShapesFile);
 
                     e.getIn().setHeader(JSON_PART, getStringImportParameters(rawImportParameters));
                 }) //Using header to addToExchange json data
