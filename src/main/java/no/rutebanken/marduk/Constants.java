@@ -64,6 +64,7 @@ public class Constants {
 
     public static final String IS_SIMULATION_EXPORT = "isSimulationExport";
     public static final String ROLE_EXPORT_SIMULATION = "exportSimulation";
+    public static final String EXPORT_SIMULATION_NAME = "exportSimulationName";
 
 
     // tag for tiamat exports

@@ -82,6 +82,9 @@ public class ChouetteExportNetexRouteBuilder extends AbstractChouetteRouteBuilde
                     if (isSimulation != null && isSimulation) {
                         e.getIn().setHeader(CHOUETTE_REFERENTIAL, "simulation_" + getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)).chouetteInfo.referential);
                         e.getIn().setHeader(OKINA_REFERENTIAL, "simulation_" + getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)).chouetteInfo.referential);
+                        if (e.getIn().getHeader(EXPORT_SIMULATION_NAME) != null) {
+                            e.getIn().setHeader(EXPORTED_FILENAME, e.getIn().getHeader(EXPORT_SIMULATION_NAME));
+                        }
                     } else {
                         e.getIn().setHeader(CHOUETTE_REFERENTIAL, getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)).chouetteInfo.referential);
                         e.getIn().setHeader(OKINA_REFERENTIAL, getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)).chouetteInfo.referential);

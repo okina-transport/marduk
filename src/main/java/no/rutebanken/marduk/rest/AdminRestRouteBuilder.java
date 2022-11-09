@@ -886,7 +886,10 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
                 .process(e -> authorizationService.verifyAtLeastOne(new AuthorizationClaim(ROLE_EXPORT_SIMULATION)))
                 .removeHeaders("CamelHttp*")
-                .process(e -> e.getIn().setHeader(USER, getUserNameFromHeaders(e)))
+                .process(e -> {
+                    e.getIn().setHeader(USER, getUserNameFromHeaders(e));
+                    e.getIn().setHeader(EXPORT_SIMULATION_NAME, getSimulationExportPrefix(e));
+                })
                 .inOnly("activemq:queue:ChouetteExportNetexQueue")
                 .routeId("simulation-export-netex")
                 .endRest()
@@ -1254,6 +1257,15 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
 
         if (headers != null) {
             return (String) headers.get(USER);
+        }
+        return null;
+    }
+
+    private String getSimulationExportPrefix(Exchange e) {
+        Map headers = (Map) e.getIn().getBody(Map.class).get("headers");
+
+        if (headers != null) {
+            return (String) headers.get(EXPORT_SIMULATION_NAME);
         }
         return null;
     }
