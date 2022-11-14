@@ -102,15 +102,15 @@ public class CommonGtfsExportMergedRouteBuilder extends BaseRouteBuilder {
                         .routeId("gtfs-export-fetch-latest");
 
         from("direct:getGtfsFiles")
-                .log(LoggingLevel.INFO, getClass().getName(), correlation() + "Fetching mobiiti_technique/gtfs/allFiles/${body}")
+                .log(LoggingLevel.INFO, getClass().getName(), correlation() + "Fetching mobiiti_technique/gtfs/allFiles/${header.ID_FORMAT}/${body}")
                 .setProperty("fileName", body())
-                .setHeader(FILE_HANDLE, simple("mobiiti_technique/gtfs/allFiles/${property.fileName}"))
+                .setHeader(FILE_HANDLE, simple("mobiiti_technique/gtfs/allFiles/${header.ID_FORMAT}/${property.fileName}"))
                 .choice()
                 .when(e -> fileSystemService.isExists(e.getIn().getHeader(FILE_HANDLE, String.class)))
                 .to("direct:getBlob")
                 .choice()
                 .when(body().isNotEqualTo(null))
-                .toD("file:${header." + FILE_PARENT + "}?fileName=${property.fileName}")
+                .toD("file:${header." + FILE_PARENT + "}+/${header.ID_FORMAT}?fileName=${property.fileName}")
                 .otherwise()
                 .log(LoggingLevel.INFO, getClass().getName(), correlation() + "${property.fileName} was empty when trying to fetch it from blobstore.")
                 .routeId("gtfs-export-get-latest-for-provider");
@@ -118,11 +118,11 @@ public class CommonGtfsExportMergedRouteBuilder extends BaseRouteBuilder {
         from("direct:mergeGtfs")
                 .log(LoggingLevel.DEBUG, getClass().getName(), "Merging gtfs files for all providers.")
                 .delay(5000)
-                .setBody(simple("${header." + FILE_PARENT + "}"))
+                .setBody(simple("${header." + FILE_PARENT + "}/${header.ID_FORMAT}" ))
                 .bean(method(GtfsFileUtils.class, "mergeGtfsFilesInDirectory"))
-                .toD("file:${exchangeProperty." + FOLDER_NAME + "}/gtfs?fileName=export_global_gtfs.zip")
+                .toD("file:${exchangeProperty." + FOLDER_NAME + "}/gtfs/${header.ID_FORMAT}?fileName=export_global_gtfs.zip")
                 .delay(10000)
-                .setHeader(FILE_HANDLE, simple("mobiiti_technique/gtfs/export_global_gtfs.zip"))
+                .setHeader(FILE_HANDLE, simple("mobiiti_technique/gtfs/${header.ID_FORMAT}/export_global_gtfs.zip"))
                 .to("direct:getBlob")
                 .routeId("gtfs-export-merge");
 

@@ -186,7 +186,7 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
                         })
                         .choice()
                             .when(e -> e.getIn().getHeader(GTFS_EXPORT_GLOBAL, Boolean.class))
-                                .setHeader(FILE_HANDLE, simple("mobiiti_technique/gtfs/allFiles/${header." + CHOUETTE_REFERENTIAL + "}-" + Constants.CURRENT_AGGREGATED_GTFS_FILENAME))
+                                .setHeader(FILE_HANDLE, simple("mobiiti_technique/gtfs/allFiles/${header.ID_FORMAT}/${header." + CHOUETTE_REFERENTIAL + "}-" + Constants.CURRENT_AGGREGATED_GTFS_FILENAME))
                                 .to("direct:uploadBlob")
                                 .to("direct:exportMergedGtfs")
                         .endChoice()
