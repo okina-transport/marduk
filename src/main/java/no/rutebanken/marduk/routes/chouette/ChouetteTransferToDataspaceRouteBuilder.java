@@ -73,7 +73,7 @@ public class ChouetteTransferToDataspaceRouteBuilder extends AbstractChouetteRou
                 	Provider provider = getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class));
                 	Provider destProvider = getProviderRepository().getProvider(provider.chouetteInfo.migrateDataToProvider);
 					e.getIn().setHeader(CHOUETTE_REFERENTIAL, provider.chouetteInfo.referential);
-                	e.getIn().setHeader(JSON_PART, Parameters.getTransferExportParameters(provider,destProvider));
+                	e.getIn().setHeader(JSON_PART, Parameters.getTransferExportParameters(provider, destProvider));
 	                e.getIn().removeHeader(Constants.CHOUETTE_JOB_ID);
                 })
 				.process(e -> JobEvent.providerJobBuilder(e).timetableAction(TimetableAction.DATASPACE_TRANSFER).state(State.PENDING).build())

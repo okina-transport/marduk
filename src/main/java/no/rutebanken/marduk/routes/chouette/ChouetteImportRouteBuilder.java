@@ -108,7 +108,6 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
 
         from("activemq:queue:ChouetteImportQueue?transacted=true").streamCaching()
                 .transacted()
-                .process(e -> log.info("debug purpose to remove"))
                 .log(LoggingLevel.INFO, correlation() + "Starting Chouette import")
                 .removeHeader(CHOUETTE_JOB_ID)
                 .process(e -> {

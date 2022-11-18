@@ -35,7 +35,6 @@ import org.apache.camel.builder.PredicateBuilder;
 import org.apache.camel.component.http4.HttpMethods;
 import org.apache.camel.model.dataformat.JsonLibrary;
 import org.apache.http.client.utils.URIBuilder;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -65,9 +64,6 @@ public class ChouettePollJobStatusRoute extends AbstractChouetteRouteBuilder {
     @Value("${chouette.url}")
     private String chouetteUrl;
 
-    @Autowired
-    private MultipleExportProcessor multipleExportProcessor;
-
     private int maxConsumers = 5;
 
 
@@ -82,14 +78,6 @@ public class ChouettePollJobStatusRoute extends AbstractChouetteRouteBuilder {
     @Override
     public void configure() throws Exception {
         super.configure();
-
-
-//        onException(HttpOperationFailedException.class, NoRouteToHostException.class)
-//                .setHeader(Constants.FILE_NAME, exchangeProperty(Constants.FILE_NAME))
-//                .process(e -> Status.addStatus(e, TimetableAction.valueOf( (String) e.getIn().getHeader(Constants.CHOUETTE_JOB_STATUS_JOB_TYPE)), State.FAILED))
-//                .to("direct:updateStatus")
-//                .log(LoggingLevel.ERROR,correlation()+"Failed while polling chouette.")
-//                .handled(true);
 
         from("direct:chouetteGetJobsForProvider")
                 .log(LoggingLevel.DEBUG, correlation() + "Fetching jobs for provider id '${header." + PROVIDER_ID + "}'")
@@ -128,11 +116,6 @@ public class ChouettePollJobStatusRoute extends AbstractChouetteRouteBuilder {
                     }
                     b.addParameter("addActionParameters", Boolean.FALSE.toString());
                     String newUri = b.toString();
-                    if (dynamicEndpointNotation) {
-                        // Convert url (http://xxx) back to camel dynamic endpoint format (http4:xxxx). Needed as interception
-                        // does not seem to work with // in target anymore (as of camel 2.22.0)
-                        newUri.replace("://", ":");
-                    }
                     e.setProperty("chouette_url", newUri);
                 })
                 .toD("${exchangeProperty.chouette_url}")
@@ -185,7 +168,6 @@ public class ChouettePollJobStatusRoute extends AbstractChouetteRouteBuilder {
         from("activemq:queue:ChouettePollStatusQueue?transacted=true&maxConcurrentConsumers=" + maxConsumers)
                 .transacted()
                 .validate(header(Constants.CORRELATION_ID).isNotNull())
-                //.validate(header(Constants.PROVIDER_ID).isNotNull())
                 .validate(header(Constants.CHOUETTE_JOB_STATUS_ROUTING_DESTINATION).isNotNull())
                 .validate(header(Constants.CHOUETTE_JOB_STATUS_URL).isNotNull())
                 .validate(header(Constants.CHOUETTE_JOB_STATUS_JOB_TYPE).isNotNull())
@@ -193,9 +175,7 @@ public class ChouettePollJobStatusRoute extends AbstractChouetteRouteBuilder {
                 .routeId("chouette-validate-job-status-parameters");
 
         from("direct:checkJobStatus")
-                .process(e -> {
-                    e.getIn().setHeader("loopCounter", (Integer) e.getIn().getHeader("loopCounter", 0) + 1);
-                })
+                .process(e -> e.getIn().setHeader("loopCounter", (Integer) e.getIn().getHeader("loopCounter", 0) + 1))
                 .setProperty(Constants.CHOUETTE_REFERENTIAL, header(Constants.CHOUETTE_REFERENTIAL))
                 .setProperty("url", header(Constants.CHOUETTE_JOB_STATUS_URL))
                 .removeHeaders("Camel*")
@@ -206,7 +186,6 @@ public class ChouettePollJobStatusRoute extends AbstractChouetteRouteBuilder {
                     HttpURLConnection con = (HttpURLConnection) url.openConnection();
                     e.getIn().setBody(con.getInputStream());
                 })
-
                 .choice()
                     .when(simple("${header.TIAMAT_STOP_PLACES_EXPORT} != null || ${header.TIAMAT_POINTS_OF_INTEREST_EXPORT} != null || ${header.TIAMAT_PARKINGS_EXPORT} != null"))
                         .process(e -> {
@@ -214,7 +193,7 @@ public class ChouettePollJobStatusRoute extends AbstractChouetteRouteBuilder {
                             final Boolean isPOI = e.getIn().getHeader(Constants.TIAMAT_POINTS_OF_INTEREST_EXPORT) != null;
                             final Boolean isParkings = e.getIn().getHeader(Constants.TIAMAT_PARKINGS_EXPORT) != null;
 
-                            String skipJobReportsJobId = null;
+                            String skipJobReportsJobId;
 
                             if (isPOI) {
                                 skipJobReportsJobId = e.getIn().getHeader(Constants.TIAMAT_POINTS_OF_INTEREST_EXPORT).toString();
@@ -353,21 +332,21 @@ public class ChouettePollJobStatusRoute extends AbstractChouetteRouteBuilder {
                 .stop()
                 .end()
 
-                .choice().when(simple("${body.finalised} == false"))
-                .choice().when(simple("${header.loopCounter} > " + maxRetries))
-                .log(LoggingLevel.WARN, correlation() + "Received non-finalised action report for terminated job. Giving up.")
-                .process(e -> JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.valueOf((String) e.getIn().getHeader(Constants.CHOUETTE_JOB_STATUS_JOB_TYPE))).state(State.FAILED).build())
-                .to("direct:updateStatus")
-                .otherwise()
-                .log(LoggingLevel.INFO, correlation() + "Received non-finalised action report for terminated job. Waiting before retry ")
-                // Update status
-                .to("direct:rescheduleJob")
+                .choice()
+                    .when(simple("${body.finalised} == false"))
+                        .choice()
+                            .when(simple("${header.loopCounter} > " + maxRetries))
+                                .log(LoggingLevel.WARN, correlation() + "Received non-finalised action report for terminated job. Giving up.")
+                                .process(e -> JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.valueOf((String) e.getIn().getHeader(Constants.CHOUETTE_JOB_STATUS_JOB_TYPE))).state(State.FAILED).build())
+                                .to("direct:updateStatus")
+                            .otherwise()
+                                .log(LoggingLevel.INFO, correlation() + "Received non-finalised action report for terminated job. Waiting before retry ")
+                                // Update status
+                                .to("direct:rescheduleJob")
+                        .end()
+                    .stop()
                 .end()
-                .stop()
-                .end()
-                .process(e -> {
-                    e.getIn().setHeader("action_report_result", e.getIn().getBody(ActionReportWrapper.class).actionReport.result);
-                })
+                .process(e -> e.getIn().setHeader("action_report_result", e.getIn().getBody(ActionReportWrapper.class).actionReport.result))
                 // Fetch and parse validation report
                 .to("log:" + getClass().getName() + "?level=DEBUG&showAll=true&multiline=true")
                 .choice()
@@ -386,10 +365,11 @@ public class ChouettePollJobStatusRoute extends AbstractChouetteRouteBuilder {
 
         from("direct:checkValidationReport")
                 .choice()
-                .when().jsonpath("$.validation_report.check_points[?(@.severity == 'ERROR' && @.result == 'NOK')]")
-                .setHeader("validation_report_result", constant("NOK"))
-                .otherwise()
-                .setHeader("validation_report_result", constant("OK"))
+                    .when()
+                        .jsonpath("$.validation_report.check_points[?(@.severity == 'ERROR' && @.result == 'NOK')]")
+                        .setHeader("validation_report_result", constant("NOK"))
+                    .otherwise()
+                        .setHeader("validation_report_result", constant("OK"))
                 .end()
                 .log(LoggingLevel.DEBUG, correlation() + "action_report_result=${header.action_report_result} validation_report_result=${header.validation_report_result}")
                 .toD("${header." + Constants.CHOUETTE_JOB_STATUS_ROUTING_DESTINATION + "}")
@@ -398,8 +378,8 @@ public class ChouettePollJobStatusRoute extends AbstractChouetteRouteBuilder {
 
         from("direct:handleGlobalNetexExportCase")
                 .choice()
-                .when(e->  e.getIn().getHeader(NETEX_EXPORT_GLOBAL) != null && (boolean) e.getIn().getHeader(NETEX_EXPORT_GLOBAL))
-                    .inOnly("direct:updateMergedNetexStatus")
+                    .when(e->  e.getIn().getHeader(NETEX_EXPORT_GLOBAL) != null && (boolean) e.getIn().getHeader(NETEX_EXPORT_GLOBAL))
+                        .inOnly("direct:updateMergedNetexStatus")
                 .end()
                 .routeId("handle-global-netex-export-case");
     }

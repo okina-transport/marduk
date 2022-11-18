@@ -103,6 +103,7 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
                     String referential = e.getIn().getHeader(CHOUETTE_REFERENTIAL, String.class);
                     String importConfigurationId = e.getIn().getHeader(IMPORT_CONFIGURATION_ID, String.class);
                     ImportConfiguration importConfiguration = importConfigurationDAO.getImportConfiguration(referential, importConfigurationId);
+                    e.getIn().setHeader(GENERATE_MAP_MATCHING, importConfiguration.isGenerateMapMatching());
 
                     // FTP
                     for (ConfigurationFtp configurationFtp : importConfiguration.getConfigurationFtpList()) {

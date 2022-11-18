@@ -88,14 +88,7 @@ public class Constants {
     public static final String CURRENT_AGGREGATED_GTFS_FILENAME = "aggregated-gtfs.zip";
     public static final String CURRENT_AGGREGATED_NETEX_FILENAME = "aggregated-netex.zip";
     public static final String CURRENT_AGGREGATED_CONCERTO_FILENAME = "concerto.csv";
-    public static final String CURRENT_AGGREGATED_NEPTUNE_FILENAME = "aggregated-neptune.zip";
-    public static final String GRAPH_OBJ = "Graph.obj";
-    public static final String BASE_GRAPH_OBJ = "baseGraph.obj";
 
-    public static final String METADATA_DESCRIPTION = "MetadataDescription";
-    public static final String METADATA_FILE = "MetadataFile";
-
-    public static final String FILE_TARGET_MD5 = "RutebankenMd5SumRecordedForTargetFile";
     public static final String ENABLE_VALIDATION = "RutebankenEnableValidation";
     public static final String FILE_SKIP_STATUS_UPDATE_FOR_DUPLICATES = "RutebankenSkipStatusUpdateForDuplicateFiles";
 
@@ -116,8 +109,6 @@ public class Constants {
 
     public static final String FOLDER_NAME = "RutebankenFolderName";
     public static final String SYSTEM_STATUS = "RutebankenSystemStatus";
-
-    public static final String TIMESTAMP = "RutebankenTimeStamp";
 
     public static final String ETCD_KEY = "RutebankenEtcdKey";
 
@@ -154,6 +145,7 @@ public class Constants {
     public static final String WORKLOW = "worklow";
     public static final String RECIPIENTS = "recipients";
     public static final String MULTIPLE_EXPORT = "multipleExport";
+    public static final String GENERATE_MAP_MATCHING = "generateMapMatching";
 
 
 }

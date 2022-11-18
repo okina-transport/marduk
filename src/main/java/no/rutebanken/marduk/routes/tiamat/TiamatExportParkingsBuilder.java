@@ -55,9 +55,7 @@ public class TiamatExportParkingsBuilder extends AbstractChouetteRouteBuilder {
                 .choice()
                     .when(simple("${header.RutebankenCorrelationId} == null"))
                     .log(LoggingLevel.INFO, "Ajout d'un correlation id")
-                    .process(e -> {
-                        e.getIn().setHeader(Constants.CORRELATION_ID, e.getIn().getHeader(Constants.CORRELATION_ID, UUID.randomUUID().toString()));
-                    })
+                    .process(e -> e.getIn().setHeader(Constants.CORRELATION_ID, e.getIn().getHeader(Constants.CORRELATION_ID, UUID.randomUUID().toString())))
                 .end()
                 .process(e -> {
                     Object tiamatProviderId = e.getIn().getHeaders().get("tiamatProviderId");
@@ -70,7 +68,6 @@ public class TiamatExportParkingsBuilder extends AbstractChouetteRouteBuilder {
                     // required to skip chouette reports parsing when polling job status
                     e.getIn().setHeader(TIAMAT_PARKINGS_EXPORT, exportJob.getId());
                     String tiamatJobStatusUrl = parkingsExportUrl + "/" + exportJob.getId() + "/status";
-//                    setExportPollingHeaders(e, exportJob.getId().toString(), tiamatJobStatusUrl, TIAMAT_EXPORT_ROUTING_DESTINATION);
                     e.getIn().setHeader(CHOUETTE_JOB_STATUS_URL, tiamatJobStatusUrl);
                     e.getIn().setHeader(Constants.CHOUETTE_JOB_ID, exportJob.getId());
                     log.info("Tiamat Parkings Export  : export parsed => " + exportJob.getId() + " : " + tiamatJobStatusUrl);

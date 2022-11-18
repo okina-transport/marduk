@@ -200,4 +200,19 @@ public class Parameters {
     }
 
 
+    public static String getMapMatchingParameters(Provider provider, String user) {
+        try {
+            ChouetteInfo chouetteInfo = provider.chouetteInfo;
+            MapMatchingParameters.Mapmatching mapmatchingParameters = new MapMatchingParameters.Mapmatching(user, chouetteInfo.referential);
+            MapMatchingParameters.Parameters parameters = new MapMatchingParameters.Parameters(mapmatchingParameters);
+            MapMatchingParameters importParameters = new MapMatchingParameters(parameters);
+            ObjectMapper mapper = new ObjectMapper();
+            StringWriter writer = new StringWriter();
+            mapper.writeValue(writer, importParameters);
+            return writer.toString();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
 }

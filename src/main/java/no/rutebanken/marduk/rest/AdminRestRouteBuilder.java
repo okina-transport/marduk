@@ -72,8 +72,6 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
     private static final String JSON = "application/json";
     private static final String X_OCTET_STREAM = "application/x-octet-stream";
     private static final String PLAIN = "text/plain";
-    private static SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMddhhmmssZ");
-
 
     @Value("${server.admin.port}")
     public String port;
@@ -102,7 +100,6 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
     @Value("${netex.merged.tmp.working.directory:/tmp/mergedNetex/allFiles}")
     private String mergedNetexTmpDirectory;
 
-    // @formatter:off
     @Override
     public void configure() throws Exception {
         super.configure();

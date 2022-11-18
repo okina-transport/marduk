@@ -39,6 +39,7 @@ import static no.rutebanken.marduk.Constants.CHOUETTE_JOB_STATUS_JOB_VALIDATION_
 import static no.rutebanken.marduk.Constants.CHOUETTE_REFERENTIAL;
 import static no.rutebanken.marduk.Constants.CORRELATION_ID;
 import static no.rutebanken.marduk.Constants.FILE_NAME;
+import static no.rutebanken.marduk.Constants.GENERATE_MAP_MATCHING;
 import static no.rutebanken.marduk.Constants.IMPORT;
 import static no.rutebanken.marduk.Constants.JSON_PART;
 import static no.rutebanken.marduk.Constants.MULTIPLE_EXPORT;
@@ -142,7 +143,6 @@ public class ChouetteValidationRouteBuilder extends AbstractChouetteRouteBuilder
                     JobEvent.providerJobBuilder(e).timetableAction(e.getIn().getHeader(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL, JobEvent.TimetableAction.class)).state(State.PENDING).build();
                 })
                 .to("direct:updateStatus")
-
                 .process(e -> e.getIn().setHeader(CHOUETTE_REFERENTIAL, getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)).chouetteInfo.referential))
                 .process(e -> {
                     String user = e.getIn().getHeader(USER, String.class);
@@ -214,22 +214,25 @@ public class ChouetteValidationRouteBuilder extends AbstractChouetteRouteBuilder
         // Check that no other import jobs in status SCHEDULED exists for this referential. If so, do not trigger export
         from("direct:checkScheduledJobsBeforeTriggeringExport")
                 .setProperty("job_status_url", simple("{{chouette.url}}/chouette_iev/referentials/${header." + CHOUETTE_REFERENTIAL + "}/jobs?timetableAction=importer&status=SCHEDULED&status=STARTED"))
-                .log(LoggingLevel.INFO, "Triggering export of data from one space to another")
+                .log(LoggingLevel.INFO, "Triggering export of data from one space to another or generating map matching")
                 .toD("${exchangeProperty.job_status_url}")
                 .choice()
                     .when().jsonpath("$.*[?(@.status == 'SCHEDULED')].status")
-                        .log(LoggingLevel.INFO, correlation() + "Validation ok, skipping export as there are more import jobs active")
-                            .when(PredicateBuilder.and(
-                                    PredicateBuilder.or(method(getClass(), "shouldTransferData").isEqualTo(true),
-                                            constant(null).isEqualTo(header(IMPORT)),
-                                            header(WORKLOW).isEqualTo("VALIDATION"),
-                                            header(WORKLOW).isEqualTo("EXPORT")),
-                                    constant(VALIDATION_LEVEL_1).isEqualTo(header(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL))
-                                    )
-                            )
-                                .log(LoggingLevel.INFO, correlation() + "Validation ok, transfering data to next dataspace")
-                                .to("activemq:queue:ChouetteTransferExportQueue")
-                .end()
+                        .when(PredicateBuilder.and(constant(VALIDATION_LEVEL_1).isEqualTo(header(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL)),
+                                header(GENERATE_MAP_MATCHING).isEqualTo(true)))
+                            .log(LoggingLevel.INFO, correlation() + "Validation ok, generating map matching")
+                            .to("activemq:queue:ChouetteGenerateMapMatchingQueue")
+                        .when(e -> e.getIn().getHeader(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL, String.class).equals(VALIDATION_LEVEL_1.name()) &&
+                                        (e.getIn().getHeader(GENERATE_MAP_MATCHING, Boolean.class) == null || e.getIn().getHeader(GENERATE_MAP_MATCHING, Boolean.class).equals(false)) &&
+                                        (shouldTransferData(e) ||
+                                                e.getIn().getHeader(IMPORT, Boolean.class) == null ||
+                                                "VALIDATION".equals(e.getIn().getHeader(WORKLOW, String.class)) ||
+                                                "EXPORT".equals(e.getIn().getHeader(WORKLOW, String.class))
+                                        )
+                                )
+                            .log(LoggingLevel.INFO, correlation() + "Validation ok, transfering data to next dataspace")
+                            .to("activemq:queue:ChouetteTransferExportQueue")
+                        .end()
                 .routeId("chouette-process-job-list-after-validation");
     }
 
@@ -237,15 +240,29 @@ public class ChouetteValidationRouteBuilder extends AbstractChouetteRouteBuilder
         String[] recipients = e.getIn().getHeader(RECIPIENTS, String.class).trim().split(",");
         String referential = e.getIn().getHeader(CHOUETTE_REFERENTIAL, String.class);
         String fileName = e.getIn().getHeader(FILE_NAME, String.class);
-        String message = e.getIn().getHeader(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL, String.class).equals(VALIDATION_LEVEL_2.name()) ?
-                "L'import, la validation niveau 1, le transfert et la validation niveau 2 du fichier : " + fileName + " se sont correctement effectués." :
-                "L'import et la validation niveau 1 du fichier : " + fileName + " se sont correctement effectués.";
+        String message = null;
+        if (e.getIn().getHeader(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL, String.class).equals(VALIDATION_LEVEL_2.name())){
+            if(e.getIn().getHeader(GENERATE_MAP_MATCHING, Boolean.class).equals(true)){
+                message = "L'import, la validation niveau 1, la génération des tracés, le transfert et la validation niveau 2 du fichier : " + fileName + " se sont correctement effectués.";
+            } else{
+                message = "L'import, la validation niveau 1, le transfert et la validation niveau 2 du fichier : " + fileName + " se sont correctement effectués.";
+            }
+        }
+
+        if (e.getIn().getHeader(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL, String.class).equals(VALIDATION_LEVEL_1.name())){
+            if(e.getIn().getHeader(GENERATE_MAP_MATCHING, Boolean.class).equals(true)){
+                message = "L'import, la validation niveau 1 et la génération des tracés du fichier : " + fileName + " se sont correctement effectués.";
+            } else{
+                message = "L'import et la validation niveau 1 du fichier : " + fileName + " se sont correctement effectués.";
+            }
+        }
+
+
         for (String recipient : recipients) {
             if (StringUtils.isNotEmpty(recipient)) {
                 sendMail.sendEmail(client.toUpperCase() + " - " + server.toUpperCase() + " Referentiel Mobi-iti - Nouvelle integration de donnees du reseau de " + referential,
                         recipient,
-                        "Bonjour,"
-                                + "\n" + message,
+                        "Bonjour," + "\n" + message,
                         null);
             }
         }
@@ -260,8 +277,7 @@ public class ChouetteValidationRouteBuilder extends AbstractChouetteRouteBuilder
             if (StringUtils.isNotEmpty(recipient)) {
                 sendMail.sendEmail(client.toUpperCase() + " - " + server.toUpperCase() + " Referentiel Mobi-iti - Nouvelle integration de donnees du reseau de " + referential,
                         recipient,
-                        "Bonjour,"
-                                + "\nLa validation de niveau " + levelValidation + " du fichier : " + fileName + " a échoué.",
+                        "Bonjour," + "\nLa validation de niveau " + levelValidation + " du fichier : " + fileName + " a échoué.",
                         null);
             }
         }
@@ -271,7 +287,7 @@ public class ChouetteValidationRouteBuilder extends AbstractChouetteRouteBuilder
         JobEvent.providerJobBuilder(e).timetableAction(e.getIn().getHeader(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL, TimetableAction.class)).state(State.OK).build();
         if (e.getIn().getHeader(WORKLOW, String.class) != null) {
             if (e.getIn().getHeader(WORKLOW, String.class).equals("VALIDATION") && e.getIn().getHeader(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL, String.class).equals(VALIDATION_LEVEL_2.name())
-                || e.getIn().getHeader(WORKLOW, String.class).equals("IMPORT") && e.getIn().getHeader(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL, String.class).equals(VALIDATION_LEVEL_1.name()))
+                || e.getIn().getHeader(WORKLOW, String.class).equals("IMPORT") && e.getIn().getHeader(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL, String.class).equals(VALIDATION_LEVEL_1.name()) && e.getIn().getHeader(GENERATE_MAP_MATCHING, Boolean.class).equals(false))
             {
                 sendMailValidationOk(e);
             }
