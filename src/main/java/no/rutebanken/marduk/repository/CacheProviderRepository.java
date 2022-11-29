@@ -66,6 +66,11 @@ public class CacheProviderRepository implements ProviderRepository {
         try {
             Collection<Provider> newProviders = restProviderService.getProviders();
             Map<Long, Provider> providerMap = newProviders.stream().collect(Collectors.toMap(p -> p.getId(), p -> p));
+
+            newProviders.stream().forEach(p-> {
+                logger.debug("found provider name:" + p.name + " , id:" + p.getId() + ", mobiiti: " + p.mobiitiId);
+            });
+
             if (providerMap.isEmpty()) {
                 logger.warn("Result from REST Provider Service is empty. Skipping provider cache update. Keeping " + cache.size() + " existing elements.");
                 return;
