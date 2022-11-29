@@ -76,9 +76,27 @@ public class CacheProviderRepository implements ProviderRepository {
                 logger.warn("Result from REST Provider Service is empty. Skipping provider cache update. Keeping " + cache.size() + " existing elements.");
                 return;
             }
+
+
+            Provider res = providerMap.get(1L);
+            if (res == null){
+                logger.debug("prov 1 not found");
+            }else{
+                logger.debug("prov 1 found " + res.name);
+            }
+
+
             Cache<Long, Provider> newCache = CacheBuilder.newBuilder().maximumSize(cacheMaxSize).build();
             newCache.putAll(providerMap);
             cache = newCache;
+
+            Provider res2 = cache.getIfPresent(1L);
+            if (res2 == null){
+                logger.debug("prov 1 not found");
+            }else{
+                logger.debug("prov 1 found " + res2.name);
+            }
+
             logger.debug("Updated provider cache with result from REST Provider Service. Cache now has " + cache.size() + " elements");
         } catch (ResourceAccessException re) {
             if (re.getCause() instanceof ConnectException) {
