@@ -1027,6 +1027,9 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .route()
                 .setHeader(PROVIDER_ID, header("providerId"))
                 .to("direct:authorizeRequest")
+                    .process(e-> {
+                        log.info("providerId:" + e.getIn().getHeader(PROVIDER_ID, Long.class));
+                    })
                 .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
                 .log(LoggingLevel.INFO, correlation() + "Tiamat start export POI")
                 .removeHeaders("CamelHttp*")
