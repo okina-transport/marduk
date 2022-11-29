@@ -66,6 +66,7 @@ public class TiamatExportPointsOfInterestBuilder extends AbstractChouetteRouteBu
                     Object tiamatProviderId = e.getIn().getHeaders().get("tiamatProviderId");
                     log.info("Tiamat points of interest export : launching export for provider " + tiamatProviderId.toString());
                     URL url = new URL(stopPlacesExportUrl.replace("http4", "http") + "/poi?providerId=" + tiamatProviderId.toString());
+                    log.info("URL : " + url.toString());
                     HttpURLConnection con = (HttpURLConnection) url.openConnection();
                     e.getIn().setBody(con.getInputStream());
 
