@@ -20,6 +20,7 @@ import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import no.rutebanken.marduk.domain.Provider;
 import org.apache.commons.lang3.StringUtils;
+import org.checkerframework.checker.nullness.qual.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -117,6 +118,15 @@ public class CacheProviderRepository implements ProviderRepository {
 
     @Override
     public Provider getProvider(Long id) {
+
+        logger.debug("recovering provider for id : " + id);
+        Provider result = cache.getIfPresent(id);
+        if (result == null){
+            logger.debug("provider not found");
+        }else{
+            logger.debug("provider found:" + result.name);
+        }
+
         return cache.getIfPresent(id);
     }
 
