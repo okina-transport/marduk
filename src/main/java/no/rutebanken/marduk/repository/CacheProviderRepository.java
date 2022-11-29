@@ -44,7 +44,7 @@ public class CacheProviderRepository implements ProviderRepository {
     @Autowired
     RestProviderDAO restProviderService;
 
-    @Value("${marduk.provider.cache.refresh.max.size:200}")
+    @Value("${marduk.provider.cache.refresh.max.size:1000}")
     private Integer cacheMaxSize;
 
     private Cache<Long, Provider> cache;
@@ -60,6 +60,8 @@ public class CacheProviderRepository implements ProviderRepository {
     @PostConstruct
     void init() {
         cache = CacheBuilder.newBuilder().maximumSize(cacheMaxSize).build();
+        logger.info("Provider cacheMaxSize:" + cacheMaxSize);
+
     }
 
     @Scheduled(fixedRateString = "${marduk.provider.cache.refresh.interval:15000}")
@@ -68,34 +70,15 @@ public class CacheProviderRepository implements ProviderRepository {
             Collection<Provider> newProviders = restProviderService.getProviders();
             Map<Long, Provider> providerMap = newProviders.stream().collect(Collectors.toMap(p -> p.getId(), p -> p));
 
-            newProviders.stream().forEach(p-> {
-                logger.debug("found provider name:" + p.name + " , id:" + p.getId() + ", mobiiti: " + p.mobiitiId);
-            });
-
             if (providerMap.isEmpty()) {
                 logger.warn("Result from REST Provider Service is empty. Skipping provider cache update. Keeping " + cache.size() + " existing elements.");
                 return;
             }
 
 
-            Provider res = providerMap.get(1L);
-            if (res == null){
-                logger.debug("prov 1 not found");
-            }else{
-                logger.debug("prov 1 found " + res.name);
-            }
-
-
             Cache<Long, Provider> newCache = CacheBuilder.newBuilder().maximumSize(cacheMaxSize).build();
             newCache.putAll(providerMap);
             cache = newCache;
-
-            Provider res2 = cache.getIfPresent(1L);
-            if (res2 == null){
-                logger.debug("prov 1 not found");
-            }else{
-                logger.debug("prov 1 found " + res2.name);
-            }
 
             logger.debug("Updated provider cache with result from REST Provider Service. Cache now has " + cache.size() + " elements");
         } catch (ResourceAccessException re) {
@@ -136,15 +119,6 @@ public class CacheProviderRepository implements ProviderRepository {
 
     @Override
     public Provider getProvider(Long id) {
-
-        logger.debug("recovering provider for id : " + id);
-        Provider result = cache.getIfPresent(id);
-        if (result == null){
-            logger.debug("provider not found");
-        }else{
-            logger.debug("provider found:" + result.name);
-        }
-
         return cache.getIfPresent(id);
     }
 
