@@ -20,6 +20,7 @@ package no.rutebanken.marduk.routes.chouette.json.exporter;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import no.rutebanken.marduk.Constants;
+import no.rutebanken.marduk.domain.AttributionsExportModes;
 import no.rutebanken.marduk.domain.IdFormat;
 import no.rutebanken.marduk.routes.chouette.json.IdParameters;
 
@@ -91,7 +92,10 @@ public class GtfsExportParameters {
         @JsonProperty("mapping_lines_ids")
         public boolean mappingLinesIds = false;
 
-        public GtfsExport(String name, String objectIdPrefix, String referentialName, String organisationName, String userName, boolean keepOriginalId, Date startDate, Date endDate, String exportedFilename, IdParameters idParams, boolean mappingLinesIds, Boolean commercialPointExport) {
+        @JsonProperty("attributions_export_mode")
+        public AttributionsExportModes attributionsExportModes = AttributionsExportModes.NONE;
+
+        public GtfsExport(String name, String objectIdPrefix, String referentialName, String organisationName, String userName, boolean keepOriginalId, Date startDate, Date endDate, String exportedFilename, IdParameters idParams, boolean mappingLinesIds, Boolean commercialPointExport, AttributionsExportModes attributionsExportModes) {
             this.name = name;
             this.objectIdPrefix = objectIdPrefix;
             this.referentialName = referentialName;
@@ -108,10 +112,11 @@ public class GtfsExportParameters {
             this.commercialPointIdPrefix = idParams.getCommercialPointIdPrefix();
             this.commercialPointExport = commercialPointExport;
             this.mappingLinesIds = mappingLinesIds;
+            this.attributionsExportModes = attributionsExportModes;
         }
 
         public GtfsExport(String name, String objectIdPrefix, String referentialName, String organisationName, String userName, boolean keepOriginalId, String exportedFilename) {
-            this(name, objectIdPrefix, referentialName, organisationName, userName, keepOriginalId, null, null, exportedFilename, new IdParameters(), false, false);
+            this(name, objectIdPrefix, referentialName, organisationName, userName, keepOriginalId, null, null, exportedFilename, new IdParameters(), false, false, AttributionsExportModes.NONE);
         }
 
     }

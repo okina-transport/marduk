@@ -17,6 +17,7 @@
 package no.rutebanken.marduk.routes.chouette.json;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import no.rutebanken.marduk.domain.AttributionsExportModes;
 import no.rutebanken.marduk.domain.ChouetteInfo;
 import no.rutebanken.marduk.domain.Provider;
 import no.rutebanken.marduk.routes.chouette.json.exporter.ConcertoExportParameters;
@@ -111,12 +112,12 @@ public class Parameters {
         }
     }
 
-    public static String getGtfsExportParameters(Provider provider, String exportName, String user, boolean keepOriginalId, List<Long> linesIds, Date startDate, Date endDate, String exportedFilename, IdParameters idParams, boolean mappingLinesIds, Boolean commercialPointExport) {
+    public static String getGtfsExportParameters(Provider provider, String exportName, String user, boolean keepOriginalId, List<Long> linesIds, Date startDate, Date endDate, String exportedFilename, IdParameters idParams, boolean mappingLinesIds, Boolean commercialPointExport, AttributionsExportModes attributionsExportModes) {
         try {
             ChouetteInfo chouetteInfo = provider.chouetteInfo;
 
             GtfsExportParameters.GtfsExport gtfsExport = new GtfsExportParameters.GtfsExport(exportName == null ? "offre" : exportName, chouetteInfo.xmlns,
-                    chouetteInfo.referential, chouetteInfo.organisation, user, keepOriginalId, startDate, endDate, exportedFilename, idParams, mappingLinesIds, commercialPointExport);
+                    chouetteInfo.referential, chouetteInfo.organisation, user, keepOriginalId, startDate, endDate, exportedFilename, idParams, mappingLinesIds, commercialPointExport, attributionsExportModes);
             gtfsExport.ids = linesIds;
             if (linesIds != null && !linesIds.isEmpty()) {
                 gtfsExport.referencesType = "line";
@@ -133,8 +134,8 @@ public class Parameters {
         }
     }
 
-    public static String getGtfsExportParameters(Provider provider, String user, boolean keepOriginalId, String exportedFilename, Boolean commercialPointExport) {
-        return getGtfsExportParameters(provider, null, user, keepOriginalId, null, null, null, exportedFilename, new IdParameters(), false, commercialPointExport);
+    public static String getGtfsExportParameters(Provider provider, String user, boolean keepOriginalId, String exportedFilename, Boolean commercialPointExport, AttributionsExportModes attributionsExportModes) {
+        return getGtfsExportParameters(provider, null, user, keepOriginalId, null, null, null, exportedFilename, new IdParameters(), false, commercialPointExport, attributionsExportModes);
     }
 
 

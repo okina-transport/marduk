@@ -33,6 +33,7 @@ public class ExportTemplate implements Serializable {
     private Boolean commercialPointExport;
 
     private Boolean exportEnabled;
+    private AttributionsExportModes attributionsExportModes;
 
     public Long getId() {
         return id;
@@ -169,6 +170,14 @@ public class ExportTemplate implements Serializable {
 
     public void setReferentials(List<String> referentials) {
         this.referentials = referentials;
+    }
+
+    public AttributionsExportModes getAttributionsExportModes() {
+        return attributionsExportModes;
+    }
+
+    public void setAttributionsExportModes(AttributionsExportModes attributionsExportModes) {
+        this.attributionsExportModes = attributionsExportModes;
     }
 
     /**

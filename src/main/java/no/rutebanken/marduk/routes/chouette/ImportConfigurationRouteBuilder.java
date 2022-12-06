@@ -215,8 +215,6 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
                 if (date == 0) {
                     configurationUrl.setLastTimestamp(LocalDateTime.now());
                     uploadFileAndUpdateLastTimestampFromUrl(e, referential, importConfiguration, url);
-                } else {
-                    log.info("No file to import for the dataspace : " + referential + " for the import configuration URL : " + configurationUrl.getUrl());
                 }
             }
         }

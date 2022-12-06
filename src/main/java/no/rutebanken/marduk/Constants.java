@@ -32,6 +32,7 @@ public class Constants {
     public static final String EXPORT_START_DATE = "EXPORT_START_DATE";
     public static final String EXPORT_END_DATE = "EXPORT_END_DATE";
     public static final String EXPORT_NAME = "EXPORT_NAME";
+    public static final String EXPORT_ATTRIBUTIONS = "EXPORT_ATTRIBUTIONS";
     public static final String EXPORTED_FILENAME = "EXPORTED_FILENAME";
     public static final String CURRENT_EXPORT = "CURRENT_EXPORT";
     public static final String JSON_EXPORTS = "JSON_EXPORTS";
