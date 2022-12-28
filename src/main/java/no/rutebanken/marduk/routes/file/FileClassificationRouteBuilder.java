@@ -80,7 +80,6 @@ public class FileClassificationRouteBuilder extends BaseRouteBuilder {
                 .end()
                 .log(LoggingLevel.INFO, correlation() + "Posting " + FILE_HANDLE + " ${header." + FILE_HANDLE + "} and " + FILE_TYPE + " ${header." + FILE_TYPE + "} on chouette import queue.")
                 .setBody(simple(""))   //remove file data from body since this is in blobstore
-                .log(LoggingLevel.INFO, "Debug purpose to remove")
                 .process(e -> JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.FILE_CLASSIFICATION).state(JobEvent.State.OK).build()).to("direct:updateStatus")
                 .to("activemq:queue:ChouetteImportQueue")
                 .routeId("file-classify");
@@ -92,7 +91,6 @@ public class FileClassificationRouteBuilder extends BaseRouteBuilder {
                 .otherwise()
                 .bean(method(ZipFileUtils.class, "transformGtfsFile"))
                 .log(LoggingLevel.INFO, correlation() + "ZIP-file transformed ${header." + FILE_HANDLE + "}")
-                .process(e -> log.info("debug purpose to remove"))
                 .to("direct:uploadBlob")
                 .endChoice()
                 .routeId("file-transform-gtfs");

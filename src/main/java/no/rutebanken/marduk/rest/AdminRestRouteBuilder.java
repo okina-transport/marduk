@@ -26,6 +26,7 @@ import no.rutebanken.marduk.routes.blobstore.BlobStoreRoute;
 import no.rutebanken.marduk.routes.chouette.ExportJsonMapper;
 import no.rutebanken.marduk.routes.chouette.json.JobResponse;
 import no.rutebanken.marduk.routes.chouette.json.Status;
+import no.rutebanken.marduk.routes.file.StopTimesArchiver;
 import no.rutebanken.marduk.routes.status.JobEvent;
 import no.rutebanken.marduk.security.AuthorizationClaim;
 import no.rutebanken.marduk.security.AuthorizationService;
@@ -90,6 +91,9 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
 
     @Autowired
     FileSystemService fileSystemService;
+
+    @Autowired
+    StopTimesArchiver stopTimesArchiver;
 
     @Value("${superspace.name}")
     private String superspaceName;
@@ -637,6 +641,12 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                     FileItem fileItem = fac.createItem("file", "application/zip", false, file.getName());
                     Streams.copy(new FileInputStream(file), fileItem.getOutputStream(), true);
                     e.getIn().setBody(fileItem);
+                    String referential = e.getIn().getHeader(OKINA_REFERENTIAL, String.class);
+                    String cleanMode = e.getIn().getHeader(CLEAN_MODE, String.class);
+                    if ("purge".equals(cleanMode)){
+                        stopTimesArchiver.cleanOrganisationStopTimes(referential);
+                    }
+                    stopTimesArchiver.archiveStopTimes(file,referential);
                 })
                 .log(LoggingLevel.INFO, correlation() + "upload files and start import pipeline")
                 .removeHeaders("CamelHttp*")
