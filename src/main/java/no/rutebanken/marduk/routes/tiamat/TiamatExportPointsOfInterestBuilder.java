@@ -74,7 +74,6 @@ public class TiamatExportPointsOfInterestBuilder extends AbstractChouetteRouteBu
                     // required to skip chouette reports parsing when polling job status
                     e.getIn().setHeader(TIAMAT_POINTS_OF_INTEREST_EXPORT, exportJob.getId());
                     String tiamatJobStatusUrl = stopPlacesExportUrl + "/" + exportJob.getId() + "/status";
-                    // setExportPollingHeaders(e, exportJob.getId().toString(), tiamatJobStatusUrl, TIAMAT_EXPORT_ROUTING_DESTINATION);
                     e.getIn().setHeader(CHOUETTE_JOB_STATUS_URL, tiamatJobStatusUrl);
                     e.getIn().setHeader(Constants.CHOUETTE_JOB_ID, exportJob.getId());
                     log.info("Tiamat Points of Interest Export  : export parsed => " + exportJob.getId() + " : " + tiamatJobStatusUrl);
@@ -88,17 +87,7 @@ public class TiamatExportPointsOfInterestBuilder extends AbstractChouetteRouteBu
         // called after a tiamat stop places export has been terminated (see CHOUETTE_JOB_STATUS_ROUTING_DESTINATION above and route direct:checkJobStatus)
         from(TIAMAT_EXPORT_POI_ROUTING_DESTINATION).streamCaching()
                 .log(LoggingLevel.INFO, getClass().getName(), "Tiamat process export results for provider with id ${header.tiamatProviderId}")
-                // upload file directly from filesystem (solid?) to consumers , rather than downloading it from its api endpoint
-                // .toD("${header.data_url}") // => this would be the download from api endpoint version
-                .process(e -> {
-                    ExportJob exportJob = e.getIn().getBody(ExportJob.class);
-                    File file = fileSystemService.getTiamatFile(exportJob.getSubFolder()+"/"+exportJob.getFileName());
-                    log.info("Tiamat Points of Interest Export  : export parsed => " + exportJob.getId() + " : " + exportJob.getJobUrl() + " file => " + file + " => " + file.exists());
-                    e.getIn().setHeader("fileName", file.getName());
-                    e.getIn().setHeader(EXPORT_FILE_NAME, file.getName());
-                    FileSystemResource fsr = new FileSystemResource(file);
-                    e.getIn().setBody(fsr.getInputStream());
-                })
+                .setHeader(EXPORT_FROM_TIAMAT, simple("true"))
                 .process(exportToConsumersProcessor)
                 .choice()
                     .when(header(CHOUETTE_REFERENTIAL).isEqualTo("mobiiti_technique"))

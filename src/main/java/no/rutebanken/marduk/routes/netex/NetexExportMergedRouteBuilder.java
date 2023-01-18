@@ -147,10 +147,9 @@ public class NetexExportMergedRouteBuilder extends BaseRouteBuilder {
                     .setHeader(Exchange.FILE_PARENT, simple(mergedNetexTmpDirectory))
                     .log(LoggingLevel.INFO, getClass().getName(), "All exports have been generated. Launching merge of all export files")
                     .to("direct:fetchLatestProviderNetexExports")
-
                     .to("direct:mergeNetex")
+                    .setHeader(NETEX_EXPORT_GLOBAL_OK, simple("true"))
                     .process(exportToConsumersProcessor)
-
                     .to("direct:cleanUpLocalDirectory")
 
                     // Use wire tap to avoid replacing body
@@ -222,7 +221,7 @@ public class NetexExportMergedRouteBuilder extends BaseRouteBuilder {
 
         from("direct:mergeNetex").streamCaching()
                 .log(LoggingLevel.DEBUG, getClass().getName(), "Merging Netex files for all providers and stop place registry.")
-                .process(e -> e.getIn().setBody(new FileInputStream(ZipFileUtils.zipFilesInFolder( mergedNetexTmpDirectory,  e.getProperty(FOLDER_NAME, String.class) + "/netex/export_global_netex.zip"))))
+                .process(e -> e.getIn().setBody(new FileInputStream(ZipFileUtils.zipFilesInFolder( mergedNetexTmpDirectory,  e.getProperty(FOLDER_NAME, String.class) + "/netex/" + EXPORT_GLOBAL_NETEX_ZIP))))
                 .setHeader(BLOBSTORE_MAKE_BLOB_PUBLIC, constant(publicPublication))
                 .log(LoggingLevel.INFO, getClass().getName(), "Uploaded new combined Netex for France")
                 .routeId("netex-export-merge-file");

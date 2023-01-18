@@ -9,20 +9,16 @@ import no.rutebanken.marduk.services.FileSystemService;
 import org.apache.camel.LoggingLevel;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.FileSystemResource;
 import org.springframework.stereotype.Component;
 
-import java.io.File;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.UUID;
 
-import static no.rutebanken.marduk.Constants.BLOBSTORE_MAKE_BLOB_PUBLIC;
 import static no.rutebanken.marduk.Constants.CHOUETTE_JOB_STATUS_JOB_TYPE;
 import static no.rutebanken.marduk.Constants.CHOUETTE_JOB_STATUS_URL;
 import static no.rutebanken.marduk.Constants.CHOUETTE_REFERENTIAL;
-import static no.rutebanken.marduk.Constants.EXPORTED_FILENAME;
-import static no.rutebanken.marduk.Constants.EXPORT_FILE_NAME;
+import static no.rutebanken.marduk.Constants.EXPORT_FROM_TIAMAT;
 import static no.rutebanken.marduk.Constants.FILE_HANDLE;
 import static no.rutebanken.marduk.Constants.MERGED_NETEX_STOPS_ROOT_DIR;
 import static no.rutebanken.marduk.Constants.PROVIDER_ID;
@@ -81,7 +77,6 @@ public class TiamatExportStopPlacesBuilder extends AbstractChouetteRouteBuilder 
                     // required to skip chouette reports parsing when polling job status
                     e.getIn().setHeader(Constants.TIAMAT_STOP_PLACES_EXPORT, exportJob.getId());
                     String tiamatJobStatusUrl = stopPlacesExportUrl + "/" + exportJob.getId() + "/status";
-//                    setExportPollingHeaders(e, exportJob.getId().toString(), tiamatJobStatusUrl, TIAMAT_EXPORT_ROUTING_DESTINATION);
                     e.getIn().setHeader(CHOUETTE_JOB_STATUS_URL, tiamatJobStatusUrl);
                     e.getIn().setHeader(Constants.CHOUETTE_JOB_ID, exportJob.getId());
                     log.info("Tiamat Stop Places Export  : export parsed => " + exportJob.getId() + " : " + tiamatJobStatusUrl);
@@ -95,17 +90,7 @@ public class TiamatExportStopPlacesBuilder extends AbstractChouetteRouteBuilder 
         // called after a tiamat stop places export has been terminated (see CHOUETTE_JOB_STATUS_ROUTING_DESTINATION above and route direct:checkJobStatus)
         from(TIAMAT_EXPORT_ROUTING_DESTINATION).streamCaching()
                 .log(LoggingLevel.INFO, getClass().getName(), "Tiamat process export results for provider with id ${header.tiamatProviderId}")
-                // upload file directly from filesystem (solid?) to consumers , rather than downloading it from its api endpoint
-                // .toD("${header.data_url}") // => this would be the download from api endpoint version
-                .process(e -> {
-                    ExportJob exportJob = e.getIn().getBody(ExportJob.class);
-                    File file = fileSystemService.getTiamatFile(exportJob.getSubFolder()+"/"+exportJob.getFileName());
-                    log.info("Tiamat Stop Places Export  : export parsed => " + exportJob.getId() + " : " + exportJob.getJobUrl() + " file => " + file + " => " + file.exists());
-                    e.getIn().setHeader("fileName", file.getName());
-                    e.getIn().setHeader(EXPORT_FILE_NAME, file.getName());
-                    FileSystemResource fsr = new FileSystemResource(file);
-                    e.getIn().setBody(fsr.getInputStream());
-                })
+                .setHeader(EXPORT_FROM_TIAMAT, simple("true"))
                 .process(exportToConsumersProcessor)
                 .choice()
                     .when(header(CHOUETTE_REFERENTIAL).isEqualTo("mobiiti_technique"))

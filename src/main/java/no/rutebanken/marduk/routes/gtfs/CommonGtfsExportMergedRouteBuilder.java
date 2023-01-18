@@ -38,10 +38,12 @@ import java.util.stream.Collectors;
 import static java.util.stream.Collectors.toList;
 import static no.rutebanken.marduk.Constants.BLOBSTORE_MAKE_BLOB_PUBLIC;
 import static no.rutebanken.marduk.Constants.CURRENT_AGGREGATED_GTFS_FILENAME;
+import static no.rutebanken.marduk.Constants.EXPORT_GLOBAL_GTFS_ZIP;
 import static no.rutebanken.marduk.Constants.EXPORT_REFERENTIALS_NAMES;
 import static no.rutebanken.marduk.Constants.FILE_HANDLE;
 import static no.rutebanken.marduk.Constants.FILE_NAME;
 import static no.rutebanken.marduk.Constants.FOLDER_NAME;
+import static no.rutebanken.marduk.Constants.GTFS_EXPORT_GLOBAL_OK;
 import static no.rutebanken.marduk.Constants.PROVIDER_BLACK_LIST;
 import static no.rutebanken.marduk.Constants.PROVIDER_WHITE_LIST;
 import static org.apache.camel.Exchange.FILE_PARENT;
@@ -120,9 +122,9 @@ public class CommonGtfsExportMergedRouteBuilder extends BaseRouteBuilder {
                 .delay(5000)
                 .setBody(simple("${header." + FILE_PARENT + "}/${header.ID_FORMAT}" ))
                 .bean(method(GtfsFileUtils.class, "mergeGtfsFilesInDirectory"))
-                .toD("file:${exchangeProperty." + FOLDER_NAME + "}/gtfs/${header.ID_FORMAT}?fileName=export_global_gtfs.zip")
+                .toD("file:${exchangeProperty." + FOLDER_NAME + "}/gtfs/${header.ID_FORMAT}?fileName=" + EXPORT_GLOBAL_GTFS_ZIP)
                 .delay(10000)
-                .setHeader(FILE_HANDLE, simple("mobiiti_technique/gtfs/${header.ID_FORMAT}/export_global_gtfs.zip"))
+                .setHeader(FILE_HANDLE, simple("mobiiti_technique/gtfs/${header.ID_FORMAT}/" + EXPORT_GLOBAL_GTFS_ZIP))
                 .to("direct:getBlob")
                 .routeId("gtfs-export-merge");
 
@@ -135,6 +137,7 @@ public class CommonGtfsExportMergedRouteBuilder extends BaseRouteBuilder {
                 .setHeader(BLOBSTORE_MAKE_BLOB_PUBLIC, constant(publicPublication))
                 .to("direct:uploadBlob")
                 .log(LoggingLevel.INFO, getClass().getName(), "Uploaded new merged GTFS file: ${header." + FILE_NAME + "}")
+                .setHeader(GTFS_EXPORT_GLOBAL_OK, simple("true"))
                 .routeId("gtfs-export-upload-merged");
 
 

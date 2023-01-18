@@ -81,17 +81,7 @@ public class TiamatExportParkingsBuilder extends AbstractChouetteRouteBuilder {
         // called after a tiamat stop places export has been terminated (see CHOUETTE_JOB_STATUS_ROUTING_DESTINATION above and route direct:checkJobStatus)
         from(TIAMAT_EXPORT_ROUTING_DESTINATION).streamCaching()
                 .log(LoggingLevel.INFO, getClass().getName(), "Tiamat process export results for provider with id ${header.tiamatProviderId}")
-                // upload file directly from filesystem (solid?) to consumers , rather than downloading it from its api endpoint
-                // .toD("${header.data_url}") // => this would be the download from api endpoint version
-                .process(e -> {
-                    ExportJob exportJob = e.getIn().getBody(ExportJob.class);
-                    File file = fileSystemService.getTiamatFile(exportJob.getSubFolder()+"/"+exportJob.getFileName());
-                    log.info("Tiamat Parkings Export  : export parsed => " + exportJob.getId() + " : " + exportJob.getJobUrl() + " file => " + file + " => " + file.exists());
-                    e.getIn().setHeader("fileName", file.getName());
-                    e.getIn().setHeader(EXPORT_FILE_NAME, file.getName());
-                    FileSystemResource fsr = new FileSystemResource(file);
-                    e.getIn().setBody(fsr.getInputStream());
-                })
+                .setHeader(EXPORT_FROM_TIAMAT, simple("true"))
                 .process(exportToConsumersProcessor)
                 .choice()
                     .when(header(CHOUETTE_REFERENTIAL).isEqualTo("mobiiti_technique"))

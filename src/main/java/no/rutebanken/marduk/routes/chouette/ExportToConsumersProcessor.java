@@ -4,6 +4,7 @@ import no.rutebanken.marduk.Utils.CipherEncryption;
 import no.rutebanken.marduk.domain.ConsumerType;
 import no.rutebanken.marduk.domain.ExportTemplate;
 import no.rutebanken.marduk.services.BlobStoreService;
+import no.rutebanken.marduk.services.FileSystemService;
 import no.rutebanken.marduk.services.FtpService;
 import no.rutebanken.marduk.services.RestUploadService;
 import org.apache.camel.Exchange;
@@ -15,6 +16,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Optional;
@@ -62,6 +66,9 @@ public class ExportToConsumersProcessor implements Processor {
     @Autowired
     BlobStoreService blobStoreService;
 
+    @Autowired
+    FileSystemService fileSystemService;
+
     /**
      * Gets the result stream of an export  and upload it towards consumers defined for this export
      * @param exchange
@@ -76,36 +83,42 @@ public class ExportToConsumersProcessor implements Processor {
         if (StringUtils.isNotBlank(jsonExport)) {
             ExportTemplate export = exportJsonMapper.fromJson(jsonExport);
             log.info("Found " + export.getConsumers().size() + " for export " + export.getId() + "/" + export.getName());
-            String filePath = export.getExportedFileName() != null ? export.getExportedFileName()  : (String) exchange.getIn().getHeaders().get("fileName");
-            InputStream streamToUpload = (InputStream) exchange.getIn().getBody();
-            export.getConsumers().stream().forEach(consumer -> {
-                log.info(consumer.getType() + " consumer upload starting : " + consumer.getName() + " => " + consumer.getServiceUrl());
+            export.getConsumers().forEach(consumer -> {
                 try {
-                    String passwordDecryptedConsumer = null;
-                    if(consumer.getPassword() != null && consumer.getPassword().length > 0){
-                        passwordDecryptedConsumer = cipherEncryption.decrypt(consumer.getPassword());
-                    }
+                    InputStream streamToUpload = getInputStream(exchange);
 
-                    String secretKeyDecryptedConsumer = null;
-                    if(consumer.getSecretKey() != null && consumer.getSecretKey().length > 0){
-                        secretKeyDecryptedConsumer = cipherEncryption.decrypt(consumer.getSecretKey());
-                    }
+                    log.info(consumer.getType() + " consumer upload starting : " + consumer.getName() + " => " + consumer.getServiceUrl());
+                    try {
+                        String passwordDecryptedConsumer = null;
+                        if (consumer.getPassword() != null && consumer.getPassword().length > 0) {
+                            passwordDecryptedConsumer = cipherEncryption.decrypt(consumer.getPassword());
+                        }
 
-                    switch (consumer.getType()) {
-                        case FTP:
-                            ftpService.uploadStream(streamToUpload, consumer.getServiceUrl(), consumer.getLogin(), passwordDecryptedConsumer, consumer.getPort(), consumer.getDestinationPath(), filePath);
-                            break;
-                        case SFTP:
-                            ftpService.uploadStreamSFTP(streamToUpload, consumer.getServiceUrl(), consumer.getLogin(), passwordDecryptedConsumer, consumer.getPort(), consumer.getDestinationPath(), filePath);
-                            break;
-                        case REST:
-                            restUploadService.uploadStream(streamToUpload, consumer.getServiceUrl(), filePath, consumer.getLogin(), secretKeyDecryptedConsumer);
-                            break;
-                        case URL:
-                            blobStoreService.uploadBlob("/" + publicUploadPath + "/" + referential + "/" + filePath, true, streamToUpload);
-                            break;
+                        String secretKeyDecryptedConsumer = null;
+                        if (consumer.getSecretKey() != null && consumer.getSecretKey().length > 0) {
+                            secretKeyDecryptedConsumer = cipherEncryption.decrypt(consumer.getSecretKey());
+                        }
+
+                        String filePath = StringUtils.isNotEmpty(export.getExportedFileName()) ? export.getExportedFileName() : (String) exchange.getIn().getHeaders().get(EXPORT_FILE_NAME);
+
+                        switch (consumer.getType()) {
+                            case FTP:
+                                ftpService.uploadStream(streamToUpload, consumer.getServiceUrl(), consumer.getLogin(), passwordDecryptedConsumer, consumer.getPort(), consumer.getDestinationPath(), filePath);
+                                break;
+                            case SFTP:
+                                ftpService.uploadStreamSFTP(streamToUpload, consumer.getServiceUrl(), consumer.getLogin(), passwordDecryptedConsumer, consumer.getPort(), consumer.getDestinationPath(), filePath);
+                                break;
+                            case REST:
+                                restUploadService.uploadStream(streamToUpload, consumer.getServiceUrl(), filePath, consumer.getLogin(), secretKeyDecryptedConsumer);
+                                break;
+                            case URL:
+                                blobStoreService.uploadBlob("/" + publicUploadPath + "/" + referential + "/" + filePath, true, streamToUpload);
+                                break;
+                        }
+                        log.info(consumer.getType() + " consumer upload completed " + consumer.getName() + " => " + consumer.getServiceUrl());
+                    } catch (IOException e) {
+                        log.error("Error while getting the file before to upload to consumer " + exchange.getIn().getHeader(FILE_HANDLE, String.class), e);
                     }
-                    log.info(consumer.getType() + " consumer upload completed " + consumer.getName() + " => " + consumer.getServiceUrl());
                 } catch (Exception e) {
                     log.error("Error while uploading to consumer " + consumer.toString(), e);
                 }
@@ -113,8 +126,8 @@ public class ExportToConsumersProcessor implements Processor {
 
         } else if (exportSimulation) {
             log.info(" Exporting simulation...");
-            InputStream streamToUpload = (InputStream) exchange.getIn().getBody();
-            String filePath = (String) exchange.getIn().getHeaders().get("fileName");
+            InputStream streamToUpload = getInputStream(exchange);
+            String filePath = StringUtils.isNotEmpty((String) exchange.getIn().getHeaders().get(EXPORTED_FILENAME)) ? (String) exchange.getIn().getHeaders().get(EXPORTED_FILENAME) : (String) exchange.getIn().getHeaders().get(EXPORT_FILE_NAME);
 
             try {
                 switch (ConsumerType.valueOf(simulationExportType)) {
@@ -136,6 +149,32 @@ public class ExportToConsumersProcessor implements Processor {
                     log.error("Please use one of this values : FTP, SFTP, REST or URL");
             }
         }
+    }
+
+    private InputStream getInputStream(Exchange exchange) throws FileNotFoundException {
+        File file;
+        InputStream streamToUpload;
+        if(exchange.getIn().getHeader(GTFS_EXPORT_GLOBAL_OK, Boolean.class) != null &&
+                exchange.getIn().getHeader(GTFS_EXPORT_GLOBAL_OK, Boolean.class).equals(true)){
+            streamToUpload = fileSystemService.getFile("mobiiti_technique/gtfs/" + exchange.getIn().getHeader(ID_FORMAT, String.class) + "/" + EXPORT_GLOBAL_GTFS_ZIP);
+            exchange.getIn().setHeader(EXPORT_FILE_NAME, EXPORT_GLOBAL_GTFS_ZIP);
+        }
+        else if(exchange.getIn().getHeader(NETEX_EXPORT_GLOBAL_OK, Boolean.class) != null &&
+                exchange.getIn().getHeader(NETEX_EXPORT_GLOBAL_OK, Boolean.class).equals(true)){
+            streamToUpload = fileSystemService.getFile("mobiiti_technique/netex/" + EXPORT_GLOBAL_NETEX_ZIP);
+            exchange.getIn().setHeader(EXPORT_FILE_NAME, EXPORT_GLOBAL_NETEX_ZIP);
+
+        }
+        else if(exchange.getIn().getHeader(EXPORT_FROM_TIAMAT, Boolean.class) != null &&
+                exchange.getIn().getHeader(EXPORT_FROM_TIAMAT, Boolean.class).equals(true)){
+            file = fileSystemService.getTiamatFile(exchange);
+            streamToUpload = new FileInputStream(file);
+        }
+        else{
+            file = fileSystemService.getOfferFile(exchange);
+            streamToUpload = new FileInputStream(file);
+        }
+        return streamToUpload;
     }
 
     public static Optional<ExportTemplate> currentExport(Exchange exchange) throws IOException {

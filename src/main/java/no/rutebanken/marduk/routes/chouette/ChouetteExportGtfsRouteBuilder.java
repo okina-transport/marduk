@@ -179,15 +179,9 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
                         .removeHeaders("Camel*")
                         .setBody(simple(""))
                         .setHeader(Exchange.HTTP_METHOD, constant(org.apache.camel.component.http4.HttpMethods.GET))
-                        .log(LoggingLevel.INFO, "Starting export download")
-                        .toD("${header.data_url}")
-                        .process(e -> {
-                            File file = fileSystemService.getOfferFile(e);
-                            String fileName = file != null ?  file.getName() : "defaultName";
-                            e.getIn().setHeader(EXPORT_FILE_NAME, fileName);
-                        })
                         .choice()
                             .when(e -> e.getIn().getHeader(GTFS_EXPORT_GLOBAL, Boolean.class))
+                                .toD("${header.data_url}")
                                 .setHeader(FILE_HANDLE, simple("mobiiti_technique/gtfs/allFiles/${header.ID_FORMAT}/${header." + CHOUETTE_REFERENTIAL + "}-" + Constants.CURRENT_AGGREGATED_GTFS_FILENAME))
                                 .to("direct:uploadBlob")
                                 .to("direct:exportMergedGtfs")

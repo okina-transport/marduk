@@ -96,7 +96,7 @@ public class ChouetteExportNetexRouteBuilder extends AbstractChouetteRouteBuilde
                     e.getIn().setHeader(JSON_PART, Parameters.getNetexExportProvider(getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)), exportStops, user, exportedFilename));
                 }) //Using header to addToExchange json data
                 .log(LoggingLevel.INFO, correlation() + "Creating multipart request")
-                .process(e -> toGenericChouetteMultipart(e))
+                .process(this::toGenericChouetteMultipart)
                 .setHeader(Exchange.CONTENT_TYPE, simple("multipart/form-data"))
                 .toD(chouetteUrl + "/chouette_iev/referentials/${header." + CHOUETTE_REFERENTIAL + "}/exporter/netexprofile")
                 .process(e -> {
@@ -118,15 +118,9 @@ public class ChouetteExportNetexRouteBuilder extends AbstractChouetteRouteBuilde
                         .removeHeaders("Camel*")
                         .setBody(simple(""))
                         .setHeader(Exchange.HTTP_METHOD, constant(org.apache.camel.component.http4.HttpMethods.GET))
-                        .toD("${header.data_url}")
-                        .process(e -> {
-                            File file = fileSystemService.getOfferFile(e);
-                            String fileName = file != null ? file.getName() : "defaultFileName";
-                            e.getIn().setHeader("fileName", fileName);
-                            e.getIn().setHeader(EXPORT_FILE_NAME,fileName);
-                        })
                         .choice()
                             .when(e -> e.getIn().getHeader(NETEX_EXPORT_GLOBAL, Boolean.class))
+                                .toD("${header.data_url}")
                                 .setHeader(FILE_HANDLE, simple(MERGED_NETEX_ROOT_DIR+"/${header." + CHOUETTE_REFERENTIAL + "}-" + Constants.CURRENT_AGGREGATED_NETEX_FILENAME))
                                 .to("direct:uploadBlob")
                                 .to("direct:updateStatus")

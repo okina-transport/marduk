@@ -153,14 +153,6 @@ public class ChouetteExportNeptuneRouteBuilder extends AbstractChouetteRouteBuil
                         .removeHeaders("Camel*")
                         .setBody(simple(""))
                         .setHeader(Exchange.HTTP_METHOD, constant(org.apache.camel.component.http4.HttpMethods.GET))
-                        .log(LoggingLevel.INFO, "Starting export download")
-                        .toD("${header.data_url}")
-                        .process(e -> {
-                            File file = fileSystemService.getOfferFile(e);
-                            e.getIn().setHeader("fileName", file.getName());
-                            e.getIn().setHeader(EXPORT_FILE_NAME, file.getName());
-                        })
-                        .setHeader("fileName", simple("NEPTUNE.zip"))
                         .process(exportToConsumersProcessor)
                         .log(LoggingLevel.INFO, "Upload to consumers and blob store completed")
                         .process(this::setStateAndSendMailOk)
