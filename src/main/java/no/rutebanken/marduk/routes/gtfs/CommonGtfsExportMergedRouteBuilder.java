@@ -80,6 +80,7 @@ public class CommonGtfsExportMergedRouteBuilder extends BaseRouteBuilder {
                 .doTry()
                 .to("direct:fetchLatestGtfs")
                 .to("direct:mergeGtfs")
+                .setHeader(GTFS_EXPORT_GLOBAL_OK, simple("true"))
 
                 // Use wire tap to avoid replacing body
                 .wireTap("direct:reportExportMergedGtfsOK")
@@ -137,7 +138,6 @@ public class CommonGtfsExportMergedRouteBuilder extends BaseRouteBuilder {
                 .setHeader(BLOBSTORE_MAKE_BLOB_PUBLIC, constant(publicPublication))
                 .to("direct:uploadBlob")
                 .log(LoggingLevel.INFO, getClass().getName(), "Uploaded new merged GTFS file: ${header." + FILE_NAME + "}")
-                .setHeader(GTFS_EXPORT_GLOBAL_OK, simple("true"))
                 .routeId("gtfs-export-upload-merged");
 
 
