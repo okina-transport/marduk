@@ -17,7 +17,6 @@
 package no.rutebanken.marduk.routes.gtfs;
 
 import no.rutebanken.marduk.Constants;
-import no.rutebanken.marduk.domain.Provider;
 import no.rutebanken.marduk.routes.BaseRouteBuilder;
 import no.rutebanken.marduk.routes.file.GtfsFileUtils;
 import no.rutebanken.marduk.routes.status.JobEvent;
@@ -28,9 +27,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
-import org.springframework.util.CollectionUtils;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -44,8 +41,6 @@ import static no.rutebanken.marduk.Constants.FILE_HANDLE;
 import static no.rutebanken.marduk.Constants.FILE_NAME;
 import static no.rutebanken.marduk.Constants.FOLDER_NAME;
 import static no.rutebanken.marduk.Constants.GTFS_EXPORT_GLOBAL_OK;
-import static no.rutebanken.marduk.Constants.PROVIDER_BLACK_LIST;
-import static no.rutebanken.marduk.Constants.PROVIDER_WHITE_LIST;
 import static org.apache.camel.Exchange.FILE_PARENT;
 
 /**
@@ -158,29 +153,6 @@ public class CommonGtfsExportMergedRouteBuilder extends BaseRouteBuilder {
                     .map(p -> p.chouetteInfo.referential + "-" + CURRENT_AGGREGATED_GTFS_FILENAME)
                     .collect(Collectors.joining(","));
         }
-    }
-
-    private boolean isMatch(Provider p, List<String> providerBlackList, List<String> providerWhiteList) {
-        if (CollectionUtils.isEmpty(providerWhiteList)) {
-            return providerBlackList.stream().noneMatch(blacklisted -> blacklisted.equalsIgnoreCase(p.chouetteInfo.referential));
-        }
-        return providerWhiteList.stream().anyMatch(whiteListed -> whiteListed.equalsIgnoreCase(p.chouetteInfo.referential));
-    }
-
-    private List<String> getProviderBlackList(Exchange e) {
-        List<String> providerBlackList = e.getProperty(PROVIDER_BLACK_LIST, List.class);
-        if (providerBlackList == null) {
-            providerBlackList = new ArrayList<>();
-        }
-        return providerBlackList;
-    }
-
-    private List<String> getProviderWhiteList(Exchange e) {
-        List<String> providerBlackList = e.getProperty(PROVIDER_WHITE_LIST, List.class);
-        if (providerBlackList == null) {
-            providerBlackList = new ArrayList<>();
-        }
-        return providerBlackList;
     }
 }
 

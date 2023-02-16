@@ -11,11 +11,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
-import java.util.UUID;
 
 import static no.rutebanken.marduk.Constants.CHOUETTE_REFERENTIAL;
-import static no.rutebanken.marduk.Constants.NETEX_EXPORT_GLOBAL;
-import static no.rutebanken.marduk.Constants.NO_GTFS_EXPORT;
 import static no.rutebanken.marduk.Constants.ORIGINAL_PROVIDER_ID;
 import static no.rutebanken.marduk.Constants.PROVIDER_ID;
 
@@ -104,11 +101,6 @@ public class PredefinedExportsRouteBuilder extends AbstractChouetteRouteBuilder 
                 })
                 .inOnly("activemq:queue:TiamatParkingsExport")
                 .routeId("parkings-predefined-export-mobiiti_technique-quartz");
-
-
-
-
-
 
     }
 

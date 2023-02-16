@@ -75,8 +75,6 @@ public class SftpPigmaExportRouteBuilder extends BaseRouteBuilder {
     public void configure() throws Exception {
         super.configure();
 
-        //TODO activer le cron en activant le singleton ci dessous, en poussant les properties de marduk prod et activer le sftp channel
-//        from("direct:uploadPigma")
         singletonFrom("quartz2://marduk/uploadPigma?cron=" + uploadPigmaCron)
                 .process(e -> sendFilesToPigmaPlatform())
                 .routeId("uploadPigma");
@@ -95,7 +93,7 @@ public class SftpPigmaExportRouteBuilder extends BaseRouteBuilder {
         }
 
         // GTFS files
-        BlobStoreFiles gtfsBlobStoreFiles = blobStoreService.listBlobsInFolders("mobiiti_technique/gtfs/allFiles/");
+        BlobStoreFiles gtfsBlobStoreFiles = blobStoreService.listBlobsInFolders("mobiiti_technique/gtfs/allFiles/TRIDENT/");
         if(gtfsBlobStoreFiles.getFiles().size() != 0){
             List<BlobStoreFiles.File> gtfsFiles = gtfsBlobStoreFiles.getFiles();
             listBlobStoreFiles.addAll(gtfsFiles);
@@ -108,7 +106,7 @@ public class SftpPigmaExportRouteBuilder extends BaseRouteBuilder {
         }
 
         // Aggregated GTFS file
-        BlobStoreFiles aggregatedGtfsFileBlobStoreFiles = blobStoreService.listBlobsInFolders("mobiiti_technique/gtfs/" + EXPORT_GLOBAL_GTFS_ZIP);
+        BlobStoreFiles aggregatedGtfsFileBlobStoreFiles = blobStoreService.listBlobsInFolders("mobiiti_technique/gtfs/TRIDENT/" + EXPORT_GLOBAL_GTFS_ZIP);
         if(aggregatedGtfsFileBlobStoreFiles.getFiles().size() != 0){
             listBlobStoreFiles.add(aggregatedGtfsFileBlobStoreFiles.getFiles().get(0));
         }
@@ -176,12 +174,13 @@ public class SftpPigmaExportRouteBuilder extends BaseRouteBuilder {
             for (File file : files) {
                 try (FileInputStream src = new FileInputStream(file.getName())) {
                     channelSftp.put(src, file.getName(), ChannelSftp.OVERWRITE);
+                    log.info("File transfered : " + file.getName() + " successfully to host.");
                 }
             }
-            log.info("File transfered successfully to host.");
+            log.info("All files transfered successfully to host.");
         } catch (Exception ex) {
             ex.printStackTrace();
-            log.error("Exception found while transfer the response.", ex.getMessage());
+            log.error("Exception found while transfer the response. {}", ex.getMessage());
             slackNotification.sendSlackNotificationTitleAndMessage(SlackNotification.NOTIFICATION_CHANNEL, "Erreur upload des fichiers sur la plateforme Pigma", "Les fichiers n'ont pas pu être exportés sur la plateforme Pigma.");
             sendMail.sendEmail("Erreur upload des fichiers sur la plateforme Pigma", "developer@okina.fr", "Les fichiers n'ont pas pu être exportés sur la plateforme Pigma.", null);
 
