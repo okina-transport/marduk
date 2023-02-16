@@ -56,8 +56,8 @@ import java.net.Authenticator;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
-import java.text.SimpleDateFormat;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.util.Arrays;
@@ -124,7 +124,7 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
                 })
                 .choice()
                 .when(header(WORKLOW).isNotNull())
-                    .to("direct:importLaunch")
+                .to("direct:importLaunch")
                 .endChoice()
                 .routeId("import-configuration-job");
 
@@ -291,10 +291,14 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
                 }
             } else {
                 log.info("File " + configurationFtp.getFilename() + " not founded for the dataspace " + referential);
+                sendMailForFileNotFound(importConfiguration,referential, configurationFtp.getFilename());
             }
         } catch (Exception ex) {
             ex.printStackTrace();
             log.error("Exception found while transfer the response.", ex.getMessage());
+            if (ex.getMessage().equals("No such file")){
+                sendMailForFileNotFound(importConfiguration,referential, configurationFtp.getFilename());
+            }
         } finally {
             channelSftp.exit();
             log.info("SFTP Channel exited.");
@@ -327,8 +331,34 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
                 }
             } else {
                 log.info("File " + configurationFtp.getFilename() + " not founded for the dataspace " + referential);
+                sendMailForFileNotFound(importConfiguration, referential, configurationFtp.getFilename());
             }
         }
+    }
+
+    /**
+     * Send a mail to warn that file was not found
+     * @param importConfiguration
+     *    the configuration of the automatic import
+     * @param referential
+     *    the referential for which file was not found
+     * @param filename
+     *    the file name that was not found
+     */
+    private void sendMailForFileNotFound(ImportConfiguration importConfiguration,String referential, String filename) {
+
+        String mailObject = "MOBIITI - import automatique - Fichier non trouvé";
+        LocalDate now= LocalDate.now();
+        String text  = "Bonjour, <br> Après vérification, il n'y pas de nouvelle offre a intégrer pour la date du " + now.toString() + ". <br>" +
+                        "Nom du fichier : " + filename + " <br>" +
+                        "Organisation : " + referential +  " <br>" +
+                        "Cordialement,<br> L'équipe Mobi-iti";
+
+
+        for (Recipient recipient : importConfiguration.getRecipients()) {
+            sendMail.sendEmail(mailObject, recipient.getEmail(), text, null);
+        }
+
     }
 
     private void setBodyWithFileAndUpdateLastTimestamp(Exchange e, String referential, ImportConfiguration importConfiguration, InputStream inputStream, String fileName) throws IOException {
