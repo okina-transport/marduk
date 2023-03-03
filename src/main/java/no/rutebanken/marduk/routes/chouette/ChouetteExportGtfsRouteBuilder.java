@@ -95,6 +95,7 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
                     }
                     e.getIn().setHeader(FILE_NAME, exportName);
                     e.getIn().setHeader(FILE_TYPE, "gtfs");
+                    log.info("Lancement export GTFS - Fichier : " + exportName + " - Espace de données : " + getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)).chouetteInfo.referential);
                 })
                 .process(e -> JobEvent.providerJobBuilder(e).timetableAction(TimetableAction.EXPORT).state(State.PENDING).build())
                 .to("direct:updateStatus")
@@ -174,6 +175,7 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
                 .to("log:" + getClass().getName() + "?level=DEBUG&showAll=true&multiline=true")
                 .choice()
                     .when(simple("${header.action_report_result} == 'OK'"))
+                        .log(LoggingLevel.INFO,"Export GTFS terminé - Fichier : ${header." + FILE_NAME + "} - Espace de données : ${header." + CHOUETTE_REFERENTIAL + "}")
                         .log(LoggingLevel.INFO, correlation() + "Export ended with status '${header.action_report_result}'")
                         .log(LoggingLevel.INFO, correlation() + "Calling url ${header.data_url}")
                         .removeHeaders("Camel*")

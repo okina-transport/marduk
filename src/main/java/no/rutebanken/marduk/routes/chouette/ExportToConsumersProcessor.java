@@ -87,7 +87,8 @@ public class ExportToConsumersProcessor implements Processor {
                 try {
                     InputStream streamToUpload = getInputStream(exchange);
 
-                    log.info(consumer.getType() + " consumer upload starting : " + consumer.getName() + " => " + consumer.getServiceUrl());
+                    log.info("Envoi du fichier : " + exchange.getIn().getHeader(EXPORT_FILE_NAME) + " vers le consommateur : " + consumer.getName() + " - de type : " + consumer.getType().name() + " - Espace de données : " + referential);
+
                     try {
                         String passwordDecryptedConsumer = null;
                         if (consumer.getPassword() != null && consumer.getPassword().length > 0) {
@@ -115,7 +116,8 @@ public class ExportToConsumersProcessor implements Processor {
                                 blobStoreService.uploadBlob("/" + publicUploadPath + "/" + referential + "/" + filePath, true, streamToUpload);
                                 break;
                         }
-                        log.info(consumer.getType() + " consumer upload completed " + consumer.getName() + " => " + consumer.getServiceUrl());
+                        log.info("Envoi du fichier terminé : " + exchange.getIn().getHeader(EXPORT_FILE_NAME) + " vers le consommateur : " + consumer.getName() + " - de type : " + consumer.getType().name() + " - Espace de données : " + referential);
+
                     } catch (IOException e) {
                         log.error("Error while getting the file before to upload to consumer " + exchange.getIn().getHeader(FILE_HANDLE, String.class), e);
                     }
@@ -125,7 +127,7 @@ public class ExportToConsumersProcessor implements Processor {
             });
 
         } else if (exportSimulation) {
-            log.info(" Exporting simulation...");
+            log.info("Exporting simulation...");
             InputStream streamToUpload = getInputStream(exchange);
             String filePath = StringUtils.isNotEmpty((String) exchange.getIn().getHeaders().get(EXPORTED_FILENAME)) ? (String) exchange.getIn().getHeaders().get(EXPORTED_FILENAME) : (String) exchange.getIn().getHeaders().get(EXPORT_FILE_NAME);
 

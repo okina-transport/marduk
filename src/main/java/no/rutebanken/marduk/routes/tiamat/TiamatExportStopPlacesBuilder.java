@@ -22,6 +22,7 @@ import static no.rutebanken.marduk.Constants.CHOUETTE_JOB_STATUS_URL;
 import static no.rutebanken.marduk.Constants.CHOUETTE_REFERENTIAL;
 import static no.rutebanken.marduk.Constants.EXPORT_FROM_TIAMAT;
 import static no.rutebanken.marduk.Constants.FILE_HANDLE;
+import static no.rutebanken.marduk.Constants.FILE_NAME;
 import static no.rutebanken.marduk.Constants.MERGED_NETEX_STOPS_ROOT_DIR;
 import static no.rutebanken.marduk.Constants.PROVIDER_ID;
 
@@ -59,6 +60,7 @@ public class TiamatExportStopPlacesBuilder extends AbstractChouetteRouteBuilder 
                     .process(e -> {
                         Long tiamatProviderId = Long.valueOf(e.getIn().getHeaders().get(PROVIDER_ID).toString());
                         e.getIn().getHeaders().put("tiamatProviderId", tiamatProviderId);
+                        e.getIn().getHeaders().put(CHOUETTE_REFERENTIAL, getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)).chouetteInfo.referential);
                     })
                 .end()
                 .choice()
@@ -76,12 +78,14 @@ public class TiamatExportStopPlacesBuilder extends AbstractChouetteRouteBuilder 
                     e.getIn().setBody(con.getInputStream());
 
                     ExportJob exportJob = e.getIn().getBody(ExportJob.class);
+                    e.getIn().getHeaders().put(FILE_NAME,  exportJob.getFileName());
                     // required to skip chouette reports parsing when polling job status
                     e.getIn().setHeader(Constants.TIAMAT_STOP_PLACES_EXPORT, exportJob.getId());
                     String tiamatJobStatusUrl = stopPlacesExportUrl + "/" + exportJob.getId() + "/status";
                     e.getIn().setHeader(CHOUETTE_JOB_STATUS_URL, tiamatJobStatusUrl);
                     e.getIn().setHeader(Constants.CHOUETTE_JOB_ID, exportJob.getId());
                     log.info("Tiamat Stop Places Export  : export parsed => " + exportJob.getId() + " : " + tiamatJobStatusUrl);
+                    log.info("Lancement export Arrêts - Fichier : " + exportJob.getFileName() + " - Espace de données : " + getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)).chouetteInfo.referential);
                 })
 
                 .setHeader(Constants.CHOUETTE_JOB_STATUS_ROUTING_DESTINATION, constant(TIAMAT_EXPORT_ROUTING_DESTINATION))
@@ -91,6 +95,7 @@ public class TiamatExportStopPlacesBuilder extends AbstractChouetteRouteBuilder 
 
         // called after a tiamat stop places export has been terminated (see CHOUETTE_JOB_STATUS_ROUTING_DESTINATION above and route direct:checkJobStatus)
         from(TIAMAT_EXPORT_ROUTING_DESTINATION).streamCaching()
+                .log(LoggingLevel.INFO,"Export Arrêts terminé - Fichier : ${header." + FILE_NAME + "} - Espace de données : ${header." + CHOUETTE_REFERENTIAL + "}")
                 .log(LoggingLevel.INFO, getClass().getName(), "Tiamat process export results for provider with id ${header.tiamatProviderId}")
                 .setHeader(EXPORT_FROM_TIAMAT, simple("true"))
                 .process(exportToConsumersProcessor)

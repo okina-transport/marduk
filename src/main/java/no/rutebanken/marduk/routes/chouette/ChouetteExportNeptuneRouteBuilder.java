@@ -92,6 +92,7 @@ public class ChouetteExportNeptuneRouteBuilder extends AbstractChouetteRouteBuil
                     e.getIn().removeHeader(Constants.CHOUETTE_JOB_ID);
                     e.getIn().setHeader(FILE_NAME, exportName);
                     e.getIn().setHeader(FILE_TYPE, "neptune");
+                    log.info("Lancement export Neptune - Fichier : " + exportName + " - Espace de données : " + getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)).chouetteInfo.referential);
                 })
                 .process(e -> JobEvent.providerJobBuilder(e).timetableAction(TimetableAction.EXPORT).state(State.PENDING).build())
                 .to("direct:updateStatus")
@@ -148,6 +149,7 @@ public class ChouetteExportNeptuneRouteBuilder extends AbstractChouetteRouteBuil
                 .log(LoggingLevel.INFO, getClass().getName())
                 .choice()
                     .when(simple("${header.action_report_result} == 'OK'"))
+                        .log(LoggingLevel.INFO,"Export Neptune terminé - Fichier : ${header." + FILE_NAME + "} - Espace de données : ${header." + CHOUETTE_REFERENTIAL + "}")
                         .log(LoggingLevel.INFO, correlation() + "Export ended with status '${header.action_report_result}'")
                         .log(LoggingLevel.INFO, correlation() + "Calling url ${header.data_url}")
                         .removeHeaders("Camel*")

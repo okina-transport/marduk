@@ -73,6 +73,7 @@ public class ChouetteExportNetexRouteBuilder extends AbstractChouetteRouteBuilde
                     String exportName = org.springframework.util.StringUtils.hasText(e.getIn().getHeader(EXPORTED_FILENAME, String.class)) && !e.getIn().getHeader(NETEX_EXPORT_GLOBAL, Boolean.class) ? (String) e.getIn().getHeader(EXPORTED_FILENAME) : "offre";
                     e.getIn().setHeader(FILE_NAME, exportName);
                     e.getIn().setHeader(FILE_TYPE, "netex");
+                    log.info("Lancement export Netex - Fichier : " + exportName + " - Espace de données : " + getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)).chouetteInfo.referential);
                 })
                 .process(e -> JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.EXPORT_NETEX).state(JobEvent.State.PENDING).build())
                 .to("direct:updateStatus")
@@ -113,6 +114,7 @@ public class ChouetteExportNetexRouteBuilder extends AbstractChouetteRouteBuilde
         from("direct:processNetexExportResult")
                 .choice()
                     .when(simple("${header.action_report_result} == 'OK'"))
+                        .log(LoggingLevel.INFO,"Export Netex terminé - Fichier : ${header." + FILE_NAME + "} - Espace de données : ${header." + CHOUETTE_REFERENTIAL + "}")
                         .log(LoggingLevel.INFO, correlation() + "Export ended with status '${header.action_report_result}'")
                         .log(LoggingLevel.DEBUG, correlation() + "Calling url ${header.data_url}")
                         .removeHeaders("Camel*")

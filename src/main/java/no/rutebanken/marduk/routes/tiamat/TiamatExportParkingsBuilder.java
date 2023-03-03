@@ -50,6 +50,7 @@ public class TiamatExportParkingsBuilder extends AbstractChouetteRouteBuilder {
                     .process(e -> {
                         Long tiamatProviderId = Long.valueOf(e.getIn().getHeaders().get(PROVIDER_ID).toString());
                         e.getIn().getHeaders().put("tiamatProviderId", tiamatProviderId);
+                        e.getIn().getHeaders().put(CHOUETTE_REFERENTIAL, getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)).chouetteInfo.referential);
                     })
                 .end()
                 .choice()
@@ -65,12 +66,14 @@ public class TiamatExportParkingsBuilder extends AbstractChouetteRouteBuilder {
                     e.getIn().setBody(con.getInputStream());
 
                     ExportJob exportJob = e.getIn().getBody(ExportJob.class);
+                    e.getIn().getHeaders().put(FILE_NAME,  exportJob.getFileName());
                     // required to skip chouette reports parsing when polling job status
                     e.getIn().setHeader(TIAMAT_PARKINGS_EXPORT, exportJob.getId());
                     String tiamatJobStatusUrl = parkingsExportUrl + "/" + exportJob.getId() + "/status";
                     e.getIn().setHeader(CHOUETTE_JOB_STATUS_URL, tiamatJobStatusUrl);
                     e.getIn().setHeader(Constants.CHOUETTE_JOB_ID, exportJob.getId());
                     log.info("Tiamat Parkings Export  : export parsed => " + exportJob.getId() + " : " + tiamatJobStatusUrl);
+                    log.info("Lancement export Parkings - Fichier : " + exportJob.getFileName() + " - Espace de données : " + getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)).chouetteInfo.referential);
                 })
 
                 .setHeader(Constants.CHOUETTE_JOB_STATUS_ROUTING_DESTINATION, constant(TIAMAT_EXPORT_ROUTING_DESTINATION))
@@ -80,6 +83,7 @@ public class TiamatExportParkingsBuilder extends AbstractChouetteRouteBuilder {
 
         // called after a tiamat stop places export has been terminated (see CHOUETTE_JOB_STATUS_ROUTING_DESTINATION above and route direct:checkJobStatus)
         from(TIAMAT_EXPORT_ROUTING_DESTINATION).streamCaching()
+                .log(LoggingLevel.INFO,"Export Parkings terminé - Fichier : ${header." + FILE_NAME + "} - Espace de données : ${header." + CHOUETTE_REFERENTIAL + "}")
                 .log(LoggingLevel.INFO, getClass().getName(), "Tiamat process export results for provider with id ${header.tiamatProviderId}")
                 .setHeader(EXPORT_FROM_TIAMAT, simple("true"))
                 .process(exportToConsumersProcessor)
