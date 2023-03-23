@@ -124,7 +124,7 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
                 })
                 .choice()
                 .when(header(WORKLOW).isNotNull())
-                .to("direct:importLaunch")
+                    .to("direct:importLaunch")
                 .endChoice()
                 .routeId("import-configuration-job");
 
@@ -199,6 +199,7 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
                     uploadFileAndUpdateLastTimestampFromUrl(e, referential, importConfiguration, url);
                 } else {
                     log.info("No new file to import for the referential : " + referential + " for the import configuration URL : " + configurationUrl.getUrl());
+                    sendMailForFileAlreadyImported(importConfiguration, referential, url.getPath().substring(url.getPath().lastIndexOf('/') + 1));
                 }
             } else {
                 HttpURLConnection httpCon = (HttpURLConnection) url.openConnection();
@@ -210,6 +211,7 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
                         uploadFileAndUpdateLastTimestampFromUrl(e, referential, importConfiguration, url);
                     } else {
                         log.info("No file to import for the dataspace : " + referential + " for the import configuration URL : " + configurationUrl.getUrl());
+                        sendMailForFileAlreadyImported(importConfiguration, referential, url.getPath().substring(url.getPath().lastIndexOf('/') + 1));
                     }
                 }
                 if (date == 0) {
@@ -217,6 +219,9 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
                     uploadFileAndUpdateLastTimestampFromUrl(e, referential, importConfiguration, url);
                 }
             }
+        }
+        else{
+            sendMailForFileNotFound(importConfiguration, referential, url.getPath().substring(url.getPath().lastIndexOf('/') + 1));
         }
     }
 
@@ -288,16 +293,17 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
                     setBodyWithFileAndUpdateLastTimestamp(e, referential, importConfiguration, new FileInputStream(targetFile), configurationFtp.getFilename());
                 } else {
                     log.info("No new file to import for the dataspace : " + referential + " for the import configuration SFTP : " + configurationFtp.getUrl());
+                    sendMailForFileAlreadyImported(importConfiguration, referential, configurationFtp.getFilename());
                 }
             } else {
                 log.info("File " + configurationFtp.getFilename() + " not founded for the dataspace " + referential);
-                sendMailForFileNotFound(importConfiguration,referential, configurationFtp.getFilename());
+                sendMailForFileNotFound(importConfiguration, referential, configurationFtp.getFilename());
             }
         } catch (Exception ex) {
             ex.printStackTrace();
             log.error("Exception found while transfer the response.", ex.getMessage());
             if (ex.getMessage().equals("No such file")){
-                sendMailForFileNotFound(importConfiguration,referential, configurationFtp.getFilename());
+                sendMailForFileNotFound(importConfiguration, referential, configurationFtp.getFilename());
             }
         } finally {
             channelSftp.exit();
@@ -328,6 +334,7 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
                     setBodyWithFileAndUpdateLastTimestamp(e, referential, importConfiguration, client.retrieveFileStream(configurationFtp.getFolder() + "/" + file.getName()), file.getName());
                 } else {
                     log.info("No new file to import for the dataspace : " + referential + " for the import configuration FTP : " + configurationFtp.getUrl());
+                    sendMailForFileAlreadyImported(importConfiguration, referential, configurationFtp.getFilename());
                 }
             } else {
                 log.info("File " + configurationFtp.getFilename() + " not founded for the dataspace " + referential);
@@ -349,10 +356,36 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
 
         String mailObject = "MOBIITI - import automatique - Fichier non trouvé";
         LocalDate now= LocalDate.now();
-        String text  = "Bonjour, <br> Après vérification, il n'y pas de nouvelle offre a intégrer pour la date du " + now.toString() + ". <br>" +
+        String text  = "Bonjour, <br> Après vérification, il n'y pas de nouvelle offre à intégrer pour la date du " + now.toString() + ". <br>" +
                         "Nom du fichier : " + filename + " <br>" +
                         "Organisation : " + referential +  " <br>" +
                         "Cordialement,<br> L'équipe Mobi-iti";
+
+
+        for (Recipient recipient : importConfiguration.getRecipients()) {
+            sendMail.sendEmail(mailObject, recipient.getEmail(), text, null);
+        }
+
+    }
+
+    /**
+     * Send a mail to warn that file was already imported
+     * @param importConfiguration
+     *    the configuration of the automatic import
+     * @param referential
+     *    the referential for which file was already imported
+     * @param filename
+     *    the file name that was already imported
+     */
+    private void sendMailForFileAlreadyImported(ImportConfiguration importConfiguration,String referential, String filename) {
+
+        String mailObject = "MOBIITI - import automatique - Fichier déjà importé";
+        LocalDate now= LocalDate.now();
+        String text  = "Bonjour, <br> Après vérification, il n'y pas de nouvelle offre à intégrer pour la date du " + now.toString() +
+                ", le fichier ayant déjà été importé précédemment. <br>" +
+                "Nom du fichier : " + filename + " <br>" +
+                "Organisation : " + referential +  " <br>" +
+                "Cordialement,<br> L'équipe Mobi-iti";
 
 
         for (Recipient recipient : importConfiguration.getRecipients()) {
