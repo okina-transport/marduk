@@ -12,7 +12,7 @@
 
     <groupId>no.rutebanken.marduk</groupId>
     <artifactId>marduk</artifactId>
-    <version>2.3.4-mobi-iti-SNAPSHOT</version>
+    <version>2.3.5-mobi-iti-SNAPSHOT</version>
 
 
     <name>marduk</name>
