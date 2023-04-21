@@ -15,7 +15,6 @@ public class Consumer {
     private byte[] password;
     private Integer port;
     private String destinationPath;
-    private boolean publicExport = false;
     private boolean notification = false;
     private String notificationUrl;
 
@@ -93,14 +92,6 @@ public class Consumer {
 
     public String toString() {
         return String.format("%d / %s / %s", getId(), getName(), getServiceUrl());
-    }
-
-    public boolean isPublicExport() {
-        return publicExport;
-    }
-
-    public void setPublicExport(boolean publicExport) {
-        this.publicExport = publicExport;
     }
 
     public boolean isNotification() {

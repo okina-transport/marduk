@@ -16,24 +16,15 @@
 
 package no.rutebanken.marduk.routes.blobstore;
 
-import no.rutebanken.marduk.domain.ExportTemplate;
 import no.rutebanken.marduk.domain.Provider;
 import no.rutebanken.marduk.routes.BaseRouteBuilder;
-import no.rutebanken.marduk.routes.chouette.ExportToConsumersProcessor;
 import org.apache.camel.LoggingLevel;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import java.text.SimpleDateFormat;
-import java.util.Optional;
-
-import static no.rutebanken.marduk.Constants.ARCHIVE_FILE_HANDLE;
 import static no.rutebanken.marduk.Constants.BLOBSTORE_MAKE_BLOB_PUBLIC;
 import static no.rutebanken.marduk.Constants.CHOUETTE_REFERENTIAL;
-import static no.rutebanken.marduk.Constants.EXPORT_FILE_NAME;
 import static no.rutebanken.marduk.Constants.FILE_HANDLE;
-import static no.rutebanken.marduk.Constants.NOTIFICATION;
-import static no.rutebanken.marduk.Constants.NOTIFICATION_URL;
 import static no.rutebanken.marduk.Constants.PROVIDER_ID;
 
 @Component
@@ -41,9 +32,6 @@ public class BlobStoreRoute extends BaseRouteBuilder {
 
     @Value("${google.publish.public:false}")
     private boolean publicPublication;
-
-    private static SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMddhhmmss");
-
     @Override
     public void configure() throws Exception {
 
@@ -58,39 +46,6 @@ public class BlobStoreRoute extends BaseRouteBuilder {
                 .to("log:" + getClass().getName() + "?level=DEBUG&showAll=true&multiline=true")
                 .log(LoggingLevel.INFO, correlation() + "Stored file ${header." + FILE_HANDLE + "} in blob store.")
                 .routeId("blobstore-upload");
-
-        from("direct:uploadBlobExport")
-                .to("log:" + getClass().getName() + "?level=DEBUG&showAll=true&multiline=true")
-                .process(e -> {
-                    Provider provider = getProviderRepository().getNonMobiitiProvider(e.getIn().getHeader(PROVIDER_ID, Long.class))
-                            .orElseThrow(() -> new RuntimeException("No valid base provider found for export uploading. Provider id : " + e.getIn().getHeader(PROVIDER_ID)));
-                    Optional<ExportTemplate> export = ExportToConsumersProcessor.currentExport(e);
-                    if (export.isPresent()) {
-                        e.getIn().setHeader(FILE_HANDLE, exportFilePath(export.get(), provider));
-                        e.getIn().setHeader(ARCHIVE_FILE_HANDLE, exportArchiveFilePath(export.get(), provider, e.getIn().getHeader(EXPORT_FILE_NAME).toString()));
-                        e.getIn().setHeader(BLOBSTORE_MAKE_BLOB_PUBLIC, export.get().hasExportFilePublicAccess());
-
-                        if(export.get().getConsumers() != null && !export.get().getConsumers().isEmpty()) {
-                            e.getIn().setHeader(NOTIFICATION, export.get().getConsumers().get(0).isNotification());
-                            if (e.getIn().getHeader(NOTIFICATION).equals(true)) {
-                                e.getIn().setHeader(NOTIFICATION_URL, export.get().getConsumers().get(0).getNotificationUrl());
-                            }
-                        }
-                    } else { // cas des exports manuels
-                        e.getIn().setHeader(FILE_HANDLE, exportFilePath(provider, e.getIn().getHeader(EXPORT_FILE_NAME).toString()));
-                    }
-                })
-                .choice()
-                    .when(header(BLOBSTORE_MAKE_BLOB_PUBLIC).isNull())
-                    .setHeader(BLOBSTORE_MAKE_BLOB_PUBLIC, constant(publicPublication))     //defaulting to false if not specified
-                .end()
-                .bean("blobStoreService", "uploadBlobExport")
-                .choice()
-                    .when(header(NOTIFICATION).isEqualTo(true))
-                    .bean("notificationService", "sendNotification")
-                .end()
-                .setBody(simple(""))
-                .routeId("blobstore-upload-export");
 
         from("direct:getBlob")
                 .to("log:" + getClass().getName() + "?level=DEBUG&showAll=true&multiline=true")
@@ -134,82 +89,17 @@ public class BlobStoreRoute extends BaseRouteBuilder {
     }
 
 
-
-    public static String exportFilePath(ExportTemplate export, Provider provider) {
-        return awsExportPath(export, provider) + "/" + awsExportFileName(export);
-    }
-
-    public static String exportFilePath(Provider provider, String filename) {
-        return exportSiteId(provider) + "/exports/0-manuals/" + filename;
-    }
-
-    private static String exportArchiveFilePath(ExportTemplate export, Provider provider, String fileName) {
-        return awsExportPath(export, provider) + "/archive/" +  fileName;
-    }
-
-
-    private static String awsExportFileName(ExportTemplate export) {
-        return awsExportFileFormat(export) + "." + awsExportFileExtension(export);
-    }
-
-    private static String awsExportFileFormat(ExportTemplate export) {
-        String format = "";
-        switch (export.getType()) {
-            case NETEX:
-                format = "netex_offre";
-                break;
-            case GTFS:
-                format = "gtfs";
-                break;
-            case ARRET:
-                format = "netex_arrets";
-                break;
-            case CONCERTO:
-                format = "concerto";
-                break;
-            default:
-                format = "offre";
-                break;
-        }
-        return format;
-    }
-
-    private static String awsExportFileExtension(ExportTemplate export) {
-        String format = "";
-        switch (export.getType()) {
-            case CONCERTO:
-                format = "csv";
-                break;
-            case NETEX:
-                format = "zip";
-                break;
-            case GTFS:
-                format = "zip";
-                break;
-            case ARRET:
-            default:
-                format = "zip";
-                break;
-        }
-        return format;
-    }
-
-
     /**
-     * Returns the AWS path for storing imports
+     * Returns the path for storing imports
      * @param provider
      * @return
      */
-    public static String awsImportPath(Provider provider) {
+    public static String importPath(Provider provider) {
         return exportSiteId(provider) + "/imports";
     }
 
 
-    private static String awsExportPath(ExportTemplate export, Provider provider) {
-        return exportSiteId(provider) + "/exports/" + export.getId();
-    }
-
     public static String exportSiteId(Provider provider) {
-        return "" + (provider.mobiitiId != null ? provider.mobiitiId : "x" + provider.getId());
+        return String.valueOf(provider.mobiitiId != null ? provider.mobiitiId : "x" + provider.getId());
     }
 }
