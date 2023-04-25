@@ -144,8 +144,8 @@ public class Parameters {
             ChouetteInfo chouetteInfo = provider.chouetteInfo;
             String projectionType = null;
             String defaultCodespacePrefix = chouetteInfo.xmlns;
-            if (StringUtils.isNotBlank(chouetteInfo.getNameNetexOffreIdfm())) {
-                defaultCodespacePrefix = chouetteInfo.getNameNetexOffreIdfm();
+            if (StringUtils.isNotBlank(chouetteInfo.getNameNetexOffre())) {
+                defaultCodespacePrefix = chouetteInfo.getNameNetexOffre();
             }
             NetexExportParameters.NetexExport netexExport = new NetexExportParameters.NetexExport("offre", chouetteInfo.referential, chouetteInfo.organisation, user, projectionType, exportStops, defaultCodespacePrefix, exportedFilename);
             NetexExportParameters.Parameters parameters = new NetexExportParameters.Parameters(netexExport);
