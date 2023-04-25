@@ -110,7 +110,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
 
         RestPropertyDefinition corsAllowedHeaders = new RestPropertyDefinition();
         corsAllowedHeaders.setKey("Access-Control-Allow-Headers");
-        corsAllowedHeaders.setValue("Origin, Accept, X-Requested-With, Content-Type, Access-Control-Request-Method, Access-Control-Request-Headers, Authorization, x-okina-referential, RutebankenUser, RutebankenDescription, EXPORT_LINES_IDS, EXPORT_START_DATE, EXPORT_END_DATE, ImportType, routeMerge, splitCharacter, commercialPointIdPrefixToRemove, quayIdPrefixToRemove, areaCentroidPrefixToRemove, linePrefixToRemove, stopAreaPrefixToRemove, ignoreCommercialPoints, analysisJobId, cleanMode, keepBoardingAlightingPossibility, keepStopGeolocalisation, keepStopNames, removeParentStations, importShapesFile, prefixNetex");
+        corsAllowedHeaders.setValue("Origin, Accept, X-Requested-With, Content-Type, Access-Control-Request-Method, Access-Control-Request-Headers, Authorization, x-okina-referential, RutebankenUser, RutebankenDescription, EXPORT_LINES_IDS, EXPORT_START_DATE, EXPORT_END_DATE, ImportType, routeMerge, splitCharacter, commercialPointIdPrefixToRemove, quayIdPrefixToRemove, areaCentroidPrefixToRemove, linePrefixToRemove, stopAreaPrefixToRemove, ignoreCommercialPoints, analysisJobId, cleanMode, keepBoardingAlightingPossibility, keepStopGeolocalisation, keepStopNames, removeParentStations, importShapesFile");
 
         RestPropertyDefinition corsAllowedOrigin = new RestPropertyDefinition();
         corsAllowedOrigin.setKey("Access-Control-Allow-Origin");
@@ -658,7 +658,6 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .description("Download file for reimport into Chouette")
                 .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the nabu service").dataType("integer").endParam()
                 .param().name("fileName").type(RestParamType.path).description("Name of file to fetch").dataType("string").endParam()
-                .param().name("fileName").type(RestParamType.path).description("Name of file to fetch").dataType("string").endParam()
                 .consumes(PLAIN)
                 .produces(X_OCTET_STREAM)
                 .responseMessage().code(200).endResponseMessage()
@@ -855,7 +854,6 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .removeHeaders("CamelHttp*")
                 .removeHeader("Authorization")
                 .process(e -> e.getIn().setHeader(USER, getUserNameFromHeaders(e)))
-                .process(e -> e.getIn().setHeader(PREFIX_NETEX, getNetexPrefix(e)))
                 .inOnly("activemq:queue:ChouetteExportNetexQueue")
                 .routeId("admin-chouette-export-netex")
                 .endRest()
@@ -1278,15 +1276,6 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
 
         if (headers != null) {
             return (String) headers.get(EXPORT_SIMULATION_NAME);
-        }
-        return null;
-    }
-
-    private String getNetexPrefix(Exchange e) {
-        Map headers = (Map) e.getIn().getBody(Map.class).get("headers");
-
-        if (headers != null) {
-            return (String) headers.get(PREFIX_NETEX);
         }
         return null;
     }
