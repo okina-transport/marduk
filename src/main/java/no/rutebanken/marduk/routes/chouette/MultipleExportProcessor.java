@@ -85,9 +85,11 @@ public class MultipleExportProcessor implements Processor {
         log.info("Routing to NETEX export => " + export.getId() + "/" + export.getName());
         prepareHeadersForExport(exchange, export);
         if("mobiiti_technique".equals(exchange.getIn().getHeader(CHOUETTE_REFERENTIAL, String.class))){
+            String referentialsNames = export.getReferentials() != null ? StringUtils.join(export.getReferentials().toArray(), ",") : "";
+            exchange.getIn().getHeaders().put(EXPORT_REFERENTIALS_NAMES, StringUtils.lowerCase(referentialsNames));
+            log.info("Routing to Netex export global with referentials => " + referentialsNames);
             producer.sendBodyAndHeaders("direct:launchGlobalNetexExport", exchange, exchange.getOut().getHeaders());
-        }
-        else{
+        } else {
             producer.send("activemq:queue:ChouetteExportNetexQueue", exchange);
         }
     }

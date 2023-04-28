@@ -185,7 +185,7 @@ public class NetexExportMergedRouteBuilder extends BaseRouteBuilder {
 
         from("direct:fetchLatestProviderNetexExports")
                 .log(LoggingLevel.INFO, getClass().getName(), "Fetching netex files for all providers.")
-                .process(e -> e.getIn().setBody(getAggregatedNetexFiles()))
+                .process(e -> e.getIn().setBody(getAggregatedNetexFiles(e)))
                 .split(body())
                 .to("direct:fetchProviderNetexExport")
                 .routeId("netex-export-fetch-latest-per-provider");
@@ -228,11 +228,13 @@ public class NetexExportMergedRouteBuilder extends BaseRouteBuilder {
 
     }
 
-    String getAggregatedNetexFiles() {
+    String getAggregatedNetexFiles(Exchange e) {
+        List<String> referentialsNames = Arrays.asList(e.getIn().getHeader(EXPORT_REFERENTIALS_NAMES, String.class).split(","));
         return getProviderRepository().getProviders().stream()
-                       .filter(p -> p.chouetteInfo.migrateDataToProvider == null && !p.chouetteInfo.referential.equals("mobiiti_technique") && !excludedProviders.contains(p.chouetteInfo.referential) )
-                       .map(p -> p.chouetteInfo.referential + "-" + CURRENT_AGGREGATED_NETEX_FILENAME)
-                       .collect(Collectors.joining(","));
+                .filter(p -> p.chouetteInfo.migrateDataToProvider == null && !p.chouetteInfo.referential.equals("mobiiti_technique")
+                        && !excludedProviders.contains(p.chouetteInfo.referential) && referentialsNames.contains(p.chouetteInfo.referential.replace("mobiiti_","")))
+                .map(p -> p.chouetteInfo.referential + "-" + CURRENT_AGGREGATED_NETEX_FILENAME)
+                .collect(Collectors.joining(","));
     }
 
 
@@ -242,9 +244,7 @@ public class NetexExportMergedRouteBuilder extends BaseRouteBuilder {
      */
     private void setUnfinishedExports(Exchange e){
 
-
-
-        List<String> expectedFiles = Arrays.asList(getAggregatedNetexFiles().split(","));
+        List<String> expectedFiles = Arrays.asList(getAggregatedNetexFiles(e).split(","));
 
         List<String> missingFiles = expectedFiles.stream()
                                     .filter(file-> !completedExports.contains(file) && !failedExports.contains(file))
