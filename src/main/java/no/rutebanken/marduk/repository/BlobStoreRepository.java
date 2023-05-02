@@ -39,12 +39,8 @@ public interface BlobStoreRepository {
 
     void uploadBlob(String objectName, InputStream inputStream, boolean makePublic, String contentType);
 
-    void copyBlob(String src, String dest);
-
     boolean delete(String objectName);
 
     boolean deleteAllFilesInFolder(String folder);
-
-    void setPublicAccess(boolean isPublic, String filepath);
 
 }

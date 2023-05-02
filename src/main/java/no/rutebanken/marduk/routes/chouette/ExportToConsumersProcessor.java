@@ -6,6 +6,7 @@ import no.rutebanken.marduk.domain.ExportTemplate;
 import no.rutebanken.marduk.services.BlobStoreService;
 import no.rutebanken.marduk.services.FileSystemService;
 import no.rutebanken.marduk.services.FtpService;
+import no.rutebanken.marduk.services.NotificationService;
 import no.rutebanken.marduk.services.RestUploadService;
 import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
@@ -21,9 +22,20 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Optional;
 
-import static no.rutebanken.marduk.Constants.*;
+import static no.rutebanken.marduk.Constants.CHOUETTE_REFERENTIAL;
+import static no.rutebanken.marduk.Constants.CURRENT_EXPORT;
+import static no.rutebanken.marduk.Constants.EXPORTED_FILENAME;
+import static no.rutebanken.marduk.Constants.EXPORT_FILE_NAME;
+import static no.rutebanken.marduk.Constants.EXPORT_FROM_TIAMAT;
+import static no.rutebanken.marduk.Constants.EXPORT_GLOBAL_GTFS_ZIP;
+import static no.rutebanken.marduk.Constants.EXPORT_GLOBAL_NETEX_ZIP;
+import static no.rutebanken.marduk.Constants.FILE_HANDLE;
+import static no.rutebanken.marduk.Constants.GTFS_EXPORT_GLOBAL_OK;
+import static no.rutebanken.marduk.Constants.ID_FORMAT;
+import static no.rutebanken.marduk.Constants.IS_SIMULATION_EXPORT;
+import static no.rutebanken.marduk.Constants.NETEX_EXPORT_GLOBAL;
+import static no.rutebanken.marduk.Constants.NETEX_EXPORT_GLOBAL_OK;
 
 @Component
 public class ExportToConsumersProcessor implements Processor {
@@ -68,6 +80,9 @@ public class ExportToConsumersProcessor implements Processor {
 
     @Autowired
     FileSystemService fileSystemService;
+
+    @Autowired
+    NotificationService notificationService;
 
     /**
      * Gets the result stream of an export  and upload it towards consumers defined for this export
@@ -114,6 +129,9 @@ public class ExportToConsumersProcessor implements Processor {
                                 break;
                             case URL:
                                 blobStoreService.uploadBlob("/" + publicUploadPath + "/" + referential + "/" + filePath, true, streamToUpload);
+                                if(consumer.isNotification() && StringUtils.isNotEmpty(consumer.getNotificationUrl())){
+                                    notificationService.sendNotification(consumer.getNotificationUrl());
+                                }
                                 break;
                         }
                         log.info("Envoi du fichier terminé : " + exchange.getIn().getHeader(EXPORT_FILE_NAME) + " vers le consommateur : " + consumer.getName() + " - de type : " + consumer.getType().name() + " - Espace de données : " + referential);
@@ -178,16 +196,5 @@ public class ExportToConsumersProcessor implements Processor {
         }
         return streamToUpload;
     }
-
-    public static Optional<ExportTemplate> currentExport(Exchange exchange) throws IOException {
-        ExportTemplate export = null;
-        // get the json export string:
-        String jsonExport = (String) exchange.getIn().getHeaders().get(CURRENT_EXPORT);
-        if (StringUtils.isNotBlank(jsonExport)) {
-            export = exportJsonMapper.fromJson(jsonExport);
-        }
-        return Optional.ofNullable(export);
-    }
-
 
 }

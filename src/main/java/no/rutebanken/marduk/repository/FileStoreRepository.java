@@ -3,7 +3,6 @@ package no.rutebanken.marduk.repository;
 import no.rutebanken.marduk.domain.BlobStoreFiles;
 import no.rutebanken.marduk.domain.Provider;
 import no.rutebanken.marduk.services.FileSystemService;
-import org.apache.commons.io.FileUtils;
 import org.apache.commons.net.io.Util;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -143,19 +142,6 @@ public class FileStoreRepository implements BlobStoreRepository{
     }
 
     @Override
-    public void copyBlob(String src, String dest) {
-
-        File srcFile = fileSystemService.getOrCreateFilePath(src).toFile();
-        File destFile = fileSystemService.getOrCreateFilePath(dest).toFile();
-        try {
-            FileUtils.copyFile(srcFile, destFile);
-        } catch (IOException e) {
-            logger.error("Erreur copie fichier:"+src + " vers : "+dest);
-            logger.error(e.toString());
-        }
-    }
-
-    @Override
     public boolean delete(String objectName) {
         return fileSystemService.deleteDirectoryFromStorage(objectName);
     }
@@ -170,9 +156,5 @@ public class FileStoreRepository implements BlobStoreRepository{
     public boolean deleteFile(String objectName) {
         Path filePath = fileSystemService.getOrCreateFilePath(fileSystemService.convertToRelativePath(objectName));
         return filePath.toFile().delete();
-    }
-
-    @Override
-    public void setPublicAccess(boolean isPublic, String filepath) {
     }
 }

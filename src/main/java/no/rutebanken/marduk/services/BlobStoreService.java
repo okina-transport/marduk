@@ -22,16 +22,12 @@ import no.rutebanken.marduk.repository.BlobStoreRepository;
 import no.rutebanken.marduk.repository.ProviderRepository;
 import org.apache.camel.Exchange;
 import org.apache.camel.Header;
-import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
 
 import java.io.InputStream;
-import java.io.UnsupportedEncodingException;
-import java.net.URLDecoder;
-import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 
 import static no.rutebanken.marduk.Constants.FILE_HANDLE;
@@ -87,30 +83,6 @@ public class BlobStoreService {
         ExchangeUtils.addHeadersAndAttachments(exchange);
         repository.uploadBlob(name, inputStream, makePublic);
     }
-
-
-    public void uploadBlobExport(@Header(value = Constants.FILE_HANDLE) String name,
-                                 @Header(value = Constants.ARCHIVE_FILE_HANDLE) String archiveName,
-                                 @Header(value = Constants.BLOBSTORE_MAKE_BLOB_PUBLIC) boolean makePublic,
-                                 InputStream inputStream,
-                                 Exchange exchange) throws UnsupportedEncodingException {
-        name = URLDecoder.decode(name, StandardCharsets.UTF_8.toString());
-        uploadBlob(name, makePublic, inputStream, exchange);
-        if (StringUtils.isNotBlank(archiveName)) {
-            copyBlob(name, archiveName);
-        }
-    }
-
-
-    public void setPublicAccess(String filepath, boolean makePublic) {
-        repository.setPublicAccess(makePublic, filepath);
-    }
-
-
-    public void copyBlob(String src, String dest) {
-        repository.copyBlob(src, dest);
-    }
-
 
     public boolean deleteBlob(@Header(value = FILE_HANDLE) String name, Exchange exchange) {
         ExchangeUtils.addHeadersAndAttachments(exchange);

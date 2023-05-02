@@ -80,7 +80,7 @@ public class FileUploadRouteBuilder extends BaseRouteBuilder {
                     Provider provider = getProviderRepository().getNonMobiitiProvider(providerId)
                             .orElseThrow(() -> new Exception("No provider found for import with id " + providerId));
                     DiskFileItem fileItem = (DiskFileItem) e.getIn().getBody();
-                    String importPath = BlobStoreRoute.awsImportPath(provider) + "/" + fileItem.getName();
+                    String importPath = BlobStoreRoute.importPath(provider) + "/" + fileItem.getName();
                     e.getIn().setHeader(FILE_HANDLE, importPath);
                 })
                 .setHeader(IMPORT, constant(true))

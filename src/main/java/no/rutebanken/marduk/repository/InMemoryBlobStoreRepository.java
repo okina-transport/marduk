@@ -20,7 +20,6 @@ import no.rutebanken.marduk.domain.BlobStoreFiles;
 import no.rutebanken.marduk.domain.Provider;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.io.output.ByteArrayOutputStream;
-import org.apache.commons.lang3.NotImplementedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Profile;
@@ -119,11 +118,6 @@ public class InMemoryBlobStoreRepository implements BlobStoreRepository {
         return true;
     }
 
-    @Override
-    public void setPublicAccess(boolean isPublic, String filepath) {
-        throw new NotImplementedException("setPublicAccess not implemented for InMemoryBlobStoreRepository");
-    }
-
     public Provider parseProviderFromFileName(CacheProviderRepository providerRepository, String fileName) {
         if (fileName == null) {
             return null;
@@ -135,12 +129,5 @@ public class InMemoryBlobStoreRepository implements BlobStoreRepository {
 
         return providerRepository.getProviders().stream().filter(provider -> potentialRef.equalsIgnoreCase((provider.chouetteInfo.referential))).findFirst().orElse(null);
     }
-
-    @Override
-    public void copyBlob(String src, String dest) {
-        throw new NotImplementedException("copyBlob not implemented for InMemoryBlobStoreRepository");
-    }
-
-
 
 }
