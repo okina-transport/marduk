@@ -20,6 +20,8 @@ public class ImportParameters {
     private Long importConfigurationId;
     private Boolean removeParentStations;
 
+    private Boolean updateStopAccessibility;
+
     public Long getId() {
         return id;
     }
@@ -162,5 +164,13 @@ public class ImportParameters {
 
     public void setImportShapesFile(Boolean importShapesFile) {
         this.importShapesFile = importShapesFile;
+    }
+
+    public Boolean getUpdateStopAccessibility() {
+        return updateStopAccessibility;
+    }
+
+    public void setUpdateStopAccessibility(Boolean updateStopAccessibility) {
+        this.updateStopAccessibility = updateStopAccessibility;
     }
 }

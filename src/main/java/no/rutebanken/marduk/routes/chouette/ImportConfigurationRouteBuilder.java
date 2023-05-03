@@ -167,6 +167,7 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
             e.getIn().setHeader(IMPORT_MODE, importParameters.getImportMode());
             e.getIn().setHeader(WORKLOW, importConfiguration.getWorkflow().toString());
             e.getIn().setHeader(REMOVE_PARENT_STATIONS, importParameters.getRemoveParentStations());
+            e.getIn().setHeader(UPDATE_STOP_ACCESSIBILITY, importParameters.getUpdateStopAccessibility());
             StringBuilder recipients = new StringBuilder();
             for (Recipient recipient : importConfiguration.getRecipients()) {
                 recipients.append(recipient.getEmail());

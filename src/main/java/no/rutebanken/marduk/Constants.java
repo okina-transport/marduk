@@ -50,6 +50,8 @@ public class Constants {
     public static final String KEEP_STOP_NAMES = "keepStopNames";
     public static final String IMPORT_SHAPES_FILE = "importShapesFile";
 
+    public static final String UPDATE_STOP_ACCESSIBILITY = "updateStopAccessibility";
+
 
     public static final String ID_SUFFIX = "ID_SUFFIX";
     public static final String COMMERCIAL_POINT_ID_PREFIX = "COMMERCIAL_POINT_ID_PREFIX";

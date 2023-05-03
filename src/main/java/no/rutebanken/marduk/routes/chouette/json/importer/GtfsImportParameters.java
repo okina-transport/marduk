@@ -89,6 +89,10 @@ public class GtfsImportParameters extends ChouetteJobParameters {
         @JsonInclude(JsonInclude.Include.ALWAYS)
         public Boolean importShapesFile = true;
 
+        @JsonProperty("update_stop_accessibility")
+        @JsonInclude(JsonInclude.Include.ALWAYS)
+        public Boolean updateStopAccess = false;
+
 
     }
 
@@ -126,6 +130,7 @@ public class GtfsImportParameters extends ChouetteJobParameters {
         gtfsImportParameters.parameters = parameters;
         gtfsImportParameters.enableValidation = chouetteInfo.enableValidation;
         gtfsImport.removeParentStations = rawImportParameters.isRemoveParentStations();
+        gtfsImport.updateStopAccess = rawImportParameters.isUpdateStopAccess();
 
 
         return gtfsImportParameters;

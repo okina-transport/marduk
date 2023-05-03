@@ -28,6 +28,8 @@ public class RawImportParameters {
     private boolean removeParentStations;
     private boolean importShapesFile;
 
+    private boolean updateStopAccess;
+
     public String getFileName() {
         return fileName;
     }
@@ -163,6 +165,14 @@ public class RawImportParameters {
 
     public void setRemoveParentStations(boolean removeParentStations) {
         this.removeParentStations = removeParentStations;
+    }
+
+    public boolean isUpdateStopAccess() {
+        return updateStopAccess;
+    }
+
+    public void setUpdateStopAccess(boolean updateStopAccess) {
+        this.updateStopAccess = updateStopAccess;
     }
 
     public boolean isImportShapesFile() {
