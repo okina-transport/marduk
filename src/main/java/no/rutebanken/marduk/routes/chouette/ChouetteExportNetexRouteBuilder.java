@@ -18,18 +18,25 @@ package no.rutebanken.marduk.routes.chouette;
 
 import no.rutebanken.marduk.Constants;
 import no.rutebanken.marduk.Utils.SendMail;
+import no.rutebanken.marduk.domain.Provider;
 import no.rutebanken.marduk.routes.chouette.json.Parameters;
 import no.rutebanken.marduk.routes.status.JobEvent;
 import no.rutebanken.marduk.services.FileSystemService;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
+import org.codehaus.plexus.util.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.io.File;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
+import static java.util.stream.Collectors.toList;
 import static no.rutebanken.marduk.Constants.*;
 import static no.rutebanken.marduk.Utils.Utils.getLastPathElementOfUrl;
 
@@ -153,7 +160,19 @@ public class ChouetteExportNetexRouteBuilder extends AbstractChouetteRouteBuilde
                 .routeId("chouette-process-export-netex-status");
 
         from("direct:chouetteNetexExportForAllProviders")
-                .process(e -> e.getIn().setBody(getProviderRepository().getMobiitiProviders()))
+                .process(e -> {
+                    if (e.getIn().getHeader(EXPORT_REFERENTIALS_NAMES) != null) {
+                        String allReferentialsNames = e.getIn().getHeader(EXPORT_REFERENTIALS_NAMES, String.class);
+                        List<String> referentialsNames = Arrays.stream(StringUtils.split(allReferentialsNames, ",")).map(s -> "mobiiti_" + s).collect(toList());
+                        log.info("Netex export global with mobi_iti providers => " + referentialsNames);
+                        Collection<Provider> mobiitiProviders =  getProviderRepository().getMobiitiProviders().stream().filter(provider -> referentialsNames.contains(provider.name)).collect(Collectors.toList());
+                        e.getIn().setBody(mobiitiProviders);
+                    }
+                    else {
+                        log.info("Netex export global with all mobi_iti providers");
+                        e.getIn().setBody(getProviderRepository().getMobiitiProviders());
+                    }
+                })
                 .split().body().parallelProcessing().executorService(allProvidersExecutorService)
                 .setHeader(PROVIDER_ID, simple("${body.id}"))
                 .setBody(constant(null))
