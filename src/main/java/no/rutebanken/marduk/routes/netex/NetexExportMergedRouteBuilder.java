@@ -28,6 +28,7 @@ import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.builder.PredicateBuilder;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -43,6 +44,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 
+import static java.util.stream.Collectors.toList;
 import static no.rutebanken.marduk.Constants.*;
 import static no.rutebanken.marduk.routes.chouette.json.Status.ABORTED;
 import static no.rutebanken.marduk.routes.chouette.json.Status.CANCELED;
@@ -67,9 +69,6 @@ public class NetexExportMergedRouteBuilder extends BaseRouteBuilder {
 
     @Value("${google.publish.public:false}")
     private boolean publicPublication;
-
-    @Value("#{'${netex.global.excluded.providers:}'.split(',')}")
-    private List<String> excludedProviders;
 
     @Value("${netex.merge.delay.before.checks:60000}")
     private Integer delayBeforeChecks;
@@ -229,13 +228,23 @@ public class NetexExportMergedRouteBuilder extends BaseRouteBuilder {
     }
 
     String getAggregatedNetexFiles(Exchange e) {
-        List<String> referentialsNames = Arrays.asList(e.getIn().getHeader(EXPORT_REFERENTIALS_NAMES, String.class).split(","));
-        return getProviderRepository().getProviders().stream()
-                .filter(p -> p.chouetteInfo.migrateDataToProvider == null && !p.chouetteInfo.referential.equals("mobiiti_technique")
-                        && !excludedProviders.contains(p.chouetteInfo.referential) && referentialsNames.contains(p.chouetteInfo.referential.replace("mobiiti_","")))
-                .map(p -> p.chouetteInfo.referential + "-" + CURRENT_AGGREGATED_NETEX_FILENAME)
-                .collect(Collectors.joining(","));
+         String allReferentialsNames = e.getIn().getHeader(EXPORT_REFERENTIALS_NAMES, String.class);
+        if(StringUtils.isNotEmpty(allReferentialsNames)){
+            List<String> referentialsNames = Arrays.asList(allReferentialsNames.split(","));
+            return getProviderRepository().getProviders().stream()
+                    .filter(p -> p.chouetteInfo.migrateDataToProvider == null && !p.chouetteInfo.referential.equals("mobiiti_technique")
+                            && referentialsNames.contains(p.chouetteInfo.referential.replace("mobiiti_","")))
+                    .map(p -> p.chouetteInfo.referential + "-" + CURRENT_AGGREGATED_NETEX_FILENAME)
+                    .collect(Collectors.joining(","));
+        }
+        else{
+            return getProviderRepository().getProviders().stream()
+                    .filter(p -> p.chouetteInfo.migrateDataToProvider == null && !p.chouetteInfo.referential.equals("mobiiti_technique"))
+                    .map(p -> p.chouetteInfo.referential + "-" + CURRENT_AGGREGATED_NETEX_FILENAME)
+                    .collect(Collectors.joining(","));
+        }
     }
+
 
 
     /**

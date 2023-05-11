@@ -54,9 +54,6 @@ public class CacheProviderRepository implements ProviderRepository {
     @Value("${superspace.name}")
     private String superspaceName;
 
-    @Value("#{'${netex.global.excluded.providers:}'.split(',')}")
-    private List<String> excludedProviders;
-
     @PostConstruct
     void init() {
         cache = CacheBuilder.newBuilder().maximumSize(cacheMaxSize).build();
@@ -113,7 +110,7 @@ public class CacheProviderRepository implements ProviderRepository {
     @Override
     public Collection<Provider> getMobiitiProviders() {
         return cache.asMap().values().stream()
-                        .filter(provider -> !provider.getMigrateProviderId().isPresent() && !provider.name.equals("mobiiti_technique") && !excludedProviders.contains(provider.name))
+                        .filter(provider -> !provider.getMigrateProviderId().isPresent() && !provider.name.equals("mobiiti_technique"))
                         .collect(Collectors.toList());
     }
 
