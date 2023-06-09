@@ -157,5 +157,7 @@ public class Constants {
     public static final String EXPORT_GLOBAL_NETEX_ZIP = "export_global_netex.zip";
     public static final String EXPORT_GLOBAL_GTFS_ZIP = "export_global_gtfs.zip";
 
+    public static final String POST_PROCESS = "postProcess";
+
 }
 

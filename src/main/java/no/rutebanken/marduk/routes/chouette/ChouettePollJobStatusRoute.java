@@ -35,6 +35,7 @@ import org.apache.camel.builder.PredicateBuilder;
 import org.apache.camel.component.http4.HttpMethods;
 import org.apache.camel.model.dataformat.JsonLibrary;
 import org.apache.http.client.utils.URIBuilder;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -64,7 +65,13 @@ public class ChouettePollJobStatusRoute extends AbstractChouetteRouteBuilder {
     @Value("${chouette.url}")
     private String chouetteUrl;
 
+    @Value("${lug.url}")
+    private String lugUrl;
+
     private int maxConsumers = 5;
+
+    @Autowired
+    ExportToConsumersProcessor exportToConsumersProcessor;
 
 
     /**
@@ -165,6 +172,28 @@ public class ChouettePollJobStatusRoute extends AbstractChouetteRouteBuilder {
                 .routeId("chouette-get-jobs-all");
 
 
+
+        from("activemq:queue:PostProcessCompleted?transacted=true&maxConcurrentConsumers=" + maxConsumers)
+                .log(LoggingLevel.INFO, "PostProcess completed")
+                .process(e -> {
+                    System.out.println("post-process-completed");
+                    Object netexGlobalRaw = e.getIn().getHeader(NETEX_EXPORT_GLOBAL);
+                    if (netexGlobalRaw instanceof String){
+                        boolean netexGlobal = Boolean.parseBoolean((String)netexGlobalRaw);
+                        e.getIn().setHeader(NETEX_EXPORT_GLOBAL,netexGlobal);
+                    }
+
+                    Object simulationExpRaw = e.getIn().getHeader(IS_SIMULATION_EXPORT);
+                    if (simulationExpRaw instanceof String){
+                        boolean simulationExp = Boolean.parseBoolean((String)simulationExpRaw);
+                        e.getIn().setHeader(IS_SIMULATION_EXPORT,simulationExp);
+                    }
+                })
+                .process(exportToConsumersProcessor)
+                .process(e -> JobEvent.providerJobBuilder(e).timetableAction(TimetableAction.valueOf((String) e.getIn().getHeader(Constants.CHOUETTE_JOB_STATUS_JOB_TYPE))).state(State.OK).build())
+                .to("direct:updateStatus")
+                .routeId("post-process-completed");
+
         from("activemq:queue:ChouettePollStatusQueue?transacted=true&maxConcurrentConsumers=" + maxConsumers)
                 .transacted()
                 .validate(header(Constants.CORRELATION_ID).isNotNull())
@@ -175,7 +204,9 @@ public class ChouettePollJobStatusRoute extends AbstractChouetteRouteBuilder {
                 .routeId("chouette-validate-job-status-parameters");
 
         from("direct:checkJobStatus")
-                .process(e -> e.getIn().setHeader("loopCounter", (Integer) e.getIn().getHeader("loopCounter", 0) + 1))
+                .process(e -> {
+                    e.getIn().setHeader("loopCounter", (Integer) e.getIn().getHeader("loopCounter", 0) + 1);
+                })
                 .setProperty(Constants.CHOUETTE_REFERENTIAL, header(Constants.CHOUETTE_REFERENTIAL))
                 .setProperty("url", header(Constants.CHOUETTE_JOB_STATUS_URL))
                 .removeHeaders("Camel*")
@@ -256,16 +287,16 @@ public class ChouettePollJobStatusRoute extends AbstractChouetteRouteBuilder {
                         .unmarshal().json(JsonLibrary.Jackson, JobResponseWithLinks.class)
                 .end()
 
-
                 .setProperty("current_status", simple("${body.status}"))
                 .choice()
-                .when(PredicateBuilder.or(simple("${body.status} != ${type:no.rutebanken.marduk.routes.chouette.json.Status.SCHEDULED} && ${body.status} != ${type:no.rutebanken.marduk.routes.chouette.json.Status.STARTED} && ${body.status} != ${type:no.rutebanken.marduk.routes.chouette.json.Status.RESCHEDULED}"),
-                        simple("${header.loopCounter} > " + maxRetries)))
-                .to("direct:jobStatusDone")
+                    .when(PredicateBuilder.and(simple("${body.status} == ${type:no.rutebanken.marduk.routes.chouette.json.Status.TERMINATED}"),  simple("${header." + POST_PROCESS + "} != null")))
+                        .to("direct:sendToLUG")
+                    .when(PredicateBuilder.or(simple("${body.status} != ${type:no.rutebanken.marduk.routes.chouette.json.Status.SCHEDULED} && ${body.status} != ${type:no.rutebanken.marduk.routes.chouette.json.Status.STARTED} && ${body.status} != ${type:no.rutebanken.marduk.routes.chouette.json.Status.RESCHEDULED}"),
+                            simple("${header.loopCounter} > " + maxRetries)))
+                        .to("direct:jobStatusDone")
                 .otherwise()
-                // Update status
-                .to("direct:rescheduleJob")
-
+                     // Update status
+                    .to("direct:rescheduleJob")
                 .end()
                 .routeId("chouette-get-job-status");
 
@@ -284,6 +315,13 @@ public class ChouettePollJobStatusRoute extends AbstractChouetteRouteBuilder {
                 .to("activemq:queue:ChouettePollStatusQueue")
                 .routeId("chouette-reschedule-job");
 
+
+        from("direct:sendToLUG")
+                .log(LoggingLevel.INFO, correlation() + "Process completed. Sending job to LUG")
+                .setBody().constant(null)
+                .toD(lugUrl + "/api/mobi-iti/post-process")
+                .routeId("send-to-LUG");
+
         from("direct:jobStatusDone")
                 .log(LoggingLevel.DEBUG, correlation() + "Exited retry loop with status ${header.current_status}")
                 .to("log:" + getClass().getName() + "?level=DEBUG&showAll=true&multiline=true")
@@ -291,17 +329,17 @@ public class ChouettePollJobStatusRoute extends AbstractChouetteRouteBuilder {
                 .choice()
                     .when(simple("${header.current_status} == '" + SCHEDULED + "' || ${header.current_status} == '" + STARTED + "' || ${header.current_status} == '" + RESCHEDULED + "'"))
                         .log(LoggingLevel.WARN, correlation() + "Job timed out with state ${header.current_status}. Config should probably be tweaked. Stopping route.")
-                        .process(e -> JobEvent.providerJobBuilder(e).timetableAction(TimetableAction.valueOf((String) e.getIn().getHeader(Constants.CHOUETTE_JOB_STATUS_JOB_TYPE))).state(State.TIMEOUT).build())
+                        .process(e -> JobEvent.providerJobBuilder(e).timetableAction(TimetableAction.valueOf((String) e.getIn().getHeader(CHOUETTE_JOB_STATUS_JOB_TYPE))).state(State.TIMEOUT).build())
                         .to("direct:updateStatus")
                         .stop()
                     .when(simple("${header.current_status} == '" + ABORTED + "'"))
                         .log(LoggingLevel.WARN, correlation() + "Job ended in state FAILED. Stopping route.")
-                        .process(e -> JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.valueOf((String) e.getIn().getHeader(Constants.CHOUETTE_JOB_STATUS_JOB_TYPE))).state(State.FAILED).build())
+                        .process(e -> JobEvent.providerJobBuilder(e).timetableAction(TimetableAction.valueOf((String) e.getIn().getHeader(CHOUETTE_JOB_STATUS_JOB_TYPE))).state(State.FAILED).build())
                         .to("direct:updateStatus")
                         .stop()
                     .when(simple("${header.current_status} == '" + CANCELED + "'"))
                         .log(LoggingLevel.WARN, correlation() + "Job ended in state CANCELLED. Stopping route.")
-                        .process(e -> JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.valueOf((String) e.getIn().getHeader(Constants.CHOUETTE_JOB_STATUS_JOB_TYPE))).state(State.CANCELLED).build())
+                        .process(e -> JobEvent.providerJobBuilder(e).timetableAction(TimetableAction.valueOf((String) e.getIn().getHeader(CHOUETTE_JOB_STATUS_JOB_TYPE))).state(State.CANCELLED).build())
                         .to("direct:updateStatus")
                         .stop()
                 .end()
@@ -327,7 +365,7 @@ public class ChouettePollJobStatusRoute extends AbstractChouetteRouteBuilder {
                 .unmarshal().json(JsonLibrary.Jackson, ActionReportWrapper.class).process(e -> { /** Dummy line to make doCatch available */})
                 .doCatch(JsonMappingException.class)
                 .log(LoggingLevel.WARN, correlation() + "Received invalid (empty?) action report for terminated job. Giving up.")
-                .process(e -> JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.valueOf((String) e.getIn().getHeader(Constants.CHOUETTE_JOB_STATUS_JOB_TYPE))).state(State.FAILED).build())
+                .process(e -> JobEvent.providerJobBuilder(e).timetableAction(TimetableAction.valueOf((String) e.getIn().getHeader(CHOUETTE_JOB_STATUS_JOB_TYPE))).state(State.FAILED).build())
                 .to("direct:updateStatus")
                 .stop()
                 .end()
@@ -337,7 +375,7 @@ public class ChouettePollJobStatusRoute extends AbstractChouetteRouteBuilder {
                         .choice()
                             .when(simple("${header.loopCounter} > " + maxRetries))
                                 .log(LoggingLevel.WARN, correlation() + "Received non-finalised action report for terminated job. Giving up.")
-                                .process(e -> JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.valueOf((String) e.getIn().getHeader(Constants.CHOUETTE_JOB_STATUS_JOB_TYPE))).state(State.FAILED).build())
+                                .process(e -> JobEvent.providerJobBuilder(e).timetableAction(TimetableAction.valueOf((String) e.getIn().getHeader(CHOUETTE_JOB_STATUS_JOB_TYPE))).state(State.FAILED).build())
                                 .to("direct:updateStatus")
                             .otherwise()
                                 .log(LoggingLevel.INFO, correlation() + "Received non-finalised action report for terminated job. Waiting before retry ")
@@ -359,7 +397,7 @@ public class ChouettePollJobStatusRoute extends AbstractChouetteRouteBuilder {
                         .to("direct:checkValidationReport")
                     .otherwise()
                         .setHeader("validation_report_result", constant("NOT_PRESENT"))
-                        .toD("${header." + Constants.CHOUETTE_JOB_STATUS_ROUTING_DESTINATION + "}")
+                        .toD("${header." + CHOUETTE_JOB_STATUS_ROUTING_DESTINATION + "}")
                 .end()
                 .routeId("chouette-process-job-reports");
 

@@ -35,6 +35,8 @@ public class ExportTemplate implements Serializable {
     private Boolean exportEnabled;
     private AttributionsExportModes attributionsExportModes;
 
+    private String postProcess;
+
     public Long getId() {
         return id;
     }
@@ -180,4 +182,11 @@ public class ExportTemplate implements Serializable {
         this.attributionsExportModes = attributionsExportModes;
     }
 
+    public String getPostProcess() {
+        return postProcess;
+    }
+
+    public void setPostProcess(String postProcess) {
+        this.postProcess = postProcess;
+    }
 }
