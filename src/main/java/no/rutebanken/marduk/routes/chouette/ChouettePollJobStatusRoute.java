@@ -35,6 +35,8 @@ import org.apache.camel.builder.PredicateBuilder;
 import org.apache.camel.component.http4.HttpMethods;
 import org.apache.camel.model.dataformat.JsonLibrary;
 import org.apache.http.client.utils.URIBuilder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -54,6 +56,8 @@ import static no.rutebanken.marduk.routes.chouette.json.Status.STARTED;
 
 @Component
 public class ChouettePollJobStatusRoute extends AbstractChouetteRouteBuilder {
+
+    private Logger logger = LoggerFactory.getLogger(this.getClass());
 
 
     @Value("${chouette.max.retries:3000}")
@@ -176,18 +180,11 @@ public class ChouettePollJobStatusRoute extends AbstractChouetteRouteBuilder {
         from("activemq:queue:PostProcessCompleted?transacted=true&maxConcurrentConsumers=" + maxConsumers)
                 .log(LoggingLevel.INFO, "PostProcess completed")
                 .process(e -> {
-                    System.out.println("post-process-completed");
                     Object netexGlobalRaw = e.getIn().getHeader(NETEX_EXPORT_GLOBAL);
-                    if (netexGlobalRaw instanceof String){
-                        boolean netexGlobal = Boolean.parseBoolean((String)netexGlobalRaw);
-                        e.getIn().setHeader(NETEX_EXPORT_GLOBAL,netexGlobal);
-                    }
-
                     Object simulationExpRaw = e.getIn().getHeader(IS_SIMULATION_EXPORT);
-                    if (simulationExpRaw instanceof String){
-                        boolean simulationExp = Boolean.parseBoolean((String)simulationExpRaw);
-                        e.getIn().setHeader(IS_SIMULATION_EXPORT,simulationExp);
-                    }
+
+                    e.getIn().setHeader(NETEX_EXPORT_GLOBAL,convertToBoolean(netexGlobalRaw));
+                    e.getIn().setHeader(IS_SIMULATION_EXPORT,convertToBoolean(simulationExpRaw));
                 })
                 .process(exportToConsumersProcessor)
                 .process(e -> JobEvent.providerJobBuilder(e).timetableAction(TimetableAction.valueOf((String) e.getIn().getHeader(Constants.CHOUETTE_JOB_STATUS_JOB_TYPE))).state(State.OK).build())
@@ -420,6 +417,18 @@ public class ChouettePollJobStatusRoute extends AbstractChouetteRouteBuilder {
                         .inOnly("direct:updateMergedNetexStatus")
                 .end()
                 .routeId("handle-global-netex-export-case");
+    }
+
+    private Boolean convertToBoolean (Object rawProperty){
+        if (rawProperty instanceof Boolean){
+            return (Boolean) rawProperty;
+        }
+
+        if (rawProperty instanceof String){
+            return Boolean.parseBoolean((String)rawProperty);
+        }
+        logger.error("Unable to cast object to boolean:" + rawProperty);
+        return null;
     }
 
 }
