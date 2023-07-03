@@ -316,6 +316,9 @@ public class ChouettePollJobStatusRoute extends AbstractChouetteRouteBuilder {
         from("direct:sendToLUG")
                 .log(LoggingLevel.INFO, correlation() + "Process completed. Sending job to LUG")
                 .setBody().constant(null)
+                .removeHeaders("CamelHttp*")
+                .removeHeaders("Authorization*")
+                .removeHeaders("Camel*")
                 .toD(lugUrl + "/api/mobi-iti/post-process")
                 .routeId("send-to-LUG");
 
