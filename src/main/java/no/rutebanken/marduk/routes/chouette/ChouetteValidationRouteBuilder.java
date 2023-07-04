@@ -237,7 +237,8 @@ public class ChouetteValidationRouteBuilder extends AbstractChouetteRouteBuilder
     }
 
     private void sendMailValidationOk(Exchange e) {
-        String[] recipients = e.getIn().getHeader(RECIPIENTS, String.class).trim().split(",");
+        String recipientString = e.getIn().getHeader(RECIPIENTS, String.class);
+        String[] recipients = recipientString != null ? recipientString.trim().split(",") : null;
         String referential = e.getIn().getHeader(CHOUETTE_REFERENTIAL, String.class);
         String fileName = e.getIn().getHeader(FILE_NAME, String.class);
         String message = null;
@@ -257,28 +258,32 @@ public class ChouetteValidationRouteBuilder extends AbstractChouetteRouteBuilder
             }
         }
 
-
-        for (String recipient : recipients) {
-            if (StringUtils.isNotEmpty(recipient)) {
-                sendMail.sendEmail(client.toUpperCase() + " - " + server.toUpperCase() + " Referentiel Mobi-iti - Nouvelle integration de donnees du reseau de " + referential,
-                        recipient,
-                        "Bonjour," + "\n" + message,
-                        null);
+        if(recipients != null){
+            for (String recipient : recipients) {
+                if (StringUtils.isNotEmpty(recipient)) {
+                    sendMail.sendEmail(client.toUpperCase() + " - " + server.toUpperCase() + " Referentiel Mobi-iti - Nouvelle integration de donnees du reseau de " + referential,
+                            recipient,
+                            "Bonjour," + "\n" + message,
+                            null);
+                }
             }
         }
     }
 
     private void sendMailValidationFailed(Exchange e) {
-        String[] recipients = e.getIn().getHeader(RECIPIENTS, String.class).trim().split(",");
-        String referential = e.getIn().getHeader(CHOUETTE_REFERENTIAL, String.class);
-        String fileName = e.getIn().getHeader(FILE_NAME, String.class);
-        String levelValidation = e.getIn().getHeader(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL, String.class).equals(VALIDATION_LEVEL_2.name()) ?  "2" : "1";
-        for (String recipient : recipients) {
-            if (StringUtils.isNotEmpty(recipient)) {
-                sendMail.sendEmail(client.toUpperCase() + " - " + server.toUpperCase() + " Referentiel Mobi-iti - Nouvelle integration de donnees du reseau de " + referential,
-                        recipient,
-                        "Bonjour," + "\nLa validation de niveau " + levelValidation + " du fichier : " + fileName + " a échoué.",
-                        null);
+        String recipientString = e.getIn().getHeader(RECIPIENTS, String.class);
+        String[] recipients = recipientString != null ? recipientString.trim().split(",") : null;
+        if (recipients != null) {
+            String referential = e.getIn().getHeader(CHOUETTE_REFERENTIAL, String.class);
+            String fileName = e.getIn().getHeader(FILE_NAME, String.class);
+            String levelValidation = e.getIn().getHeader(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL, String.class).equals(VALIDATION_LEVEL_2.name()) ?  "2" : "1";
+            for (String recipient : recipients) {
+                if (StringUtils.isNotEmpty(recipient)) {
+                    sendMail.sendEmail(client.toUpperCase() + " - " + server.toUpperCase() + " Referentiel Mobi-iti - Nouvelle integration de donnees du reseau de " + referential,
+                            recipient,
+                            "Bonjour," + "\nLa validation de niveau " + levelValidation + " du fichier : " + fileName + " a échoué.",
+                            null);
+                }
             }
         }
     }
