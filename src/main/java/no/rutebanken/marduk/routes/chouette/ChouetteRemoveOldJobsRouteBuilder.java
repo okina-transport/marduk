@@ -42,6 +42,9 @@ public class ChouetteRemoveOldJobsRouteBuilder extends BaseRouteBuilder {
     @Value("${chouette.url}")
     private String chouetteUrl;
 
+    @Value("${nabu.url}")
+    private String nabuUrl;
+
 
     @Override
     public void configure() throws Exception {
@@ -50,7 +53,7 @@ public class ChouetteRemoveOldJobsRouteBuilder extends BaseRouteBuilder {
         singletonFrom("quartz2://marduk/chouetteRemoveOldJobsQuartz?cron=" + cronSchedule + "&trigger.timeZone=" + Constants.TIME_ZONE)
                 .autoStartup("{{chouette.remove.old.jobs.autoStartup:true}}")
                 .filter(e -> shouldQuartzRouteTrigger(e, cronSchedule))
-                .log(LoggingLevel.INFO, "Quartz triggers deletion of old jobs in Chouette.")
+                .log(LoggingLevel.INFO, "Quartz triggers deletion of old jobs in Chouette and Nabu.")
                 .to("direct:chouetteRemoveOldJobs")
                 .routeId("chouette-remove-old-jobs-quartz");
 
@@ -61,17 +64,41 @@ public class ChouetteRemoveOldJobsRouteBuilder extends BaseRouteBuilder {
                 .setBody(constant(null))
                 .setHeader(Exchange.HTTP_METHOD, constant(HttpMethods.DELETE))
 
-                .choice().when(header("keepJobs").isNull())
-                .setHeader("keepJobs", constant(keepJobs))
+                .choice()
+                    .when(header("keepJobs").isNull())
+                    .setHeader("keepJobs", constant(keepJobs))
                 .end()
 
-                .choice().when(header("keepDays").isNull())
-                .setHeader("keepDays", constant(keepDays))
+                .choice()
+                    .when(header("keepDays").isNull())
+                    .setHeader("keepDays", constant(keepDays))
                 .end()
 
                 .toD(chouetteUrl + "/chouette_iev/admin/completed_jobs?keepJobs=${header.keepJobs}&keepDays=${header.keepDays}")
                 .log(LoggingLevel.INFO, correlation() + "Completed Chouette remove old jobs")
+
+                .to("direct:nabuRemoveOldJobs")
                 .routeId("chouette-remove-old-jobs");
 
+        from("direct:nabuRemoveOldJobs")
+                .log(LoggingLevel.INFO, correlation() + "Starting Nabu remove old events")
+                .removeHeaders("Camel*")
+                .setBody(constant(null))
+                .setHeader(Exchange.HTTP_METHOD, constant(HttpMethods.DELETE))
+
+                .choice()
+                .when(header("keepJobs").isNull())
+                .setHeader("keepJobs", constant(keepJobs))
+                .end()
+
+                .choice()
+                .when(header("keepDays").isNull())
+                .setHeader("keepDays", constant(keepDays))
+                .end()
+
+                .toD(nabuUrl + "/nabu/admin/clear-events?keepJobs=${header.keepJobs}&keepDays=${header.keepDays}")
+                .log(LoggingLevel.INFO, correlation() + "Completed Nabu remove old events")
+
+                .routeId("nabu-remove-old-events");
     }
 }
