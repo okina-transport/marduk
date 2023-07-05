@@ -328,46 +328,55 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
     }
 
     private void sendMailAnalyzeOk(Exchange e) {
-        String[] recipients = e.getIn().getHeader(RECIPIENTS, String.class).trim().split(",");
+        String recipientString = e.getIn().getHeader(RECIPIENTS, String.class);
+        String[] recipients = recipientString != null ? recipientString.trim().split(",") : null;
         String referential = e.getIn().getHeader(CHOUETTE_REFERENTIAL, String.class);
         String fileName = e.getIn().getHeader(FILE_NAME, String.class);
-        for (String recipient : recipients) {
-            if (StringUtils.isNotEmpty(recipient)) {
-                sendMail.sendEmail(client.toUpperCase() + " - " + server.toUpperCase() + " Referentiel Mobi-iti - Nouvelle integration de donnees du reseau de " + referential,
-                        recipient,
-                        "Bonjour,"
-                                + "\nL'analyse du fichier: " + fileName + " s'est correctement effectuée.",
-                        null);
+        if(recipients != null) {
+            for (String recipient : recipients) {
+                if (StringUtils.isNotEmpty(recipient)) {
+                    sendMail.sendEmail(client.toUpperCase() + " - " + server.toUpperCase() + " Referentiel Mobi-iti - Nouvelle integration de donnees du reseau de " + referential,
+                            recipient,
+                            "Bonjour,"
+                                    + "\nL'analyse du fichier: " + fileName + " s'est correctement effectuée.",
+                            null);
+                }
             }
         }
     }
 
     private void sendMailAnalyzeFailed(Exchange e) {
-        String[] recipients = e.getIn().getHeader(RECIPIENTS, String.class).trim().split(",");
+        String recipientString = e.getIn().getHeader(RECIPIENTS, String.class);
+        String[] recipients = recipientString != null ? recipientString.trim().split(",") : null;
         String referential = e.getIn().getHeader(CHOUETTE_REFERENTIAL, String.class);
         String fileName = e.getIn().getHeader(FILE_NAME, String.class);
-        for (String recipient : recipients) {
-            if (StringUtils.isNotEmpty(recipient)) {
-                sendMail.sendEmail(client.toUpperCase() + " - " + server.toUpperCase() + " Referentiel Mobi-iti - Nouvelle integration de donnees du reseau de " + referential,
-                        recipient,
-                        "Bonjour,"
-                                + "\nL'analyse du fichier : " + fileName + " a échoué.",
-                        null);
+        if(recipients != null) {
+            for (String recipient : recipients) {
+                if (StringUtils.isNotEmpty(recipient)) {
+                    sendMail.sendEmail(client.toUpperCase() + " - " + server.toUpperCase() + " Referentiel Mobi-iti - Nouvelle integration de donnees du reseau de " + referential,
+                            recipient,
+                            "Bonjour,"
+                                    + "\nL'analyse du fichier : " + fileName + " a échoué.",
+                            null);
+                }
             }
         }
     }
 
     private void sendMailImportFailed(Exchange e) {
-        String[] recipients = e.getIn().getHeader(RECIPIENTS, String.class).trim().split(",");
+        String recipientString = e.getIn().getHeader(RECIPIENTS, String.class);
+        String[] recipients = recipientString != null ? recipientString.trim().split(",") : null;
         String referential = e.getIn().getHeader(CHOUETTE_REFERENTIAL, String.class);
         String fileName = e.getIn().getHeader(FILE_NAME, String.class);
-        for (String recipient : recipients) {
-            if (StringUtils.isNotEmpty(recipient)) {
-                sendMail.sendEmail(client.toUpperCase() + " - " + server.toUpperCase() + " Referentiel Mobi-iti - Nouvelle integration de donnees du reseau de " + referential,
-                        recipient,
-                        "Bonjour,"
-                                + "\nL'import du fichier : " + fileName + " a échoué.",
-                        null);
+        if(recipients != null) {
+            for (String recipient : recipients) {
+                if (StringUtils.isNotEmpty(recipient)) {
+                    sendMail.sendEmail(client.toUpperCase() + " - " + server.toUpperCase() + " Referentiel Mobi-iti - Nouvelle integration de donnees du reseau de " + referential,
+                            recipient,
+                            "Bonjour,"
+                                    + "\nL'import du fichier : " + fileName + " a échoué.",
+                            null);
+                }
             }
         }
     }

@@ -178,33 +178,39 @@ public class ChouetteExportNeptuneRouteBuilder extends AbstractChouetteRouteBuil
     }
 
     private void sendMailExportOk(Exchange e) {
-        String[] recipients = e.getIn().getHeader(RECIPIENTS, String.class).trim().split(",");
+        String recipientString = e.getIn().getHeader(RECIPIENTS, String.class);
+        String[] recipients = recipientString != null ? recipientString.trim().split(",") : null;
         String referential = e.getIn().getHeader(CHOUETTE_REFERENTIAL, String.class);
         String fileName = e.getIn().getHeader(FILE_NAME, String.class);
         String exportName = e.getIn().getHeader(EXPORT_NAME, String.class);
-        for (String recipient : recipients) {
-            if (org.apache.commons.lang3.StringUtils.isNotEmpty(recipient)) {
-                sendMail.sendEmail(client.toUpperCase() + " - " + server.toUpperCase() + " Referentiel Mobi-iti - Nouvelle integration de donnees du reseau de " + referential,
-                        recipient,
-                        "Bonjour,"
-                                + "\nL'export Neptune : " + exportName + "suite à l'import du fichier : " + fileName + " s'est correctement effectué.",
-                        null);
+        if(recipients != null) {
+            for (String recipient : recipients) {
+                if (org.apache.commons.lang3.StringUtils.isNotEmpty(recipient)) {
+                    sendMail.sendEmail(client.toUpperCase() + " - " + server.toUpperCase() + " Referentiel Mobi-iti - Nouvelle integration de donnees du reseau de " + referential,
+                            recipient,
+                            "Bonjour,"
+                                    + "\nL'export Neptune : " + exportName + "suite à l'import du fichier : " + fileName + " s'est correctement effectué.",
+                            null);
+                }
             }
         }
     }
 
     private void sendMailExportFailed(Exchange e) {
-        String[] recipients = e.getIn().getHeader(RECIPIENTS, String.class).trim().split(",");
+        String recipientString = e.getIn().getHeader(RECIPIENTS, String.class);
+        String[] recipients = recipientString != null ? recipientString.trim().split(",") : null;
         String referential = e.getIn().getHeader(CHOUETTE_REFERENTIAL, String.class);
         String fileName = e.getIn().getHeader(FILE_NAME, String.class);
         String exportName = e.getIn().getHeader(EXPORT_NAME, String.class);
-        for (String recipient : recipients) {
-            if (org.apache.commons.lang3.StringUtils.isNotEmpty(recipient)) {
-                sendMail.sendEmail(client.toUpperCase() + " - " + server.toUpperCase() + " Referentiel Mobi-iti - Nouvelle integration de donnees du reseau de " + referential,
-                        recipient,
-                        "Bonjour,"
-                                + "\nL'export Neptune : " + exportName + " suite à l'import du fichier : " + fileName + " a échoué.",
-                        null);
+        if(recipients != null) {
+            for (String recipient : recipients) {
+                if (org.apache.commons.lang3.StringUtils.isNotEmpty(recipient)) {
+                    sendMail.sendEmail(client.toUpperCase() + " - " + server.toUpperCase() + " Referentiel Mobi-iti - Nouvelle integration de donnees du reseau de " + referential,
+                            recipient,
+                            "Bonjour,"
+                                    + "\nL'export Neptune : " + exportName + " suite à l'import du fichier : " + fileName + " a échoué.",
+                            null);
+                }
             }
         }
     }
