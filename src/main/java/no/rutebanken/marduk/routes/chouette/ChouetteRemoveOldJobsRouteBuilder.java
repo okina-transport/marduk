@@ -96,7 +96,7 @@ public class ChouetteRemoveOldJobsRouteBuilder extends BaseRouteBuilder {
                 .setHeader("keepDays", constant(keepDays))
                 .end()
 
-                .toD(nabuUrl + "/nabu/admin/clear-events?keepJobs=${header.keepJobs}&keepDays=${header.keepDays}")
+                .toD(nabuUrl + "timetable/clear-events?keepJobs=${header.keepJobs}&keepDays=${header.keepDays}")
                 .log(LoggingLevel.INFO, correlation() + "Completed Nabu remove old events")
 
                 .routeId("nabu-remove-old-events");
