@@ -22,6 +22,8 @@ public class ImportParameters {
 
     private Boolean updateStopAccessibility;
 
+    private Boolean railUICprocessing;
+
     public Long getId() {
         return id;
     }
@@ -84,6 +86,14 @@ public class ImportParameters {
 
     public void setRemoveParentStations(Boolean removeParentStations) {
         this.removeParentStations = removeParentStations;
+    }
+
+    public Boolean getRailUICprocessing() {
+        return railUICprocessing;
+    }
+
+    public void setRailUICprocessing(Boolean railUICprocessing) {
+        this.railUICprocessing = railUICprocessing;
     }
 
     public String getQuayIdPrefixToRemove() {

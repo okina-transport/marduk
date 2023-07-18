@@ -94,6 +94,11 @@ public class GtfsImportParameters extends ChouetteJobParameters {
         public Boolean updateStopAccess = false;
 
 
+        @JsonProperty("rail_uic_processing")
+        @JsonInclude(JsonInclude.Include.ALWAYS)
+        public Boolean railUICprocessing = false;
+
+
     }
 
     public static GtfsImportParameters create(RawImportParameters rawImportParameters) {
@@ -131,6 +136,7 @@ public class GtfsImportParameters extends ChouetteJobParameters {
         gtfsImportParameters.enableValidation = chouetteInfo.enableValidation;
         gtfsImport.removeParentStations = rawImportParameters.isRemoveParentStations();
         gtfsImport.updateStopAccess = rawImportParameters.isUpdateStopAccess();
+        gtfsImport.railUICprocessing = rawImportParameters.isRailUICprocessing();
 
 
         return gtfsImportParameters;

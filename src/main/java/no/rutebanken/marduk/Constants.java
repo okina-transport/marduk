@@ -52,6 +52,8 @@ public class Constants {
 
     public static final String UPDATE_STOP_ACCESSIBILITY = "updateStopAccessibility";
 
+    public static final String RAIL_UIC_PROCESSING = "railUICprocessing";
+
 
     public static final String ID_SUFFIX = "ID_SUFFIX";
     public static final String COMMERCIAL_POINT_ID_PREFIX = "COMMERCIAL_POINT_ID_PREFIX";

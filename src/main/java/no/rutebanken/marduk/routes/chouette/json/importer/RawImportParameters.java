@@ -30,6 +30,8 @@ public class RawImportParameters {
 
     private boolean updateStopAccess;
 
+    private boolean railUICprocessing;
+
     public String getFileName() {
         return fileName;
     }
@@ -181,5 +183,13 @@ public class RawImportParameters {
 
     public void setImportShapesFile(boolean importShapesFile) {
         this.importShapesFile = importShapesFile;
+    }
+
+    public boolean isRailUICprocessing() {
+        return railUICprocessing;
+    }
+
+    public void setRailUICprocessing(boolean railUICprocessing) {
+        this.railUICprocessing = railUICprocessing;
     }
 }
