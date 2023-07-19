@@ -112,7 +112,10 @@ public class FileSystemService {
 
         if (files != null) {
             for (final File file : files) {
-                if (file.getName().toLowerCase().endsWith(".zip") || file.getName().toLowerCase().endsWith(".csv")) {
+                if (
+                        (file.getName().toLowerCase().endsWith(".zip") || file.getName().toLowerCase().endsWith(".csv"))
+                            && !file.getName().toLowerCase().endsWith("_orig.zip")
+                ) {
                     offerFile = file;
                 }
             }
