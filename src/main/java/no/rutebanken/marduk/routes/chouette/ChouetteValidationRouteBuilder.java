@@ -148,6 +148,7 @@ public class ChouetteValidationRouteBuilder extends AbstractChouetteRouteBuilder
                     String user = e.getIn().getHeader(USER, String.class);
                     e.getIn().setHeader(JSON_PART, Parameters.getValidationParameters(getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)), user));
                 }) //Using header to addToExchange json data
+                .to("direct:ChouetteGenerateMapMatchingDirectQueue")
                 .to("direct:assertHeadersForChouetteValidation")
                 .log(LoggingLevel.DEBUG, correlation() + "Creating multipart request")
                 .process(this::toGenericChouetteMultipart)
