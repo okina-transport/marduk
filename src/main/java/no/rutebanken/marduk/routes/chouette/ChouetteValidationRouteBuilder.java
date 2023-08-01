@@ -226,12 +226,6 @@ public class ChouetteValidationRouteBuilder extends AbstractChouetteRouteBuilder
                 .routeId("chouette-process-job-list-after-validation");
     }
 
-    private boolean isValidation(Exchange e) {
-        JSONObject jsonObject = new JSONObject(e.getIn().getHeader(SYSTEM_STATUS, String.class));
-        String action = jsonObject.getString("action");
-        return action != null && action.equals("IMPORT") ? false : true;
-    }
-
     private void sendMailValidationOk(Exchange e) {
         String recipientString = e.getIn().getHeader(RECIPIENTS, String.class);
         String[] recipients = recipientString != null ? recipientString.trim().split(",") : null;
