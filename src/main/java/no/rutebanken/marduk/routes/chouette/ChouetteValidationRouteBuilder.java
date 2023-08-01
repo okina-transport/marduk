@@ -26,8 +26,10 @@ import no.rutebanken.marduk.routes.status.JobEvent.State;
 import no.rutebanken.marduk.routes.status.JobEvent.TimetableAction;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
+import org.apache.camel.Predicate;
 import org.apache.camel.builder.PredicateBuilder;
 import org.apache.commons.lang3.StringUtils;
+import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -35,19 +37,7 @@ import org.springframework.stereotype.Component;
 import java.util.List;
 import java.util.UUID;
 
-import static no.rutebanken.marduk.Constants.CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL;
-import static no.rutebanken.marduk.Constants.CHOUETTE_REFERENTIAL;
-import static no.rutebanken.marduk.Constants.CORRELATION_ID;
-import static no.rutebanken.marduk.Constants.FILE_NAME;
-import static no.rutebanken.marduk.Constants.GENERATE_MAP_MATCHING;
-import static no.rutebanken.marduk.Constants.IMPORT;
-import static no.rutebanken.marduk.Constants.JSON_PART;
-import static no.rutebanken.marduk.Constants.MULTIPLE_EXPORT;
-import static no.rutebanken.marduk.Constants.OKINA_REFERENTIAL;
-import static no.rutebanken.marduk.Constants.PROVIDER_ID;
-import static no.rutebanken.marduk.Constants.RECIPIENTS;
-import static no.rutebanken.marduk.Constants.USER;
-import static no.rutebanken.marduk.Constants.WORKLOW;
+import static no.rutebanken.marduk.Constants.*;
 import static no.rutebanken.marduk.Utils.Utils.getLastPathElementOfUrl;
 import static no.rutebanken.marduk.routes.status.JobEvent.TimetableAction.VALIDATION_LEVEL_1;
 import static no.rutebanken.marduk.routes.status.JobEvent.TimetableAction.VALIDATION_LEVEL_2;
@@ -132,9 +122,14 @@ public class ChouetteValidationRouteBuilder extends AbstractChouetteRouteBuilder
                 .inOnly("activemq:queue:ChouetteValidationQueue")
                 .routeId("chouette-validate-level2-all-providers");
 
-
         from("activemq:queue:ChouetteValidationQueue?transacted=true&maxConcurrentConsumers=3").streamCaching()
                 .transacted()
+                .choice()
+                    .when(PredicateBuilder.and(header(GENERATE_MAP_MATCHING).isEqualTo(true),header(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL).isEqualTo(constant(JobEvent.TimetableAction.VALIDATION_LEVEL_1.name()))))
+                        .log(LoggingLevel.INFO, correlation() + "Generating map matching")
+                        .to("direct:ChouetteGenerateMapMatchingQueue")
+                    .end()
+                .end()
                 .log(LoggingLevel.INFO, correlation() + "Starting Chouette validation")
                 .process(e -> {
                     // Add correlation id only if missing
@@ -148,7 +143,6 @@ public class ChouetteValidationRouteBuilder extends AbstractChouetteRouteBuilder
                     String user = e.getIn().getHeader(USER, String.class);
                     e.getIn().setHeader(JSON_PART, Parameters.getValidationParameters(getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)), user));
                 }) //Using header to addToExchange json data
-                .to("direct:ChouetteGenerateMapMatchingDirectQueue")
                 .to("direct:assertHeadersForChouetteValidation")
                 .log(LoggingLevel.DEBUG, correlation() + "Creating multipart request")
                 .process(this::toGenericChouetteMultipart)
@@ -219,12 +213,7 @@ public class ChouetteValidationRouteBuilder extends AbstractChouetteRouteBuilder
                 .toD("${exchangeProperty.job_status_url}")
                 .choice()
                     .when().jsonpath("$.*[?(@.status == 'SCHEDULED')].status")
-                        .when(PredicateBuilder.and(constant(VALIDATION_LEVEL_1).isEqualTo(header(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL)),
-                                header(GENERATE_MAP_MATCHING).isEqualTo(true)))
-                            .log(LoggingLevel.INFO, correlation() + "Validation ok, generating map matching")
-                            .to("activemq:queue:ChouetteGenerateMapMatchingQueue")
                         .when(e -> e.getIn().getHeader(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL, String.class).equals(VALIDATION_LEVEL_1.name()) &&
-                                        (e.getIn().getHeader(GENERATE_MAP_MATCHING, Boolean.class) == null || e.getIn().getHeader(GENERATE_MAP_MATCHING, Boolean.class).equals(false)) &&
                                         (shouldTransferData(e) ||
                                                 e.getIn().getHeader(IMPORT, Boolean.class) == null ||
                                                 "VALIDATION".equals(e.getIn().getHeader(WORKLOW, String.class)) ||
@@ -235,6 +224,12 @@ public class ChouetteValidationRouteBuilder extends AbstractChouetteRouteBuilder
                             .to("activemq:queue:ChouetteTransferExportQueue")
                         .end()
                 .routeId("chouette-process-job-list-after-validation");
+    }
+
+    private boolean isValidation(Exchange e) {
+        JSONObject jsonObject = new JSONObject(e.getIn().getHeader(SYSTEM_STATUS, String.class));
+        String action = jsonObject.getString("action");
+        return action != null && action.equals("IMPORT") ? false : true;
     }
 
     private void sendMailValidationOk(Exchange e) {

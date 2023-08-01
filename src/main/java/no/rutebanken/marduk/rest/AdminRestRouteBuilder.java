@@ -1060,7 +1060,10 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
                 .log(LoggingLevel.INFO, correlation() + "Chouette start validation")
                 .removeHeaders("CamelHttp*")
-                .process(e -> e.getIn().setHeader(USER, getUserNameFromHeaders(e)))
+                .process(e -> {
+                    e.getIn().setHeader(USER, getUserNameFromHeaders(e));
+                    e.getIn().setHeader(GENERATE_MAP_MATCHING, true);
+                        })
                 .choice()
                     .when(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)).chouetteInfo.migrateDataToProvider == null)
                         .setHeader(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL, constant(JobEvent.TimetableAction.VALIDATION_LEVEL_2.name()))

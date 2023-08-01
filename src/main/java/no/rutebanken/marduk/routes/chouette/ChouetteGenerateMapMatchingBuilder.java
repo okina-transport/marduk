@@ -40,37 +40,7 @@ public class ChouetteGenerateMapMatchingBuilder extends AbstractChouetteRouteBui
     public void configure() throws Exception {
         super.configure();
 
-
-        from("direct:ChouetteGenerateMapMatchingDirectQueue?transacted=true").streamCaching()
-                .transacted()
-                .log(LoggingLevel.INFO, correlation() + "Starting Chouette map matching")
-                .process(e -> {
-                    // Add correlation id only if missing
-                    e.getIn().setHeader(Constants.CORRELATION_ID, e.getIn().getHeader(Constants.CORRELATION_ID, UUID.randomUUID().toString()));
-                    e.getIn().removeHeader(Constants.CHOUETTE_JOB_ID);
-                    JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.BUILD_MAP_MATCHING).state(JobEvent.State.PENDING).build();
-                    String mapmatchingParameters =  Parameters.getMapMatchingParameters(getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)), getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)).chouetteInfo.referential);
-                    e.getIn().setHeader(JSON_PART, mapmatchingParameters);
-                })
-                .to("direct:updateStatus")
-                .process(e -> e.getIn().setHeader(CHOUETTE_REFERENTIAL, getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)).chouetteInfo.referential))
-                .to("direct:assertHeadersForChouetteMapMatching")
-                .log(LoggingLevel.DEBUG, correlation() + "Creating multipart request")
-                .process(this::toGenericChouetteMultipart)
-                .setHeader(Exchange.CONTENT_TYPE, simple("multipart/form-data"))
-                .toD(chouetteUrl + "/chouette_iev/referentials/${header." + CHOUETTE_REFERENTIAL + "}/mapmatching")
-                .process(e -> {
-                    e.getIn().setHeader(Constants.CHOUETTE_JOB_STATUS_URL, e.getIn().getHeader("Location").toString().replaceFirst("http", "http4"));
-                    e.getIn().setHeader(Constants.CHOUETTE_JOB_ID, getLastPathElementOfUrl(e.getIn().getHeader("Location", String.class)));
-                })
-                .setHeader(Constants.CHOUETTE_JOB_STATUS_ROUTING_DESTINATION, constant("direct:processMapMatchingResult"))
-                .process(e -> e.getIn().setHeader(Constants.CHOUETTE_JOB_STATUS_JOB_TYPE, JobEvent.TimetableAction.BUILD_MAP_MATCHING.name()))
-                .removeHeader("loopCounter")
-                .to("activemq:queue:ChouettePollStatusQueue")
-                .routeId("chouette-send-map-matching-direct-job");
-
-
-        from("activemq:queue:ChouetteGenerateMapMatchingQueue?transacted=true").streamCaching()
+        from("direct:ChouetteGenerateMapMatchingQueue").streamCaching()
                 .transacted()
                 .log(LoggingLevel.INFO, correlation() + "Starting Chouette map matching")
                 .process(e -> {
