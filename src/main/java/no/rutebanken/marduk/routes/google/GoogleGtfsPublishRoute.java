@@ -31,7 +31,7 @@ import static no.rutebanken.marduk.Constants.FILE_HANDLE;
  *
  * Supports regular production export in addition to a separate dataset for testing / QA / onboarding new providers.
  */
-@Component
+
 public class GoogleGtfsPublishRoute extends BaseRouteBuilder {
 
     /**
