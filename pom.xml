@@ -31,7 +31,7 @@
         <maven-surefire-plugin.version>3.0.0-M1</maven-surefire-plugin.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
-        <okina-helpers.version>1.0.24</okina-helpers.version>
+        <okina-helpers.version>1.0.28</okina-helpers.version>
 
         <docker.maven.plugin.version>0.21.0</docker.maven.plugin.version>
         <spring-boot-plugin.version>2.0.3.RELEASE</spring-boot-plugin.version>
