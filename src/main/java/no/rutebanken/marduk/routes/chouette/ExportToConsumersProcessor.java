@@ -102,7 +102,9 @@ public class ExportToConsumersProcessor implements Processor {
                 try {
                     InputStream streamToUpload = getInputStream(exchange);
 
-                    log.info("Envoi du fichier : " + exchange.getIn().getHeader(EXPORT_FILE_NAME) + " vers le consommateur : " + consumer.getName() + " - de type : " + consumer.getType().name() + " - Espace de données : " + referential);
+                    String filePath = StringUtils.isNotEmpty(export.getExportedFileName()) ? export.getExportedFileName() : (String) exchange.getIn().getHeaders().get(EXPORT_FILE_NAME);
+
+                    log.info("Envoi du fichier : " + filePath + " vers le consommateur : " + consumer.getName() + " - de type : " + consumer.getType().name() + " - Espace de données : " + referential);
 
                     try {
                         String passwordDecryptedConsumer = null;
@@ -114,8 +116,6 @@ public class ExportToConsumersProcessor implements Processor {
                         if (consumer.getSecretKey() != null && consumer.getSecretKey().length > 0) {
                             secretKeyDecryptedConsumer = cipherEncryption.decrypt(consumer.getSecretKey());
                         }
-
-                        String filePath = StringUtils.isNotEmpty(export.getExportedFileName()) ? export.getExportedFileName() : (String) exchange.getIn().getHeaders().get(EXPORT_FILE_NAME);
 
                         switch (consumer.getType()) {
                             case FTP:
@@ -134,7 +134,7 @@ public class ExportToConsumersProcessor implements Processor {
                                 }
                                 break;
                         }
-                        log.info("Envoi du fichier terminé : " + exchange.getIn().getHeader(EXPORT_FILE_NAME) + " vers le consommateur : " + consumer.getName() + " - de type : " + consumer.getType().name() + " - Espace de données : " + referential);
+                        log.info("Envoi du fichier terminé : " + filePath + " vers le consommateur : " + consumer.getName() + " - de type : " + consumer.getType().name() + " - Espace de données : " + referential);
 
                     } catch (IOException e) {
                         log.error("Error while getting the file before to upload to consumer " + exchange.getIn().getHeader(FILE_HANDLE, String.class), e);
