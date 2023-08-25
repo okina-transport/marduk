@@ -16,7 +16,6 @@ public class ImportConfiguration implements Serializable {
     private List<Recipient> recipients;
     private List<ImportParameters> importParameters;
     private WorkflowEnum workflow;
-    private boolean generateMapMatching;
 
 
     public Long getId() {
@@ -83,11 +82,4 @@ public class ImportConfiguration implements Serializable {
         this.workflow = workflow;
     }
 
-    public boolean isGenerateMapMatching() {
-        return generateMapMatching;
-    }
-
-    public void setGenerateMapMatching(boolean generateMapMatching) {
-        this.generateMapMatching = generateMapMatching;
-    }
 }
