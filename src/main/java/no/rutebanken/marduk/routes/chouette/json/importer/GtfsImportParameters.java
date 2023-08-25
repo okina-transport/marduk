@@ -69,10 +69,6 @@ public class GtfsImportParameters extends ChouetteJobParameters {
         @JsonInclude(JsonInclude.Include.ALWAYS)
         public Boolean routeMerge = false;
 
-        @JsonProperty("generate_map_matching")
-        @JsonInclude(JsonInclude.Include.ALWAYS)
-        public Boolean generateMapMatching = false;
-
         @JsonProperty("split_character")
         @JsonInclude(JsonInclude.Include.ALWAYS)
         public String splitCharacter = "";
