@@ -137,6 +137,10 @@ public class Constants {
 
     public static final String ANALYZE_ACTION = "Analyze";
 
+    public static final String IS_LAUNCHABLE = "isLaunchable";
+
+    public static final String VALIDATION_REPORT_URL = "validation_report_url";
+
     public static final String IMPORT_MODE = "ImportMode";
 
     public static final String MERGED_NETEX_ROOT_DIR = "mobiiti_technique/netex/merged";

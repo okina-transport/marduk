@@ -31,9 +31,16 @@ import org.apache.camel.LoggingLevel;
 import org.apache.camel.builder.PredicateBuilder;
 import org.apache.camel.component.http4.HttpMethods;
 import org.apache.commons.lang3.StringUtils;
+import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
 
 import static no.rutebanken.marduk.Constants.*;
 import static no.rutebanken.marduk.Utils.Utils.getHttp4;
@@ -58,6 +65,7 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
     @Autowired
     SendMail sendMail;
 
+    // @formatter:off
     @Override
     public void configure() throws Exception {
         super.configure();
@@ -264,17 +272,25 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
                 .setBody(constant(""))
                 .choice()
                     .when(PredicateBuilder.and(constant("true").isEqualTo(header(ANALYZE_ACTION)), simple("${header.action_report_result} == 'OK' and ${header.validation_report_result} == 'OK'")))
-                        .log(LoggingLevel.INFO, correlation() + "File analysis completed successfully")
-                        .process(this::setStateAndSendMailOk)
-                        .choice()
-                            .when(e -> e.getIn().getHeader(WORKLOW, String.class) != null &&
-                                    (e.getIn().getHeader(WORKLOW, String.class).equals("IMPORT") ||
-                                    e.getIn().getHeader(WORKLOW, String.class).equals("VALIDATION") ||
-                                    e.getIn().getHeader(WORKLOW, String.class).equals("EXPORT")))
-                            .process(e -> e.getIn().setHeader(ANALYZE_ACTION, false))
-                            .to("activemq:queue:ChouetteImportQueue")
-                        .endChoice()
-                    .when(PredicateBuilder.and(constant("false").isEqualTo(header(Constants.ENABLE_VALIDATION)), simple("${header.action_report_result} == 'OK'")))
+                        .process(this::addAnalysisResultToExchange)
+                            .choice()
+                            .when(header("isLaunchable").isEqualTo(true))
+                                .log(LoggingLevel.INFO, correlation() + "File analysis completed successfully")
+                                .process(this::setStateAndSendMailOk)
+                                .choice()
+                                    .when(e -> e.getIn().getHeader(WORKLOW, String.class) != null &&
+                                            (e.getIn().getHeader(WORKLOW, String.class).equals("IMPORT") ||
+                                                    e.getIn().getHeader(WORKLOW, String.class).equals("VALIDATION") ||
+                                                    e.getIn().getHeader(WORKLOW, String.class).equals("EXPORT")))
+                                    .process(e -> e.getIn().setHeader(ANALYZE_ACTION, false))
+                                    .to("activemq:queue:ChouetteImportQueue")
+                                .endChoice()
+                            .otherwise()
+                                .log(LoggingLevel.ERROR, correlation() + "File analysis found a major issue.Cannot launch import")
+                                .process(this::setStateAndSendMailFailed)
+                            .endChoice()
+
+                    .when(PredicateBuilder.and(constant("false").isEqualTo(header(ENABLE_VALIDATION)), simple("${header.action_report_result} == 'OK'")))
                         .to("direct:checkScheduledJobsBeforeTriggeringNextAction")
                         .process(e -> JobEvent.providerJobBuilder(e).timetableAction(getTimeTableAction(e)).state(State.OK).build())
                     .when(simple("${header.action_report_result} == 'OK' and ${header.validation_report_result} == 'OK'"))
@@ -372,7 +388,7 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
         String[] recipients = recipientString != null ? recipientString.trim().split(",") : null;
         String referential = e.getIn().getHeader(CHOUETTE_REFERENTIAL, String.class);
         String fileName = e.getIn().getHeader(FILE_NAME, String.class);
-        if(recipients != null) {
+        if (recipients != null) {
             for (String recipient : recipients) {
                 if (StringUtils.isNotEmpty(recipient)) {
                     sendMail.sendEmail(client.toUpperCase() + " - " + server.toUpperCase() + " Referentiel Mobi-iti - Nouvelle integration de donnees du reseau de " + referential,
@@ -392,6 +408,30 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
                 sendMailAnalyzeOk(e);
             }
         }
+    }
+
+    private void addAnalysisResultToExchange(Exchange e) {
+
+        e.getIn().setHeader(IS_LAUNCHABLE, false);
+        try {
+            String validationReportUrl = e.getIn().getHeader(VALIDATION_REPORT_URL, String.class);
+            String analysisReportUrl = validationReportUrl.replace("validation_report.json", "analysis_report.json").replace("http4://", "http://");
+            URL urlAnalysisReport = new URL(analysisReportUrl);
+            InputStream inputStreamUrlInfo = urlAnalysisReport.openStream();
+            JSONParser jsonParser = new JSONParser();
+            JSONObject jsonObject = (JSONObject) jsonParser.parse(new InputStreamReader(inputStreamUrlInfo, StandardCharsets.UTF_8));
+            JSONObject report = (JSONObject) jsonObject.get("analyze_report");
+
+            if (report != null) {
+                Boolean canLaunchimport = (Boolean) report.get("canLaunchImport");
+                if (canLaunchimport) {
+                    e.getIn().setHeader(IS_LAUNCHABLE, true);
+                }
+            }
+        } catch (Exception ex) {
+            log.error("Unable to recover analysis report" + ex.getMessage());
+        }
+
     }
 
     private void setStateAndSendMailFailed(Exchange e) {
