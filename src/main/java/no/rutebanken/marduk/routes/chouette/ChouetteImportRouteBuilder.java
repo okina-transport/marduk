@@ -151,6 +151,8 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
 
                     String cleanMode = e.getIn().getHeader(CLEAN_MODE, String.class);
 
+                    String generateMapMatchingStr = e.getIn().getHeader(GENERATE_MAP_MATCHING, String.class);
+                    boolean generateMapMatching = !StringUtils.isEmpty(generateMapMatchingStr) && Boolean.parseBoolean(generateMapMatchingStr);
 
                     String keepBoardingAlightingPossibilityStr = e.getIn().getHeader(KEEP_BOARDING_ALIGHTING_POSSIBILITY, String.class);
                     boolean keepBoardingAlightingPossibility = !StringUtils.isEmpty(keepBoardingAlightingPossibilityStr) && Boolean.parseBoolean(keepBoardingAlightingPossibilityStr);
@@ -215,6 +217,7 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
                     rawImportParameters.setUser(user);
                     rawImportParameters.setDescription(description);
                     rawImportParameters.setRouteMerge(routeMerge);
+                    rawImportParameters.setGenerateMapMatching(generateMapMatching);
                     rawImportParameters.setSplitCharacter(splitCharacter);
                     rawImportParameters.setIdParameters(idParams);
                     rawImportParameters.setCleanMode(cleanMode);
@@ -227,6 +230,7 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
                     rawImportParameters.setImportShapesFile(importShapesFile);
                     rawImportParameters.setUpdateStopAccess(updateStopAccess);
                     rawImportParameters.setRailUICprocessing(railUICProcessing);
+
 
                     e.getIn().setHeader(JSON_PART, getStringImportParameters(rawImportParameters));
                 }) //Using header to addToExchange json data

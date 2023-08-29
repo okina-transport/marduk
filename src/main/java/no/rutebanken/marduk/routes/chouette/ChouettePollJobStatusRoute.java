@@ -125,7 +125,7 @@ public class ChouettePollJobStatusRoute extends AbstractChouetteRouteBuilder {
                             b.addParameter("status", (String) status);
                         }
                     }
-                    b.addParameter("addActionParameters", Boolean.FALSE.toString());
+                        b.addParameter("addActionParameters", Boolean.FALSE.toString());
                     String newUri = b.toString();
                     e.setProperty("chouette_url", newUri);
                 })
