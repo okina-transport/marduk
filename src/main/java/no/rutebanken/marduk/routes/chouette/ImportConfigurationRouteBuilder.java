@@ -103,7 +103,6 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
                     String referential = e.getIn().getHeader(CHOUETTE_REFERENTIAL, String.class);
                     String importConfigurationId = e.getIn().getHeader(IMPORT_CONFIGURATION_ID, String.class);
                     ImportConfiguration importConfiguration = importConfigurationDAO.getImportConfiguration(referential, importConfigurationId);
-                    e.getIn().setHeader(GENERATE_MAP_MATCHING, importConfiguration.isGenerateMapMatching());
 
                     // FTP
                     for (ConfigurationFtp configurationFtp : importConfiguration.getConfigurationFtpList()) {
@@ -153,6 +152,7 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
             e.getIn().setHeader(IMPORT_TYPE, importParameters.getImportType());
             e.getIn().setHeader(SPLIT_CHARACTER, importParameters.getSplitCharacter());
             e.getIn().setHeader(ROUTE_MERGE, importParameters.getRouteMerge());
+            e.getIn().setHeader(GENERATE_MAP_MATCHING, importParameters.getGenerateMapMatching());
             e.getIn().setHeader(CLEAN_MODE, importParameters.getImportMode());
             e.getIn().setHeader(KEEP_BOARDING_ALIGHTING_POSSIBILITY, importParameters.getKeepBoardingAlighting());
             e.getIn().setHeader(KEEP_STOP_GEOLOCALISATION, importParameters.getKeepStopGeolocalisation());

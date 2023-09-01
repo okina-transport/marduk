@@ -40,7 +40,7 @@ public class ChouetteGenerateMapMatchingBuilder extends AbstractChouetteRouteBui
     public void configure() throws Exception {
         super.configure();
 
-        from("direct:ChouetteGenerateMapMatchingQueue").streamCaching()
+        from("activemq:queue:ChouetteGenerateMapMatchingQueue?transacted=true").streamCaching()
                 .transacted()
                 .log(LoggingLevel.INFO, correlation() + "Starting Chouette map matching")
                 .process(e -> {

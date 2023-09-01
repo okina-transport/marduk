@@ -37,6 +37,8 @@ public class ExportTemplate implements Serializable {
 
     private String postProcess;
 
+    private Long exportJobId;
+
     public Long getId() {
         return id;
     }
@@ -189,4 +191,13 @@ public class ExportTemplate implements Serializable {
     public void setPostProcess(String postProcess) {
         this.postProcess = postProcess;
     }
+
+    public Long getExportJobId() {
+        return exportJobId;
+    }
+
+    public void setExportJobId(Long exportJobId) {
+        this.exportJobId = exportJobId;
+    }
+
 }

@@ -124,12 +124,6 @@ public class ChouetteValidationRouteBuilder extends AbstractChouetteRouteBuilder
 
         from("activemq:queue:ChouetteValidationQueue?transacted=true&maxConcurrentConsumers=3").streamCaching()
                 .transacted()
-                .choice()
-                    .when(PredicateBuilder.and(header(GENERATE_MAP_MATCHING).isEqualTo(true),header(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL).isEqualTo(constant(JobEvent.TimetableAction.VALIDATION_LEVEL_1.name()))))
-                        .log(LoggingLevel.INFO, correlation() + "Generating map matching")
-                        .to("direct:ChouetteGenerateMapMatchingQueue")
-                    .end()
-                .end()
                 .log(LoggingLevel.INFO, correlation() + "Starting Chouette validation")
                 .process(e -> {
                     // Add correlation id only if missing
@@ -213,8 +207,13 @@ public class ChouetteValidationRouteBuilder extends AbstractChouetteRouteBuilder
                 .toD("${exchangeProperty.job_status_url}")
                 .choice()
                     .when().jsonpath("$.*[?(@.status == 'SCHEDULED')].status")
-                        .when(e -> e.getIn().getHeader(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL, String.class).equals(VALIDATION_LEVEL_1.name()) &&
-                                        (shouldTransferData(e) ||
+                                        .when(PredicateBuilder.and(constant(VALIDATION_LEVEL_1).isEqualTo(header(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL)),
+                                                header(GENERATE_MAP_MATCHING).isEqualTo(true)))
+                                            .log(LoggingLevel.INFO, correlation() + "Validation ok, generating map matching")
+                                            .to("activemq:queue:ChouetteGenerateMapMatchingQueue")
+                                        .when(e -> e.getIn().getHeader(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL, String.class).equals(VALIDATION_LEVEL_1.name()) &&
+                                                (e.getIn().getHeader(GENERATE_MAP_MATCHING, Boolean.class) == null || e.getIn().getHeader(GENERATE_MAP_MATCHING, Boolean.class).equals(false)) &&
+                                                (shouldTransferData(e) ||
                                                 e.getIn().getHeader(IMPORT, Boolean.class) == null ||
                                                 "VALIDATION".equals(e.getIn().getHeader(WORKLOW, String.class)) ||
                                                 "EXPORT".equals(e.getIn().getHeader(WORKLOW, String.class))

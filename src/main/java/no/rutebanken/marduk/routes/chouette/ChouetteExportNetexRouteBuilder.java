@@ -61,6 +61,10 @@ public class ChouetteExportNetexRouteBuilder extends AbstractChouetteRouteBuilde
     ExportToConsumersProcessor exportToConsumersProcessor;
 
     @Autowired
+    UpdateExportTemplateProcessor updateExportTemplateProcessor;
+
+
+    @Autowired
     FileSystemService fileSystemService;
 
     @Autowired
@@ -136,6 +140,7 @@ public class ChouetteExportNetexRouteBuilder extends AbstractChouetteRouteBuilde
                             .otherwise()
                                 .process(exportToConsumersProcessor)
                                 .log(LoggingLevel.INFO, "Upload to consumers and blob store completed")
+                                .process(updateExportTemplateProcessor)
                                 .process(this::setStateAndSendMailOk)
                         .endChoice()
                         .setHeader(BLOBSTORE_MAKE_BLOB_PUBLIC, constant(publicPublication))

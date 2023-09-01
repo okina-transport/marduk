@@ -77,6 +77,9 @@ public class ChouettePollJobStatusRoute extends AbstractChouetteRouteBuilder {
     @Autowired
     ExportToConsumersProcessor exportToConsumersProcessor;
 
+    @Autowired
+    UpdateExportTemplateProcessor updateExportTemplateProcessor;
+
 
     /**
      * This routebuilder polls a job until it is terminated. It expects a few headers set on the message it receives:
@@ -125,7 +128,7 @@ public class ChouettePollJobStatusRoute extends AbstractChouetteRouteBuilder {
                             b.addParameter("status", (String) status);
                         }
                     }
-                    b.addParameter("addActionParameters", Boolean.FALSE.toString());
+                        b.addParameter("addActionParameters", Boolean.FALSE.toString());
                     String newUri = b.toString();
                     e.setProperty("chouette_url", newUri);
                 })
@@ -187,6 +190,7 @@ public class ChouettePollJobStatusRoute extends AbstractChouetteRouteBuilder {
                     e.getIn().setHeader(IS_SIMULATION_EXPORT,convertToBoolean(simulationExpRaw));
                 })
                 .process(exportToConsumersProcessor)
+                .process(updateExportTemplateProcessor)
                 .process(e -> JobEvent.providerJobBuilder(e).timetableAction(TimetableAction.valueOf((String) e.getIn().getHeader(Constants.CHOUETTE_JOB_STATUS_JOB_TYPE))).state(State.OK).build())
                 .to("direct:updateStatus")
                 .routeId("post-process-completed");

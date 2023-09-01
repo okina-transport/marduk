@@ -3,6 +3,7 @@ package no.rutebanken.marduk.routes.tiamat;
 import no.rutebanken.marduk.Constants;
 import no.rutebanken.marduk.routes.chouette.AbstractChouetteRouteBuilder;
 import no.rutebanken.marduk.routes.chouette.ExportToConsumersProcessor;
+import no.rutebanken.marduk.routes.chouette.UpdateExportTemplateProcessor;
 import no.rutebanken.marduk.routes.chouette.json.ExportJob;
 import no.rutebanken.marduk.routes.status.JobEvent;
 import no.rutebanken.marduk.services.FileSystemService;
@@ -46,6 +47,9 @@ public class TiamatExportStopPlacesBuilder extends AbstractChouetteRouteBuilder 
 
     @Autowired
     ExportToConsumersProcessor exportToConsumersProcessor;
+
+    @Autowired
+    UpdateExportTemplateProcessor updateExportTemplateProcessor;
 
     @Override
     public void configure() throws Exception {
@@ -99,6 +103,7 @@ public class TiamatExportStopPlacesBuilder extends AbstractChouetteRouteBuilder 
                 .log(LoggingLevel.INFO, getClass().getName(), "Tiamat process export results for provider with id ${header.tiamatProviderId}")
                 .setHeader(EXPORT_FROM_TIAMAT, simple("true"))
                 .process(exportToConsumersProcessor)
+                .process(updateExportTemplateProcessor)
                 .choice()
                     .when(header(CHOUETTE_REFERENTIAL).isEqualTo("mobiiti_technique"))
                     .process(e -> {

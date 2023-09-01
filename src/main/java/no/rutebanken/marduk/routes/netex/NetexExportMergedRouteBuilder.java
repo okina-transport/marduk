@@ -20,6 +20,7 @@ import no.rutebanken.marduk.Constants;
 import no.rutebanken.marduk.exceptions.MardukException;
 import no.rutebanken.marduk.routes.BaseRouteBuilder;
 import no.rutebanken.marduk.routes.chouette.ExportToConsumersProcessor;
+import no.rutebanken.marduk.routes.chouette.UpdateExportTemplateProcessor;
 import no.rutebanken.marduk.routes.file.ZipFileUtils;
 import no.rutebanken.marduk.routes.status.JobEvent;
 import org.apache.activemq.ScheduledMessage;
@@ -81,6 +82,9 @@ public class NetexExportMergedRouteBuilder extends BaseRouteBuilder {
 
     @Autowired
     ExportToConsumersProcessor exportToConsumersProcessor;
+
+    @Autowired
+    UpdateExportTemplateProcessor updateExportTemplateProcessor;
 
     private List<String> completedExports = new ArrayList<>();
     private List<String> failedExports = new ArrayList<>();
@@ -149,6 +153,7 @@ public class NetexExportMergedRouteBuilder extends BaseRouteBuilder {
                     .to("direct:mergeNetex")
                     .setHeader(NETEX_EXPORT_GLOBAL_OK, simple("true"))
                     .process(exportToConsumersProcessor)
+                    .process(updateExportTemplateProcessor)
                     .to("direct:cleanUpLocalDirectory")
 
                     // Use wire tap to avoid replacing body

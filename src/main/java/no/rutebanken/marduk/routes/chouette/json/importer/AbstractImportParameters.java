@@ -80,6 +80,9 @@ public class AbstractImportParameters extends AbstractParameters {
     @JsonInclude(JsonInclude.Include.ALWAYS)
     public Boolean removeParentStations;
 
+    @JsonProperty("generate_map_matching")
+    @JsonInclude(JsonInclude.Include.ALWAYS)
+    public Boolean generateMapMatching = false;
 
 
 }

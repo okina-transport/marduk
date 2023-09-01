@@ -32,6 +32,8 @@ public class RawImportParameters {
 
     private boolean railUICprocessing;
 
+    private boolean generateMapMatching;
+
     public String getFileName() {
         return fileName;
     }
@@ -191,5 +193,12 @@ public class RawImportParameters {
 
     public void setRailUICprocessing(boolean railUICprocessing) {
         this.railUICprocessing = railUICprocessing;
+    }
+
+    public boolean isGenerateMapMatching() {
+        return generateMapMatching;
+    }
+    public void setGenerateMapMatching(boolean generateMapMatching) {
+        this.generateMapMatching = generateMapMatching;
     }
 }

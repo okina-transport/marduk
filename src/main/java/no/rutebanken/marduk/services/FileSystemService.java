@@ -62,9 +62,10 @@ public class FileSystemService {
         return file;
     }
 
+
+
     public File getLatestStopPlacesFile(Exchange exchange) {
         ExchangeUtils.addHeadersAndAttachments(exchange);
-        FileSystemResource fileSystemResource = new FileSystemResource(tiamatStoragePath);
         String referential = exchange.getIn().getHeader(OKINA_REFERENTIAL, String.class).replace(superspaceName.toUpperCase() + "_", "").replace(superspaceName.toLowerCase() + "_", "");
         logger.info("------ referential : " + referential);
 
@@ -74,6 +75,8 @@ public class FileSystemService {
 
         logger.info("------ idsite : " + idSite);
         logger.info("------ filename a peu presque : ARRET_" + idSite + ".zip");
+
+        FileSystemResource fileSystemResource = new FileSystemResource(tiamatStoragePath + "/" + provider.name);
 
         List<File> zipFiles = new ArrayList<File>();
         File[] files = fileSystemResource.getFile().listFiles();

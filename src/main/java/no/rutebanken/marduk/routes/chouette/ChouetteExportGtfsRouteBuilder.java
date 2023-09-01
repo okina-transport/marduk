@@ -71,6 +71,9 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
     ExportToConsumersProcessor exportToConsumersProcessor;
 
     @Autowired
+    UpdateExportTemplateProcessor updateExportTemplateProcessor;
+
+    @Autowired
     FileSystemService fileSystemService;
 
     @Autowired
@@ -191,6 +194,7 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
                         .process(exportToConsumersProcessor)
                         .setHeader(BLOBSTORE_MAKE_BLOB_PUBLIC, constant(publicPublication))
                         .log(LoggingLevel.INFO,"Upload to consumers and blob store completed")
+                        .process(updateExportTemplateProcessor)
                         .process(this::setStateAndSendMailOk)
                     .when(simple("${header.action_report_result} == 'NOK'"))
                         .log(LoggingLevel.WARN, correlation() + "Export failed")

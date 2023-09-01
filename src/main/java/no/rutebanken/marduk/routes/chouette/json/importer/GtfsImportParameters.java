@@ -121,6 +121,7 @@ public class GtfsImportParameters extends ChouetteJobParameters {
             gtfsImport.stopAreaImportMode = AbstractImportParameters.StopAreaImportMode.READ_ONLY;
         }
         gtfsImport.routeMerge = rawImportParameters.isRouteMerge();
+        gtfsImport.generateMapMatching = rawImportParameters.isGenerateMapMatching();
         gtfsImport.splitCharacter = rawImportParameters.getSplitCharacter();
         gtfsImport.commercialPointIdPrefixToRemove = rawImportParameters.getIdParameters().getCommercialPointIdPrefixToRemove();
         gtfsImport.quayIdPrefixToRemove = rawImportParameters.getIdParameters().getQuayIdPrefixToRemove();

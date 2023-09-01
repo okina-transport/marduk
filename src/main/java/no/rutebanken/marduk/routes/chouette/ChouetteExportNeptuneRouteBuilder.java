@@ -73,6 +73,9 @@ public class ChouetteExportNeptuneRouteBuilder extends AbstractChouetteRouteBuil
     ExportToConsumersProcessor exportToConsumersProcessor;
 
     @Autowired
+    UpdateExportTemplateProcessor updateExportTemplateProcessor;
+
+    @Autowired
     FileSystemService fileSystemService;
 
     @Autowired
@@ -156,7 +159,8 @@ public class ChouetteExportNeptuneRouteBuilder extends AbstractChouetteRouteBuil
                         .setBody(simple(""))
                         .setHeader(Exchange.HTTP_METHOD, constant(org.apache.camel.component.http4.HttpMethods.GET))
                         .process(exportToConsumersProcessor)
-                        .log(LoggingLevel.INFO, "Upload to consumers and blob store completed")
+                        .process(updateExportTemplateProcessor)
+                .log(LoggingLevel.INFO, "Upload to consumers and blob store completed")
                         .process(this::setStateAndSendMailOk)
                     .when(simple("${header.action_report_result} == 'NOK'"))
                         .log(LoggingLevel.WARN, correlation() + "Export failed")

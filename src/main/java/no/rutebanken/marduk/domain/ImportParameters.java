@@ -24,6 +24,8 @@ public class ImportParameters {
 
     private Boolean railUICprocessing;
 
+    private Boolean generateMapMatching;
+
     public Long getId() {
         return id;
     }
@@ -182,5 +184,13 @@ public class ImportParameters {
 
     public void setUpdateStopAccessibility(Boolean updateStopAccessibility) {
         this.updateStopAccessibility = updateStopAccessibility;
+    }
+
+    public Boolean getGenerateMapMatching() {
+        return generateMapMatching;
+    }
+
+    public void setGenerateMapMatching(Boolean generateMapMatching) {
+        this.generateMapMatching = generateMapMatching;
     }
 }

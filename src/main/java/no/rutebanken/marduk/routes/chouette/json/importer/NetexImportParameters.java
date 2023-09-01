@@ -79,6 +79,7 @@ public class NetexImportParameters extends ChouetteJobParameters {
         netexImport.keepBoardingAlighting = rawImportParameters.isKeepBoardingAlighting();
         netexImport.keepStopGeolocalisation = rawImportParameters.isKeepBoardingAlighting();
         netexImport.keepStopNames = rawImportParameters.isKeepStopNames();
+        netexImport.generateMapMatching = rawImportParameters.isGenerateMapMatching();
         if (chouetteInfo.allowCreateMissingStopPlace) {
             netexImport.stopAreaImportMode = AbstractImportParameters.StopAreaImportMode.CREATE_NEW;
         }

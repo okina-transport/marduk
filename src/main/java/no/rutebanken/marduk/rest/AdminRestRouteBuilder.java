@@ -109,7 +109,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
 
         RestPropertyDefinition corsAllowedHeaders = new RestPropertyDefinition();
         corsAllowedHeaders.setKey("Access-Control-Allow-Headers");
-        corsAllowedHeaders.setValue("Origin, Accept, X-Requested-With, Content-Type, Access-Control-Request-Method, Access-Control-Request-Headers, Authorization, x-okina-referential, RutebankenUser, RutebankenDescription, EXPORT_LINES_IDS, EXPORT_START_DATE, EXPORT_END_DATE, ImportType, routeMerge, splitCharacter, commercialPointIdPrefixToRemove, quayIdPrefixToRemove, areaCentroidPrefixToRemove, linePrefixToRemove, stopAreaPrefixToRemove, ignoreCommercialPoints, analysisJobId, cleanMode, keepBoardingAlightingPossibility, keepStopGeolocalisation, keepStopNames, removeParentStations, importShapesFile, updateStopAccessibility, railUICprocessing");
+        corsAllowedHeaders.setValue("Origin, Accept, X-Requested-With, Content-Type, Access-Control-Request-Method, Access-Control-Request-Headers, Authorization, x-okina-referential, RutebankenUser, RutebankenDescription, EXPORT_LINES_IDS, EXPORT_START_DATE, EXPORT_END_DATE, ImportType, routeMerge, splitCharacter, commercialPointIdPrefixToRemove, quayIdPrefixToRemove, areaCentroidPrefixToRemove, linePrefixToRemove, stopAreaPrefixToRemove, ignoreCommercialPoints, analysisJobId, cleanMode, keepBoardingAlightingPossibility, keepStopGeolocalisation, keepStopNames, removeParentStations, importShapesFile, updateStopAccessibility, railUICprocessing, generateMapMatching");
 
         RestPropertyDefinition corsAllowedOrigin = new RestPropertyDefinition();
         corsAllowedOrigin.setKey("Access-Control-Allow-Origin");
@@ -610,7 +610,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .log(LoggingLevel.INFO, "Authorized request passed")
                 .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
                 .log(LoggingLevel.INFO, "Validation passed")
-                .process(e -> e.getIn().setHeader(ANALYZE_ACTION, true))
+                    .process(e -> e.getIn().setHeader(ANALYZE_ACTION, true))
                 .log(LoggingLevel.INFO, correlation() + "upload files and start import pipeline")
                 .removeHeaders("CamelHttp*")
                 .to("direct:uploadFilesAndStartImport")
@@ -645,6 +645,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                     if ("purge".equals(cleanMode)){
                         stopTimesArchiver.cleanOrganisationStopTimes(referential);
                     }
+                    e.getIn().setHeader(GENERATE_MAP_MATCHING, getGenerateMapMatchingHeaders(e));
                     stopTimesArchiver.archiveStopTimes(file,referential);
                 })
                 .log(LoggingLevel.INFO, correlation() + "upload files and start import pipeline")
@@ -1062,7 +1063,6 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .removeHeaders("CamelHttp*")
                 .process(e -> {
                     e.getIn().setHeader(USER, getUserNameFromHeaders(e));
-                    e.getIn().setHeader(GENERATE_MAP_MATCHING, true);
                         })
                 .choice()
                     .when(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)).chouetteInfo.migrateDataToProvider == null)
@@ -1244,6 +1244,17 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
             return (String) headers.get(USER);
         }
         return null;
+    }
+
+    private boolean getGenerateMapMatchingHeaders(Exchange e) {
+        Map body = (Map) e.getIn().getBody(Map.class);
+        Map headers;
+        headers = body == null ? e.getIn().getHeaders() : (Map) body.get("headers");
+
+        if (headers != null && headers.get(GENERATE_MAP_MATCHING) != null && ((String)headers.get(GENERATE_MAP_MATCHING)).equalsIgnoreCase("true")) {
+            return true;
+        }
+        return false;
     }
 
     private String getSimulationExportPrefix(Exchange e) {
