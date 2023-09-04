@@ -645,7 +645,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                     if ("purge".equals(cleanMode)){
                         stopTimesArchiver.cleanOrganisationStopTimes(referential);
                     }
-                    //e.getIn().setHeader(GENERATE_MAP_MATCHING, getGenerateMapMatchingHeaders(e));
+                    e.getIn().setHeader(GENERATE_MAP_MATCHING, getGenerateMapMatchingHeaders(e));
                     stopTimesArchiver.archiveStopTimes(file,referential);
                 })
                 .log(LoggingLevel.INFO, correlation() + "upload files and start import pipeline")
@@ -1251,8 +1251,8 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
         Map headers;
         headers = body == null ? e.getIn().getHeaders() : (Map) body.get("headers");
 
-        if (headers != null) {
-            return (boolean) headers.get(GENERATE_MAP_MATCHING);
+        if (headers != null && headers.get(GENERATE_MAP_MATCHING) != null && ((String)headers.get(GENERATE_MAP_MATCHING)).equalsIgnoreCase("true")) {
+            return true;
         }
         return false;
     }
