@@ -98,6 +98,9 @@ public class GtfsImportParameters extends ChouetteJobParameters {
         @JsonInclude(JsonInclude.Include.ALWAYS)
         public Boolean railUICprocessing = false;
 
+        @JsonProperty("distance_geolocation")
+        public Long distanceGeolocation = 200L;
+
 
     }
 
@@ -138,6 +141,7 @@ public class GtfsImportParameters extends ChouetteJobParameters {
         gtfsImport.removeParentStations = rawImportParameters.isRemoveParentStations();
         gtfsImport.updateStopAccess = rawImportParameters.isUpdateStopAccess();
         gtfsImport.railUICprocessing = rawImportParameters.isRailUICprocessing();
+        gtfsImport.distanceGeolocation = rawImportParameters.getDistanceGeolocation();
 
 
         return gtfsImportParameters;

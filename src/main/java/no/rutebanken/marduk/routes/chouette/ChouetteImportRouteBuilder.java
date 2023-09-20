@@ -140,6 +140,7 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
                 .end()
                 .routeId("chouette-import-dataspace");
 
+
         from("direct:addImportParameters")
                 .process(e -> {
                     String fileName = e.getIn().getHeader(FILE_NAME, String.class);
@@ -195,6 +196,8 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
                     String removeParentStationStr = e.getIn().getHeader(REMOVE_PARENT_STATIONS, String.class);
                     boolean removeParentStations = !StringUtils.isEmpty(removeParentStationStr) && Boolean.parseBoolean(removeParentStationStr);
 
+                    Long distanceGeolocation = e.getIn().getHeader(DISTANCE_GEOLOCATION, Long.class);
+
                     if (StringUtils.isNotEmpty(commercialPointIdPrefixToRemove)) {
                         idParams.setCommercialPointIdPrefixToRemove(commercialPointIdPrefixToRemove);
                     } else {
@@ -230,6 +233,7 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
                     rawImportParameters.setImportShapesFile(importShapesFile);
                     rawImportParameters.setUpdateStopAccess(updateStopAccess);
                     rawImportParameters.setRailUICprocessing(railUICProcessing);
+                    rawImportParameters.setDistanceGeolocation(distanceGeolocation);
 
 
                     e.getIn().setHeader(JSON_PART, getStringImportParameters(rawImportParameters));

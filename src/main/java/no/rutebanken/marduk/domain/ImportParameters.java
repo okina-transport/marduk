@@ -26,6 +26,8 @@ public class ImportParameters {
 
     private Boolean generateMapMatching;
 
+    private Long distanceGeolocation;
+
     public Long getId() {
         return id;
     }
@@ -193,4 +195,8 @@ public class ImportParameters {
     public void setGenerateMapMatching(Boolean generateMapMatching) {
         this.generateMapMatching = generateMapMatching;
     }
+
+    public Long getDistanceGeolocation(){return distanceGeolocation;}
+
+    public void setDistanceGeolocation(Long distanceGeolocation){this.distanceGeolocation = distanceGeolocation;}
 }

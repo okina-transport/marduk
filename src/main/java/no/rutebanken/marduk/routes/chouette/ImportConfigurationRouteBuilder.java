@@ -169,6 +169,7 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
             e.getIn().setHeader(REMOVE_PARENT_STATIONS, importParameters.getRemoveParentStations());
             e.getIn().setHeader(UPDATE_STOP_ACCESSIBILITY, importParameters.getUpdateStopAccessibility());
             e.getIn().setHeader(RAIL_UIC_PROCESSING, importParameters.getRailUICprocessing());
+            e.getIn().setHeader(DISTANCE_GEOLOCATION, importParameters.getDistanceGeolocation());
             StringBuilder recipients = new StringBuilder();
             for (Recipient recipient : importConfiguration.getRecipients()) {
                 recipients.append(recipient.getEmail());

@@ -66,7 +66,7 @@ public class Constants {
     public static final String QUAY_ID_PREFIX_TO_REMOVE = "quayIdPrefixToRemove";
     public static final String LINE_PREFIX_TO_REMOVE = "linePrefixToRemove";
     public static final String REMOVE_PARENT_STATIONS = "removeParentStations";
-
+    public static final String DISTANCE_GEOLOCATION = "distanceGeolocation";
     public static final String IS_SIMULATION_EXPORT = "isSimulationExport";
     public static final String ROLE_EXPORT_SIMULATION = "exportSimulation";
     public static final String EXPORT_SIMULATION_NAME = "exportSimulationName";
