@@ -611,6 +611,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
                 .log(LoggingLevel.INFO, correlation() + "blob store get files")
                 .removeHeaders("CamelHttp*")
+                .removeHeaders("Authorization*")
                 .to("direct:listBlobsFlat")
                 .routeId("admin-chouette-import-list")
                 .endRest()
