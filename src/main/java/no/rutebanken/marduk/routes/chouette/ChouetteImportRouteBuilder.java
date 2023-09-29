@@ -17,7 +17,6 @@
 package no.rutebanken.marduk.routes.chouette;
 
 import no.rutebanken.marduk.Constants;
-import no.rutebanken.marduk.Utils.SendMail;
 import no.rutebanken.marduk.domain.Provider;
 import no.rutebanken.marduk.routes.chouette.json.IdParameters;
 import no.rutebanken.marduk.routes.chouette.json.Parameters;
@@ -63,7 +62,7 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
     private String server;
 
     @Autowired
-    SendMail sendMail;
+    CreateMail createMail;
 
     // @formatter:off
     @Override
@@ -128,7 +127,12 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
                 .choice()
                     .when(body().isNull())
                         .log(LoggingLevel.WARN, correlation() + "Import failed because blob could not be found")
-                        .process(this::setStateAndSendMailFailed)
+                        .process(e-> {
+                            JobEvent.providerJobBuilder(e).timetableAction(getTimeTableAction(e)).state(State.FAILED).build();
+                            if (e.getIn().getHeader(WORKLOW, String.class) != null) {
+                                createMail.createMail(e, null, getTimeTableAction(e), false);
+                            }
+                        })
                     .otherwise()
                         .process(e -> {
                             Provider provider = getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class));
@@ -280,7 +284,12 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
                             .choice()
                             .when(header("isLaunchable").isEqualTo(true))
                                 .log(LoggingLevel.INFO, correlation() + "File analysis completed successfully")
-                                .process(this::setStateAndSendMailOk)
+                                .process(e-> {
+                                    JobEvent.providerJobBuilder(e).timetableAction(getTimeTableAction(e)).state(State.OK).build();
+                                    if(e.getIn().getHeader(WORKLOW, String.class) != null && e.getIn().getHeader(WORKLOW, String.class).equals("ANALYZE")) {
+                                        createMail.createMail(e, null, getTimeTableAction(e), true);
+                                    }
+                                })
                                 .choice()
                                     .when(e -> e.getIn().getHeader(WORKLOW, String.class) != null &&
                                             (e.getIn().getHeader(WORKLOW, String.class).equals("IMPORT") ||
@@ -291,7 +300,12 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
                                 .endChoice()
                             .otherwise()
                                 .log(LoggingLevel.ERROR, correlation() + "File analysis found a major issue.Cannot launch import")
-                                .process(this::setStateAndSendMailFailed)
+                                .process(e -> {
+                                    JobEvent.providerJobBuilder(e).timetableAction(getTimeTableAction(e)).state(State.FAILED).build();
+                                    if (e.getIn().getHeader(WORKLOW, String.class) != null) {
+                                        createMail.createMail(e, null, getTimeTableAction(e), false);
+                                    }
+                                })
                             .endChoice()
 
                     .when(PredicateBuilder.and(constant("false").isEqualTo(header(ENABLE_VALIDATION)), simple("${header.action_report_result} == 'OK'")))
@@ -302,13 +316,28 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
                         .process(e -> JobEvent.providerJobBuilder(e).timetableAction(getTimeTableAction(e)).state(State.OK).build())
                     .when(simple("${header.action_report_result} == 'OK' and ${header.validation_report_result} == 'NOK'"))
                         .log(LoggingLevel.INFO, correlation() + "Import ok but validation failed")
-                        .process(this::setStateAndSendMailFailed)
+                        .process(e -> {
+                            JobEvent.providerJobBuilder(e).timetableAction(getTimeTableAction(e)).state(State.FAILED).build();
+                            if (e.getIn().getHeader(WORKLOW, String.class) != null) {
+                                createMail.createMail(e, null, getTimeTableAction(e), false);
+                            }
+                        })
                     .when(simple("${header.action_report_result} == 'NOK'"))
                         .log(LoggingLevel.WARN, correlation() + "Import not ok")
-                        .process(this::setStateAndSendMailFailed)
+                        .process(e -> {
+                            JobEvent.providerJobBuilder(e).timetableAction(getTimeTableAction(e)).state(State.FAILED).build();
+                            if (e.getIn().getHeader(WORKLOW, String.class) != null) {
+                                createMail.createMail(e, null, getTimeTableAction(e), false);
+                            }
+                        })
                     .otherwise()
                         .log(LoggingLevel.ERROR, correlation() + "Something went wrong on import")
-                        .process(this::setStateAndSendMailFailed)
+                        .process(e -> {
+                            JobEvent.providerJobBuilder(e).timetableAction(getTimeTableAction(e)).state(State.FAILED).build();
+                            if (e.getIn().getHeader(WORKLOW, String.class) != null) {
+                                createMail.createMail(e, null, getTimeTableAction(e), false);
+                            }
+                        })
                 .end()
                 .to("direct:updateStatus")
                 .routeId("chouette-process-import-status");
@@ -341,81 +370,11 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
 
     }
 
-    private TimetableAction getTimeTableAction(Exchange e) {
-        Boolean analyze = e.getIn().getHeader(ANALYZE_ACTION, Boolean.class) != null ? e.getIn().getHeader(ANALYZE_ACTION, Boolean.class) : false;
-        return analyze ? TimetableAction.FILE_ANALYZE : TimetableAction.IMPORT;
-    }
-
     private String getStringImportParameters(RawImportParameters rawImportParameters) {
         rawImportParameters.setProvider(getProviderRepository().getProvider(rawImportParameters.getProviderId()));
         return Parameters.createStringImportParameters(rawImportParameters);
     }
-
-    private void sendMailAnalyzeOk(Exchange e) {
-        String recipientString = e.getIn().getHeader(RECIPIENTS, String.class);
-        String[] recipients = recipientString != null ? recipientString.trim().split(",") : null;
-        String referential = e.getIn().getHeader(CHOUETTE_REFERENTIAL, String.class);
-        String fileName = e.getIn().getHeader(FILE_NAME, String.class);
-        if(recipients != null) {
-            for (String recipient : recipients) {
-                if (StringUtils.isNotEmpty(recipient)) {
-                    sendMail.sendEmail(client.toUpperCase() + " - " + server.toUpperCase() + " Referentiel Mobi-iti - Nouvelle integration de donnees du reseau de " + referential,
-                            recipient,
-                            "Bonjour,"
-                                    + "\nL'analyse du fichier: " + fileName + " s'est correctement effectuée.",
-                            null);
-                }
-            }
-        }
-    }
-
-    private void sendMailAnalyzeFailed(Exchange e) {
-        String recipientString = e.getIn().getHeader(RECIPIENTS, String.class);
-        String[] recipients = recipientString != null ? recipientString.trim().split(",") : null;
-        String referential = e.getIn().getHeader(CHOUETTE_REFERENTIAL, String.class);
-        String fileName = e.getIn().getHeader(FILE_NAME, String.class);
-        if(recipients != null) {
-            for (String recipient : recipients) {
-                if (StringUtils.isNotEmpty(recipient)) {
-                    sendMail.sendEmail(client.toUpperCase() + " - " + server.toUpperCase() + " Referentiel Mobi-iti - Nouvelle integration de donnees du reseau de " + referential,
-                            recipient,
-                            "Bonjour,"
-                                    + "\nL'analyse du fichier : " + fileName + " a échoué.",
-                            null);
-                }
-            }
-        }
-    }
-
-    private void sendMailImportFailed(Exchange e) {
-        String recipientString = e.getIn().getHeader(RECIPIENTS, String.class);
-        String[] recipients = recipientString != null ? recipientString.trim().split(",") : null;
-        String referential = e.getIn().getHeader(CHOUETTE_REFERENTIAL, String.class);
-        String fileName = e.getIn().getHeader(FILE_NAME, String.class);
-        if (recipients != null) {
-            for (String recipient : recipients) {
-                if (StringUtils.isNotEmpty(recipient)) {
-                    sendMail.sendEmail(client.toUpperCase() + " - " + server.toUpperCase() + " Referentiel Mobi-iti - Nouvelle integration de donnees du reseau de " + referential,
-                            recipient,
-                            "Bonjour,"
-                                    + "\nL'import du fichier : " + fileName + " a échoué.",
-                            null);
-                }
-            }
-        }
-    }
-
-    private void setStateAndSendMailOk(Exchange e) {
-        JobEvent.providerJobBuilder(e).timetableAction(getTimeTableAction(e)).state(State.OK).build();
-        if (e.getIn().getHeader(WORKLOW, String.class) != null) {
-            if (e.getIn().getHeader(WORKLOW, String.class).equals("ANALYZE") && getTimeTableAction(e).equals(TimetableAction.FILE_ANALYZE)) {
-                sendMailAnalyzeOk(e);
-            }
-        }
-    }
-
     private void addAnalysisResultToExchange(Exchange e) {
-
         e.getIn().setHeader(IS_LAUNCHABLE, false);
         try {
             String validationReportUrl = e.getIn().getHeader(VALIDATION_REPORT_URL, String.class);
@@ -438,17 +397,11 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
 
     }
 
-    private void setStateAndSendMailFailed(Exchange e) {
-        JobEvent.providerJobBuilder(e).timetableAction(getTimeTableAction(e)).state(State.FAILED).build();
-        if (e.getIn().getHeader(WORKLOW, String.class) != null) {
-            if (getTimeTableAction(e).equals(TimetableAction.FILE_ANALYZE)) {
-                sendMailAnalyzeFailed(e);
-            }
-            if (getTimeTableAction(e).equals(TimetableAction.IMPORT)) {
-                sendMailImportFailed(e);
-            }
-        }
+    private JobEvent.TimetableAction getTimeTableAction(Exchange e) {
+        Boolean analyze = e.getIn().getHeader(ANALYZE_ACTION, Boolean.class) != null ? e.getIn().getHeader(ANALYZE_ACTION, Boolean.class) : false;
+        return analyze ? JobEvent.TimetableAction.FILE_ANALYZE : JobEvent.TimetableAction.IMPORT;
     }
+
 }
 
 

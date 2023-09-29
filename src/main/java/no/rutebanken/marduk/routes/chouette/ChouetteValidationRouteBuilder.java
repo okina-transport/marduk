@@ -17,19 +17,14 @@
 package no.rutebanken.marduk.routes.chouette;
 
 import no.rutebanken.marduk.Constants;
-import no.rutebanken.marduk.Utils.SendMail;
 import no.rutebanken.marduk.domain.ExportTemplate;
 import no.rutebanken.marduk.repository.ExportTemplateDAO;
 import no.rutebanken.marduk.routes.chouette.json.Parameters;
 import no.rutebanken.marduk.routes.status.JobEvent;
 import no.rutebanken.marduk.routes.status.JobEvent.State;
-import no.rutebanken.marduk.routes.status.JobEvent.TimetableAction;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
-import org.apache.camel.Predicate;
 import org.apache.camel.builder.PredicateBuilder;
-import org.apache.commons.lang3.StringUtils;
-import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -65,14 +60,8 @@ public class ChouetteValidationRouteBuilder extends AbstractChouetteRouteBuilder
     @Autowired
     private ExportTemplateDAO exportTemplateDAO;
 
-    @Value("${client.name}")
-    private String client;
-
-    @Value("${server.name}")
-    private String server;
-
     @Autowired
-    SendMail sendMail;
+    CreateMail createMail;
 
     @Override
     public void configure() throws Exception {
@@ -169,7 +158,17 @@ public class ChouetteValidationRouteBuilder extends AbstractChouetteRouteBuilder
                 .choice()
                 .when(simple("${header.action_report_result} == 'OK' and ${header.validation_report_result} == 'OK'"))
                     .to("direct:checkScheduledJobsBeforeTriggeringExport")
-                    .process(this::setStateAndSendMailOk)
+                    .process(e -> {
+                        JobEvent.providerJobBuilder(e).timetableAction(e.getIn().getHeader(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL, JobEvent.TimetableAction.class)).state(JobEvent.State.OK).build();
+                        if (e.getIn().getHeader(WORKLOW, String.class) != null) {
+                            if (e.getIn().getHeader(WORKLOW, String.class).equals("VALIDATION") && e.getIn().getHeader(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL, String.class).equals(VALIDATION_LEVEL_2.name())
+                                    || e.getIn().getHeader(WORKLOW, String.class).equals("IMPORT") && e.getIn().getHeader(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL, String.class).equals(VALIDATION_LEVEL_1.name()) && e.getIn().getHeader(GENERATE_MAP_MATCHING, Boolean.class).equals(false))
+                            {
+                                JobEvent.TimetableAction timetableAction = e.getIn().getHeader(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL, String.class).equals(VALIDATION_LEVEL_2.name()) ? VALIDATION_LEVEL_2 : VALIDATION_LEVEL_1;
+                                createMail.createMail(e, null, timetableAction, true);
+                            }
+                        }
+                    })
                     .to("direct:updateStatus")
                     .choice()
                         .when(PredicateBuilder.and(
@@ -191,11 +190,23 @@ public class ChouetteValidationRouteBuilder extends AbstractChouetteRouteBuilder
                     .endChoice()
                 .when(simple("${header.action_report_result} == 'OK' and ${header.validation_report_result} == 'NOK'"))
                     .log(LoggingLevel.INFO, correlation() + "Validation failed (processed ok, but timetable data is faulty)")
-                    .process(this::setStateAndSendMailFailed)
+                    .process(e -> {
+                        JobEvent.providerJobBuilder(e).timetableAction(e.getIn().getHeader(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL, JobEvent.TimetableAction.class)).state(State.FAILED).build();
+                        if (e.getIn().getHeader(WORKLOW, String.class) != null) {
+                            JobEvent.TimetableAction timetableAction = e.getIn().getHeader(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL, String.class).equals(VALIDATION_LEVEL_2.name()) ? VALIDATION_LEVEL_2 : VALIDATION_LEVEL_1;
+                            createMail.createMail(e, null, timetableAction, false);
+                        }
+                    })
                     .to("direct:updateStatus")
                 .otherwise()
                     .log(LoggingLevel.ERROR, correlation() + "Validation went wrong")
-                    .process(this::setStateAndSendMailFailed)
+                    .process(e -> {
+                        JobEvent.providerJobBuilder(e).timetableAction(e.getIn().getHeader(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL, JobEvent.TimetableAction.class)).state(State.FAILED).build();
+                        if (e.getIn().getHeader(WORKLOW, String.class) != null) {
+                            JobEvent.TimetableAction timetableAction = e.getIn().getHeader(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL, String.class).equals(VALIDATION_LEVEL_2.name()) ?  VALIDATION_LEVEL_2 : VALIDATION_LEVEL_1;
+                            createMail.createMail(e, null, timetableAction, false);
+                        }
+                    })
                     .to("direct:updateStatus")
                 .end()
                 .routeId("chouette-process-validation-status");
@@ -223,76 +234,6 @@ public class ChouetteValidationRouteBuilder extends AbstractChouetteRouteBuilder
                             .to("activemq:queue:ChouetteTransferExportQueue")
                         .end()
                 .routeId("chouette-process-job-list-after-validation");
-    }
-
-    private void sendMailValidationOk(Exchange e) {
-        String recipientString = e.getIn().getHeader(RECIPIENTS, String.class);
-        String[] recipients = recipientString != null ? recipientString.trim().split(",") : null;
-        String referential = e.getIn().getHeader(CHOUETTE_REFERENTIAL, String.class);
-        String fileName = e.getIn().getHeader(FILE_NAME, String.class);
-        String message = null;
-        if (e.getIn().getHeader(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL, String.class).equals(VALIDATION_LEVEL_2.name())){
-            if(e.getIn().getHeader(GENERATE_MAP_MATCHING, Boolean.class).equals(true)){
-                message = "L'import, la validation niveau 1, la génération des tracés, le transfert et la validation niveau 2 du fichier : " + fileName + " se sont correctement effectués.";
-            } else{
-                message = "L'import, la validation niveau 1, le transfert et la validation niveau 2 du fichier : " + fileName + " se sont correctement effectués.";
-            }
-        }
-
-        if (e.getIn().getHeader(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL, String.class).equals(VALIDATION_LEVEL_1.name())){
-            if(e.getIn().getHeader(GENERATE_MAP_MATCHING, Boolean.class).equals(true)){
-                message = "L'import, la validation niveau 1 et la génération des tracés du fichier : " + fileName + " se sont correctement effectués.";
-            } else{
-                message = "L'import et la validation niveau 1 du fichier : " + fileName + " se sont correctement effectués.";
-            }
-        }
-
-        if(recipients != null){
-            for (String recipient : recipients) {
-                if (StringUtils.isNotEmpty(recipient)) {
-                    sendMail.sendEmail(client.toUpperCase() + " - " + server.toUpperCase() + " Referentiel Mobi-iti - Nouvelle integration de donnees du reseau de " + referential,
-                            recipient,
-                            "Bonjour," + "\n" + message,
-                            null);
-                }
-            }
-        }
-    }
-
-    private void sendMailValidationFailed(Exchange e) {
-        String recipientString = e.getIn().getHeader(RECIPIENTS, String.class);
-        String[] recipients = recipientString != null ? recipientString.trim().split(",") : null;
-        if (recipients != null) {
-            String referential = e.getIn().getHeader(CHOUETTE_REFERENTIAL, String.class);
-            String fileName = e.getIn().getHeader(FILE_NAME, String.class);
-            String levelValidation = e.getIn().getHeader(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL, String.class).equals(VALIDATION_LEVEL_2.name()) ?  "2" : "1";
-            for (String recipient : recipients) {
-                if (StringUtils.isNotEmpty(recipient)) {
-                    sendMail.sendEmail(client.toUpperCase() + " - " + server.toUpperCase() + " Referentiel Mobi-iti - Nouvelle integration de donnees du reseau de " + referential,
-                            recipient,
-                            "Bonjour," + "\nLa validation de niveau " + levelValidation + " du fichier : " + fileName + " a échoué.",
-                            null);
-                }
-            }
-        }
-    }
-
-    private void setStateAndSendMailOk(Exchange e) {
-        JobEvent.providerJobBuilder(e).timetableAction(e.getIn().getHeader(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL, TimetableAction.class)).state(State.OK).build();
-        if (e.getIn().getHeader(WORKLOW, String.class) != null) {
-            if (e.getIn().getHeader(WORKLOW, String.class).equals("VALIDATION") && e.getIn().getHeader(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL, String.class).equals(VALIDATION_LEVEL_2.name())
-                || e.getIn().getHeader(WORKLOW, String.class).equals("IMPORT") && e.getIn().getHeader(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL, String.class).equals(VALIDATION_LEVEL_1.name()) && e.getIn().getHeader(GENERATE_MAP_MATCHING, Boolean.class).equals(false))
-            {
-                sendMailValidationOk(e);
-            }
-        }
-    }
-
-    private void setStateAndSendMailFailed(Exchange e) {
-        JobEvent.providerJobBuilder(e).timetableAction(e.getIn().getHeader(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL, TimetableAction.class)).state(State.FAILED).build();
-        if (e.getIn().getHeader(WORKLOW, String.class) != null) {
-            sendMailValidationFailed(e);
-        }
     }
 
 }

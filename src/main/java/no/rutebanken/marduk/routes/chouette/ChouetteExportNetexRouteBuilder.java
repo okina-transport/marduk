@@ -17,7 +17,6 @@
 package no.rutebanken.marduk.routes.chouette;
 
 import no.rutebanken.marduk.Constants;
-import no.rutebanken.marduk.Utils.SendMail;
 import no.rutebanken.marduk.domain.Provider;
 import no.rutebanken.marduk.routes.chouette.json.Parameters;
 import no.rutebanken.marduk.routes.status.JobEvent;
@@ -29,7 +28,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import java.io.File;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
@@ -51,12 +49,6 @@ public class ChouetteExportNetexRouteBuilder extends AbstractChouetteRouteBuilde
     @Value("${google.publish.public:false}")
     private boolean publicPublication;
 
-    @Value("${client.name}")
-    private String client;
-
-    @Value("${server.name}")
-    private String server;
-
     @Autowired
     ExportToConsumersProcessor exportToConsumersProcessor;
 
@@ -68,7 +60,7 @@ public class ChouetteExportNetexRouteBuilder extends AbstractChouetteRouteBuilde
     FileSystemService fileSystemService;
 
     @Autowired
-    SendMail sendMail;
+    CreateMail createMail;
 
     @Override
     public void configure() throws Exception {
@@ -141,7 +133,12 @@ public class ChouetteExportNetexRouteBuilder extends AbstractChouetteRouteBuilde
                                 .process(exportToConsumersProcessor)
                                 .log(LoggingLevel.INFO, "Upload to consumers and blob store completed")
                                 .process(updateExportTemplateProcessor)
-                                .process(this::setStateAndSendMailOk)
+                                .process(e -> {
+                                    JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.EXPORT_NETEX).state(JobEvent.State.OK).build();
+                                    if (e.getIn().getHeader(WORKLOW, String.class) != null) {
+                                        createMail.createMail(e, "NETEX", JobEvent.TimetableAction.EXPORT_NETEX, true);
+                                    }
+                                })
                         .endChoice()
                         .setHeader(BLOBSTORE_MAKE_BLOB_PUBLIC, constant(publicPublication))
                         .to("direct:updateStatus")
@@ -155,10 +152,20 @@ public class ChouetteExportNetexRouteBuilder extends AbstractChouetteRouteBuilde
                     .endChoice()
                     .when(simple("${header.action_report_result} == 'NOK'"))
                         .log(LoggingLevel.WARN, correlation() + "Netex export failed")
-                        .process(this::setStateAndSendMailFailed)
+                        .process(e -> {
+                            JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.EXPORT_NETEX).state(JobEvent.State.FAILED).build();
+                            if (e.getIn().getHeader(WORKLOW, String.class) != null) {
+                                createMail.createMail(e, "NETEX", JobEvent.TimetableAction.EXPORT_NETEX, false);
+                            }
+                        })
                     .otherwise()
                         .log(LoggingLevel.ERROR, correlation() + "Something went wrong on Netex export")
-                        .process(this::setStateAndSendMailFailed)
+                        .process(e -> {
+                            JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.EXPORT_NETEX).state(JobEvent.State.FAILED).build();
+                            if (e.getIn().getHeader(WORKLOW, String.class) != null) {
+                                createMail.createMail(e, "NETEX", JobEvent.TimetableAction.EXPORT_NETEX, false);
+                            }
+                        })
                     .end()
                 .to("direct:updateStatus")
                 .removeHeader(Constants.CHOUETTE_JOB_ID)
@@ -183,57 +190,5 @@ public class ChouetteExportNetexRouteBuilder extends AbstractChouetteRouteBuilde
                 .setBody(constant(null))
                 .inOnly("activemq:queue:ChouetteExportNetexQueue")
                 .routeId("chouette-netex-export-all-providers");
-    }
-
-    private void setStateAndSendMailOk(Exchange e) {
-        JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.EXPORT_NETEX).state(JobEvent.State.OK).build();
-        if (e.getIn().getHeader(WORKLOW, String.class) != null) {
-            sendMailExportOk(e);
-        }
-    }
-
-    private void setStateAndSendMailFailed(Exchange e) {
-        JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.EXPORT_NETEX).state(JobEvent.State.FAILED).build();
-        if (e.getIn().getHeader(WORKLOW, String.class) != null) {
-            sendMailExportFailed(e);
-        }
-    }
-
-    private void sendMailExportOk(Exchange e) {
-        String recipientString = e.getIn().getHeader(RECIPIENTS, String.class);
-        String[] recipients = recipientString != null ? recipientString.trim().split(",") : null;
-        String referential = e.getIn().getHeader(CHOUETTE_REFERENTIAL, String.class);
-        String fileName = e.getIn().getHeader(FILE_NAME, String.class);
-        String exportName = e.getIn().getHeader(EXPORT_NAME, String.class);
-        if (recipients != null) {
-            for (String recipient : recipients) {
-                if (org.apache.commons.lang3.StringUtils.isNotEmpty(recipient)) {
-                    sendMail.sendEmail(client.toUpperCase() + " - " + server.toUpperCase() + " Referentiel Mobi-iti - Nouvelle integration de donnees du reseau de " + referential,
-                            recipient,
-                            "Bonjour,"
-                                    + "\nL'export Netex : " + exportName + " suite à l'import du fichier : " + fileName + " s'est correctement effectué.",
-                            null);
-                }
-            }
-        }
-    }
-
-    private void sendMailExportFailed(Exchange e) {
-        String recipientString = e.getIn().getHeader(RECIPIENTS, String.class);
-        String[] recipients = recipientString != null ? recipientString.trim().split(",") : null;
-        String referential = e.getIn().getHeader(CHOUETTE_REFERENTIAL, String.class);
-        String fileName = e.getIn().getHeader(FILE_NAME, String.class);
-        String exportName = e.getIn().getHeader(EXPORT_NAME, String.class);
-        if(recipients != null) {
-            for (String recipient : recipients) {
-                if (org.apache.commons.lang3.StringUtils.isNotEmpty(recipient)) {
-                    sendMail.sendEmail(client.toUpperCase() + " - " + server.toUpperCase() + " Referentiel Mobi-iti - Nouvelle integration de donnees du reseau de " + referential,
-                            recipient,
-                            "Bonjour,"
-                                    + "\nL'export Netex : " + exportName + " suite à l'import du fichier : " + fileName + " a échoué.",
-                            null);
-                }
-            }
-        }
     }
 }
