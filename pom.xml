@@ -12,7 +12,7 @@
 
     <groupId>no.rutebanken.marduk</groupId>
     <artifactId>marduk</artifactId>
-    <version>1.0.22_MOSAIC</version>
+    <version>1.0.23-SNAPSHOT</version>
 
 
     <name>marduk</name>

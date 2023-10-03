@@ -611,6 +611,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
                 .log(LoggingLevel.INFO, correlation() + "blob store get files")
                 .removeHeaders("CamelHttp*")
+                .removeHeaders("Authorization*")
                 .to("direct:listBlobsFlat")
                 .routeId("admin-chouette-import-list")
                 .endRest()
@@ -711,6 +712,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                     }
                 })
                 .removeHeaders("CamelHttp*")
+                .removeHeaders("Authorization*")
                 .to("direct:getOfferFile")
                 .choice().when(simple("${body} == null")).setHeader(Exchange.HTTP_RESPONSE_CODE, constant(404)).endChoice()
                 .routeId("admin-offer-file-download")
