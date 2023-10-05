@@ -17,7 +17,6 @@
 package no.rutebanken.marduk.routes.chouette;
 
 import no.rutebanken.marduk.Constants;
-import no.rutebanken.marduk.Utils.SendMail;
 import no.rutebanken.marduk.routes.chouette.json.Parameters;
 import no.rutebanken.marduk.routes.status.JobEvent;
 import no.rutebanken.marduk.routes.status.JobEvent.State;
@@ -30,7 +29,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import java.io.File;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.List;
@@ -41,7 +39,6 @@ import static no.rutebanken.marduk.Constants.CHOUETTE_JOB_STATUS_URL;
 import static no.rutebanken.marduk.Constants.CHOUETTE_REFERENTIAL;
 import static no.rutebanken.marduk.Constants.EXPORTED_FILENAME;
 import static no.rutebanken.marduk.Constants.EXPORT_END_DATE;
-import static no.rutebanken.marduk.Constants.EXPORT_FILE_NAME;
 import static no.rutebanken.marduk.Constants.EXPORT_LINES_IDS;
 import static no.rutebanken.marduk.Constants.EXPORT_NAME;
 import static no.rutebanken.marduk.Constants.EXPORT_START_DATE;
@@ -49,7 +46,6 @@ import static no.rutebanken.marduk.Constants.FILE_NAME;
 import static no.rutebanken.marduk.Constants.FILE_TYPE;
 import static no.rutebanken.marduk.Constants.JSON_PART;
 import static no.rutebanken.marduk.Constants.PROVIDER_ID;
-import static no.rutebanken.marduk.Constants.RECIPIENTS;
 import static no.rutebanken.marduk.Constants.USER;
 import static no.rutebanken.marduk.Constants.WORKLOW;
 import static no.rutebanken.marduk.Utils.Utils.getLastPathElementOfUrl;
@@ -63,12 +59,6 @@ public class ChouetteExportNeptuneRouteBuilder extends AbstractChouetteRouteBuil
     @Value("${chouette.url}")
     private String chouetteUrl;
 
-    @Value("${client.name}")
-    private String client;
-
-    @Value("${server.name}")
-    private String server;
-
     @Autowired
     ExportToConsumersProcessor exportToConsumersProcessor;
 
@@ -79,7 +69,7 @@ public class ChouetteExportNeptuneRouteBuilder extends AbstractChouetteRouteBuil
     FileSystemService fileSystemService;
 
     @Autowired
-    SendMail sendMail;
+    CreateMail createMail;
 
     @Override
     public void configure() throws Exception {
@@ -161,70 +151,32 @@ public class ChouetteExportNeptuneRouteBuilder extends AbstractChouetteRouteBuil
                         .process(exportToConsumersProcessor)
                         .process(updateExportTemplateProcessor)
                 .log(LoggingLevel.INFO, "Upload to consumers and blob store completed")
-                        .process(this::setStateAndSendMailOk)
+                        .process(e -> {
+                            JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.EXPORT).state(State.OK).build();
+                            if (e.getIn().getHeader(WORKLOW, String.class) != null) {
+                                createMail.createMail(e, "NEPTUNE", JobEvent.TimetableAction.EXPORT, true);
+                            }
+                        })
                     .when(simple("${header.action_report_result} == 'NOK'"))
                         .log(LoggingLevel.WARN, correlation() + "Export failed")
-                        .process(this::setStateAndSendMailFailed)
+                        .process(e -> {
+                            JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.EXPORT).state(JobEvent.State.FAILED).build();
+                            if (e.getIn().getHeader(WORKLOW, String.class) != null) {
+                                createMail.createMail(e, "NEPTUNE", JobEvent.TimetableAction.EXPORT, false);
+                            }
+                        })
                     .otherwise()
                         .log(LoggingLevel.ERROR, correlation() + "Something went wrong on export")
-                        .process(this::setStateAndSendMailFailed)
+                        .process(e -> {
+                            JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.EXPORT).state(JobEvent.State.FAILED).build();
+                            if (e.getIn().getHeader(WORKLOW, String.class) != null) {
+                                createMail.createMail(e, "NEPTUNE", JobEvent.TimetableAction.EXPORT, false);
+                            }
+                        })
                 .end()
                 .to("direct:updateStatus")
                 .routeId("chouette-process-export-neptune-status");
 
-    }
-
-    private void setStateAndSendMailOk(Exchange e) {
-        JobEvent.providerJobBuilder(e).timetableAction(TimetableAction.EXPORT).state(State.OK).build();
-        if (e.getIn().getHeader(WORKLOW, String.class) != null) {
-            sendMailExportOk(e);
-        }
-    }
-
-    private void sendMailExportOk(Exchange e) {
-        String recipientString = e.getIn().getHeader(RECIPIENTS, String.class);
-        String[] recipients = recipientString != null ? recipientString.trim().split(",") : null;
-        String referential = e.getIn().getHeader(CHOUETTE_REFERENTIAL, String.class);
-        String fileName = e.getIn().getHeader(FILE_NAME, String.class);
-        String exportName = e.getIn().getHeader(EXPORT_NAME, String.class);
-        if(recipients != null) {
-            for (String recipient : recipients) {
-                if (org.apache.commons.lang3.StringUtils.isNotEmpty(recipient)) {
-                    sendMail.sendEmail(client.toUpperCase() + " - " + server.toUpperCase() + " Referentiel Mobi-iti - Nouvelle integration de donnees du reseau de " + referential,
-                            recipient,
-                            "Bonjour,"
-                                    + "\nL'export Neptune : " + exportName + "suite à l'import du fichier : " + fileName + " s'est correctement effectué.",
-                            null);
-                }
-            }
-        }
-    }
-
-    private void sendMailExportFailed(Exchange e) {
-        String recipientString = e.getIn().getHeader(RECIPIENTS, String.class);
-        String[] recipients = recipientString != null ? recipientString.trim().split(",") : null;
-        String referential = e.getIn().getHeader(CHOUETTE_REFERENTIAL, String.class);
-        String fileName = e.getIn().getHeader(FILE_NAME, String.class);
-        String exportName = e.getIn().getHeader(EXPORT_NAME, String.class);
-        if(recipients != null) {
-            for (String recipient : recipients) {
-                if (org.apache.commons.lang3.StringUtils.isNotEmpty(recipient)) {
-                    sendMail.sendEmail(client.toUpperCase() + " - " + server.toUpperCase() + " Referentiel Mobi-iti - Nouvelle integration de donnees du reseau de " + referential,
-                            recipient,
-                            "Bonjour,"
-                                    + "\nL'export Neptune : " + exportName + " suite à l'import du fichier : " + fileName + " a échoué.",
-                            null);
-                }
-            }
-        }
-    }
-
-
-    private void setStateAndSendMailFailed(Exchange e) {
-        JobEvent.providerJobBuilder(e).timetableAction(TimetableAction.EXPORT).state(State.FAILED).build();
-        if (e.getIn().getHeader(WORKLOW, String.class) != null) {
-            sendMailExportFailed(e);
-        }
     }
 
 }

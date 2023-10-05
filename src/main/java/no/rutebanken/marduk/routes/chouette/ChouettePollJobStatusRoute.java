@@ -80,6 +80,9 @@ public class ChouettePollJobStatusRoute extends AbstractChouetteRouteBuilder {
     @Autowired
     UpdateExportTemplateProcessor updateExportTemplateProcessor;
 
+    @Autowired
+    CreateMail createMail;
+
 
     /**
      * This routebuilder polls a job until it is terminated. It expects a few headers set on the message it receives:
@@ -338,7 +341,12 @@ public class ChouettePollJobStatusRoute extends AbstractChouetteRouteBuilder {
                         .stop()
                     .when(simple("${header.current_status} == '" + ABORTED + "'"))
                         .log(LoggingLevel.WARN, correlation() + "Job ended in state FAILED. Stopping route.")
-                        .process(e -> JobEvent.providerJobBuilder(e).timetableAction(TimetableAction.valueOf((String) e.getIn().getHeader(CHOUETTE_JOB_STATUS_JOB_TYPE))).state(State.FAILED).build())
+                        .process(e -> {
+                            JobEvent.providerJobBuilder(e).timetableAction(TimetableAction.valueOf((String) e.getIn().getHeader(CHOUETTE_JOB_STATUS_JOB_TYPE))).state(State.FAILED).build();
+                            if (e.getIn().getHeader(WORKLOW, String.class) != null) {
+                                createMail.createMail(e, null, null, false);
+                            }
+                        })
                         .to("direct:updateStatus")
                         .stop()
                     .when(simple("${header.current_status} == '" + CANCELED + "'"))

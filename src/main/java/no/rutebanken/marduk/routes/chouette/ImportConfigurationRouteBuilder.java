@@ -188,7 +188,12 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
         trustAllCertificates();
 
         URL url = new URL(configurationUrl.getUrl());
-        if (url.openStream().available() > 0) {
+
+        HttpURLConnection httpURLConnection;
+        httpURLConnection = (HttpURLConnection) url.openConnection();
+        httpURLConnection.connect();
+
+        if (httpURLConnection.getResponseCode() == HttpURLConnection.HTTP_OK) {
             if (StringUtils.isNotEmpty(configurationUrl.getUrlInfo())) {
                 URL urlInfo = new URL(configurationUrl.getUrlInfo());
                 InputStream inputStreamUrlInfo = urlInfo.openStream();
@@ -222,10 +227,12 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
                     uploadFileAndUpdateLastTimestampFromUrl(e, referential, importConfiguration, url);
                 }
             }
-        }
-        else{
+
+        }else{
             sendMailForFileNotFound(importConfiguration, referential, url.getPath().substring(url.getPath().lastIndexOf('/') + 1));
         }
+
+
     }
 
     private void uploadFileAndUpdateLastTimestampFromUrl(Exchange e, String referential, ImportConfiguration importConfiguration, URL url) throws IOException {

@@ -1,12 +1,10 @@
 package no.rutebanken.marduk.routes.chouette;
 
 import no.rutebanken.marduk.Constants;
-import no.rutebanken.marduk.Utils.SendMail;
 import no.rutebanken.marduk.routes.chouette.json.Parameters;
 import no.rutebanken.marduk.routes.status.JobEvent;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
-import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -14,10 +12,8 @@ import org.springframework.stereotype.Component;
 import java.util.UUID;
 
 import static no.rutebanken.marduk.Constants.CHOUETTE_REFERENTIAL;
-import static no.rutebanken.marduk.Constants.FILE_NAME;
 import static no.rutebanken.marduk.Constants.JSON_PART;
 import static no.rutebanken.marduk.Constants.PROVIDER_ID;
-import static no.rutebanken.marduk.Constants.RECIPIENTS;
 import static no.rutebanken.marduk.Constants.WORKLOW;
 import static no.rutebanken.marduk.Utils.Utils.getLastPathElementOfUrl;
 
@@ -27,14 +23,8 @@ public class ChouetteGenerateMapMatchingBuilder extends AbstractChouetteRouteBui
     @Value("${chouette.url}")
     private String chouetteUrl;
 
-    @Value("${client.name}")
-    private String client;
-
-    @Value("${server.name}")
-    private String server;
-
     @Autowired
-    SendMail sendMail;
+    CreateMail createMail;
 
     @Override
     public void configure() throws Exception {
@@ -84,16 +74,33 @@ public class ChouetteGenerateMapMatchingBuilder extends AbstractChouetteRouteBui
                 .setBody(constant(""))
                 .choice()
                     .when(simple("${header.action_report_result} == 'OK'"))
-                        .process(this::setStateAndSendMailOk)
+                        .process(e -> {
+                            JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.BUILD_MAP_MATCHING).state(JobEvent.State.OK).build();
+                            if (e.getIn().getHeader(WORKLOW, String.class) != null &&
+                                    !e.getIn().getHeader(WORKLOW, String.class).equals("VALIDATION") &&
+                                    !e.getIn().getHeader(WORKLOW, String.class).equals("EXPORT")) {
+                                createMail.createMail(e, null, JobEvent.TimetableAction.BUILD_MAP_MATCHING, true);
+                            }
+                        })
                         .to("direct:updateStatus")
                         .to("direct:checkScheduledJobsBeforeTriggeringTransfer")
                     .when(simple("${header.action_report_result} == 'NOK'"))
                         .log(LoggingLevel.INFO, correlation() + "Map matching failed")
-                        .process(this::setStateAndSendMailFailed)
+                        .process(e -> {
+                            JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.BUILD_MAP_MATCHING).state(JobEvent.State.FAILED).build();
+                            if (e.getIn().getHeader(WORKLOW, String.class) != null) {
+                                createMail.createMail(e, null, JobEvent.TimetableAction.BUILD_MAP_MATCHING, false);
+                            }
+                        })
                         .to("direct:updateStatus")
                     .otherwise()
                         .log(LoggingLevel.ERROR, correlation() + "Map matching went wrong")
-                        .process(this::setStateAndSendMailFailed)
+                        .process(e -> {
+                            JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.BUILD_MAP_MATCHING).state(JobEvent.State.FAILED).build();
+                            if (e.getIn().getHeader(WORKLOW, String.class) != null) {
+                                createMail.createMail(e, null, JobEvent.TimetableAction.BUILD_MAP_MATCHING, false);
+                            }
+                        })
                         .to("direct:updateStatus")
                 .end()
                 .routeId("chouette-process-map-matching-status");
@@ -109,55 +116,5 @@ public class ChouetteGenerateMapMatchingBuilder extends AbstractChouetteRouteBui
                             .to("activemq:queue:ChouetteTransferExportQueue")
                     .end()
                 .routeId("chouette-process-job-list-after-map-matching");
-    }
-
-    private void setStateAndSendMailOk(Exchange e) {
-        JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.BUILD_MAP_MATCHING).state(JobEvent.State.OK).build();
-        if (e.getIn().getHeader(WORKLOW, String.class) != null && !e.getIn().getHeader(WORKLOW, String.class).equals("VALIDATION") && !e.getIn().getHeader(WORKLOW, String.class).equals("EXPORT")) {
-            sendMailMapMatchingOk(e);
-        }
-    }
-
-    private void setStateAndSendMailFailed(Exchange e) {
-        JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.BUILD_MAP_MATCHING).state(JobEvent.State.FAILED).build();
-        if (e.getIn().getHeader(WORKLOW, String.class) != null) {
-            sendMailMapMatchingFailed(e);
-        }
-    }
-
-    private void sendMailMapMatchingOk(Exchange e) {
-        String recipientString = e.getIn().getHeader(RECIPIENTS, String.class);
-        String[] recipients = recipientString != null ? recipientString.trim().split(",") : null;
-        String referential = e.getIn().getHeader(CHOUETTE_REFERENTIAL, String.class);
-        String fileName = e.getIn().getHeader(FILE_NAME, String.class);
-        if(recipients != null) {
-            for (String recipient : recipients) {
-                if (StringUtils.isNotEmpty(recipient)) {
-                    sendMail.sendEmail(client.toUpperCase() + " - " + server.toUpperCase() + " Referentiel Mobi-iti - Nouvelle integration de donnees du reseau de " + referential,
-                            recipient,
-                            "Bonjour,"
-                                    + "\nL'import, la validation niveau 1 et la génération des tracés du fichier : " + fileName + " se sont correctement effectués.",
-                            null);
-                }
-            }
-        }
-    }
-
-    private void sendMailMapMatchingFailed(Exchange e) {
-        String recipientString = e.getIn().getHeader(RECIPIENTS, String.class);
-        String[] recipients = recipientString != null ? recipientString.trim().split(",") : null;
-        String referential = e.getIn().getHeader(CHOUETTE_REFERENTIAL, String.class);
-        String fileName = e.getIn().getHeader(FILE_NAME, String.class);
-        if (recipients != null) {
-            for (String recipient : recipients) {
-                if (StringUtils.isNotEmpty(recipient)) {
-                    sendMail.sendEmail(client.toUpperCase() + " - " + server.toUpperCase() + " Referentiel Mobi-iti - Nouvelle integration de donnees du reseau de " + referential,
-                            recipient,
-                            "Bonjour,"
-                                    + "\nLa génération des tracés du fichier : " + fileName + " a échoué.",
-                            null);
-                }
-            }
-        }
     }
 }

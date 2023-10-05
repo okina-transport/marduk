@@ -17,7 +17,6 @@
 package no.rutebanken.marduk.routes.chouette;
 
 import no.rutebanken.marduk.Constants;
-import no.rutebanken.marduk.Utils.SendMail;
 import no.rutebanken.marduk.domain.AttributionsExportModes;
 import no.rutebanken.marduk.domain.IdFormat;
 import no.rutebanken.marduk.domain.Provider;
@@ -61,12 +60,6 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
     @Value("${google.publish.public:false}")
     private boolean publicPublication;
 
-    @Value("${client.name}")
-    private String client;
-
-    @Value("${server.name}")
-    private String server;
-
     @Autowired
     ExportToConsumersProcessor exportToConsumersProcessor;
 
@@ -77,7 +70,8 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
     FileSystemService fileSystemService;
 
     @Autowired
-    SendMail sendMail;
+    CreateMail createMail;
+
 
     @Override
     public void configure() throws Exception {
@@ -195,13 +189,28 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
                         .setHeader(BLOBSTORE_MAKE_BLOB_PUBLIC, constant(publicPublication))
                         .log(LoggingLevel.INFO,"Upload to consumers and blob store completed")
                         .process(updateExportTemplateProcessor)
-                        .process(this::setStateAndSendMailOk)
+                        .process(e -> {
+                            JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.EXPORT).state(JobEvent.State.OK).build();
+                            if (e.getIn().getHeader(WORKLOW, String.class) != null) {
+                                createMail.createMail(e, "GTFS", JobEvent.TimetableAction.EXPORT, true);
+                            }
+                        })
                     .when(simple("${header.action_report_result} == 'NOK'"))
                         .log(LoggingLevel.WARN, correlation() + "Export failed")
-                        .process(this::setStateAndSendMailFailed)
+                        .process(e -> {
+                            JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.EXPORT).state(JobEvent.State.FAILED).build();
+                            if (e.getIn().getHeader(WORKLOW, String.class) != null) {
+                                createMail.createMail(e, "GTFS", JobEvent.TimetableAction.EXPORT, false);
+                            }
+                        })
                     .otherwise()
                         .log(LoggingLevel.ERROR, correlation() + "Something went wrong on export")
-                        .process(this::setStateAndSendMailFailed)
+                        .process(e -> {
+                            JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.EXPORT).state(JobEvent.State.FAILED).build();
+                            if (e.getIn().getHeader(WORKLOW, String.class) != null) {
+                                createMail.createMail(e, "GTFS", JobEvent.TimetableAction.EXPORT, false);
+                            }
+                        })
                 .end()
                 .to("direct:updateStatus")
                 .routeId("chouette-process-export-status");
@@ -257,58 +266,6 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
                 .setBody(constant(null))
                 .inOnly("activemq:queue:ChouetteExportGtfsQueue")
                 .routeId("chouette-gtfs-export-all-providers");
-    }
-
-    private void sendMailExportOk(Exchange e) {
-        String recipientString = e.getIn().getHeader(RECIPIENTS, String.class);
-        String[] recipients = recipientString != null ? recipientString.trim().split(",") : null;
-        String referential = e.getIn().getHeader(CHOUETTE_REFERENTIAL, String.class);
-        String fileName = e.getIn().getHeader(FILE_NAME, String.class);
-        String exportName = e.getIn().getHeader(EXPORT_NAME, String.class);
-        if(recipients != null) {
-            for (String recipient : recipients) {
-                if (org.apache.commons.lang3.StringUtils.isNotEmpty(recipient)) {
-                    sendMail.sendEmail(client.toUpperCase() + " - " + server.toUpperCase() + " Referentiel Mobi-iti - Nouvelle integration de donnees du reseau de " + referential,
-                            recipient,
-                            "Bonjour,"
-                                    + "\nL'export GTFS : " + exportName + " suite à l'import du fichier : " + fileName + " s'est correctement effectué.",
-                            null);
-                }
-            }
-        }
-    }
-
-    private void sendMailExportFailed(Exchange e) {
-        String recipientString = e.getIn().getHeader(RECIPIENTS, String.class);
-        String[] recipients = recipientString != null ? recipientString.trim().split(",") : null;
-        String referential = e.getIn().getHeader(CHOUETTE_REFERENTIAL, String.class);
-        String fileName = e.getIn().getHeader(FILE_NAME, String.class);
-        String exportName = e.getIn().getHeader(EXPORT_NAME, String.class);
-        if(recipients != null) {
-            for (String recipient : recipients) {
-                if (org.apache.commons.lang3.StringUtils.isNotEmpty(recipient)) {
-                    sendMail.sendEmail(client.toUpperCase() + " - " + server.toUpperCase() + " Referentiel Mobi-iti - Nouvelle integration de donnees du reseau de " + referential,
-                            recipient,
-                            "Bonjour,"
-                                    + "\nL'export GTFS : " + exportName + " suite à l'import du fichier : " + fileName + " a échoué.",
-                            null);
-                }
-            }
-        }
-    }
-
-    private void setStateAndSendMailOk(Exchange e) {
-        JobEvent.providerJobBuilder(e).timetableAction(TimetableAction.EXPORT).state(State.OK).build();
-        if (e.getIn().getHeader(WORKLOW, String.class) != null) {
-            sendMailExportOk(e);
-        }
-    }
-
-    private void setStateAndSendMailFailed(Exchange e) {
-        JobEvent.providerJobBuilder(e).timetableAction(TimetableAction.EXPORT).state(State.FAILED).build();
-        if (e.getIn().getHeader(WORKLOW, String.class) != null) {
-            sendMailExportFailed(e);
-        }
     }
 
 }
