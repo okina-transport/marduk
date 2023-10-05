@@ -129,8 +129,10 @@ public class ExportToConsumersProcessor implements Processor {
                                 break;
                             case URL:
                                 blobStoreService.uploadBlob("/" + publicUploadPath + "/" + referential + "/" + filePath, true, streamToUpload);
-                                if(consumer.isNotification() && StringUtils.isNotEmpty(consumer.getNotificationUrl())){
-                                    notificationService.sendNotification(consumer.getNotificationUrl());
+                                if(consumer.isNotification() && consumer.getNotificationUrls() != null && !consumer.getNotificationUrls().isEmpty()){
+                                    for (String notificationUrl : consumer.getNotificationUrls()){
+                                        notificationService.sendNotification(notificationUrl);
+                                    }
                                 }
                                 break;
                         }
