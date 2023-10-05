@@ -2,6 +2,9 @@ package no.rutebanken.marduk.domain;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class Consumer {
 
@@ -16,7 +19,7 @@ public class Consumer {
     private Integer port;
     private String destinationPath;
     private boolean notification = false;
-    private String notificationUrl;
+    private List<String> notificationUrls = new ArrayList<>();
 
     public Long getId() {
         return id;
@@ -102,7 +105,5 @@ public class Consumer {
         this.notification = notification;
     }
 
-    public String getNotificationUrl() { return notificationUrl; }
-
-    public void setNotificationUrl(String notificationUrl) { this.notificationUrl = notificationUrl; }
+    public List<String> getNotificationUrls() { return notificationUrls; }
 }
