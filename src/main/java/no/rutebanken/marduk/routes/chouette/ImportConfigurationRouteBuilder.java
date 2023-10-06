@@ -213,7 +213,7 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
                 HttpURLConnection httpCon = (HttpURLConnection) url.openConnection();
                 long date = httpCon.getLastModified();
                 if (date != 0) {
-                    LocalDateTime dateLastModified = LocalDateTime.ofInstant(Instant.ofEpochSecond(date), TimeZone.getDefault().toZoneId());
+                    LocalDateTime dateLastModified = LocalDateTime.ofInstant(Instant.ofEpochMilli(date), TimeZone.getDefault().toZoneId());
                     if (configurationUrl.getLastTimestamp() == null || dateLastModified.isAfter(configurationUrl.getLastTimestamp())) {
                         configurationUrl.setLastTimestamp(dateLastModified);
                         uploadFileAndUpdateLastTimestampFromUrl(e, referential, importConfiguration, url);
