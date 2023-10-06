@@ -37,7 +37,15 @@ public class UpdateExportTemplateProcessor implements Processor {
         String referential = exchange.getIn().getHeaders().get(NETEX_EXPORT_GLOBAL) != null && (Boolean) exchange.getIn().getHeaders().get(NETEX_EXPORT_GLOBAL) ? "mobiiti_technique" : (String) exchange.getIn().getHeaders().get(CHOUETTE_REFERENTIAL);
         if (StringUtils.isNotBlank(jsonExport)) {
             ExportTemplate export = exportJsonMapper.fromJson(jsonExport);
-            Long jobId = (Long) exchange.getIn().getHeaders().get(CHOUETTE_JOB_ID);
+
+            Object jobIdObj = exchange.getIn().getHeaders().get(CHOUETTE_JOB_ID);
+            Long jobId = 0L;
+            if (jobIdObj instanceof Long){
+                jobId = (Long) jobIdObj;
+            }else if (jobIdObj instanceof String){
+                jobId = Long.getLong((String) jobIdObj);
+            }
+
             export.setExportJobId(jobId);
             exportTemplateDAO.saveJobId(referential, export);
         }
