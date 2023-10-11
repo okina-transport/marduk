@@ -109,7 +109,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
 
         RestPropertyDefinition corsAllowedHeaders = new RestPropertyDefinition();
         corsAllowedHeaders.setKey("Access-Control-Allow-Headers");
-        corsAllowedHeaders.setValue("Origin, Accept, X-Requested-With, Content-Type, Access-Control-Request-Method, Access-Control-Request-Headers, Authorization, x-okina-referential, RutebankenUser, RutebankenDescription, EXPORT_LINES_IDS, EXPORT_START_DATE, EXPORT_END_DATE, ImportType, routeMerge, splitCharacter, commercialPointIdPrefixToRemove, quayIdPrefixToRemove, areaCentroidPrefixToRemove, linePrefixToRemove, stopAreaPrefixToRemove, ignoreCommercialPoints, analysisJobId, cleanMode, keepBoardingAlightingPossibility, keepStopGeolocalisation, keepStopNames, removeParentStations, importShapesFile, updateStopAccessibility, railUICprocessing, generateMapMatching, distanceGeolocation");
+        corsAllowedHeaders.setValue("Origin, Accept, X-Requested-With, Content-Type, Access-Control-Request-Method, Access-Control-Request-Headers, Authorization, x-okina-referential, RutebankenUser, RutebankenDescription, EXPORT_LINES_IDS, EXPORT_START_DATE, EXPORT_END_DATE, ImportType, routeMerge, splitCharacter, commercialPointIdPrefixToRemove, quayIdPrefixToRemove, areaCentroidPrefixToRemove, linePrefixToRemove, stopAreaPrefixToRemove, ignoreCommercialPoints, analysisJobId, cleanMode, keepBoardingAlightingPossibility, keepStopGeolocalisation, keepStopNames, removeParentStations, importShapesFile, updateStopAccessibility, railUICprocessing, generateMapMatching, distanceGeolocation, importConfigurationId");
 
         RestPropertyDefinition corsAllowedOrigin = new RestPropertyDefinition();
         corsAllowedOrigin.setKey("Access-Control-Allow-Origin");
@@ -577,6 +577,24 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .routeId("admin-chouette-import")
                 .endRest()
 
+                .post("/import/all")
+                .description("Triggers all imports process in Chouette.")
+                .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the nabu service").dataType("integer").endParam()
+                .consumes(PLAIN)
+                .produces(PLAIN)
+                .responseMessage().code(200).message("Command for all imports accepted").endResponseMessage()
+                .route()
+                .setHeader(PROVIDER_ID, header("providerId"))
+                .process(e -> e.getIn().setHeader(IMPORT_CONFIGURATION_ID, getHeaders(e, IMPORT_CONFIGURATION_ID)))
+                .to("direct:authorizeRequest")
+                .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
+                .log(LoggingLevel.INFO, correlation() + "Chouette start all import process")
+                .removeHeaders("CamelHttp*")
+                .process(e -> e.getIn().setHeader(USER, getHeaders(e, USER)))
+                .inOnly("activemq:queue:ImportConfigurationQueue")
+                .routeId("admin-chouette-import-all")
+                .endRest()
+
                 .get("/files")
                 .description("List files available for reimport into Chouette")
                 .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the baba service").dataType("integer").endParam()
@@ -853,7 +871,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .log(LoggingLevel.INFO, correlation() + "Chouette start export Netex")
                 .removeHeaders("CamelHttp*")
                 .removeHeader("Authorization")
-                .process(e -> e.getIn().setHeader(USER, getUserNameFromHeaders(e)))
+                .process(e -> e.getIn().setHeader(USER, getHeaders(e, USER)))
                 .inOnly("activemq:queue:ChouetteExportNetexQueue")
                 .routeId("admin-chouette-export-netex")
                 .endRest()
@@ -874,7 +892,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .log(LoggingLevel.INFO, correlation() + "Chouette start export Neptune")
                 .removeHeaders("CamelHttp*")
                 .removeHeader("Authorization")
-                .process(e -> e.getIn().setHeader(USER, getUserNameFromHeaders(e)))
+                .process(e -> e.getIn().setHeader(USER, getHeaders(e, USER)))
                 .inOnly("activemq:queue:ChouetteExportNeptuneQueue")
                 .routeId("admin-chouette-export-neptune")
                 .endRest()
@@ -894,7 +912,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .process(e -> authorizationService.verifyAtLeastOne(new AuthorizationClaim(ROLE_EXPORT_SIMULATION)))
                 .removeHeaders("CamelHttp*")
                 .process(e -> {
-                    e.getIn().setHeader(USER, getUserNameFromHeaders(e));
+                    e.getIn().setHeader(USER, getHeaders(e, USER));
                     e.getIn().setHeader(EXPORT_SIMULATION_NAME, getSimulationExportPrefix(e));
                 })
                 .inOnly("activemq:queue:ChouetteExportNetexQueue")
@@ -971,7 +989,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
                 .log(LoggingLevel.INFO, correlation() + "Chouette start all export process")
                 .removeHeaders("CamelHttp*")
-                .process(e -> e.getIn().setHeader(USER, getUserNameFromHeaders(e)))
+                .process(e -> e.getIn().setHeader(USER, getHeaders(e, USER)))
                 .inOnly("activemq:queue:predefinedExports")
                 .routeId("admin-chouette-export-all")
                 .endRest()
@@ -989,7 +1007,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
                 .log(LoggingLevel.INFO, correlation() + "Chouette start export Concerto")
                 .removeHeaders("CamelHttp*")
-                .process(e -> e.getIn().setHeader(USER, getUserNameFromHeaders(e)))
+                .process(e -> e.getIn().setHeader(USER, getHeaders(e, USER)))
                 .inOnly("activemq:queue:ChouetteExportConcertoQueue")
                 .routeId("admin-chouette-export-concerto")
                 .endRest()
@@ -1006,7 +1024,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
                 .log(LoggingLevel.INFO, correlation() + "Tiamat start export Stops")
                 .removeHeaders("CamelHttp*")
-                .process(e -> e.getIn().setHeader(USER, getUserNameFromHeaders(e)))
+                .process(e -> e.getIn().setHeader(USER, getHeaders(e, USER)))
                 .inOnly("activemq:queue:TiamatStopPlacesExport")
                 .routeId("admin-tiamat-export-stops")
                 .endRest()
@@ -1023,7 +1041,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
                 .log(LoggingLevel.INFO, correlation() + "Tiamat start export Parkings")
                 .removeHeaders("CamelHttp*")
-                .process(e -> e.getIn().setHeader(USER, getUserNameFromHeaders(e)))
+                .process(e -> e.getIn().setHeader(USER, getHeaders(e, USER)))
                 .inOnly("activemq:queue:TiamatParkingsExport")
                 .routeId("admin-tiamat-export-parkings")
                 .endRest()
@@ -1043,7 +1061,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
                 .log(LoggingLevel.INFO, correlation() + "Tiamat start export POI")
                 .removeHeaders("CamelHttp*")
-                .process(e -> e.getIn().setHeader(USER, getUserNameFromHeaders(e)))
+                .process(e -> e.getIn().setHeader(USER, getHeaders(e, USER)))
                 .removeHeader("Authorization")
                 .inOnly("activemq:queue:TiamatPointOfInterestExport")
                 .routeId("admin-tiamat-export-poi")
@@ -1062,7 +1080,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .log(LoggingLevel.INFO, correlation() + "Chouette start validation")
                 .removeHeaders("CamelHttp*")
                 .process(e -> {
-                    e.getIn().setHeader(USER, getUserNameFromHeaders(e));
+                   e.getIn().setHeader(USER, getHeaders(e, USER));
                         })
                 .choice()
                     .when(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)).chouetteInfo.migrateDataToProvider == null)
@@ -1221,7 +1239,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
         from("direct:launchGlobalNetexExport")
                 .setHeader(Exchange.FILE_PARENT, simple(mergedNetexTmpDirectory))
                 .inOnly("direct:cleanUpLocalDirectory")
-                .process(e -> e.getIn().setHeader(USER, getUserNameFromHeaders(e)))
+                .process(e -> e.getIn().setHeader(USER, getHeaders(e, USER)))
                 .inOnly("direct:resetExportLists")
                 .inOnly("direct:chouetteNetexExportForAllProviders")
                 .inOnly("direct:exportMergedNetex")
@@ -1235,16 +1253,17 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
         }
     }
 
-    private String getUserNameFromHeaders(Exchange e) {
+    private String getHeaders(Exchange e, String headerToCollect) {
         Map body = (Map) e.getIn().getBody(Map.class);
         Map headers;
         headers = body == null ? e.getIn().getHeaders() : (Map) body.get("headers");
 
         if (headers != null) {
-            return (String) headers.get(USER);
+            return (String) headers.get(headerToCollect);
         }
         return null;
     }
+
 
     private boolean getGenerateMapMatchingHeaders(Exchange e) {
         Map body = (Map) e.getIn().getBody(Map.class);
