@@ -77,7 +77,7 @@ public class NetexImportParameters extends ChouetteJobParameters {
         netexImport.generateMissingRouteSectionsForModes = chouetteInfo.generateMissingServiceLinksForModes;
         netexImport.importMode = rawImportParameters.getImportMode();
         netexImport.keepBoardingAlighting = rawImportParameters.isKeepBoardingAlighting();
-        netexImport.keepStopGeolocalisation = rawImportParameters.isKeepBoardingAlighting();
+        netexImport.keepStopGeolocalisation = rawImportParameters.isKeepStopGeolocalisation();
         netexImport.keepStopNames = rawImportParameters.isKeepStopNames();
         netexImport.generateMapMatching = rawImportParameters.isGenerateMapMatching();
         if (chouetteInfo.allowCreateMissingStopPlace) {
