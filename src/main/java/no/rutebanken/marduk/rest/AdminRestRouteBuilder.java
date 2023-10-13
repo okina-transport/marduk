@@ -109,7 +109,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
 
         RestPropertyDefinition corsAllowedHeaders = new RestPropertyDefinition();
         corsAllowedHeaders.setKey("Access-Control-Allow-Headers");
-        corsAllowedHeaders.setValue("Origin, Accept, X-Requested-With, Content-Type, Access-Control-Request-Method, Access-Control-Request-Headers, Authorization, x-okina-referential, RutebankenUser, RutebankenDescription, EXPORT_LINES_IDS, EXPORT_START_DATE, EXPORT_END_DATE, ImportType, routeMerge, splitCharacter, commercialPointIdPrefixToRemove, quayIdPrefixToRemove, areaCentroidPrefixToRemove, linePrefixToRemove, stopAreaPrefixToRemove, ignoreCommercialPoints, analysisJobId, cleanMode, keepBoardingAlightingPossibility, keepStopGeolocalisation, keepStopNames, removeParentStations, importShapesFile, updateStopAccessibility, railUICprocessing, generateMapMatching, distanceGeolocation, importConfigurationId");
+        corsAllowedHeaders.setValue("Origin, Accept, X-Requested-With, Content-Type, Access-Control-Request-Method, Access-Control-Request-Headers, Authorization, x-okina-referential, RutebankenUser, RutebankenDescription, EXPORT_LINES_IDS, EXPORT_START_DATE, EXPORT_END_DATE, ImportType, routeMerge, splitCharacter, commercialPointIdPrefixToRemove, quayIdPrefixToRemove, areaCentroidPrefixToRemove, linePrefixToRemove, stopAreaPrefixToRemove, ignoreCommercialPoints, analysisJobId, cleanMode, keepBoardingAlightingPossibility, keepStopGeolocalisation, keepStopNames, removeParentStations, importShapesFile, updateStopAccessibility, railUICprocessing, generateMapMatching, distanceGeolocation");
 
         RestPropertyDefinition corsAllowedOrigin = new RestPropertyDefinition();
         corsAllowedOrigin.setKey("Access-Control-Allow-Origin");
@@ -577,18 +577,18 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .routeId("admin-chouette-import")
                 .endRest()
 
-                .post("/import/all")
-                .description("Triggers all imports process in Chouette.")
+                .post("/import/{importConfigurationId}")
+                .description("Triggers a predefined import.")
                 .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the nabu service").dataType("integer").endParam()
                 .consumes(PLAIN)
                 .produces(PLAIN)
-                .responseMessage().code(200).message("Command for all imports accepted").endResponseMessage()
+                .responseMessage().code(200).message("Command for predefined import accepted").endResponseMessage()
                 .route()
                 .setHeader(PROVIDER_ID, header("providerId"))
-                .process(e -> e.getIn().setHeader(IMPORT_CONFIGURATION_ID, getHeaders(e, IMPORT_CONFIGURATION_ID)))
+                .setHeader(IMPORT_CONFIGURATION_ID, header("importConfigurationId"))
                 .to("direct:authorizeRequest")
                 .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
-                .log(LoggingLevel.INFO, correlation() + "Chouette start all import process")
+                .log(LoggingLevel.INFO, correlation() + "Chouette start import predefined")
                 .removeHeaders("CamelHttp*")
                 .process(e -> e.getIn().setHeader(USER, getHeaders(e, USER)))
                 .inOnly("activemq:queue:ImportConfigurationQueue")
