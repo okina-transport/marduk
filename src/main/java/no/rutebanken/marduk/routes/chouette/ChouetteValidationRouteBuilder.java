@@ -181,6 +181,9 @@ public class ChouetteValidationRouteBuilder extends AbstractChouetteRouteBuilder
                                 if(exports.size() > 0){
                                     e.getIn().setHeader(MULTIPLE_EXPORT, true);
                                     e.getIn().setBody(exports);
+                                } else {
+                                    log.info("Workflow configure to export but none is configure for provider with id ${header." + PROVIDER_ID + "}");
+                                    createMail.createMail(e, "", JobEvent.TimetableAction.EXPORT, false);
                                 }
                             })
                             .choice()

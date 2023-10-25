@@ -114,6 +114,13 @@ public class CreateMail {
                         null);
             }
         }
+        if(StringUtils.equals(format, "")){
+            sendMail.sendEmail(client.toUpperCase() + " - " + server.toUpperCase() + " Referentiel Mobi-iti - Nouvelle integration de donnees du reseau de " + referential,
+                    recipient,
+                    "Bonjour,"
+                            + "\nLe workflow de l'import automatique concernant le fichier : " + fileName + " doit être défini jusqu'à l'export mais il semblerait qu'aucun export automatique ne soit configuré. ",
+                    null);
+        }
     }
 
     private void sendMailOk(Exchange e, String format, JobEvent.TimetableAction timetableAction, String referential, String recipient, String exportName, String fileName) {

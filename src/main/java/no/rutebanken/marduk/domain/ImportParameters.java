@@ -28,6 +28,8 @@ public class ImportParameters {
 
     private Long distanceGeolocation;
 
+    private String description;
+
     public Long getId() {
         return id;
     }
@@ -199,4 +201,8 @@ public class ImportParameters {
     public Long getDistanceGeolocation(){return distanceGeolocation;}
 
     public void setDistanceGeolocation(Long distanceGeolocation){this.distanceGeolocation = distanceGeolocation;}
+
+    public  String getDescription(){ return description;}
+
+    public void setDescription(String description){this.description = description;}
 }
