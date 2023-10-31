@@ -32,6 +32,8 @@ public class ExportTemplate implements Serializable {
 
     private Boolean commercialPointExport;
 
+    private Boolean googleMapsCompatibility;
+
     private Boolean exportEnabled;
     private AttributionsExportModes attributionsExportModes;
 
@@ -158,6 +160,14 @@ public class ExportTemplate implements Serializable {
 
     public void setCommercialPointExport(Boolean commercialPointExport) {
         this.commercialPointExport = commercialPointExport;
+    }
+
+    public Boolean getGoogleMapsCompatibility() {
+        return googleMapsCompatibility;
+    }
+
+    public void setGoogleMapsCompatibility(Boolean googleMapsCompatibility) {
+        this.googleMapsCompatibility = googleMapsCompatibility;
     }
 
     public Boolean getExportEnabled() {

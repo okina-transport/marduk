@@ -89,13 +89,16 @@ public class GtfsExportParameters {
         @JsonProperty("commercial_point_export")
         private Boolean commercialPointExport;
 
+        @JsonProperty("google_maps_compatibility")
+        private Boolean googleMapsCompatibility;
+
         @JsonProperty("mapping_lines_ids")
         public boolean mappingLinesIds = false;
 
         @JsonProperty("attributions_export_mode")
         public AttributionsExportModes attributionsExportModes = AttributionsExportModes.NONE;
 
-        public GtfsExport(String name, String objectIdPrefix, String referentialName, String organisationName, String userName, boolean keepOriginalId, Date startDate, Date endDate, String exportedFilename, IdParameters idParams, boolean mappingLinesIds, Boolean commercialPointExport, AttributionsExportModes attributionsExportModes) {
+        public GtfsExport(String name, String objectIdPrefix, String referentialName, String organisationName, String userName, boolean keepOriginalId, Date startDate, Date endDate, String exportedFilename, IdParameters idParams, boolean mappingLinesIds, Boolean commercialPointExport, AttributionsExportModes attributionsExportModes, Boolean googleMapsCompatibility) {
             this.name = name;
             this.objectIdPrefix = objectIdPrefix;
             this.referentialName = referentialName;
@@ -111,12 +114,13 @@ public class GtfsExportParameters {
             this.lineIdPrefix = idParams.getLineIdPrefix();
             this.commercialPointIdPrefix = idParams.getCommercialPointIdPrefix();
             this.commercialPointExport = commercialPointExport;
+            this.googleMapsCompatibility = googleMapsCompatibility;
             this.mappingLinesIds = mappingLinesIds;
             this.attributionsExportModes = attributionsExportModes;
         }
 
         public GtfsExport(String name, String objectIdPrefix, String referentialName, String organisationName, String userName, boolean keepOriginalId, String exportedFilename) {
-            this(name, objectIdPrefix, referentialName, organisationName, userName, keepOriginalId, null, null, exportedFilename, new IdParameters(), false, false, AttributionsExportModes.NONE);
+            this(name, objectIdPrefix, referentialName, organisationName, userName, keepOriginalId, null, null, exportedFilename, new IdParameters(), false, false, AttributionsExportModes.NONE, false);
         }
 
     }

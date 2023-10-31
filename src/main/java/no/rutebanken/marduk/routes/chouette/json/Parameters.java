@@ -112,12 +112,12 @@ public class Parameters {
         }
     }
 
-    public static String getGtfsExportParameters(Provider provider, String exportName, String user, boolean keepOriginalId, List<Long> linesIds, Date startDate, Date endDate, String exportedFilename, IdParameters idParams, boolean mappingLinesIds, Boolean commercialPointExport, AttributionsExportModes attributionsExportModes) {
+    public static String getGtfsExportParameters(Provider provider, String exportName, String user, boolean keepOriginalId, List<Long> linesIds, Date startDate, Date endDate, String exportedFilename, IdParameters idParams, boolean mappingLinesIds, Boolean commercialPointExport, AttributionsExportModes attributionsExportModes, Boolean googleMapsCompatibility) {
         try {
             ChouetteInfo chouetteInfo = provider.chouetteInfo;
 
             GtfsExportParameters.GtfsExport gtfsExport = new GtfsExportParameters.GtfsExport(exportName == null ? "offre" : exportName, chouetteInfo.xmlns,
-                    chouetteInfo.referential, chouetteInfo.organisation, user, keepOriginalId, startDate, endDate, exportedFilename, idParams, mappingLinesIds, commercialPointExport, attributionsExportModes);
+                    chouetteInfo.referential, chouetteInfo.organisation, user, keepOriginalId, startDate, endDate, exportedFilename, idParams, mappingLinesIds, commercialPointExport, attributionsExportModes, googleMapsCompatibility);
             gtfsExport.ids = linesIds;
             if (linesIds != null && !linesIds.isEmpty()) {
                 gtfsExport.referencesType = "line";
@@ -134,8 +134,8 @@ public class Parameters {
         }
     }
 
-    public static String getGtfsExportParameters(Provider provider, String user, boolean keepOriginalId, String exportedFilename, Boolean commercialPointExport, AttributionsExportModes attributionsExportModes) {
-        return getGtfsExportParameters(provider, null, user, keepOriginalId, null, null, null, exportedFilename, new IdParameters(), false, commercialPointExport, attributionsExportModes);
+    public static String getGtfsExportParameters(Provider provider, String user, boolean keepOriginalId, String exportedFilename, Boolean commercialPointExport, AttributionsExportModes attributionsExportModes, Boolean googleMapsCompatibility) {
+        return getGtfsExportParameters(provider, null, user, keepOriginalId, null, null, null, exportedFilename, new IdParameters(), false, commercialPointExport, attributionsExportModes, googleMapsCompatibility);
     }
 
 
