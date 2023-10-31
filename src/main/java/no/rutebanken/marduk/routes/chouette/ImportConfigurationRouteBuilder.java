@@ -103,27 +103,37 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
                     String referential = e.getIn().getHeader(CHOUETTE_REFERENTIAL, String.class);
                     String importConfigurationId = e.getIn().getHeader(IMPORT_CONFIGURATION_ID, String.class);
                     ImportConfiguration importConfiguration = importConfigurationDAO.getImportConfiguration(referential, importConfigurationId);
-
-                    // FTP
-                    for (ConfigurationFtp configurationFtp : importConfiguration.getConfigurationFtpList()) {
-                        if ("FTP".equals(configurationFtp.getType())) {
-                            FTPClient client = new FTPClient();
-                            getFileFromFTP(e, referential, importConfiguration, configurationFtp, client);
-                        }
-
-                        if ("SFTP".equals(configurationFtp.getType())) {
-                            getFileFromSFTP(e, referential, importConfiguration, configurationFtp);
-                        }
-                    }
-
-                    // URL
-                    for (ConfigurationUrl configurationUrl : importConfiguration.getConfigurationUrlList()) {
-                        getFileFromUrl(e, referential, importConfiguration, configurationUrl);
-                    }
+                    e.getIn().setHeader(IMPORT_CONFIGURATION, importConfiguration);
+                    e.getIn().setHeader(IS_ACTIVE, importConfiguration.isActivated());
                 })
                 .choice()
-                .when(header(WORKLOW).isNotNull())
-                    .to("direct:importLaunch")
+                    .when(header(IS_ACTIVE).isEqualTo(true))
+                        .process(e -> {
+                            ImportConfiguration importConfiguration = e.getIn().getHeader(IMPORT_CONFIGURATION, ImportConfiguration.class);
+                            String referential = e.getIn().getHeader(CHOUETTE_REFERENTIAL, String.class);
+                            // FTP
+                            for (ConfigurationFtp configurationFtp : importConfiguration.getConfigurationFtpList()) {
+                                if ("FTP".equals(configurationFtp.getType())) {
+                                    FTPClient client = new FTPClient();
+                                    getFileFromFTP(e, referential, importConfiguration, configurationFtp, client);
+                                }
+
+                                if ("SFTP".equals(configurationFtp.getType())) {
+                                    getFileFromSFTP(e, referential, importConfiguration, configurationFtp);
+                                }
+                            }
+
+                            // URL
+                            for (ConfigurationUrl configurationUrl : importConfiguration.getConfigurationUrlList()) {
+                                getFileFromUrl(e, referential, importConfiguration, configurationUrl);
+                            }
+                        })
+                        .choice()
+                            .when(header(WORKLOW).isNotNull())
+                                .to("direct:importLaunch")
+                        .endChoice()
+                    .otherwise()
+                        .log("L'import avec l'identifiant ${header." + IMPORT_CONFIGURATION_ID + "} n'est pas actif.")
                 .endChoice()
                 .routeId("import-configuration-job");
 
