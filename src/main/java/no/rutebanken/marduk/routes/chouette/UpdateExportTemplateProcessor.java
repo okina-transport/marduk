@@ -43,7 +43,7 @@ public class UpdateExportTemplateProcessor implements Processor {
             if (jobIdObj instanceof Long){
                 jobId = (Long) jobIdObj;
             }else if (jobIdObj instanceof String){
-                jobId = Long.getLong((String) jobIdObj);
+                jobId = Long.parseLong((String) jobIdObj);
             }
 
             export.setExportJobId(jobId);
