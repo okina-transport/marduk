@@ -163,6 +163,7 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
             e.getIn().setHeader(SPLIT_CHARACTER, importParameters.getSplitCharacter());
             e.getIn().setHeader(ROUTE_MERGE, importParameters.getRouteMerge());
             e.getIn().setHeader(GENERATE_MAP_MATCHING, importParameters.getGenerateMapMatching());
+            e.getIn().setHeader(ROUTES_REORGANIZATION, importParameters.getRoutesReorganization());
             e.getIn().setHeader(CLEAN_MODE, importParameters.getImportMode());
             e.getIn().setHeader(KEEP_BOARDING_ALIGHTING_POSSIBILITY, importParameters.getKeepBoardingAlighting());
             e.getIn().setHeader(KEEP_STOP_GEOLOCALISATION, importParameters.getKeepStopGeolocalisation());

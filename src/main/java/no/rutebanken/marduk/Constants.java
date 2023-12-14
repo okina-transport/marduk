@@ -159,6 +159,8 @@ public class Constants {
     public static final String MULTIPLE_EXPORT = "multipleExport";
     public static final String GENERATE_MAP_MATCHING = "generateMapMatching";
 
+    public static final String ROUTES_REORGANIZATION = "routesReorganization";
+
     public static final String EXPORT_FROM_TIAMAT = "exportFromTiamat";
     public static final String NETEX_EXPORT_GLOBAL_OK = "netexExportGlobalOk";
     public static final String GTFS_EXPORT_GLOBAL_OK = "gtfsExportGlobalOk";

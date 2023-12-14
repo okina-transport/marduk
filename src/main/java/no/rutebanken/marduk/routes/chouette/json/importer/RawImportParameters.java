@@ -34,6 +34,8 @@ public class RawImportParameters {
 
     private boolean generateMapMatching;
 
+    private boolean routesReorganization;
+
     private Long distanceGeolocation;
 
     public String getFileName() {
@@ -202,6 +204,14 @@ public class RawImportParameters {
     }
     public void setGenerateMapMatching(boolean generateMapMatching) {
         this.generateMapMatching = generateMapMatching;
+    }
+
+    public boolean isRoutesReorganization() {
+        return routesReorganization;
+    }
+
+    public void setRoutesReorganization(boolean routesReorganization) {
+        this.routesReorganization = routesReorganization;
     }
 
     public Long getDistanceGeolocation(){return distanceGeolocation;}

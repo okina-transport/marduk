@@ -26,6 +26,8 @@ public class ImportParameters {
 
     private Boolean generateMapMatching;
 
+    private Boolean routesReorganization;
+
     private Long distanceGeolocation;
 
     private String description;
@@ -205,4 +207,12 @@ public class ImportParameters {
     public  String getDescription(){ return description;}
 
     public void setDescription(String description){this.description = description;}
+
+    public Boolean getRoutesReorganization() {
+        return routesReorganization;
+    }
+
+    public void setRoutesReorganization(Boolean routesReorganization) {
+        this.routesReorganization = routesReorganization;
+    }
 }

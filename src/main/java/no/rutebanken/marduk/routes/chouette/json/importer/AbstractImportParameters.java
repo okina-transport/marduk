@@ -84,5 +84,9 @@ public class AbstractImportParameters extends AbstractParameters {
     @JsonInclude(JsonInclude.Include.ALWAYS)
     public Boolean generateMapMatching = false;
 
+    @JsonProperty("routes_reorganization")
+    @JsonInclude(JsonInclude.Include.ALWAYS)
+    public Boolean routesReorganization = false;
+
 
 }
