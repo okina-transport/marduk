@@ -131,6 +131,7 @@ public class ChouetteExportNetexRouteBuilder extends AbstractChouetteRouteBuilde
                                 .to("direct:updateStatus")
                             .otherwise()
                                 .process(exportToConsumersProcessor)
+                                .to("direct:updateExportToConsumerStatus")
                                 .log(LoggingLevel.INFO, "Upload to consumers and blob store completed")
                                 .process(updateExportTemplateProcessor)
                                 .process(e -> {

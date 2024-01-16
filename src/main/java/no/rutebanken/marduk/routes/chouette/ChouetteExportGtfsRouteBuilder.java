@@ -187,6 +187,7 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
                                 .to("direct:exportMergedGtfs")
                         .endChoice()
                         .process(exportToConsumersProcessor)
+                        .to("direct:updateExportToConsumerStatus")
                         .setHeader(BLOBSTORE_MAKE_BLOB_PUBLIC, constant(publicPublication))
                         .log(LoggingLevel.INFO,"Upload to consumers and blob store completed")
                         .process(updateExportTemplateProcessor)

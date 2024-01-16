@@ -20,6 +20,8 @@ import org.apache.camel.LoggingLevel;
 import org.apache.camel.builder.RouteBuilder;
 import org.springframework.stereotype.Component;
 
+import static no.rutebanken.marduk.Constants.EXPORT_TO_CONSUMER_STATUS;
+
 @Component
 public class StatusRouteBuilder extends RouteBuilder {
 
@@ -29,6 +31,20 @@ public class StatusRouteBuilder extends RouteBuilder {
 				.log(LoggingLevel.INFO, getClass().getName(), "Sending off job status event: ${body}")
 				.to("activemq:queue:JobEventQueue")
 				.routeId("update-status").startupOrder(1);
+
+
+
+		from("direct:updateExportToConsumerStatus")
+				.process(e->{
+					String exportToConsumerStatus = (String) e.getIn().getHeader(EXPORT_TO_CONSUMER_STATUS);
+					if (exportToConsumerStatus.equals("OK")){
+						JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.EXPORT_TO_CONSUMER).state(JobEvent.State.OK).build();
+					}else{
+						JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.EXPORT_TO_CONSUMER).state(JobEvent.State.FAILED).build();
+					}
+				})
+				.to("direct:updateStatus")
+				.routeId("update-export-to-consumer-status");
 	}
 
 
