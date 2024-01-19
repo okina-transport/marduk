@@ -37,10 +37,12 @@ public class StatusRouteBuilder extends RouteBuilder {
 		from("direct:updateExportToConsumerStatus")
 				.process(e->{
 					String exportToConsumerStatus = (String) e.getIn().getHeader(EXPORT_TO_CONSUMER_STATUS);
-					if (exportToConsumerStatus.equals("OK")){
-						JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.EXPORT_TO_CONSUMER).state(JobEvent.State.OK).build();
-					}else{
-						JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.EXPORT_TO_CONSUMER).state(JobEvent.State.FAILED).build();
+					if (exportToConsumerStatus != null){
+						if (exportToConsumerStatus.equals("OK")){
+							JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.EXPORT_TO_CONSUMER).state(JobEvent.State.OK).build();
+						}else{
+							JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.EXPORT_TO_CONSUMER).state(JobEvent.State.FAILED).build();
+						}
 					}
 				})
 				.to("direct:updateStatus")
