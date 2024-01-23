@@ -149,6 +149,7 @@ public class ChouetteExportNeptuneRouteBuilder extends AbstractChouetteRouteBuil
                         .setBody(simple(""))
                         .setHeader(Exchange.HTTP_METHOD, constant(org.apache.camel.component.http4.HttpMethods.GET))
                         .process(exportToConsumersProcessor)
+                        .to("direct:updateExportToConsumerStatus")
                         .process(updateExportTemplateProcessor)
                 .log(LoggingLevel.INFO, "Upload to consumers and blob store completed")
                         .process(e -> {

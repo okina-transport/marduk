@@ -23,19 +23,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 
-import static no.rutebanken.marduk.Constants.CHOUETTE_REFERENTIAL;
-import static no.rutebanken.marduk.Constants.CURRENT_EXPORT;
-import static no.rutebanken.marduk.Constants.EXPORTED_FILENAME;
-import static no.rutebanken.marduk.Constants.EXPORT_FILE_NAME;
-import static no.rutebanken.marduk.Constants.EXPORT_FROM_TIAMAT;
-import static no.rutebanken.marduk.Constants.EXPORT_GLOBAL_GTFS_ZIP;
-import static no.rutebanken.marduk.Constants.EXPORT_GLOBAL_NETEX_ZIP;
-import static no.rutebanken.marduk.Constants.FILE_HANDLE;
-import static no.rutebanken.marduk.Constants.GTFS_EXPORT_GLOBAL_OK;
-import static no.rutebanken.marduk.Constants.ID_FORMAT;
-import static no.rutebanken.marduk.Constants.IS_SIMULATION_EXPORT;
-import static no.rutebanken.marduk.Constants.NETEX_EXPORT_GLOBAL;
-import static no.rutebanken.marduk.Constants.NETEX_EXPORT_GLOBAL_OK;
+import static no.rutebanken.marduk.Constants.*;
 
 @Component
 public class ExportToConsumersProcessor implements Processor {
@@ -137,12 +125,15 @@ public class ExportToConsumersProcessor implements Processor {
                                 break;
                         }
                         log.info("Envoi du fichier terminé : " + filePath + " vers le consommateur : " + consumer.getName() + " - de type : " + consumer.getType().name() + " - Espace de données : " + referential);
+                        exchange.getIn().setHeader(EXPORT_TO_CONSUMER_STATUS, "OK");
 
                     } catch (IOException e) {
                         log.error("Error while getting the file before to upload to consumer " + exchange.getIn().getHeader(FILE_HANDLE, String.class), e);
+                        exchange.getIn().setHeader(EXPORT_TO_CONSUMER_STATUS, "ERROR");
                     }
                 } catch (Exception e) {
                     log.error("Error while uploading to consumer " + consumer.toString(), e);
+                    exchange.getIn().setHeader(EXPORT_TO_CONSUMER_STATUS, "ERROR");
                 }
             });
 
@@ -169,6 +160,7 @@ public class ExportToConsumersProcessor implements Processor {
             } catch (IllegalArgumentException iae) {
                     log.error("Simulation export type unknown : " + simulationExportType + ".");
                     log.error("Please use one of this values : FTP, SFTP, REST or URL");
+                    exchange.getIn().setHeader(EXPORT_TO_CONSUMER_STATUS, "ERROR");
             }
         }
     }

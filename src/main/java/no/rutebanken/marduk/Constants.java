@@ -168,5 +168,7 @@ public class Constants {
 
     public static final String POST_PROCESS = "postProcess";
 
+    public static final String EXPORT_TO_CONSUMER_STATUS = "exportToConsumerStatus";
+
 }
 
