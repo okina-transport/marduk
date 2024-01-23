@@ -16,8 +16,13 @@
 
 package no.rutebanken.marduk.routes.chouette;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import no.rutebanken.marduk.Constants;
+import no.rutebanken.marduk.domain.ConfigurationFtp;
+import no.rutebanken.marduk.domain.ConfigurationUrl;
+import no.rutebanken.marduk.domain.ImportConfiguration;
 import no.rutebanken.marduk.domain.Provider;
+import no.rutebanken.marduk.repository.ImportConfigurationDAO;
 import no.rutebanken.marduk.routes.chouette.json.IdParameters;
 import no.rutebanken.marduk.routes.chouette.json.Parameters;
 import no.rutebanken.marduk.routes.chouette.json.importer.ImportMode;
@@ -40,6 +45,11 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 import static no.rutebanken.marduk.Constants.*;
 import static no.rutebanken.marduk.Utils.Utils.getHttp4;
@@ -63,6 +73,9 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
 
     @Autowired
     CreateMail createMail;
+
+    @Autowired
+    ImportConfigurationDAO importConfigurationDAO;
 
     // @formatter:off
     @Override
@@ -128,6 +141,9 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
                     .when(body().isNull())
                         .log(LoggingLevel.WARN, correlation() + "Import failed because blob could not be found")
                         .process(e-> {
+                            if(TimetableAction.IMPORT.equals(getTimeTableAction(e)) && e.getIn().getHeader(IMPORT_CONFIGURATION_ID) != null){
+                                updateLastTimestamp(e);
+                            }
                             JobEvent.providerJobBuilder(e).timetableAction(getTimeTableAction(e)).state(State.FAILED).build();
                             if (e.getIn().getHeader(WORKLOW, String.class) != null) {
                                 createMail.createMail(e, null, getTimeTableAction(e), false);
@@ -315,32 +331,50 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
                                     }
                                 })
                             .endChoice()
-
+                    //import ok
                     .when(PredicateBuilder.and(constant("false").isEqualTo(header(ENABLE_VALIDATION)), simple("${header.action_report_result} == 'OK'")))
                         .to("direct:checkScheduledJobsBeforeTriggeringNextAction")
-                        .process(e -> JobEvent.providerJobBuilder(e).timetableAction(getTimeTableAction(e)).state(State.OK).build())
+                        .process(e -> {
+                            JobEvent.providerJobBuilder(e).timetableAction(getTimeTableAction(e)).state(State.OK).build();
+                        })
+                    //import ok
                     .when(simple("${header.action_report_result} == 'OK' and ${header.validation_report_result} == 'OK'"))
                         .to("direct:checkScheduledJobsBeforeTriggeringNextAction")
-                        .process(e -> JobEvent.providerJobBuilder(e).timetableAction(getTimeTableAction(e)).state(State.OK).build())
+                        .process(e -> {
+                            JobEvent.providerJobBuilder(e).timetableAction(getTimeTableAction(e)).state(State.OK).build();
+                        })
+                    //import ko
                     .when(simple("${header.action_report_result} == 'OK' and ${header.validation_report_result} == 'NOK'"))
                         .log(LoggingLevel.INFO, correlation() + "Import ok but validation failed")
                         .process(e -> {
+                            if(TimetableAction.IMPORT.equals(getTimeTableAction(e)) && e.getIn().getHeader(IMPORT_CONFIGURATION_ID) != null){
+                                updateLastTimestamp(e);
+                            }
                             JobEvent.providerJobBuilder(e).timetableAction(getTimeTableAction(e)).state(State.FAILED).build();
                             if (e.getIn().getHeader(WORKLOW, String.class) != null) {
                                 createMail.createMail(e, null, getTimeTableAction(e), false);
                             }
                         })
+                    //import ko
                     .when(simple("${header.action_report_result} == 'NOK'"))
                         .log(LoggingLevel.WARN, correlation() + "Import not ok")
                         .process(e -> {
+                            if(TimetableAction.IMPORT.equals(getTimeTableAction(e)) && e.getIn().getHeader(IMPORT_CONFIGURATION_ID) != null){
+                                updateLastTimestamp(e);
+                            }
                             JobEvent.providerJobBuilder(e).timetableAction(getTimeTableAction(e)).state(State.FAILED).build();
                             if (e.getIn().getHeader(WORKLOW, String.class) != null) {
                                 createMail.createMail(e, null, getTimeTableAction(e), false);
                             }
+
                         })
+                    //import ko
                     .otherwise()
                         .log(LoggingLevel.ERROR, correlation() + "Something went wrong on import")
                         .process(e -> {
+                            if(TimetableAction.IMPORT.equals(getTimeTableAction(e)) && e.getIn().getHeader(IMPORT_CONFIGURATION_ID) != null){
+                                updateLastTimestamp(e);
+                            }
                             JobEvent.providerJobBuilder(e).timetableAction(getTimeTableAction(e)).state(State.FAILED).build();
                             if (e.getIn().getHeader(WORKLOW, String.class) != null) {
                                 createMail.createMail(e, null, getTimeTableAction(e), false);
@@ -375,13 +409,42 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
                         .end()
                 .end()
                 .routeId("chouette-process-job-list-after-import");
+    }
 
+    private void updateLastTimestamp(Exchange e)throws JsonProcessingException {
+        String referential = (String) e.getIn().getHeader(CHOUETTE_REFERENTIAL);
+        String fileName = (String) e.getIn().getHeader(FILE_NAME);
+        String importConfigurationId = (String) e.getIn().getHeader(IMPORT_CONFIGURATION_ID);
+
+        ImportConfiguration importConfiguration = importConfigurationDAO.getImportConfiguration(referential, importConfigurationId);
+
+        // Vérification pour les configurations FTP
+        List<ConfigurationFtp> ftpList = importConfiguration.getConfigurationFtpList().isEmpty() ? new ArrayList<>() : importConfiguration.getConfigurationFtpList();
+        updateLastTimestampIfFileNameMatchesForFtp(ftpList, fileName);
+
+        // Vérification pour les configurations URL
+        List<ConfigurationUrl> urlList = importConfiguration.getConfigurationUrlList();
+        updateLastTimestampIfFileNameMatchesForUrl(urlList, fileName);
+
+        importConfigurationDAO.update(referential, importConfiguration);
+    }
+        // Méthode pour mettre à jour lastTimestamp si le fichier correspond (pour les configurations FTP)
+    private void updateLastTimestampIfFileNameMatchesForFtp(List<ConfigurationFtp> ftpList, String fileName) {
+        ftpList.stream().filter(config -> config.getFilename().equals(fileName))
+                .findFirst().ifPresent(config -> config.setLastTimestamp(null));
+    }
+
+    // Méthode pour mettre à jour lastTimestamp si le fichier correspond (pour les configurations URL)
+    private void updateLastTimestampIfFileNameMatchesForUrl(List<ConfigurationUrl> urlList, String fileName) {
+        urlList.stream().filter(config -> config.getUrl().substring(config.getUrl().lastIndexOf('/') + 1).equals(fileName))
+            .findFirst().ifPresent(config -> config.setLastTimestamp(null));
     }
 
     private String getStringImportParameters(RawImportParameters rawImportParameters) {
         rawImportParameters.setProvider(getProviderRepository().getProvider(rawImportParameters.getProviderId()));
         return Parameters.createStringImportParameters(rawImportParameters);
     }
+
     private void addAnalysisResultToExchange(Exchange e) {
         e.getIn().setHeader(IS_LAUNCHABLE, false);
         try {

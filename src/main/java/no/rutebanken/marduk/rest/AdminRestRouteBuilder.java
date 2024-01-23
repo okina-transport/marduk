@@ -25,7 +25,7 @@ import no.rutebanken.marduk.routes.blobstore.BlobStoreRoute;
 import no.rutebanken.marduk.routes.chouette.ExportJsonMapper;
 import no.rutebanken.marduk.routes.chouette.json.JobResponse;
 import no.rutebanken.marduk.routes.chouette.json.Status;
-import no.rutebanken.marduk.routes.file.StopTimesArchiver;
+import no.rutebanken.marduk.routes.file.GtfsFilesArchiver;
 import no.rutebanken.marduk.routes.status.JobEvent;
 import no.rutebanken.marduk.security.AuthorizationClaim;
 import no.rutebanken.marduk.security.AuthorizationService;
@@ -51,11 +51,9 @@ import org.springframework.stereotype.Component;
 import javax.ws.rs.NotFoundException;
 import java.io.FileInputStream;
 import java.net.URLDecoder;
-import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -92,7 +90,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
     FileSystemService fileSystemService;
 
     @Autowired
-    StopTimesArchiver stopTimesArchiver;
+    GtfsFilesArchiver stopTimesArchiver;
 
     @Value("${superspace.name}")
     private String superspaceName;
@@ -662,9 +660,11 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                     String cleanMode = e.getIn().getHeader(CLEAN_MODE, String.class);
                     if ("purge".equals(cleanMode)){
                         stopTimesArchiver.cleanOrganisationStopTimes(referential);
+                        stopTimesArchiver.cleanOrganisationTrips(referential);
                     }
                     e.getIn().setHeader(GENERATE_MAP_MATCHING, getGenerateMapMatchingHeaders(e));
                     stopTimesArchiver.archiveStopTimes(file,referential);
+                    stopTimesArchiver.archiveTrips(file,referential);
                 })
                 .log(LoggingLevel.INFO, correlation() + "upload files and start import pipeline")
                 .removeHeaders("CamelHttp*")
