@@ -17,35 +17,15 @@
 package no.rutebanken.marduk.routes.file;
 
 import no.rutebanken.marduk.exceptions.MardukException;
-import no.rutebanken.marduk.routes.file.beans.FileTypeClassifierBean;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
-import org.onebusaway.gtfs_transformer.GtfsTransformer;
-import org.onebusaway.gtfs_transformer.updates.EnsureStopTimesIncreaseUpdateStrategy;
-import org.onebusaway.gtfs_transformer.updates.LocalVsExpressUpdateStrategy;
-import org.onebusaway.gtfs_transformer.updates.RemoveDuplicateTripsStrategy;
-import org.onebusaway.gtfs_transformer.updates.RemoveStopDescStrategy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 import java.nio.file.FileSystem;
-import java.nio.file.FileSystems;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Enumeration;
-import java.util.HashSet;
-import java.util.Set;
-import java.util.UUID;
+import java.nio.file.*;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
@@ -80,30 +60,6 @@ public class ZipFileUtils {
             e.printStackTrace();
             return Collections.emptySet();
         }
-    }
-
-    private static File transformGtfsFiles(File inputFile) throws Exception {
-
-        logger.info("Transforming GTFS-file");
-        long t1 = System.currentTimeMillis();
-
-        GtfsTransformer transformer = new GtfsTransformer();
-        File outputFile = File.createTempFile("marduk-cleanup", ".zip");
-
-        transformer.setGtfsInputDirectories(Arrays.asList(inputFile));
-
-        transformer.setOutputDirectory(outputFile);
-//        transformer.addTransform(new RemoveRepeatedStopTimesStrategy());
-        transformer.addTransform(new RemoveDuplicateTripsStrategy());
-        transformer.addTransform(new EnsureStopTimesIncreaseUpdateStrategy());
-        transformer.addTransform(new LocalVsExpressUpdateStrategy());
-        transformer.addTransform(new RemoveStopDescStrategy());
-        transformer.getReader().setOverwriteDuplicates(true);
-
-        transformer.run();
-
-        logger.info("Transformed GTFS-file - spent {} ms", (System.currentTimeMillis() - t1));
-        return outputFile;
     }
 
     public static boolean zipFileContainsSingleFolder(byte[] data) {
@@ -284,23 +240,6 @@ public class ZipFileUtils {
         fos.write(data);
         fos.close();
         return inputFile;
-    }
-
-    public static File transformGtfsFile(byte[] data) throws IOException {
-        File file = getFile(data);
-        if (file.exists() && file.length() > 0) {
-            try (FileInputStream input = new FileInputStream(file)) {
-                Set<String> filenames = new ZipFileUtils().listFilesInZip(IOUtils.toByteArray(input));
-                if (FileTypeClassifierBean.isGtfsZip(filenames)) {
-                    try {
-                        file = transformGtfsFiles(file);
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-                }
-            }
-        }
-        return file;
     }
 
     private static ZipFile getZipFileIfSingleFolder(File inputFile) throws IOException {
