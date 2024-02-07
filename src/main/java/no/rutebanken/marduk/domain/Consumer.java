@@ -20,6 +20,12 @@ public class Consumer {
     private String destinationPath;
     private boolean notification = false;
     private List<String> notificationUrls = new ArrayList<>();
+    private String datasetId;
+
+    private String exportDate;
+
+    private String description;
+
 
     public Long getId() {
         return id;
@@ -106,4 +112,28 @@ public class Consumer {
     }
 
     public List<String> getNotificationUrls() { return notificationUrls; }
+
+    public String getDatasetId() {
+        return datasetId;
+    }
+
+    public void setDatasetId(String datasetId) {
+        this.datasetId = datasetId;
+    }
+
+    public String getExportDate() {
+        return exportDate;
+    }
+
+    public void setExportDate(String exportDate) {
+        this.exportDate = exportDate;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
 }

@@ -4,5 +4,6 @@ public enum ConsumerType {
     FTP,
     SFTP,
     REST,
+    OPENDATASOFT,
     URL;
 }

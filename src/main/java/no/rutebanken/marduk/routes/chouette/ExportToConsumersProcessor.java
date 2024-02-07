@@ -3,11 +3,7 @@ package no.rutebanken.marduk.routes.chouette;
 import no.rutebanken.marduk.Utils.CipherEncryption;
 import no.rutebanken.marduk.domain.ConsumerType;
 import no.rutebanken.marduk.domain.ExportTemplate;
-import no.rutebanken.marduk.services.BlobStoreService;
-import no.rutebanken.marduk.services.FileSystemService;
-import no.rutebanken.marduk.services.FtpService;
-import no.rutebanken.marduk.services.NotificationService;
-import no.rutebanken.marduk.services.RestUploadService;
+import no.rutebanken.marduk.services.*;
 import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
 import org.apache.commons.lang3.StringUtils;
@@ -72,6 +68,9 @@ public class ExportToConsumersProcessor implements Processor {
     @Autowired
     NotificationService notificationService;
 
+    @Autowired
+    OpendatasoftService opendatasoftService;
+
     /**
      * Gets the result stream of an export  and upload it towards consumers defined for this export
      * @param exchange
@@ -123,6 +122,9 @@ public class ExportToConsumersProcessor implements Processor {
                                     }
                                 }
                                 break;
+                            case OPENDATASOFT:
+                                opendatasoftService.sendToOpendatasoft(streamToUpload, consumer.getServiceUrl(), consumer.getDatasetId(),secretKeyDecryptedConsumer, consumer.getExportDate(), consumer.getDescription(), filePath);
+
                         }
                         log.info("Envoi du fichier terminé : " + filePath + " vers le consommateur : " + consumer.getName() + " - de type : " + consumer.getType().name() + " - Espace de données : " + referential);
                         exchange.getIn().setHeader(EXPORT_TO_CONSUMER_STATUS, "OK");
