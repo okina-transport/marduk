@@ -206,7 +206,7 @@ public class OpendatasoftService {
         if (!opendatasoftURL.endsWith("/")) {
             opendatasoftURL = opendatasoftURL + "/";
         }
-        return opendatasoftURL + "api/automation/v1.0/datasets/" + datasetUID + "/resources/files/";
+        return opendatasoftURL + "automation/v1.0/datasets/" + datasetUID + "/resources/files/";
     }
 
     /**
@@ -411,7 +411,7 @@ public class OpendatasoftService {
      *      the built url
      */
     private String buildResourcesURL(String opendatasoftURL, String datasetUID) {
-        return buildDatasetBaseURL(opendatasoftURL) + "api/automation/v1.0/datasets/" + datasetUID + "/resources/";
+        return buildDatasetBaseURL(opendatasoftURL) + "automation/v1.0/datasets/" + datasetUID + "/resources/";
     }
 
     /**
@@ -424,7 +424,7 @@ public class OpendatasoftService {
      *      the url
      */
     private String buildDescriptionMetaDataURL(String opendatasoftURL, String datasetUID) {
-        return buildDatasetBaseURL(opendatasoftURL) + "api/automation/v1.0/datasets/" + datasetUID + "/metadata/default/description";
+        return buildDatasetBaseURL(opendatasoftURL) + "automation/v1.0/datasets/" + datasetUID + "/metadata/default/description";
     }
 
     /**
@@ -437,7 +437,7 @@ public class OpendatasoftService {
      *      the url
      */
     private String buildTempPeriodMetaDataURL(String opendatasoftURL, String datasetUID) {
-        return buildDatasetBaseURL(opendatasoftURL) + "api/automation/v1.0/datasets/" + datasetUID + "/metadata/dcat/temporal";
+        return buildDatasetBaseURL(opendatasoftURL) + "automation/v1.0/datasets/" + datasetUID + "/metadata/dcat/temporal";
     }
 
 
@@ -533,6 +533,6 @@ public class OpendatasoftService {
             opendatasoftURL = opendatasoftURL + "/";
         }
 
-        return opendatasoftURL + "api/automation/v1.0/datasets?dataset_id=" + datasetUID;
+        return opendatasoftURL + "automation/v1.0/datasets?dataset_id=" + datasetUID;
     }
 }
