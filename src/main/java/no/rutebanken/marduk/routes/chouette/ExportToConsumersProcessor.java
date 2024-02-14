@@ -1,8 +1,12 @@
 package no.rutebanken.marduk.routes.chouette;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import no.rutebanken.marduk.Utils.CipherEncryption;
 import no.rutebanken.marduk.domain.ConsumerType;
 import no.rutebanken.marduk.domain.ExportTemplate;
+import no.rutebanken.marduk.routes.chouette.json.JobResponse;
+import no.rutebanken.marduk.routes.chouette.json.exporter.AbstractExportParameters;
+import no.rutebanken.marduk.routes.chouette.json.exporter.GtfsExportParameters;
 import no.rutebanken.marduk.services.*;
 import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
@@ -18,6 +22,10 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Date;
+import java.util.Optional;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static no.rutebanken.marduk.Constants.*;
 
@@ -47,7 +55,7 @@ public class ExportToConsumersProcessor implements Processor {
     @Value("${simulation.export.type}")
     private String simulationExportType;
 
-//    @Autowired
+    //    @Autowired
     private static ExportJsonMapper exportJsonMapper = new ExportJsonMapper();
 
     @Autowired
@@ -73,6 +81,7 @@ public class ExportToConsumersProcessor implements Processor {
 
     /**
      * Gets the result stream of an export  and upload it towards consumers defined for this export
+     *
      * @param exchange
      * @throws Exception
      */
@@ -84,6 +93,8 @@ public class ExportToConsumersProcessor implements Processor {
         Boolean exportSimulation = exchange.getIn().getHeaders().get(IS_SIMULATION_EXPORT) != null && (Boolean) exchange.getIn().getHeaders().get(IS_SIMULATION_EXPORT);
         if (StringUtils.isNotBlank(jsonExport)) {
             ExportTemplate export = exportJsonMapper.fromJson(jsonExport);
+            String startDate = getValueFromParameters(exchange, "start_date").orElse(null);
+            String endDate = getValueFromParameters(exchange, "end_date").orElse(null);
             log.info("Found " + export.getConsumers().size() + " for export " + export.getId() + "/" + export.getName());
             export.getConsumers().forEach(consumer -> {
                 try {
@@ -116,14 +127,14 @@ public class ExportToConsumersProcessor implements Processor {
                                 break;
                             case URL:
                                 blobStoreService.uploadBlob("/" + publicUploadPath + "/" + referential + "/" + filePath, true, streamToUpload);
-                                if(consumer.isNotification() && consumer.getNotificationUrls() != null && !consumer.getNotificationUrls().isEmpty()){
-                                    for (String notificationUrl : consumer.getNotificationUrls()){
+                                if (consumer.isNotification() && consumer.getNotificationUrls() != null && !consumer.getNotificationUrls().isEmpty()) {
+                                    for (String notificationUrl : consumer.getNotificationUrls()) {
                                         notificationService.sendNotification(notificationUrl);
                                     }
                                 }
                                 break;
                             case OPENDATASOFT:
-                                opendatasoftService.sendToOpendatasoft(streamToUpload, consumer.getServiceUrl(), consumer.getDatasetId(),secretKeyDecryptedConsumer, consumer.getExportDate(), consumer.getDescription(), filePath);
+                                opendatasoftService.sendToOpendatasoft(streamToUpload, consumer.getServiceUrl(), consumer.getDatasetId(), secretKeyDecryptedConsumer, consumer.getExportDate(), consumer.getDescription(), filePath, startDate, endDate);
 
                         }
                         log.info("Envoi du fichier terminé : " + filePath + " vers le consommateur : " + consumer.getName() + " - de type : " + consumer.getType().name() + " - Espace de données : " + referential);
@@ -160,33 +171,44 @@ public class ExportToConsumersProcessor implements Processor {
                         break;
                 }
             } catch (IllegalArgumentException iae) {
-                    log.error("Simulation export type unknown : " + simulationExportType + ".");
-                    log.error("Please use one of this values : FTP, SFTP, REST or URL");
-                    exchange.getIn().setHeader(EXPORT_TO_CONSUMER_STATUS, "ERROR");
+                log.error("Simulation export type unknown : " + simulationExportType + ".");
+                log.error("Please use one of this values : FTP, SFTP, REST or URL");
+                exchange.getIn().setHeader(EXPORT_TO_CONSUMER_STATUS, "ERROR");
             }
         }
+    }
+
+    private Optional<String> getValueFromParameters(Exchange exchange, String parameterToSearch) {
+
+        String jsonParameters = (String) exchange.getIn().getHeaders().get(JSON_PART);
+        String regex = "\"" + parameterToSearch + "\"\\s*:\\s*\"(\\d{4}-\\d{2}-\\d{2})\"";
+        Pattern pattern = Pattern.compile(regex);
+        Matcher matcher = pattern.matcher(jsonParameters);
+
+        if (matcher.find()) {
+            String value = matcher.group(1);
+            return Optional.of(value);
+        }
+        return Optional.empty();
     }
 
     private InputStream getInputStream(Exchange exchange) throws FileNotFoundException {
         File file;
         InputStream streamToUpload;
-        if(exchange.getIn().getHeader(GTFS_EXPORT_GLOBAL_OK, Boolean.class) != null &&
-                exchange.getIn().getHeader(GTFS_EXPORT_GLOBAL_OK, Boolean.class).equals(true)){
+        if (exchange.getIn().getHeader(GTFS_EXPORT_GLOBAL_OK, Boolean.class) != null &&
+                exchange.getIn().getHeader(GTFS_EXPORT_GLOBAL_OK, Boolean.class).equals(true)) {
             streamToUpload = fileSystemService.getFile("mobiiti_technique/gtfs/" + exchange.getIn().getHeader(ID_FORMAT, String.class) + "/" + EXPORT_GLOBAL_GTFS_ZIP);
             exchange.getIn().setHeader(EXPORT_FILE_NAME, EXPORT_GLOBAL_GTFS_ZIP);
-        }
-        else if(exchange.getIn().getHeader(NETEX_EXPORT_GLOBAL_OK, Boolean.class) != null &&
-                exchange.getIn().getHeader(NETEX_EXPORT_GLOBAL_OK, Boolean.class).equals(true)){
+        } else if (exchange.getIn().getHeader(NETEX_EXPORT_GLOBAL_OK, Boolean.class) != null &&
+                exchange.getIn().getHeader(NETEX_EXPORT_GLOBAL_OK, Boolean.class).equals(true)) {
             streamToUpload = fileSystemService.getFile("mobiiti_technique/netex/" + EXPORT_GLOBAL_NETEX_ZIP);
             exchange.getIn().setHeader(EXPORT_FILE_NAME, EXPORT_GLOBAL_NETEX_ZIP);
 
-        }
-        else if(exchange.getIn().getHeader(EXPORT_FROM_TIAMAT, Boolean.class) != null &&
-                exchange.getIn().getHeader(EXPORT_FROM_TIAMAT, Boolean.class).equals(true)){
+        } else if (exchange.getIn().getHeader(EXPORT_FROM_TIAMAT, Boolean.class) != null &&
+                exchange.getIn().getHeader(EXPORT_FROM_TIAMAT, Boolean.class).equals(true)) {
             file = fileSystemService.getTiamatFile(exchange);
             streamToUpload = new FileInputStream(file);
-        }
-        else{
+        } else {
             file = fileSystemService.getOfferFile(exchange);
             streamToUpload = new FileInputStream(file);
         }
