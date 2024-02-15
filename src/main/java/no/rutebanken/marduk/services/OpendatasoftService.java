@@ -75,6 +75,21 @@ public class OpendatasoftService {
         String newFileUID = uploadFileToOpendataSoft(opendatasoftURL, datasetUID, fileName, secretKey, archiveToSend);
         createOrUpdateResource(opendatasoftURL, datasetUID, secretKey, fileName, newFileUID);
         updateMetadata(opendatasoftURL, datasetUID, secretKey, description, exportDate);
+        publishDataSet(opendatasoftURL, datasetUID, secretKey);
+    }
+
+    /**
+     * Publish modifications on the dataset
+     * @param opendatasoftURL
+     *  base URL to opendatasoft server
+     * @param datasetUID
+     *  uid of the dataset
+     * @param secretKey
+     *  secret key to access the dataset
+     */
+    private void publishDataSet(String opendatasoftURL, String datasetUID, String secretKey) {
+        String publishUrl = buildPublishURL(opendatasoftURL, datasetUID);
+        launchConnectionOnURL(publishUrl, secretKey, "POST", MediaType.APPLICATION_JSON, Optional.empty());
     }
 
     /**
@@ -185,12 +200,12 @@ public class OpendatasoftService {
      * @param inputDate
      *  date with format yyyy-MM-dd
      * @return
-     *  date with format dd-MM-yyyy
+     *  date with format dd/MM/yyyy
      * @throws ParseException
      */
     private String formatDate(String inputDate) throws ParseException {
         SimpleDateFormat originFormat = new SimpleDateFormat("yyyy-MM-dd");
-        SimpleDateFormat destinationFormat = new SimpleDateFormat("dd-MM-yyyy");
+        SimpleDateFormat destinationFormat = new SimpleDateFormat("dd/MM/yyyy");
         Date dateOrigine = originFormat.parse(inputDate);
         return destinationFormat.format(dateOrigine);
     }
@@ -216,7 +231,6 @@ public class OpendatasoftService {
                         }
                     });
 
-            Files.delete(directory);
             logger.info("working directory deleted : " + workingDirectory);
 
         }
@@ -298,7 +312,7 @@ public class OpendatasoftService {
     private FileInfos.Result createRequestParameters(String fileName, String fileUID) {
         // Building parameters that will be sent on POST request as a JSON body
         FileInfos.Result requestParameters = new FileInfos.Result();
-        requestParameters.setType("file");
+        requestParameters.setType("files_csv");
         requestParameters.setTitle(fileName);
         FileInfos.Datasource requestDatasource = new FileInfos.Datasource();
         requestDatasource.setType("uploaded_file");
@@ -306,6 +320,17 @@ public class OpendatasoftService {
         requestFile.setUid(fileUID);
         requestDatasource.setFile(requestFile);
         requestParameters.setDatasource(requestDatasource);
+
+        FileInfos.Params fileParams = new FileInfos.Params();
+        fileParams.setEncoding("utf-8");
+        fileParams.setFirst_row_no(1);
+        fileParams.setDoublequote(true);
+        fileParams.setHeaders_first_row(true);
+        fileParams.setSeparator(";");
+        fileParams.setExtract_meta(false);
+        fileParams.setExtract_geopoint(false);
+
+        requestParameters.setParams(fileParams);
         return requestParameters;
     }
 
@@ -543,6 +568,18 @@ public class OpendatasoftService {
     private String buildTempPeriodMetaDataURL(String opendatasoftURL, String datasetUID) {
         return buildDatasetBaseURL(opendatasoftURL) + "automation/v1.0/datasets/" + datasetUID + "/metadata/dcat/temporal";
     }
+
+
+    /**
+     *  Builds a url to publish a dataset
+     * @param opendatasoftURL base url of the opendatasoft server
+     * @param datasetUID      dataset on which action must be performed
+     * @return the url
+     */
+    private String buildPublishURL(String opendatasoftURL, String datasetUID) {
+        return buildDatasetBaseURL(opendatasoftURL) + "automation/v1.0/datasets/" + datasetUID + "/publish";
+    }
+
 
 
     /**
