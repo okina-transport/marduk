@@ -162,7 +162,7 @@ public class FileSystemService {
                     .collect(Collectors.toList());
         } catch (IOException e) {
             logger.error("Récupération fichiers localStorage impossible: " + e);
-            return new ArrayList();
+            return new ArrayList<>();
         }
     }
 

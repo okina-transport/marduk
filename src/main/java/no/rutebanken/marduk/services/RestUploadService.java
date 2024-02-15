@@ -66,7 +66,7 @@ public class RestUploadService {
         }
 
         @Override
-        public long contentLength() throws IOException {
+        public long contentLength() {
             return -1; // we do not want to generally read the whole stream into memory ...
         }
     }

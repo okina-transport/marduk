@@ -22,7 +22,7 @@ public class ExportCsv {
     public static final char NEW_COLUMN_SEPARATOR = ';';
 
     // Create the CSVFormat object with "\n" as a record delimiter
-    CSVFormat csvFileFormat = CSVFormat.DEFAULT.withRecordSeparator(NEW_LINE_SEPARATOR).withDelimiter(NEW_COLUMN_SEPARATOR);
+    CSVFormat csvFileFormat = CSVFormat.Builder.create().setRecordSeparator(NEW_LINE_SEPARATOR).setDelimiter(NEW_COLUMN_SEPARATOR).build();
 
 
     public File createCSVFile(String nameFile, String[] header, ArrayList<String[]> rows) {

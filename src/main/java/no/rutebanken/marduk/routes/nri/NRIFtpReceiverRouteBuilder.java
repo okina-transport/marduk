@@ -22,7 +22,6 @@ import no.rutebanken.marduk.routes.BaseRouteBuilder;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.component.file.FileComponent;
-import org.apache.camel.component.file.remote.RemoteFile;
 import org.apache.commons.lang3.time.DateUtils;
 import org.apache.commons.net.ftp.FTPFile;
 import org.springframework.beans.factory.annotation.Value;

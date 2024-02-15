@@ -1,5 +1,7 @@
 package no.rutebanken.marduk.routes.chouette;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.jcraft.jsch.Channel;
 import com.jcraft.jsch.ChannelSftp;
 import com.jcraft.jsch.JSch;
@@ -29,8 +31,7 @@ import org.apache.tomcat.util.http.fileupload.FileItem;
 import org.apache.tomcat.util.http.fileupload.FileItemFactory;
 import org.apache.tomcat.util.http.fileupload.disk.DiskFileItemFactory;
 import org.apache.tomcat.util.http.fileupload.util.Streams;
-import org.json.JSONObject;
-import org.json.simple.parser.JSONParser;
+
 import org.quartz.CronScheduleBuilder;
 import org.quartz.CronTrigger;
 import org.quartz.JobBuilder;
@@ -209,9 +210,9 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
             if (StringUtils.isNotEmpty(configurationUrl.getUrlInfo())) {
                 URL urlInfo = new URL(configurationUrl.getUrlInfo());
                 InputStream inputStreamUrlInfo = urlInfo.openStream();
-                JSONParser jsonParser = new JSONParser();
-                org.json.simple.JSONObject jsonObject = (org.json.simple.JSONObject) jsonParser.parse(new InputStreamReader(inputStreamUrlInfo, StandardCharsets.UTF_8));
-                String stringDateLastModified = jsonObject.get("updated").toString();
+                ObjectMapper objectMapper = new ObjectMapper();
+                JsonNode jsonNode = objectMapper.readTree(new InputStreamReader(inputStreamUrlInfo, StandardCharsets.UTF_8));
+                String stringDateLastModified = jsonNode.get("updated").asText();
                 OffsetDateTime offsetDateTime = OffsetDateTime.parse(stringDateLastModified);
                 LocalDateTime dateLastModified = offsetDateTime.toLocalDateTime();
                 if (configurationUrl.getLastTimestamp() == null || dateLastModified.isAfter(configurationUrl.getLastTimestamp())) {
@@ -439,12 +440,14 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
         CronTrigger trigger = (CronTrigger) scheduler.getScheduler().getTrigger(TriggerKey.triggerKey("ImportConfigurationJobTrigger-" + provider.chouetteInfo.referential + "-" + importConfigurationId));
         if (trigger != null) {
             String[] dateFromCron = trigger.getCronExpression().split(" ");
-            JSONObject jsonObject = new JSONObject();
-            jsonObject.append("hour", dateFromCron[2]);
-            jsonObject.append("minutes", dateFromCron[1]);
-            jsonObject.append("date", trigger.getStartTime().getTime());
-            jsonObject.append("applicationDays", dateFromCron[5]);
-            e.getIn().setBody(jsonObject.toString());
+            ObjectMapper objectMapper = new ObjectMapper();
+            JsonNode jsonNode = objectMapper.createObjectNode()
+                    .put("hour", dateFromCron[2])
+                    .put("minutes", dateFromCron[1])
+                    .put("date", trigger.getStartTime().getTime())
+                    .put("applicationDays", dateFromCron[5]);
+
+            e.getIn().setBody(jsonNode);
         }
     }
 

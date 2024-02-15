@@ -16,6 +16,7 @@
 
 package no.rutebanken.marduk.rest;
 
+import jakarta.ws.rs.NotFoundException;
 import no.rutebanken.marduk.Constants;
 import no.rutebanken.marduk.domain.BlobStoreFiles;
 import no.rutebanken.marduk.domain.BlobStoreFiles.File;
@@ -48,7 +49,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Component;
 
-import javax.ws.rs.NotFoundException;
 import java.io.FileInputStream;
 import java.net.URLDecoder;
 import java.util.Arrays;
@@ -57,7 +57,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-import static javax.ws.rs.core.MediaType.MULTIPART_FORM_DATA;
+import static jakarta.ws.rs.core.MediaType.MULTIPART_FORM_DATA;
 import static no.rutebanken.marduk.Constants.*;
 
 /**

@@ -18,7 +18,6 @@ package no.rutebanken.marduk.routes.file;
 
 import com.github.junrar.Archive;
 import com.github.junrar.exception.RarException;
-import com.github.junrar.impl.FileVolumeManager;
 import com.github.junrar.rarfile.FileHeader;
 import no.rutebanken.marduk.routes.file.beans.FileTypeClassifierBean;
 import org.apache.camel.Body;
@@ -77,7 +76,7 @@ public class RARToZipFilesSplitter {
 			logger.info("Processing RAR file with length " + rarFile.length());
 
 			// Unpack to new folder
-			Archive a = new Archive(new FileVolumeManager(rarFile));
+			Archive a = new Archive(rarFile);
 			FileHeader fh = a.nextFileHeader();
 			while (fh != null) {
 				File out = new File(rarExtractFolder, fh.getFileNameString().trim().replace('\\', '/'));

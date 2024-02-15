@@ -1,23 +1,23 @@
 package no.rutebanken.marduk.Utils;
 
+import jakarta.activation.DataHandler;
+import jakarta.activation.DataSource;
+import jakarta.activation.FileDataSource;
+import jakarta.mail.BodyPart;
+import jakarta.mail.Message;
+import jakarta.mail.MessagingException;
+import jakarta.mail.Multipart;
+import jakarta.mail.PasswordAuthentication;
+import jakarta.mail.Session;
+import jakarta.mail.Transport;
+import jakarta.mail.internet.AddressException;
+import jakarta.mail.internet.InternetAddress;
+import jakarta.mail.internet.MimeBodyPart;
+import jakarta.mail.internet.MimeMessage;
+import jakarta.mail.internet.MimeMultipart;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import javax.activation.DataHandler;
-import javax.activation.DataSource;
-import javax.activation.FileDataSource;
-import javax.mail.BodyPart;
-import javax.mail.Message;
-import javax.mail.MessagingException;
-import javax.mail.Multipart;
-import javax.mail.PasswordAuthentication;
-import javax.mail.Session;
-import javax.mail.Transport;
-import javax.mail.internet.AddressException;
-import javax.mail.internet.InternetAddress;
-import javax.mail.internet.MimeBodyPart;
-import javax.mail.internet.MimeMessage;
-import javax.mail.internet.MimeMultipart;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Properties;
@@ -29,9 +29,6 @@ public class SendMail {
 
     @Value("${spring.mail.username:test}")
     private String emailFrom;
-
-    @Value("${spring.mail.to:test}")
-    private String emailTo;
 
     @Value("${spring.mail.port:12}")
     private String emailPort;
@@ -58,7 +55,7 @@ public class SendMail {
         props.put("mail.smtp.password", emailPassword);
 
         Session session = Session.getInstance(props,
-                new javax.mail.Authenticator() {
+                new jakarta.mail.Authenticator() {
                     protected PasswordAuthentication getPasswordAuthentication() {
                         return new PasswordAuthentication(emailFrom, emailPassword);
                     }
@@ -73,7 +70,7 @@ public class SendMail {
             msg.setContent(text, "text/html; charset=utf-8");
 
             if(attachmentFiles != null){
-                if(attachmentFiles.size() != 0){
+                if(!attachmentFiles.isEmpty()){
                     Multipart multipart = new MimeMultipart();
                     for(File attachementFile: attachmentFiles){
                         addAttachment(multipart, attachementFile);

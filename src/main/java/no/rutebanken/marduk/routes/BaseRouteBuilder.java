@@ -20,11 +20,10 @@ import no.rutebanken.marduk.Constants;
 import no.rutebanken.marduk.repository.ProviderRepository;
 import org.apache.camel.Exchange;
 import org.apache.camel.ServiceStatus;
+import org.apache.camel.builder.RouteBuilder;
 import org.apache.camel.component.hazelcast.policy.HazelcastRoutePolicy;
 import org.apache.camel.model.RouteDefinition;
-import org.apache.camel.spi.RouteContext;
 import org.apache.camel.spi.RoutePolicy;
-import org.apache.camel.spring.SpringRouteBuilder;
 import org.apache.commons.lang3.time.DateUtils;
 import org.quartz.CronExpression;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -40,7 +39,7 @@ import static no.rutebanken.marduk.Constants.SINGLETON_ROUTE_DEFINITION_GROUP_NA
 /**
  * Defines common route behavior.
  */
-public abstract class BaseRouteBuilder extends SpringRouteBuilder {
+public abstract class BaseRouteBuilder extends RouteBuilder {
 
     @Autowired
     private ProviderRepository providerRepository;
@@ -50,7 +49,7 @@ public abstract class BaseRouteBuilder extends SpringRouteBuilder {
 
     @Override
     public void configure() throws Exception {
-        errorHandler(transactionErrorHandler()
+        errorHandler(jtaTransactionErrorHandler()
                              .logExhausted(true)
                              .logRetryStackTrace(true));
     }
@@ -102,13 +101,12 @@ public abstract class BaseRouteBuilder extends SpringRouteBuilder {
     }
 
     protected boolean isStarted(String routeId) {
-        ServiceStatus status = getContext().getRouteStatus(routeId);
+        ServiceStatus status = getContext().getRoute(routeId).getCamelContext().getStatus();
         return status != null && status.isStarted();
     }
 
     protected boolean isLeader(String routeId) {
-        RouteContext routeContext = getContext().getRoute(routeId).getRouteContext();
-        List<RoutePolicy> routePolicyList = routeContext.getRoutePolicyList();
+        List<RoutePolicy> routePolicyList = getContext().getRoute(routeId).getRoutePolicyList();
         if (routePolicyList != null) {
             for (RoutePolicy routePolicy : routePolicyList) {
                 if (routePolicy instanceof HazelcastRoutePolicy) {

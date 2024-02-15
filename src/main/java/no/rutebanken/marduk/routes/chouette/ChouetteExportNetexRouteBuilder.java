@@ -23,7 +23,7 @@ import no.rutebanken.marduk.routes.status.JobEvent;
 import no.rutebanken.marduk.services.FileSystemService;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
-import org.codehaus.plexus.util.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;

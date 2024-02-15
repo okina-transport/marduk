@@ -193,7 +193,7 @@ public class GtfsFileUtils {
     private static ByteArrayOutputStream extractFeedInfoFile(Collection<File> files) throws IOException {
         ZipFileUtils zipFileUtils = new ZipFileUtils();
         for (File file : files) {
-            if (zipFileUtils.listFilesInZip(file).stream().anyMatch(f -> FEED_INFO_FILE_NAME.equals(f))) {
+            if (zipFileUtils.listFilesInZip(file).stream().anyMatch(FEED_INFO_FILE_NAME::equals)) {
                 try(FileInputStream inputStream = new FileInputStream(file)) {
                     return zipFileUtils.extractFileFromZipFile(inputStream, FEED_INFO_FILE_NAME);
                 }
