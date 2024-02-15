@@ -186,7 +186,7 @@ public class OpendatasoftService {
         String descriptionFileName = workingDirectory + "/" + fileName.replace(".zip" , "-TABLEAU.csv");
 
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(descriptionFileName))) {
-            writer.write("Début de validité;Fin de validité;Fichier;Description");
+            writer.write("Debut de validite;Fin de validite;Fichier;Description");
             writer.newLine();
             writer.write(formatDate(startDate) + ";" + formatDate(endDate) + ";" + fileName + ";" + description);
             logger.info("Description file create successfully");
