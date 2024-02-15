@@ -322,7 +322,7 @@ public class OpendatasoftService {
         requestParameters.setDatasource(requestDatasource);
 
         FileInfos.Params fileParams = new FileInfos.Params();
-        fileParams.setEncoding("utf-8");
+        fileParams.setEncoding("sloppy-windows-1252");
         fileParams.setFirst_row_no(1);
         fileParams.setDoublequote(true);
         fileParams.setHeaders_first_row(true);
