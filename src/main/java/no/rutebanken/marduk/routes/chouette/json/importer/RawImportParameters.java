@@ -36,6 +36,8 @@ public class RawImportParameters {
 
     private boolean routesReorganization;
 
+    private boolean routeSortOrder;
+
     private Long distanceGeolocation;
 
     public String getFileName() {
@@ -212,6 +214,14 @@ public class RawImportParameters {
 
     public void setRoutesReorganization(boolean routesReorganization) {
         this.routesReorganization = routesReorganization;
+    }
+
+    public boolean isRouteSortOrder() {
+        return routeSortOrder;
+    }
+
+    public void setRouteSortOrder(boolean routeSortOrder) {
+        this.routeSortOrder = routeSortOrder;
     }
 
     public Long getDistanceGeolocation(){return distanceGeolocation;}

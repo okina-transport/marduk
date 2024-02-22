@@ -28,6 +28,8 @@ public class ImportParameters {
 
     private Boolean routesReorganization;
 
+    private Boolean routeSortOrder;
+
     private Long distanceGeolocation;
 
     private String description;
@@ -68,8 +70,16 @@ public class ImportParameters {
         return splitCharacter;
     }
 
+    public Boolean getRouteSortOrder() {
+        return routeSortOrder;
+    }
+
     public void setSplitCharacter(String splitCharacter) {
         this.splitCharacter = splitCharacter;
+    }
+
+    public void setRouteSortOrder(Boolean routeSortOrder) {
+        this.routeSortOrder = routeSortOrder;
     }
 
     public String getLinePrefixToRemove() {

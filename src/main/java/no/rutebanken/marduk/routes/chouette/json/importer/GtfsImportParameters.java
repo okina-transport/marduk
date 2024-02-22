@@ -101,7 +101,8 @@ public class GtfsImportParameters extends ChouetteJobParameters {
         @JsonProperty("distance_geolocation")
         public Long distanceGeolocation = 200L;
 
-
+        @JsonProperty("route_sort_order")
+        public Boolean routeSortOrder = false;
     }
 
     public static GtfsImportParameters create(RawImportParameters rawImportParameters) {
@@ -126,6 +127,7 @@ public class GtfsImportParameters extends ChouetteJobParameters {
         gtfsImport.routeMerge = rawImportParameters.isRouteMerge();
         gtfsImport.generateMapMatching = rawImportParameters.isGenerateMapMatching();
         gtfsImport.routesReorganization = rawImportParameters.isRoutesReorganization();
+        gtfsImport.routeSortOrder = rawImportParameters.isRouteSortOrder();
         gtfsImport.splitCharacter = rawImportParameters.getSplitCharacter();
         gtfsImport.commercialPointIdPrefixToRemove = rawImportParameters.getIdParameters().getCommercialPointIdPrefixToRemove();
         gtfsImport.quayIdPrefixToRemove = rawImportParameters.getIdParameters().getQuayIdPrefixToRemove();
