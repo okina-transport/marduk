@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import no.rutebanken.marduk.Utils.CipherEncryption;
 import no.rutebanken.marduk.domain.ConsumerType;
 import no.rutebanken.marduk.domain.ExportTemplate;
+import no.rutebanken.marduk.metrics.PrometheusMetricsService;
 import no.rutebanken.marduk.routes.chouette.json.JobResponse;
 import no.rutebanken.marduk.routes.chouette.json.exporter.AbstractExportParameters;
 import no.rutebanken.marduk.routes.chouette.json.exporter.GtfsExportParameters;
@@ -79,6 +80,10 @@ public class ExportToConsumersProcessor implements Processor {
     @Autowired
     OpendatasoftService opendatasoftService;
 
+
+    @Autowired
+    private PrometheusMetricsService metrics;
+
     /**
      * Gets the result stream of an export  and upload it towards consumers defined for this export
      *
@@ -139,14 +144,17 @@ public class ExportToConsumersProcessor implements Processor {
                         }
                         log.info("Envoi du fichier terminé : " + filePath + " vers le consommateur : " + consumer.getName() + " - de type : " + consumer.getType().name() + " - Espace de données : " + referential);
                         exchange.getIn().setHeader(EXPORT_TO_CONSUMER_STATUS, "OK");
+                        metrics.countConsumerCalls(consumer.getType(), "OK");
 
                     } catch (IOException e) {
                         log.error("Error while getting the file before to upload to consumer " + exchange.getIn().getHeader(FILE_HANDLE, String.class), e);
                         exchange.getIn().setHeader(EXPORT_TO_CONSUMER_STATUS, "ERROR");
+                        metrics.countConsumerCalls(consumer.getType(), "ERROR");
                     }
                 } catch (Exception e) {
                     log.error("Error while uploading to consumer " + consumer.toString(), e);
                     exchange.getIn().setHeader(EXPORT_TO_CONSUMER_STATUS, "ERROR");
+                    metrics.countConsumerCalls(consumer.getType(), "ERROR");
                 }
             });
 

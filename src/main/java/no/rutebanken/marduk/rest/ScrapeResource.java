@@ -14,22 +14,33 @@
  *
  */
 
-package no.rutebanken.marduk.config;
+package no.rutebanken.marduk.rest;
 
-import no.rutebanken.marduk.rest.ApplicationStatusResource;
-import no.rutebanken.marduk.rest.ScrapeResource;
-import org.glassfish.jersey.server.ResourceConfig;
-import org.springframework.context.annotation.Configuration;
+import no.rutebanken.marduk.domain.ConsumerType;
+import no.rutebanken.marduk.metrics.PrometheusMetricsService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
 
-import javax.ws.rs.ApplicationPath;
+import javax.ws.rs.GET;
+import javax.ws.rs.Path;
+import javax.ws.rs.core.Response;
 
-@Configuration
-@ApplicationPath("/")
-public class JerseyConfig extends ResourceConfig {
+@Component
+@Path("/scrape")
+public class ScrapeResource {
 
-    public JerseyConfig() {
-        register(ApplicationStatusResource.class);
-        register(ScrapeResource.class);
+
+    @Autowired
+    private PrometheusMetricsService prometheusRegistry;
+
+
+    @GET
+    public Response scrape() {
+
+        return Response.ok()
+                .type("text/plain")
+                .entity(prometheusRegistry.scrape())
+                .build();
     }
 
 }
