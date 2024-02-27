@@ -30,6 +30,8 @@ public class ImportParameters {
 
     private Boolean routeSortOrder;
 
+    private Boolean netexImportLayouts;
+
     private Long distanceGeolocation;
 
     private String description;
@@ -81,6 +83,10 @@ public class ImportParameters {
     public void setRouteSortOrder(Boolean routeSortOrder) {
         this.routeSortOrder = routeSortOrder;
     }
+
+    public Boolean getNetexImportLayouts() { return netexImportLayouts; }
+
+    public void setNetexImportLayouts(Boolean netexImportLayouts) { this.netexImportLayouts = netexImportLayouts; }
 
     public String getLinePrefixToRemove() {
         return linePrefixToRemove;

@@ -181,6 +181,9 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
                     String routeSortOrderStr = e.getIn().getHeader(ROUTE_SORT_ORDER, String.class);
                     boolean routeSortOrder = !StringUtils.isEmpty(routeSortOrderStr) && Boolean.parseBoolean(routeSortOrderStr);
 
+                    String netexImportLayoutsStr = e.getIn().getHeader(NETEX_IMPORT_LAYOUTS, String.class);
+                    boolean netexImportLayouts = !StringUtils.isEmpty(netexImportLayoutsStr) && Boolean.parseBoolean(netexImportLayoutsStr);
+
                     String keepBoardingAlightingPossibilityStr = e.getIn().getHeader(KEEP_BOARDING_ALIGHTING_POSSIBILITY, String.class);
                     boolean keepBoardingAlightingPossibility = !StringUtils.isEmpty(keepBoardingAlightingPossibilityStr) && Boolean.parseBoolean(keepBoardingAlightingPossibilityStr);
 
@@ -249,6 +252,7 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
                     rawImportParameters.setGenerateMapMatching(generateMapMatching);
                     rawImportParameters.setRoutesReorganization(routesReorg);
                     rawImportParameters.setRouteSortOrder(routeSortOrder);
+                    rawImportParameters.setNetexImportLayouts(netexImportLayouts);
                     rawImportParameters.setSplitCharacter(splitCharacter);
                     rawImportParameters.setIdParameters(idParams);
                     rawImportParameters.setCleanMode(cleanMode);
