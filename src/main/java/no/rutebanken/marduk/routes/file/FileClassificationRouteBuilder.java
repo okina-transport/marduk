@@ -74,6 +74,9 @@ public class FileClassificationRouteBuilder extends BaseRouteBuilder {
                     .when(header(FILE_TYPE).isEqualTo(FileType.RAR.name()))
                         .log(LoggingLevel.INFO, correlation() + "Splitting and repackaging file ${header." + FILE_HANDLE + "}")
                         .to("direct:splitRarFile")
+                    .when(header(FILE_TYPE).isEqualTo(FileType.GTFS.name()))
+                        .log(LoggingLevel.INFO, correlation() + "Transforming GTFS file ${header." + FILE_HANDLE + "}")
+                        .to("direct:transformGtfsFile")
                 .end()
                 .log(LoggingLevel.INFO, correlation() + "Posting " + FILE_HANDLE + " ${header." + FILE_HANDLE + "} and " + FILE_TYPE + " ${header." + FILE_TYPE + "} on chouette import queue.")
                 .setBody(simple(""))   //remove file data from body since this is in blobstore
@@ -87,6 +90,16 @@ public class FileClassificationRouteBuilder extends BaseRouteBuilder {
                 .to("direct:uploadBlob")
                 .to("activemq:queue:ProcessFileQueue")
                 .routeId("file-repack-zip");
+
+        from("direct:transformGtfsFile")
+                .choice().when(simple("{{gtfs.transform.skip:false}}"))
+                .log(LoggingLevel.INFO, getClass().getName(), "Skipping gtfs transformation for ${header." + FILE_HANDLE + "}")
+                .otherwise()
+                .bean(method(ZipFileUtils.class, "transformGtfsFile"))
+                .log(LoggingLevel.INFO, correlation() + "ZIP-file transformed ${header." + FILE_HANDLE + "}")
+                .to("direct:uploadBlob")
+                .endChoice()
+                .routeId("file-transform-gtfs");
 
         from("direct:splitRarFile")
                 .split(method(RARToZipFilesSplitter.class, "splitRarFile"))
