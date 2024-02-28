@@ -144,17 +144,17 @@ public class ExportToConsumersProcessor implements Processor {
                         }
                         log.info("Envoi du fichier terminé : " + filePath + " vers le consommateur : " + consumer.getName() + " - de type : " + consumer.getType().name() + " - Espace de données : " + referential);
                         exchange.getIn().setHeader(EXPORT_TO_CONSUMER_STATUS, "OK");
-                        metrics.countConsumerCalls(consumer.getType(), "OK");
+                        metrics.countConsumerCalls(consumer.getType(), export.getType(), "OK");
 
                     } catch (IOException e) {
                         log.error("Error while getting the file before to upload to consumer " + exchange.getIn().getHeader(FILE_HANDLE, String.class), e);
                         exchange.getIn().setHeader(EXPORT_TO_CONSUMER_STATUS, "ERROR");
-                        metrics.countConsumerCalls(consumer.getType(), "ERROR");
+                        metrics.countConsumerCalls(consumer.getType(), export.getType(), "ERROR");
                     }
                 } catch (Exception e) {
                     log.error("Error while uploading to consumer " + consumer.toString(), e);
                     exchange.getIn().setHeader(EXPORT_TO_CONSUMER_STATUS, "ERROR");
-                    metrics.countConsumerCalls(consumer.getType(), "ERROR");
+                    metrics.countConsumerCalls(consumer.getType(), export.getType(), "ERROR");
                 }
             });
 
@@ -189,13 +189,15 @@ public class ExportToConsumersProcessor implements Processor {
     private Optional<String> getValueFromParameters(Exchange exchange, String parameterToSearch) {
 
         String jsonParameters = (String) exchange.getIn().getHeaders().get(JSON_PART);
-        String regex = "\"" + parameterToSearch + "\"\\s*:\\s*\"(\\d{4}-\\d{2}-\\d{2})\"";
-        Pattern pattern = Pattern.compile(regex);
-        Matcher matcher = pattern.matcher(jsonParameters);
+        if(jsonParameters != null){
+            String regex = "\"" + parameterToSearch + "\"\\s*:\\s*\"(\\d{4}-\\d{2}-\\d{2})\"";
+            Pattern pattern = Pattern.compile(regex);
+            Matcher matcher = pattern.matcher(jsonParameters);
 
-        if (matcher.find()) {
-            String value = matcher.group(1);
-            return Optional.of(value);
+            if (matcher.find()) {
+                String value = matcher.group(1);
+                return Optional.of(value);
+            }
         }
         return Optional.empty();
     }
