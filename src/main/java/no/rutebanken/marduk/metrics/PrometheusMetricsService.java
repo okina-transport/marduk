@@ -19,6 +19,8 @@ public class PrometheusMetricsService extends PrometheusMeterRegistry {
 
     private static final String CONSUMER_CALLS_TOTAL = METRICS_PREFIX + "consumer.calls.total";
 
+    private static final String STARTUP_TIME = METRICS_PREFIX + "startup.time";
+
     private static final String CONSUMER_TAG_NAME = "consumerType";
 
     private static final String RESULT_TAG = "result";
@@ -28,6 +30,7 @@ public class PrometheusMetricsService extends PrometheusMeterRegistry {
 
     public PrometheusMetricsService() {
         super(PrometheusConfig.DEFAULT);
+        counter(STARTUP_TIME).increment(System.currentTimeMillis() /1000);
     }
 
     @PreDestroy
