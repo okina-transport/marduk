@@ -45,7 +45,10 @@ public class StatusRouteBuilder extends RouteBuilder {
 						}
 					}
 				})
-				.to("direct:updateStatus")
+				.choice()
+					.when(simple("${header.exportToConsumerStatus} != null"))
+					.to("direct:updateStatus")
+				.end()
 				.routeId("update-export-to-consumer-status");
 	}
 
