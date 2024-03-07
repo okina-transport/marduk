@@ -20,6 +20,7 @@ public class Constants {
     public static final String FILE_TYPE = "RutebankenFileType";
     public static final String FILE_HANDLE = "RutebankenFileHandle";
     public static final String EXPORT_FILE_NAME = "ExportFileName";
+    public static final String EXPORT_CONFIGURATION_ID = "ExportConfigurationId";
     public static final String ARCHIVE_FILE_HANDLE = "ArchiveFileHandle";
     public static final String FILE_PARENT_COLLECTION = "RutebankenFileParentCollection";
     public static final String PROVIDER_ID = "RutebankenProviderId";
