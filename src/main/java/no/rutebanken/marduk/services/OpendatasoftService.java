@@ -192,7 +192,7 @@ public class OpendatasoftService {
 
             writer.write("Debut de validite;Fin de validite;Fichier;Description");
             writer.newLine();
-            writer.write(formatDate(startDate) + ";" + formatDate(endDate) + ";" + fileName + ";" + description);
+            writer.write(startDate + ";" + endDate + ";" + fileName + ";" + description);
             logger.info("Description file create successfully");
         } catch (IOException | ParseException e) {
            logger.error("Error while writing description file", e);
