@@ -185,7 +185,11 @@ public class OpendatasoftService {
         String workingDirectory = "/tmp/" + datasetId;
         String descriptionFileName = workingDirectory + "/" + fileName.replace(".zip" , "-TABLEAU.csv");
 
+
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(descriptionFileName))) {
+            startDate =  startDate != null ? formatDate(startDate) : "";
+            endDate =  endDate != null ? formatDate(endDate) : "";
+
             writer.write("Debut de validite;Fin de validite;Fichier;Description");
             writer.newLine();
             writer.write(formatDate(startDate) + ";" + formatDate(endDate) + ";" + fileName + ";" + description);
