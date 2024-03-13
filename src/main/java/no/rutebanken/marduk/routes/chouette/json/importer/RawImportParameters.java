@@ -40,6 +40,8 @@ public class RawImportParameters {
 
     private boolean netexImportLayouts;
 
+    private boolean netexImportColors;
+
     private Long distanceGeolocation;
 
     public String getFileName() {
@@ -233,6 +235,12 @@ public class RawImportParameters {
     public void setNetexImportLayouts(boolean netexImportLayouts) {
         this.netexImportLayouts = netexImportLayouts;
     }
+
+    public boolean isNetexImportColors() {
+        return netexImportColors;
+    }
+
+    public void setNetexImportColors(boolean netexImportColors) { this.netexImportColors = netexImportColors; }
 
     public Long getDistanceGeolocation(){return distanceGeolocation;}
 

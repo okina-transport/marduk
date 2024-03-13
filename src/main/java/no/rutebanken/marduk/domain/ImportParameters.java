@@ -32,6 +32,8 @@ public class ImportParameters {
 
     private Boolean netexImportLayouts;
 
+    private Boolean netexImportColors;
+
     private Long distanceGeolocation;
 
     private String description;
@@ -87,6 +89,10 @@ public class ImportParameters {
     public Boolean getNetexImportLayouts() { return netexImportLayouts; }
 
     public void setNetexImportLayouts(Boolean netexImportLayouts) { this.netexImportLayouts = netexImportLayouts; }
+
+    public Boolean getNetexImportColors() { return netexImportColors; }
+
+    public void setNetexImportColors(Boolean netexImportColors) { this.netexImportColors = netexImportColors; }
 
     public String getLinePrefixToRemove() {
         return linePrefixToRemove;

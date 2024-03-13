@@ -166,6 +166,7 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
             e.getIn().setHeader(ROUTES_REORGANIZATION, importParameters.getRoutesReorganization());
             e.getIn().setHeader(ROUTE_SORT_ORDER, importParameters.getRouteSortOrder());
             e.getIn().setHeader(NETEX_IMPORT_LAYOUTS, importParameters.getNetexImportLayouts());
+            e.getIn().setHeader(NETEX_IMPORT_COLORS, importParameters.getNetexImportColors());
             e.getIn().setHeader(CLEAN_MODE, importParameters.getImportMode());
             e.getIn().setHeader(KEEP_BOARDING_ALIGHTING_POSSIBILITY, importParameters.getKeepBoardingAlighting());
             e.getIn().setHeader(KEEP_STOP_GEOLOCALISATION, importParameters.getKeepStopGeolocalisation());

@@ -65,6 +65,9 @@ public class NetexImportParameters extends ChouetteJobParameters {
         @JsonInclude(JsonInclude.Include.ALWAYS)
         private boolean netexImportLayouts = false;
 
+        @JsonProperty("netex_import_colors")
+        @JsonInclude(JsonInclude.Include.ALWAYS)
+        private boolean netexImportColors = false;
     }
 
     public static NetexImportParameters create(RawImportParameters rawImportParameters) {
@@ -86,6 +89,7 @@ public class NetexImportParameters extends ChouetteJobParameters {
         netexImport.generateMapMatching = rawImportParameters.isGenerateMapMatching();
         netexImport.description = rawImportParameters.getDescription();
         netexImport.netexImportLayouts = rawImportParameters.isNetexImportLayouts();
+        netexImport.netexImportColors = rawImportParameters.isNetexImportColors();
         if (chouetteInfo.allowCreateMissingStopPlace) {
             netexImport.stopAreaImportMode = AbstractImportParameters.StopAreaImportMode.CREATE_NEW;
         }
