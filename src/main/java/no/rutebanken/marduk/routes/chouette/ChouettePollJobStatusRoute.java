@@ -19,11 +19,9 @@ package no.rutebanken.marduk.routes.chouette;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import no.rutebanken.marduk.Constants;
-import no.rutebanken.marduk.routes.chouette.json.ActionReportWrapper;
-import no.rutebanken.marduk.routes.chouette.json.ExportJob;
-import no.rutebanken.marduk.routes.chouette.json.JobResponse;
-import no.rutebanken.marduk.routes.chouette.json.JobResponseWithLinks;
-import no.rutebanken.marduk.routes.chouette.json.Status;
+import no.rutebanken.marduk.domain.ExportType;
+import no.rutebanken.marduk.metrics.PrometheusMetricsService;
+import no.rutebanken.marduk.routes.chouette.json.*;
 import no.rutebanken.marduk.routes.chouette.mapping.ProviderAndJobsMapper;
 import no.rutebanken.marduk.routes.status.JobEvent;
 import no.rutebanken.marduk.routes.status.JobEvent.State;
@@ -82,6 +80,10 @@ public class ChouettePollJobStatusRoute extends AbstractChouetteRouteBuilder {
 
     @Autowired
     CreateMail createMail;
+
+
+    @Autowired
+    private PrometheusMetricsService metrics;
 
 
     /**
@@ -253,6 +255,7 @@ public class ChouettePollJobStatusRoute extends AbstractChouetteRouteBuilder {
                                     e.getProperties().put("STATUS", exportJob.getStatus().name());
                                     e.getIn().setBody(exportJob);
                                     isExportDone = exportJob.getStatus().isDone();
+                                    countEvent(isPOI, isParkings, exportJob);
                                 } else if(JobEvent.TimetableAction.EXPORT_NETEX.name().equals(e.getIn().getHeader(CHOUETTE_JOB_STATUS_JOB_TYPE))) {
                                     String json = e.getIn().getBody(String.class);
                                     JobResponse jobResponse = new ObjectMapper().readValue(json, JobResponse.class);
@@ -266,6 +269,8 @@ public class ChouettePollJobStatusRoute extends AbstractChouetteRouteBuilder {
                                         e.getProperties().put("STATUS", jobResponse.getStatus().name());
                                     }
                                 }
+
+
 
                                 // remove header to ensure we don't fall into a "reschedulejob infinite loop" on aborted/failed jobs
                                 if (isExportDone) {
@@ -433,6 +438,23 @@ public class ChouettePollJobStatusRoute extends AbstractChouetteRouteBuilder {
                 .end()
                 .routeId("handle-global-netex-export-case");
     }
+
+    private void countEvent(Boolean isPOI, Boolean isParkings, ExportJob exportJob) {
+        if (exportJob == null || JobStatus.PROCESSING.equals(exportJob.getStatus())){
+            return;
+        }
+
+        ExportType exportType;
+        if (isPOI) {
+            exportType = ExportType.POI;
+        } else if (isParkings) {
+            exportType = ExportType.PARKING;
+        } else {
+            exportType = ExportType.ARRET;
+        }
+        metrics.countExports(exportType,JobStatus.FINISHED.equals(exportJob.getStatus()) ? "OK" : exportJob.getStatus().name());
+    }
+
 
     private Boolean convertToBoolean (Object rawProperty){
         if (rawProperty instanceof Boolean){
