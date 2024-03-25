@@ -19,6 +19,8 @@ public class PrometheusMetricsService extends PrometheusMeterRegistry {
 
     private static final String CONSUMER_CALLS_TOTAL = METRICS_PREFIX + "consumer.calls.total";
 
+    private static final String EXPORTS_TOTAL = METRICS_PREFIX + "exports.total";
+
     private static final String STARTUP_TIME = METRICS_PREFIX + "startup.time";
 
     private static final String CONSUMER_TAG_NAME = "consumerType";
@@ -44,8 +46,15 @@ public class PrometheusMetricsService extends PrometheusMeterRegistry {
         counterTags.add(new ImmutableTag(CONSUMER_TAG_NAME, consumerType.name()));
         counterTags.add(new ImmutableTag(EXPORT_TYPE_TAG_NAME, type.name()));
         counterTags.add(new ImmutableTag(RESULT_TAG, result));
-
         counter(CONSUMER_CALLS_TOTAL, counterTags).increment();
+    }
+
+    public void countExports(ExportType type, String result) {
+
+        List<Tag> counterTags = new ArrayList<>();
+        counterTags.add(new ImmutableTag(EXPORT_TYPE_TAG_NAME, type.name()));
+        counterTags.add(new ImmutableTag(RESULT_TAG, result));
+        counter(EXPORTS_TOTAL, counterTags).increment();
     }
 
 

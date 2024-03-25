@@ -181,6 +181,12 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
                     String routeSortOrderStr = e.getIn().getHeader(ROUTE_SORT_ORDER, String.class);
                     boolean routeSortOrder = !StringUtils.isEmpty(routeSortOrderStr) && Boolean.parseBoolean(routeSortOrderStr);
 
+                    String netexImportLayoutsStr = e.getIn().getHeader(NETEX_IMPORT_LAYOUTS, String.class);
+                    boolean netexImportLayouts = !StringUtils.isEmpty(netexImportLayoutsStr) && Boolean.parseBoolean(netexImportLayoutsStr);
+
+                    String netexImportColorsStr = e.getIn().getHeader(NETEX_IMPORT_COLORS, String.class);
+                    boolean netexImportColors = !StringUtils.isEmpty(netexImportColorsStr) && Boolean.parseBoolean(netexImportColorsStr);
+
                     String keepBoardingAlightingPossibilityStr = e.getIn().getHeader(KEEP_BOARDING_ALIGHTING_POSSIBILITY, String.class);
                     boolean keepBoardingAlightingPossibility = !StringUtils.isEmpty(keepBoardingAlightingPossibilityStr) && Boolean.parseBoolean(keepBoardingAlightingPossibilityStr);
 
@@ -249,6 +255,8 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
                     rawImportParameters.setGenerateMapMatching(generateMapMatching);
                     rawImportParameters.setRoutesReorganization(routesReorg);
                     rawImportParameters.setRouteSortOrder(routeSortOrder);
+                    rawImportParameters.setNetexImportLayouts(netexImportLayouts);
+                    rawImportParameters.setNetexImportColors(netexImportColors);
                     rawImportParameters.setSplitCharacter(splitCharacter);
                     rawImportParameters.setIdParameters(idParams);
                     rawImportParameters.setCleanMode(cleanMode);
@@ -278,6 +286,9 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
                 .log(LoggingLevel.INFO, "chouetteUrl: " + chouetteUrl)
                 .choice()
                     .when(simple("${header." + ANALYZE_ACTION + "}"))
+                .process(e -> {
+                    String toto = "";
+                })
                         .setProperty("chouette_url", simple(chouetteUrl + "/chouette_iev/referentials/${header." + CHOUETTE_REFERENTIAL + "}/analyzeFile/${header." + FILE_TYPE + ".toLowerCase()}"))
                     .otherwise()
                         .setProperty("chouette_url", simple(chouetteUrl + "/chouette_iev/referentials/${header." + CHOUETTE_REFERENTIAL + "}/importer/${header." + FILE_TYPE + ".toLowerCase()}"))

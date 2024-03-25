@@ -165,6 +165,8 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
             e.getIn().setHeader(GENERATE_MAP_MATCHING, importParameters.getGenerateMapMatching());
             e.getIn().setHeader(ROUTES_REORGANIZATION, importParameters.getRoutesReorganization());
             e.getIn().setHeader(ROUTE_SORT_ORDER, importParameters.getRouteSortOrder());
+            e.getIn().setHeader(NETEX_IMPORT_LAYOUTS, importParameters.getNetexImportLayouts());
+            e.getIn().setHeader(NETEX_IMPORT_COLORS, importParameters.getNetexImportColors());
             e.getIn().setHeader(CLEAN_MODE, importParameters.getImportMode());
             e.getIn().setHeader(KEEP_BOARDING_ALIGHTING_POSSIBILITY, importParameters.getKeepBoardingAlighting());
             e.getIn().setHeader(KEEP_STOP_GEOLOCALISATION, importParameters.getKeepStopGeolocalisation());
@@ -186,6 +188,7 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
             StringBuilder recipients = new StringBuilder();
             for (Recipient recipient : importConfiguration.getRecipients()) {
                 recipients.append(recipient.getEmail());
+                recipients.append(",");
             }
             if (StringUtils.isNotEmpty(recipients.toString())) {
                 e.getIn().setHeader(RECIPIENTS, recipients.toString());
@@ -377,7 +380,7 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
      */
     private void sendMailForFileNotFound(ImportConfiguration importConfiguration,String referential, String filename) {
 
-        String mailObject = "MOBIITI - import automatique - Fichier non trouvé";
+        String mailObject = "MOBIITI - import automatique - Fichier non trouve";
         LocalDate now= LocalDate.now();
         String text  = "Bonjour, <br> Après vérification, il n'y pas de nouvelle offre à intégrer pour la date du " + now.toString() + ". <br>" +
                         "Nom du fichier : " + filename + " <br>" +
@@ -402,7 +405,7 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
      */
     private void sendMailForFileAlreadyImported(ImportConfiguration importConfiguration,String referential, String filename) {
 
-        String mailObject = "MOBIITI - import automatique - Fichier déjà importé";
+        String mailObject = "MOBIITI - import automatique - Fichier deja importe";
         LocalDate now= LocalDate.now();
         String text  = "Bonjour, <br> Après vérification, il n'y pas de nouvelle offre à intégrer pour la date du " + now.toString() +
                 ", le fichier ayant déjà été importé précédemment. <br>" +

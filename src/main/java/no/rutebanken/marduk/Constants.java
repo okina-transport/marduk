@@ -51,6 +51,8 @@ public class Constants {
     public static final String KEEP_STOP_NAMES = "keepStopNames";
     public static final String IMPORT_SHAPES_FILE = "importShapesFile";
     public static final String ROUTE_SORT_ORDER = "routeSortOrder";
+    public static final String NETEX_IMPORT_LAYOUTS = "netexImportLayouts";
+    public static final String NETEX_IMPORT_COLORS = "netexImportColors";
 
     public static final String UPDATE_STOP_ACCESSIBILITY = "updateStopAccessibility";
 
