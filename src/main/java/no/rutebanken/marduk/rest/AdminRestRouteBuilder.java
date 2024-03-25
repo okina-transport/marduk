@@ -995,7 +995,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .endRest()
 
                 .post("/export-by-id/{exportConfigurationId}")
-                .description("Triggers all exports process in Chouette.")
+                .description("Triggers export by id process in Chouette.")
                 .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the nabu service").dataType("integer").endParam()
                 .consumes(PLAIN)
                 .produces(PLAIN)
