@@ -44,6 +44,7 @@ public class ChouetteInfo {
     public String codeIdfm;
     public String nameNetexStop;
     public String nameNetexOffre;
+    public String gtfsPrefixExport;
 
     public Long migrateDataToProvider; // Which dataspace to transfer data to when provider dataspace is valid
 
@@ -75,6 +76,7 @@ public class ChouetteInfo {
                 ", codeIdfm='" + codeIdfm + '\'' +
                 ", nameNetexStop='" + nameNetexStop + '\'' +
                 ", nameNetexOffre='" + nameNetexOffre + '\'' +
+                ", gtfsPrefixExport='" + gtfsPrefixExport + '\'' +
                 '}';
     }
 
@@ -173,4 +175,9 @@ public class ChouetteInfo {
     public void setNameNetexOffre(String nameNetexOffre) { this.nameNetexOffre = nameNetexOffre; }
 
     public String getNameNetexOffre() { return nameNetexOffre; }
+
+    public void setGtfsPrefixExport(String gtfsPrefixExport) { this.gtfsPrefixExport = gtfsPrefixExport; }
+
+    public String getGtfsPrefixExport() { return gtfsPrefixExport; }
+
 }

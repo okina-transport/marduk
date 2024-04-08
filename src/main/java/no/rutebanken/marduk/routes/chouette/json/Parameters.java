@@ -116,7 +116,8 @@ public class Parameters {
         try {
             ChouetteInfo chouetteInfo = provider.chouetteInfo;
 
-            GtfsExportParameters.GtfsExport gtfsExport = new GtfsExportParameters.GtfsExport(exportName == null ? "offre" : exportName, chouetteInfo.xmlns,
+            GtfsExportParameters.GtfsExport gtfsExport = new GtfsExportParameters.GtfsExport(exportName == null ? "offre" : exportName,
+                    StringUtils.isNotEmpty(chouetteInfo.gtfsPrefixExport) ? chouetteInfo.gtfsPrefixExport : chouetteInfo.xmlns,
                     chouetteInfo.referential, chouetteInfo.organisation, user, keepOriginalId, startDate, endDate, exportedFilename, idParams, mappingLinesIds, commercialPointExport, attributionsExportModes, googleMapsCompatibility);
             gtfsExport.ids = linesIds;
             if (linesIds != null && !linesIds.isEmpty()) {
