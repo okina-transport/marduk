@@ -58,7 +58,7 @@ public class Producers {
         producers.put("lot_et_garonne","Lot-et-Garonne");
         producers.put("pyrenees_atlantiques","Pyrénées-Atlantiques");
         producers.put("vienne","Vienne");
-        producers.put("liaisons_maritime_gironde","Liaisons Maritime Gironde");
+        producers.put("bac_gironde","Bac Gironde");
         producers.put("fai","Aix-Fouras");
         producers.put("sncf","SNCF");
 
@@ -113,7 +113,7 @@ public class Producers {
         producersTransportType.put("lot_et_garonne","interurbain");
         producersTransportType.put("pyrenees_atlantiques","interurbain");
         producersTransportType.put("vienne","interurbain");
-        producersTransportType.put("liaisons_maritime_gironde","fluvial");
+        producersTransportType.put("bac_gironde","fluvial");
         producersTransportType.put("fai","fluvial");
         producersTransportType.put("sncf","ferroviaire");
 
@@ -168,7 +168,7 @@ public class Producers {
         producersGranularite.put("lot_et_garonne","Département");
         producersGranularite.put("pyrenees_atlantiques","Département");
         producersGranularite.put("vienne","Département");
-        producersGranularite.put("liaisons_maritime_gironde","Département");
+        producersGranularite.put("bac_gironde","Département");
         producersGranularite.put("fai","Département");
         producersGranularite.put("sncf","Région");
 
