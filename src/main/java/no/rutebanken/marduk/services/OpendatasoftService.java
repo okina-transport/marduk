@@ -190,9 +190,9 @@ public class OpendatasoftService {
             startDate =  startDate != null ? formatDate(startDate) : "";
             endDate =  endDate != null ? formatDate(endDate) : "";
 
-            writer.write("Debut de validite;Fin de validite;Fichier;Description");
+            writer.write("Debut de validite;Fin de validite;Fichier");
             writer.newLine();
-            writer.write(startDate + ";" + endDate + ";" + fileName + ";" + description);
+            writer.write(startDate + ";" + endDate + ";" + fileName );
             logger.info("Description file create successfully");
         } catch (IOException | ParseException e) {
            logger.error("Error while writing description file", e);
