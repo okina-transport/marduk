@@ -1,12 +1,10 @@
 package no.rutebanken.marduk.services;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import no.rutebanken.marduk.routes.file.ZipFileUtils;
-import no.rutebanken.marduk.services.opendatasoft.DataSet;
-import no.rutebanken.marduk.services.opendatasoft.DatasetMetadata;
-import no.rutebanken.marduk.services.opendatasoft.FileInfos;
-import no.rutebanken.marduk.services.opendatasoft.FileMetadata;
+import no.rutebanken.marduk.services.opendatasoft.*;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,7 +42,7 @@ public class OpendatasoftService {
      * @param fileName        name of the file
      * @throws IOException Exception
      */
-    public void sendToOpendatasoft(InputStream fileToSend, String opendatasoftURL, String datasetId, String secretKey, String exportDate, String description, String fileName, String startDate, String endDate) throws IOException {
+    public void sendToOpendatasoft(InputStream fileToSend, String opendatasoftURL, String datasetId, String secretKey, String exportDate, String description, String fileName, String startDate, String endDate, boolean appendDescription) throws IOException {
 
 
         InputStream archiveToSend = buildArchiveTosend(fileToSend, datasetId, fileName, description, startDate, endDate);
@@ -74,7 +72,7 @@ public class OpendatasoftService {
         fileName = fileName.replace(".zip", "-ZIP.zip");
         String newFileUID = uploadFileToOpendataSoft(opendatasoftURL, datasetUID, fileName, secretKey, archiveToSend);
         createOrUpdateResource(opendatasoftURL, datasetUID, secretKey, fileName, newFileUID);
-        updateMetadata(opendatasoftURL, datasetUID, secretKey, description, exportDate);
+        updateMetadata(opendatasoftURL, datasetUID, secretKey, description, exportDate, appendDescription);
         publishDataSet(opendatasoftURL, datasetUID, secretKey);
     }
 
@@ -190,9 +188,9 @@ public class OpendatasoftService {
             startDate =  startDate != null ? formatDate(startDate) : "";
             endDate =  endDate != null ? formatDate(endDate) : "";
 
-            writer.write("Debut de validite;Fin de validite;Fichier;Description");
+            writer.write("Debut de validite;Fin de validite;Fichier");
             writer.newLine();
-            writer.write(startDate + ";" + endDate + ";" + fileName + ";" + description);
+            writer.write(startDate + ";" + endDate + ";" + fileName );
             logger.info("Description file create successfully");
         } catch (IOException | ParseException e) {
            logger.error("Error while writing description file", e);
@@ -249,13 +247,25 @@ public class OpendatasoftService {
      * @param opendatasoftURL base url of the opendatasoft server
      * @param datasetUID      dataset on which action must be performed
      * @param secretKey       secret key to access dataset
-     * @param description     description written in the metadata
+     * @param newDescription     description written in the metadata
      * @param period          temporal period written in the metadata
      */
-    private void updateMetadata(String opendatasoftURL, String datasetUID, String secretKey, String description, String period) {
-        DatasetMetadata descriptionMetadata = new DatasetMetadata();
-        descriptionMetadata.setValue(description);
+    private void updateMetadata(String opendatasoftURL, String datasetUID, String secretKey, String newDescription, String period, boolean appendDescription) {
         String descriptionMetadataURL = buildDescriptionMetaDataURL(opendatasoftURL, datasetUID);
+        Optional<String> currentDescriptionOpt = launchConnectionOnURL(descriptionMetadataURL, secretKey, "GET", MediaType.APPLICATION_JSON);
+        if (appendDescription && currentDescriptionOpt.isPresent()){
+
+            String response = currentDescriptionOpt.get();
+            Optional<Description> currentDesc = convertToObjectType(response, Description.class);
+            if (currentDesc.isPresent()){
+                newDescription = currentDesc.get().getValue() + "<br>" + newDescription;
+            }
+
+        }
+
+        DatasetMetadata descriptionMetadata = new DatasetMetadata();
+        descriptionMetadata.setValue(newDescription);
+
         launchConnectionOnURL(descriptionMetadataURL, secretKey, "PUT", MediaType.APPLICATION_JSON, convertToJSON(descriptionMetadata));
 
         DatasetMetadata temporalPeriodMetadata = new DatasetMetadata();
@@ -609,6 +619,7 @@ public class OpendatasoftService {
      */
     public static <T> Optional<T> convertToObjectType(String rawJson, Class<T> objectType) {
         ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
         try {
             T obj = objectMapper.readValue(rawJson, objectType);
             return Optional.of(obj);
