@@ -26,6 +26,8 @@ public class Consumer {
 
     private String description;
 
+    private boolean appendDescription = false;
+
 
     public Long getId() {
         return id;
@@ -135,5 +137,13 @@ public class Consumer {
 
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    public boolean isAppendDescription() {
+        return appendDescription;
+    }
+
+    public void setAppendDescription(boolean appendDescription) {
+        this.appendDescription = appendDescription;
     }
 }
