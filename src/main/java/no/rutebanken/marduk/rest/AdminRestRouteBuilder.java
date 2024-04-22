@@ -35,6 +35,7 @@ import no.rutebanken.marduk.services.FileSystemService;
 import org.apache.camel.Body;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
+import org.apache.camel.converter.stream.FileInputStreamCache;
 import org.apache.camel.converter.stream.InputStreamCache;
 import org.apache.camel.model.dataformat.JsonLibrary;
 import org.apache.camel.model.rest.RestBindingMode;
@@ -1317,12 +1318,19 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
         java.io.File incomingDir = new java.io.File(tmpDir);
         incomingDir.mkdirs();
 
-        InputStreamCache inputStreamCache = (InputStreamCache) e.getIn().getBody();
+        InputStream inputStream;
+        if (e.getIn().getBody() instanceof FileInputStreamCache){
+            inputStream =(FileInputStreamCache)e.getIn().getBody();
+        }else{
+            inputStream = (InputStreamCache) e.getIn().getBody();
+        }
+
+
         FileOutputStream fichierSortie = new FileOutputStream(tmpFile);
 
         byte[] tampon = new byte[1024];
         int longueur;
-        while ((longueur = inputStreamCache.read(tampon)) != -1) {
+        while ((longueur = inputStream.read(tampon)) != -1) {
             fichierSortie.write(tampon, 0, longueur);
         }
         return tmpFile;
