@@ -26,6 +26,7 @@ import no.rutebanken.marduk.routes.chouette.ExportJsonMapper;
 import no.rutebanken.marduk.routes.chouette.json.JobResponse;
 import no.rutebanken.marduk.routes.chouette.json.Status;
 import no.rutebanken.marduk.routes.file.GtfsFilesArchiver;
+import no.rutebanken.marduk.routes.file.ZipFileUtils;
 import no.rutebanken.marduk.routes.status.JobEvent;
 import no.rutebanken.marduk.security.AuthorizationClaim;
 import no.rutebanken.marduk.security.AuthorizationService;
@@ -34,6 +35,8 @@ import no.rutebanken.marduk.services.FileSystemService;
 import org.apache.camel.Body;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
+import org.apache.camel.converter.stream.InputStreamCache;
+import org.apache.camel.model.dataformat.JsonLibrary;
 import org.apache.camel.model.rest.RestBindingMode;
 import org.apache.camel.model.rest.RestParamType;
 import org.apache.camel.model.rest.RestPropertyDefinition;
@@ -49,16 +52,15 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Component;
 
 import javax.ws.rs.NotFoundException;
-import java.io.FileInputStream;
+import java.io.*;
 import java.net.URLDecoder;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 import java.util.stream.Collectors;
+
 
 import static javax.ws.rs.core.MediaType.MULTIPART_FORM_DATA;
 import static no.rutebanken.marduk.Constants.*;
+import static org.apache.camel.Exchange.HTTP_RESPONSE_CODE;
 
 /**
  * REST interface for backdoor triggering of messages
@@ -118,19 +120,19 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
 
         onException(AccessDeniedException.class)
                 .handled(true)
-                .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(403))
+                .setHeader(HTTP_RESPONSE_CODE, constant(403))
                 .setHeader(Exchange.CONTENT_TYPE, constant("text/plain"))
                 .transform(exceptionMessage());
 
         onException(NotAuthenticatedException.class)
                 .handled(true)
-                .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(401))
+                .setHeader(HTTP_RESPONSE_CODE, constant(401))
                 .setHeader(Exchange.CONTENT_TYPE, constant("text/plain"))
                 .transform(exceptionMessage());
 
         onException(NotFoundException.class)
                 .handled(true)
-                .setHeader(Exchange.HTTP_RESPONSE_CODE, constant(404))
+                .setHeader(HTTP_RESPONSE_CODE, constant(404))
                 .setHeader(Exchange.CONTENT_TYPE, constant("text/plain"))
                 .transform(exceptionMessage());
 
@@ -615,7 +617,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .description("Upload file for pre-import analyze into Chouette")
                 .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the nabu service").dataType("integer").endParam()
                 .consumes(MULTIPART_FORM_DATA)
-                .produces(PLAIN)
+                .produces(JSON)
                 .bindingMode(RestBindingMode.off)
                 .responseMessage().code(200).endResponseMessage()
                 .responseMessage().code(500).message("Invalid providerId").endResponseMessage()
@@ -626,10 +628,23 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .log(LoggingLevel.INFO, "Authorized request passed")
                 .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
                 .log(LoggingLevel.INFO, "Validation passed")
-                    .process(e -> e.getIn().setHeader(ANALYZE_ACTION, true))
+                .process(e -> e.getIn().setHeader(ANALYZE_ACTION, true))
                 .log(LoggingLevel.INFO, correlation() + "upload files and start import pipeline")
                 .removeHeaders("CamelHttp*")
+                .doTry()
+                .process(e -> checkFileContent(e))
                 .to("direct:uploadFilesAndStartImport")
+                .doCatch(Exception.class)
+                .removeHeaders("Authorization")
+                .process(e -> {
+                    Exception exception = e.getProperty(Exchange.EXCEPTION_CAUGHT, Exception.class);
+                    e.getIn().setHeader(HTTP_RESPONSE_CODE, 500);
+                    Map<String, String> result = new HashMap<>();
+                    result.put("message", exception.getMessage());
+                    e.getIn().setBody(result);
+                })
+                .marshal().json(JsonLibrary.Jackson)
+                .end()
                 .routeId("admin-chouette-upload-file-to-analysis")
                 .endRest()
 
@@ -658,13 +673,13 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                     e.getIn().setBody(fileItem);
                     String referential = e.getIn().getHeader(OKINA_REFERENTIAL, String.class);
                     String cleanMode = e.getIn().getHeader(CLEAN_MODE, String.class);
-                    if ("purge".equals(cleanMode)){
+                    if ("purge".equals(cleanMode)) {
                         stopTimesArchiver.cleanOrganisationStopTimes(referential);
                         stopTimesArchiver.cleanOrganisationTrips(referential);
                     }
                     e.getIn().setHeader(GENERATE_MAP_MATCHING, getGenerateMapMatchingHeaders(e));
-                    stopTimesArchiver.archiveStopTimes(file,referential);
-                    stopTimesArchiver.archiveTrips(file,referential);
+                    stopTimesArchiver.archiveStopTimes(file, referential);
+                    stopTimesArchiver.archiveTrips(file, referential);
                 })
                 .log(LoggingLevel.INFO, correlation() + "upload files and start import pipeline")
                 .removeHeaders("CamelHttp*")
@@ -691,7 +706,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .log(LoggingLevel.INFO, correlation() + "blob store download file by name")
                 .removeHeaders("CamelHttp*")
                 .to("direct:getBlob")
-                .choice().when(simple("${body} == null")).setHeader(Exchange.HTTP_RESPONSE_CODE, constant(404)).endChoice()
+                .choice().when(simple("${body} == null")).setHeader(HTTP_RESPONSE_CODE, constant(404)).endChoice()
                 .routeId("admin-chouette-file-download")
                 .endRest()
 
@@ -717,7 +732,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 })
                 .removeHeaders("CamelHttp*")
                 .to("direct:getStopPlacesFile")
-                .choice().when(simple("${body} == null")).setHeader(Exchange.HTTP_RESPONSE_CODE, constant(404)).endChoice()
+                .choice().when(simple("${body} == null")).setHeader(HTTP_RESPONSE_CODE, constant(404)).endChoice()
                 .routeId("admin-stop-places-file-download")
                 .endRest()
 
@@ -746,7 +761,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .removeHeaders("CamelHttp*")
                 .removeHeaders("Authorization*")
                 .to("direct:getOfferFile")
-                .choice().when(simple("${body} == null")).setHeader(Exchange.HTTP_RESPONSE_CODE, constant(404)).endChoice()
+                .choice().when(simple("${body} == null")).setHeader(HTTP_RESPONSE_CODE, constant(404)).endChoice()
                 .routeId("admin-offer-file-download")
                 .endRest()
 
@@ -1073,9 +1088,9 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .route()
                 .setHeader(PROVIDER_ID, header("providerId"))
                 .to("direct:authorizeRequest")
-                    .process(e-> {
-                        log.info("providerId:" + e.getIn().getHeader(PROVIDER_ID, Long.class));
-                    })
+                .process(e -> {
+                    log.info("providerId:" + e.getIn().getHeader(PROVIDER_ID, Long.class));
+                })
                 .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
                 .log(LoggingLevel.INFO, correlation() + "Tiamat start export POI")
                 .removeHeaders("CamelHttp*")
@@ -1098,13 +1113,13 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .log(LoggingLevel.INFO, correlation() + "Chouette start validation")
                 .removeHeaders("CamelHttp*")
                 .process(e -> {
-                   e.getIn().setHeader(USER, getHeaders(e, USER));
-                        })
+                    e.getIn().setHeader(USER, getHeaders(e, USER));
+                })
                 .choice()
-                    .when(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)).chouetteInfo.migrateDataToProvider == null)
-                        .setHeader(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL, constant(JobEvent.TimetableAction.VALIDATION_LEVEL_2.name()))
-                    .otherwise()
-                        .setHeader(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL, constant(JobEvent.TimetableAction.VALIDATION_LEVEL_1.name()))
+                .when(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)).chouetteInfo.migrateDataToProvider == null)
+                .setHeader(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL, constant(JobEvent.TimetableAction.VALIDATION_LEVEL_2.name()))
+                .otherwise()
+                .setHeader(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL, constant(JobEvent.TimetableAction.VALIDATION_LEVEL_1.name()))
                 .end()
                 .removeHeader("Authorization")
                 .inOnly("activemq:queue:ChouetteValidationQueue")
@@ -1265,6 +1280,55 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
 
     }
 
+
+    private void checkFileContent(Exchange e) throws IOException {
+        String importType = (String) e.getIn().getHeader("importType");
+        String incomingFile = copyIncomingFile(e);
+        ZipFileUtils zipFileUtils = new ZipFileUtils();
+        Set<String> files = zipFileUtils.listFilesInZip(new java.io.File(incomingFile));
+        checkFilesInZip(files, importType);
+    }
+
+    private void checkFilesInZip(Set<String> files, String importType ) {
+
+        if ("gtfs".equals(importType)){
+            for (String file : files) {
+                if (!file.endsWith(".txt")){
+                    String errorMsg = "GTFS file containing non-txt file:" + file;
+                    log.error(errorMsg);
+                    throw new RuntimeException(errorMsg);
+                }
+            }
+        }else {
+            for (String file : files) {
+                if (!file.endsWith(".xml")){
+                    String errorMsg = "Zip containing non-xml file:" + file;
+                    log.error(errorMsg);
+                    throw new RuntimeException(errorMsg);
+                }
+            }
+        }
+    }
+
+    private String copyIncomingFile(Exchange e) throws IOException {
+
+        String tmpDir = "/tmp/" + UUID.randomUUID().toString();
+        String tmpFile = tmpDir + "/incoming.zip";
+        java.io.File incomingDir = new java.io.File(tmpDir);
+        incomingDir.mkdirs();
+
+        InputStreamCache inputStreamCache = (InputStreamCache) e.getIn().getBody();
+        FileOutputStream fichierSortie = new FileOutputStream(tmpFile);
+
+        byte[] tampon = new byte[1024];
+        int longueur;
+        while ((longueur = inputStreamCache.read(tampon)) != -1) {
+            fichierSortie.write(tampon, 0, longueur);
+        }
+        return tmpFile;
+
+    }
+
     public static class ImportFilesSplitter {
         public List<String> splitFiles(@Body BlobStoreFiles files) {
             return files.getFiles().stream().map(File::getName).collect(Collectors.toList());
@@ -1288,7 +1352,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
         Map headers;
         headers = body == null ? e.getIn().getHeaders() : (Map) body.get("headers");
 
-        if (headers != null && headers.get(GENERATE_MAP_MATCHING) != null && ((String)headers.get(GENERATE_MAP_MATCHING)).equalsIgnoreCase("true")) {
+        if (headers != null && headers.get(GENERATE_MAP_MATCHING) != null && ((String) headers.get(GENERATE_MAP_MATCHING)).equalsIgnoreCase("true")) {
             return true;
         }
         return false;
