@@ -10,10 +10,8 @@ import no.rutebanken.marduk.services.FileSystemService;
 import org.apache.camel.LoggingLevel;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.FileSystemResource;
 import org.springframework.stereotype.Component;
 
-import java.io.File;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.UUID;
@@ -80,14 +78,14 @@ public class TiamatExportPointsOfInterestBuilder extends AbstractChouetteRouteBu
                     // required to skip chouette reports parsing when polling job status
                     e.getIn().setHeader(TIAMAT_POINTS_OF_INTEREST_EXPORT, exportJob.getId());
                     String tiamatJobStatusUrl = stopPlacesExportUrl + "/" + exportJob.getId() + "/status";
-                    e.getIn().setHeader(CHOUETTE_JOB_STATUS_URL, tiamatJobStatusUrl);
-                    e.getIn().setHeader(Constants.CHOUETTE_JOB_ID, exportJob.getId());
+                    e.getIn().setHeader(JOB_STATUS_URL, tiamatJobStatusUrl);
+                    e.getIn().setHeader(Constants.JOB_ID, exportJob.getId());
                     log.info("Tiamat Points of Interest Export  : export parsed => " + exportJob.getId() + " : " + tiamatJobStatusUrl);
                     log.info("Lancement export POI - Fichier : " + exportJob.getFileName() + " - Espace de données : " + getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)).chouetteInfo.referential);
                 })
 
-                .setHeader(Constants.CHOUETTE_JOB_STATUS_ROUTING_DESTINATION, constant(TIAMAT_EXPORT_POI_ROUTING_DESTINATION))
-                .setHeader(CHOUETTE_JOB_STATUS_JOB_TYPE, constant(JobEvent.TimetableAction.EXPORT.name()))
+                .setHeader(Constants.JOB_STATUS_ROUTING_DESTINATION, constant(TIAMAT_EXPORT_POI_ROUTING_DESTINATION))
+                .setHeader(JOB_STATUS_JOB_TYPE, constant(JobEvent.TimetableAction.EXPORT.name()))
                 .to("activemq:queue:ChouettePollStatusQueue")
                 .routeId("tiamat-points-of-interest-export-job");
 

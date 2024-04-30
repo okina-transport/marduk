@@ -26,7 +26,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import static no.rutebanken.marduk.Constants.ANALYSIS_JOB_ID;
-import static no.rutebanken.marduk.Constants.CHOUETTE_JOB_ID;
+import static no.rutebanken.marduk.Constants.JOB_ID;
 import static no.rutebanken.marduk.Constants.EXPORT_FILE_NAME;
 import static no.rutebanken.marduk.Constants.FILE_HANDLE;
 import static no.rutebanken.marduk.Constants.FILE_NAME;
@@ -105,7 +105,7 @@ public class FileSystemService {
             referential = superspaceName + "_" + referential;
         }
 
-        String jobId = exchange.getIn().getHeader(CHOUETTE_JOB_ID, String.class);
+        String jobId = exchange.getIn().getHeader(JOB_ID, String.class);
 
         logger.info("Get zip and csv files from path : " + chouetteStoragePath + "/" + referential + "/data/" + jobId);
         FileSystemResource fileSystemResource = new FileSystemResource(chouetteStoragePath + "/" + referential + "/data/" + jobId);

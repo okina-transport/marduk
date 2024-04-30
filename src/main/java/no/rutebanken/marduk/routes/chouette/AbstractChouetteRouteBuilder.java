@@ -31,7 +31,7 @@ import java.io.InputStream;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 
-import static no.rutebanken.marduk.Constants.CHOUETTE_JOB_STATUS_URL;
+import static no.rutebanken.marduk.Constants.JOB_STATUS_URL;
 import static no.rutebanken.marduk.Constants.FILE_NAME;
 import static no.rutebanken.marduk.Constants.JSON_PART;
 
@@ -122,10 +122,10 @@ public abstract class AbstractChouetteRouteBuilder extends BaseRouteBuilder {
 	 */
 	public void setExportPollingHeaders(Exchange e, String jobId, String jobStatusUrl, String routingDestination) {
 		e.getOut().setHeader(Constants.CORRELATION_ID, e.getIn().getHeader(Constants.CORRELATION_ID, UUID.randomUUID().toString()));
-		e.getOut().setHeader(CHOUETTE_JOB_STATUS_URL, jobStatusUrl);
-		e.getOut().setHeader(Constants.CHOUETTE_JOB_ID, jobId);
-		e.getOut().setHeader(Constants.CHOUETTE_JOB_STATUS_ROUTING_DESTINATION, constant(routingDestination));
-		e.getOut().setHeader(Constants.CHOUETTE_JOB_STATUS_JOB_TYPE, constant(JobEvent.TimetableAction.EXPORT.name()));
+		e.getOut().setHeader(JOB_STATUS_URL, jobStatusUrl);
+		e.getOut().setHeader(Constants.JOB_ID, jobId);
+		e.getOut().setHeader(Constants.JOB_STATUS_ROUTING_DESTINATION, constant(routingDestination));
+		e.getOut().setHeader(Constants.JOB_STATUS_JOB_TYPE, constant(JobEvent.TimetableAction.EXPORT.name()));
 	}
 
 }

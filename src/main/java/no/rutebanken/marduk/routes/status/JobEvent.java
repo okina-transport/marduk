@@ -27,7 +27,7 @@ import java.io.StringWriter;
 import java.time.Instant;
 import java.util.UUID;
 
-import static no.rutebanken.marduk.Constants.CHOUETTE_JOB_ID;
+import static no.rutebanken.marduk.Constants.JOB_ID;
 import static no.rutebanken.marduk.Constants.CHOUETTE_REFERENTIAL;
 import static no.rutebanken.marduk.Constants.CORRELATION_ID;
 import static no.rutebanken.marduk.Constants.DESCRIPTION;
@@ -218,7 +218,7 @@ public class JobEvent {
             jobEvent.name = exchange.getIn().getHeader(Constants.FILE_NAME, String.class);
             jobEvent.providerId = Long.valueOf(exchange.getIn().getHeader(Constants.ORIGINAL_PROVIDER_ID, exchange.getIn().getHeader(PROVIDER_ID, String.class), String.class));
             jobEvent.correlationId = exchange.getIn().getHeader(CORRELATION_ID, String.class);
-            jobEvent.externalId = exchange.getIn().getHeader(CHOUETTE_JOB_ID, Long.class);
+            jobEvent.externalId = exchange.getIn().getHeader(JOB_ID, Long.class);
             jobEvent.referential = exchange.getIn().getHeader(CHOUETTE_REFERENTIAL, String.class);
             jobEvent.username = exchange.getIn().getHeader(USER, String.class);
             jobEvent.description = exchange.getIn().getHeader(DESCRIPTION, String.class);

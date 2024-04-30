@@ -35,7 +35,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static java.util.stream.Collectors.toList;
-import static no.rutebanken.marduk.Constants.CHOUETTE_JOB_STATUS_URL;
+import static no.rutebanken.marduk.Constants.JOB_STATUS_URL;
 import static no.rutebanken.marduk.Constants.CHOUETTE_REFERENTIAL;
 import static no.rutebanken.marduk.Constants.EXPORTED_FILENAME;
 import static no.rutebanken.marduk.Constants.EXPORT_END_DATE;
@@ -82,7 +82,7 @@ public class ChouetteExportNeptuneRouteBuilder extends AbstractChouetteRouteBuil
                     // Force new correlation ID : each export must have its own correlation ID to me displayed correctly in export screen
                     e.getIn().setHeader(Constants.CORRELATION_ID, UUID.randomUUID().toString());
                     String exportName = org.springframework.util.StringUtils.hasText(e.getIn().getHeader(EXPORTED_FILENAME, String.class)) ? (String) e.getIn().getHeader(EXPORTED_FILENAME) : "offre";
-                    e.getIn().removeHeader(Constants.CHOUETTE_JOB_ID);
+                    e.getIn().removeHeader(Constants.JOB_ID);
                     e.getIn().setHeader(FILE_NAME, exportName);
                     e.getIn().setHeader(FILE_TYPE, "neptune");
                     log.info("Lancement export Neptune - Fichier : " + exportName + " - Espace de données : " + getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)).chouetteInfo.referential);
@@ -128,11 +128,11 @@ public class ChouetteExportNeptuneRouteBuilder extends AbstractChouetteRouteBuil
                 .toD(chouetteUrl + "/chouette_iev/referentials/${header." + CHOUETTE_REFERENTIAL + "}/exporter/neptune")
                 .to("log:" + getClass().getName() + "?level=DEBUG&showAll=true&multiline=true")
                 .process(e -> {
-                    e.getIn().setHeader(CHOUETTE_JOB_STATUS_URL, e.getIn().getHeader("Location").toString().replaceFirst("http", "http4"));
-                    e.getIn().setHeader(Constants.CHOUETTE_JOB_ID, getLastPathElementOfUrl(e.getIn().getHeader("Location", String.class)));
+                    e.getIn().setHeader(JOB_STATUS_URL, e.getIn().getHeader("Location").toString().replaceFirst("http", "http4"));
+                    e.getIn().setHeader(Constants.JOB_ID, getLastPathElementOfUrl(e.getIn().getHeader("Location", String.class)));
                 })
-                .setHeader(Constants.CHOUETTE_JOB_STATUS_ROUTING_DESTINATION, constant("direct:processNeptuneExportResult"))
-                .setHeader(Constants.CHOUETTE_JOB_STATUS_JOB_TYPE, constant(TimetableAction.EXPORT.name()))
+                .setHeader(Constants.JOB_STATUS_ROUTING_DESTINATION, constant("direct:processNeptuneExportResult"))
+                .setHeader(Constants.JOB_STATUS_JOB_TYPE, constant(TimetableAction.EXPORT.name()))
                 .removeHeader("loopCounter")
                 .to("activemq:queue:ChouettePollStatusQueue")
                 .routeId("chouette-send-export-neptune-job");

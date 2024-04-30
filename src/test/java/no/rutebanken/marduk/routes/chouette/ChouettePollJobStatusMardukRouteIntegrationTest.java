@@ -190,9 +190,9 @@ public class ChouettePollJobStatusMardukRouteIntegrationTest extends MardukRoute
 		headers.put(Constants.FILE_NAME, "file_name");
 		headers.put(Constants.CORRELATION_ID, "corr_id");
 		headers.put(Constants.FILE_HANDLE, "rut/file_name");
-		headers.put(Constants.CHOUETTE_JOB_STATUS_ROUTING_DESTINATION, "mock:destination");
-		headers.put(Constants.CHOUETTE_JOB_STATUS_URL, chouetteUrl + "/chouette_iev/referentials/rut/scheduled_jobs/1");
-		headers.put(Constants.CHOUETTE_JOB_STATUS_JOB_TYPE, JobEvent.TimetableAction.IMPORT.name());
+		headers.put(Constants.JOB_STATUS_ROUTING_DESTINATION, "mock:destination");
+		headers.put(Constants.JOB_STATUS_URL, chouetteUrl + "/chouette_iev/referentials/rut/scheduled_jobs/1");
+		headers.put(Constants.JOB_STATUS_JOB_TYPE, JobEvent.TimetableAction.IMPORT.name());
 		pollStartTemplate.sendBodyAndHeaders(null, headers);
 
 		chouetteGetJobStatus.assertIsSatisfied();
@@ -218,7 +218,7 @@ public class ChouettePollJobStatusMardukRouteIntegrationTest extends MardukRoute
 		context.start();
 
 		validationReportTemplate.sendBodyAndHeader(getClass().getResourceAsStream(validationReportClasspathReference),
-				Constants.CHOUETTE_JOB_STATUS_ROUTING_DESTINATION, "mock:destination");
+				Constants.JOB_STATUS_ROUTING_DESTINATION, "mock:destination");
 
 		destination.expectedMessageCount(1);
 		destination.expectedHeaderReceived("validation_report_result", expectedResult);

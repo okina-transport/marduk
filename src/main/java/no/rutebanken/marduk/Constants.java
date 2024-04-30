@@ -105,11 +105,11 @@ public class Constants {
     public static final String BLOBSTORE_PATH_INBOUND = "inbound/received/";
     public static final String BLOBSTORE_PATH_OUTBOUND = "outbound/";
 
-    public static final String CHOUETTE_JOB_STATUS_URL = "RutebankenChouetteJobStatusURL";
-    public static final String CHOUETTE_JOB_ID = "RutebankenChouetteJobId";
-    public static final String CHOUETTE_JOB_STATUS_ROUTING_DESTINATION = "RutebankenChouetteJobStatusRoutingDestination";
-    public static final String CHOUETTE_JOB_STATUS_JOB_TYPE = "RutebankenChouetteJobStatusType";
-    public static final String CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL = "RutebankenChouetteJobStatusValidationLevel";
+    public static final String JOB_STATUS_URL = "RutebankenJobStatusURL";
+    public static final String JOB_ID = "RutebankenJobId";
+    public static final String JOB_STATUS_ROUTING_DESTINATION = "RutebankenJobStatusRoutingDestination";
+    public static final String JOB_STATUS_JOB_TYPE = "RutebankenJobStatusType";
+    public static final String JOB_STATUS_JOB_VALIDATION_LEVEL = "RutebankenJobStatusValidationLevel";
 
     public static final String JOB_ACTION = "RutebankenJobAction";
 

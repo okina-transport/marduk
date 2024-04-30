@@ -72,7 +72,7 @@ public class ChouetteExportNetexRouteBuilder extends AbstractChouetteRouteBuilde
                 .process(e -> {
                     // Force new correlation ID : each export must have its own correlation ID to me displayed correctly in export screen
                     e.getIn().setHeader(Constants.CORRELATION_ID, UUID.randomUUID().toString());
-                    e.getIn().removeHeader(Constants.CHOUETTE_JOB_ID);
+                    e.getIn().removeHeader(Constants.JOB_ID);
                     String exportName = org.springframework.util.StringUtils.hasText(e.getIn().getHeader(EXPORTED_FILENAME, String.class)) && !e.getIn().getHeader(NETEX_EXPORT_GLOBAL, Boolean.class) ? (String) e.getIn().getHeader(EXPORTED_FILENAME) : "offre";
                     e.getIn().setHeader(FILE_NAME, exportName);
                     e.getIn().setHeader(FILE_TYPE, "netex");
@@ -104,11 +104,11 @@ public class ChouetteExportNetexRouteBuilder extends AbstractChouetteRouteBuilde
                 .setHeader(Exchange.CONTENT_TYPE, simple("multipart/form-data"))
                 .toD(chouetteUrl + "/chouette_iev/referentials/${header." + CHOUETTE_REFERENTIAL + "}/exporter/netexprofile")
                 .process(e -> {
-                    e.getIn().setHeader(CHOUETTE_JOB_STATUS_URL, e.getIn().getHeader("Location").toString().replaceFirst("http", "http4"));
-                    e.getIn().setHeader(Constants.CHOUETTE_JOB_ID, getLastPathElementOfUrl(e.getIn().getHeader("Location", String.class)));
+                    e.getIn().setHeader(JOB_STATUS_URL, e.getIn().getHeader("Location").toString().replaceFirst("http", "http4"));
+                    e.getIn().setHeader(Constants.JOB_ID, getLastPathElementOfUrl(e.getIn().getHeader("Location", String.class)));
                 })
-                .setHeader(Constants.CHOUETTE_JOB_STATUS_ROUTING_DESTINATION, constant("direct:processNetexExportResult"))
-                .setHeader(Constants.CHOUETTE_JOB_STATUS_JOB_TYPE, constant(JobEvent.TimetableAction.EXPORT_NETEX.name()))
+                .setHeader(Constants.JOB_STATUS_ROUTING_DESTINATION, constant("direct:processNetexExportResult"))
+                .setHeader(Constants.JOB_STATUS_JOB_TYPE, constant(JobEvent.TimetableAction.EXPORT_NETEX.name()))
                 .removeHeader("loopCounter")
                 .to("activemq:queue:ChouettePollStatusQueue")
                 .routeId("chouette-start-export-netex");
@@ -143,7 +143,7 @@ public class ChouetteExportNetexRouteBuilder extends AbstractChouetteRouteBuilde
                         .endChoice()
                         .setHeader(BLOBSTORE_MAKE_BLOB_PUBLIC, constant(publicPublication))
                         .to("direct:updateStatus")
-                        .removeHeader(Constants.CHOUETTE_JOB_ID)
+                        .removeHeader(Constants.JOB_ID)
                         .setBody(constant(null))
                         .choice()
                             .when(e -> !e.getIn().getHeader(NO_GTFS_EXPORT, Boolean.class))
@@ -169,7 +169,7 @@ public class ChouetteExportNetexRouteBuilder extends AbstractChouetteRouteBuilde
                         })
                     .end()
                 .to("direct:updateStatus")
-                .removeHeader(Constants.CHOUETTE_JOB_ID)
+                .removeHeader(Constants.JOB_ID)
                 .routeId("chouette-process-export-netex-status");
 
         from("direct:chouetteNetexExportForAllProviders")

@@ -83,7 +83,7 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
                 .process(e -> {
                     // Force new correlation ID : each export must have its own correlation ID to me displayed correctly in export screen
                     e.getIn().setHeader(Constants.CORRELATION_ID,  UUID.randomUUID().toString());
-                    e.getIn().removeHeader(Constants.CHOUETTE_JOB_ID);
+                    e.getIn().removeHeader(Constants.JOB_ID);
                     String exportName = "gtfs";
                     if(!e.getIn().getHeader(GTFS_EXPORT_GLOBAL, Boolean.class)){
                         exportName = org.springframework.util.StringUtils.hasText(e.getIn().getHeader(EXPORTED_FILENAME, String.class)) ?
@@ -159,11 +159,11 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
                 .toD(chouetteUrl + "/chouette_iev/referentials/${header." + CHOUETTE_REFERENTIAL + "}/exporter/gtfs")
                 .to("log:" + getClass().getName() + "?level=DEBUG&showAll=true&multiline=true")
                 .process(e -> {
-                    e.getIn().setHeader(CHOUETTE_JOB_STATUS_URL, e.getIn().getHeader("Location").toString().replaceFirst("http", "http4"));
-                    e.getIn().setHeader(Constants.CHOUETTE_JOB_ID, getLastPathElementOfUrl(e.getIn().getHeader("Location", String.class)));
+                    e.getIn().setHeader(JOB_STATUS_URL, e.getIn().getHeader("Location").toString().replaceFirst("http", "http4"));
+                    e.getIn().setHeader(Constants.JOB_ID, getLastPathElementOfUrl(e.getIn().getHeader("Location", String.class)));
                 })
-                .setHeader(Constants.CHOUETTE_JOB_STATUS_ROUTING_DESTINATION, constant("direct:processExportResult"))
-                .setHeader(Constants.CHOUETTE_JOB_STATUS_JOB_TYPE, constant(JobEvent.TimetableAction.EXPORT.name()))
+                .setHeader(Constants.JOB_STATUS_ROUTING_DESTINATION, constant("direct:processExportResult"))
+                .setHeader(Constants.JOB_STATUS_JOB_TYPE, constant(JobEvent.TimetableAction.EXPORT.name()))
                 .removeHeader("loopCounter")
                 .to("activemq:queue:ChouettePollStatusQueue")
                 .routeId("chouette-send-export-job");

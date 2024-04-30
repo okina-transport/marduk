@@ -8,7 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import static no.rutebanken.marduk.Constants.CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL;
+import static no.rutebanken.marduk.Constants.JOB_STATUS_JOB_VALIDATION_LEVEL;
 import static no.rutebanken.marduk.Constants.CHOUETTE_REFERENTIAL;
 import static no.rutebanken.marduk.Constants.EXPORT_NAME;
 import static no.rutebanken.marduk.Constants.FILE_NAME;
@@ -37,7 +37,7 @@ public class CreateMail {
         String fileName = e.getIn().getHeader(FILE_NAME, String.class);
         String levelValidation= null;
         if(VALIDATION_LEVEL_1.equals(timetableAction) || JobEvent.TimetableAction.VALIDATION_LEVEL_2.equals(timetableAction) ){
-            levelValidation = e.getIn().getHeader(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL, String.class).equals(VALIDATION_LEVEL_2.name()) ?  "2" : "1";
+            levelValidation = e.getIn().getHeader(JOB_STATUS_JOB_VALIDATION_LEVEL, String.class).equals(VALIDATION_LEVEL_2.name()) ?  "2" : "1";
         }
         if(recipients != null) {
             for (String recipient : recipients) {
@@ -140,7 +140,7 @@ public class CreateMail {
         }
         if(VALIDATION_LEVEL_1.equals(timetableAction) || JobEvent.TimetableAction.VALIDATION_LEVEL_2.equals(timetableAction) ){
             String message = null;
-            if (e.getIn().getHeader(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL, String.class).equals(VALIDATION_LEVEL_2.name())) {
+            if (e.getIn().getHeader(JOB_STATUS_JOB_VALIDATION_LEVEL, String.class).equals(VALIDATION_LEVEL_2.name())) {
                 if (e.getIn().getHeader(GENERATE_MAP_MATCHING, Boolean.class).equals(true)) {
                     message = "L'import, la validation niveau 1, la génération des tracés, le transfert et la validation niveau 2 du fichier : " + fileName + " se sont correctement effectués.";
                 } else {
@@ -148,7 +148,7 @@ public class CreateMail {
                 }
             }
 
-            if (e.getIn().getHeader(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL, String.class).equals(VALIDATION_LEVEL_1.name())){
+            if (e.getIn().getHeader(JOB_STATUS_JOB_VALIDATION_LEVEL, String.class).equals(VALIDATION_LEVEL_1.name())){
                 if(e.getIn().getHeader(GENERATE_MAP_MATCHING, Boolean.class).equals(true)){
                     message = "L'import, la validation niveau 1 et la génération des tracés du fichier : " + fileName + " se sont correctement effectués.";
                 } else{

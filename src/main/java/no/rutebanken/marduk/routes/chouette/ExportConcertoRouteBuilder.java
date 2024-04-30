@@ -31,7 +31,7 @@ import java.util.UUID;
 
 import static no.rutebanken.marduk.Constants.BLOBSTORE_MAKE_BLOB_PUBLIC;
 import static no.rutebanken.marduk.Constants.BLOBSTORE_PATH_OUTBOUND;
-import static no.rutebanken.marduk.Constants.CHOUETTE_JOB_STATUS_URL;
+import static no.rutebanken.marduk.Constants.JOB_STATUS_URL;
 import static no.rutebanken.marduk.Constants.CHOUETTE_REFERENTIAL;
 import static no.rutebanken.marduk.Constants.FILE_HANDLE;
 import static no.rutebanken.marduk.Constants.JSON_PART;
@@ -80,7 +80,7 @@ public class ExportConcertoRouteBuilder extends AbstractChouetteRouteBuilder {
                 .process(e -> {
                     // Add correlation id only if missing
                     e.getIn().setHeader(Constants.CORRELATION_ID, e.getIn().getHeader(Constants.CORRELATION_ID, UUID.randomUUID().toString()));
-                    e.getIn().removeHeader(Constants.CHOUETTE_JOB_ID);
+                    e.getIn().removeHeader(Constants.JOB_ID);
                 })
                 .process(e -> JobEvent.providerJobBuilder(e).timetableAction(TimetableAction.EXPORT_CONCERTO).state(State.PENDING).build())
                 .to("direct:updateStatus")
@@ -99,11 +99,11 @@ public class ExportConcertoRouteBuilder extends AbstractChouetteRouteBuilder {
                 .toD(chouetteUrl + "/chouette_iev/referentials/${header." + CHOUETTE_REFERENTIAL + "}/exporter/concerto")
                 .to("log:" + getClass().getName() + "?level=DEBUG&showAll=true&multiline=true")
                 .process(e -> {
-                    e.getIn().setHeader(CHOUETTE_JOB_STATUS_URL, e.getIn().getHeader("Location").toString().replaceFirst("http", "http4"));
-                    e.getIn().setHeader(Constants.CHOUETTE_JOB_ID, getLastPathElementOfUrl(e.getIn().getHeader("Location", String.class)));
+                    e.getIn().setHeader(JOB_STATUS_URL, e.getIn().getHeader("Location").toString().replaceFirst("http", "http4"));
+                    e.getIn().setHeader(Constants.JOB_ID, getLastPathElementOfUrl(e.getIn().getHeader("Location", String.class)));
                 })
-                .setHeader(Constants.CHOUETTE_JOB_STATUS_ROUTING_DESTINATION, constant("direct:processExportConcertoResult"))
-                .setHeader(Constants.CHOUETTE_JOB_STATUS_JOB_TYPE, constant(TimetableAction.EXPORT_CONCERTO.name()))
+                .setHeader(Constants.JOB_STATUS_ROUTING_DESTINATION, constant("direct:processExportConcertoResult"))
+                .setHeader(Constants.JOB_STATUS_JOB_TYPE, constant(TimetableAction.EXPORT_CONCERTO.name()))
                 .removeHeader("loopCounter")
                 .to("activemq:queue:ChouettePollStatusQueue")
                 .routeId("chouette-send-export-concerto-job");

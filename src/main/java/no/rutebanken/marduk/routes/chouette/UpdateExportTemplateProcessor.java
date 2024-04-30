@@ -1,21 +1,14 @@
 package no.rutebanken.marduk.routes.chouette;
 
-import no.rutebanken.marduk.Utils.CipherEncryption;
 import no.rutebanken.marduk.domain.ExportTemplate;
 import no.rutebanken.marduk.repository.ExportTemplateDAO;
-import no.rutebanken.marduk.services.*;
 import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
 import org.apache.commons.lang3.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import java.io.*;
-
 import static no.rutebanken.marduk.Constants.*;
-import static no.rutebanken.marduk.Constants.EXPORT_FROM_TIAMAT;
 
 @Component
 public class UpdateExportTemplateProcessor implements Processor {
@@ -38,7 +31,7 @@ public class UpdateExportTemplateProcessor implements Processor {
         if (StringUtils.isNotBlank(jsonExport)) {
             ExportTemplate export = exportJsonMapper.fromJson(jsonExport);
 
-            Object jobIdObj = exchange.getIn().getHeaders().get(CHOUETTE_JOB_ID);
+            Object jobIdObj = exchange.getIn().getHeaders().get(JOB_ID);
             Long jobId = 0L;
             if (jobIdObj instanceof Long){
                 jobId = (Long) jobIdObj;

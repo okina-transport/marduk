@@ -46,10 +46,7 @@ import java.io.InputStreamReader;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
-import java.util.stream.Collectors;
 
 import static no.rutebanken.marduk.Constants.*;
 import static no.rutebanken.marduk.Utils.Utils.getHttp4;
@@ -129,7 +126,7 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
         from("activemq:queue:ChouetteImportQueue?transacted=true").streamCaching()
                 .transacted()
                 .log(LoggingLevel.INFO, correlation() + "Starting Chouette import")
-                .removeHeader(CHOUETTE_JOB_ID)
+                .removeHeader(JOB_ID)
                 .process(e -> {
                     Boolean analyze = e.getIn().getHeader(ANALYZE_ACTION, Boolean.class) != null ? e.getIn().getHeader(ANALYZE_ACTION, Boolean.class) : false;
                     TimetableAction action = analyze ? TimetableAction.FILE_ANALYZE : TimetableAction.IMPORT;
@@ -299,15 +296,15 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
                 .toD("${exchangeProperty.chouette_url}")
                 .to("log:" + getClass().getName() + "?level=DEBUG&showAll=true&multiline=true")
                 .process(e -> {
-                    e.getIn().setHeader(Constants.CHOUETTE_JOB_STATUS_URL, getHttp4(e.getIn().getHeader("Location", String.class)));
-                    e.getIn().setHeader(Constants.CHOUETTE_JOB_ID, getLastPathElementOfUrl(e.getIn().getHeader("Location", String.class)));
+                    e.getIn().setHeader(Constants.JOB_STATUS_URL, getHttp4(e.getIn().getHeader("Location", String.class)));
+                    e.getIn().setHeader(Constants.JOB_ID, getLastPathElementOfUrl(e.getIn().getHeader("Location", String.class)));
                 })
-                .setHeader(Constants.CHOUETTE_JOB_STATUS_ROUTING_DESTINATION, constant("direct:processImportResult"))
+                .setHeader(Constants.JOB_STATUS_ROUTING_DESTINATION, constant("direct:processImportResult"))
                 .choice()
                     .when(simple("${header." + ANALYZE_ACTION + "}"))
-                        .setHeader(Constants.CHOUETTE_JOB_STATUS_JOB_TYPE, constant(TimetableAction.FILE_ANALYZE.name()))
+                        .setHeader(Constants.JOB_STATUS_JOB_TYPE, constant(TimetableAction.FILE_ANALYZE.name()))
                     .otherwise()
-                        .setHeader(Constants.CHOUETTE_JOB_STATUS_JOB_TYPE, constant(JobEvent.TimetableAction.IMPORT.name()))
+                        .setHeader(Constants.JOB_STATUS_JOB_TYPE, constant(JobEvent.TimetableAction.IMPORT.name()))
                     .end()
                 .removeHeader("loopCounter")
                 .to("activemq:queue:ChouettePollStatusQueue")
@@ -413,7 +410,7 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
                         .choice()
                             .when(constant("true").isEqualTo(header(Constants.ENABLE_VALIDATION)))
                                 .log(LoggingLevel.INFO, correlation() + "Import ok, triggering validation")
-                                .setHeader(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL, constant(JobEvent.TimetableAction.VALIDATION_LEVEL_1.name()))
+                                .setHeader(JOB_STATUS_JOB_VALIDATION_LEVEL, constant(JobEvent.TimetableAction.VALIDATION_LEVEL_1.name()))
                                 .to("activemq:queue:ChouetteValidationQueue")
                             .when(method(getClass(), "shouldTransferData").isEqualTo(true))
                                 .log(LoggingLevel.INFO, correlation() + "Import ok, transfering data to next dataspace")

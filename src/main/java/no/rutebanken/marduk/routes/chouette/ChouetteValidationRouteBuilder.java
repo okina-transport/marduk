@@ -92,7 +92,7 @@ public class ChouetteValidationRouteBuilder extends AbstractChouetteRouteBuilder
                 .process(e -> e.getIn().setHeader(CORRELATION_ID, UUID.randomUUID().toString()))
                 .setHeader(PROVIDER_ID, simple("${body.id}"))
                 .setHeader(CHOUETTE_REFERENTIAL, simple("${body.chouetteInfo.referential}"))
-                .setHeader(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL, constant(VALIDATION_LEVEL_1.name()))
+                .setHeader(JOB_STATUS_JOB_VALIDATION_LEVEL, constant(VALIDATION_LEVEL_1.name()))
                 .setBody(constant(null))
                 .inOnly("activemq:queue:ChouetteValidationQueue")
                 .routeId("chouette-validate-level1-all-providers");
@@ -106,7 +106,7 @@ public class ChouetteValidationRouteBuilder extends AbstractChouetteRouteBuilder
                 .process(e -> e.getIn().setHeader(CORRELATION_ID, UUID.randomUUID().toString()))
                 .setHeader(PROVIDER_ID, simple("${body.id}"))
                 .setHeader(CHOUETTE_REFERENTIAL, simple("${body.chouetteInfo.referential}"))
-                .setHeader(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL, constant(JobEvent.TimetableAction.VALIDATION_LEVEL_2.name()))
+                .setHeader(JOB_STATUS_JOB_VALIDATION_LEVEL, constant(JobEvent.TimetableAction.VALIDATION_LEVEL_2.name()))
                 .setBody(constant(null))
                 .inOnly("activemq:queue:ChouetteValidationQueue")
                 .routeId("chouette-validate-level2-all-providers");
@@ -117,8 +117,8 @@ public class ChouetteValidationRouteBuilder extends AbstractChouetteRouteBuilder
                 .process(e -> {
                     // Add correlation id only if missing
                     e.getIn().setHeader(Constants.CORRELATION_ID, e.getIn().getHeader(Constants.CORRELATION_ID, UUID.randomUUID().toString()));
-                    e.getIn().removeHeader(Constants.CHOUETTE_JOB_ID);
-                    JobEvent.providerJobBuilder(e).timetableAction(e.getIn().getHeader(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL, JobEvent.TimetableAction.class)).state(State.PENDING).build();
+                    e.getIn().removeHeader(Constants.JOB_ID);
+                    JobEvent.providerJobBuilder(e).timetableAction(e.getIn().getHeader(JOB_STATUS_JOB_VALIDATION_LEVEL, JobEvent.TimetableAction.class)).state(State.PENDING).build();
                 })
                 .to("direct:updateStatus")
                 .process(e -> e.getIn().setHeader(CHOUETTE_REFERENTIAL, getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)).chouetteInfo.referential))
@@ -132,11 +132,11 @@ public class ChouetteValidationRouteBuilder extends AbstractChouetteRouteBuilder
                 .setHeader(Exchange.CONTENT_TYPE, simple("multipart/form-data"))
                 .toD(chouetteUrl + "/chouette_iev/referentials/${header." + CHOUETTE_REFERENTIAL + "}/validator")
                 .process(e -> {
-                    e.getIn().setHeader(Constants.CHOUETTE_JOB_STATUS_URL, e.getIn().getHeader("Location").toString().replaceFirst("http", "http4"));
-                    e.getIn().setHeader(Constants.CHOUETTE_JOB_ID, getLastPathElementOfUrl(e.getIn().getHeader("Location", String.class)));
+                    e.getIn().setHeader(Constants.JOB_STATUS_URL, e.getIn().getHeader("Location").toString().replaceFirst("http", "http4"));
+                    e.getIn().setHeader(Constants.JOB_ID, getLastPathElementOfUrl(e.getIn().getHeader("Location", String.class)));
                 })
-                .setHeader(Constants.CHOUETTE_JOB_STATUS_ROUTING_DESTINATION, constant("direct:processValidationResult"))
-                .process(e -> e.getIn().setHeader(Constants.CHOUETTE_JOB_STATUS_JOB_TYPE, e.getIn().getHeader(Constants.CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL)))
+                .setHeader(Constants.JOB_STATUS_ROUTING_DESTINATION, constant("direct:processValidationResult"))
+                .process(e -> e.getIn().setHeader(Constants.JOB_STATUS_JOB_TYPE, e.getIn().getHeader(Constants.JOB_STATUS_JOB_VALIDATION_LEVEL)))
                 .removeHeader("loopCounter")
                 .to("activemq:queue:ChouettePollStatusQueue")
                 .routeId("chouette-send-validation-job");
@@ -145,7 +145,7 @@ public class ChouetteValidationRouteBuilder extends AbstractChouetteRouteBuilder
                 .choice()
                     .when(simple("${header." + CHOUETTE_REFERENTIAL + "} == null or ${header." + PROVIDER_ID + "} == null "))
                         .log(LoggingLevel.WARN, correlation() + "Unable to start Chouette validation for missing referential or providerId")
-                        .process(e -> JobEvent.providerJobBuilder(e).timetableAction(e.getIn().getHeader(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL, JobEvent.TimetableAction.class)).state(State.FAILED).build())
+                        .process(e -> JobEvent.providerJobBuilder(e).timetableAction(e.getIn().getHeader(JOB_STATUS_JOB_VALIDATION_LEVEL, JobEvent.TimetableAction.class)).state(State.FAILED).build())
                         .to("direct:updateStatus")
                         .stop()
                     .end()
@@ -159,12 +159,12 @@ public class ChouetteValidationRouteBuilder extends AbstractChouetteRouteBuilder
                 .when(simple("${header.action_report_result} == 'OK' and ${header.validation_report_result} == 'OK'"))
                     .to("direct:checkScheduledJobsBeforeTriggeringExport")
                     .process(e -> {
-                        JobEvent.providerJobBuilder(e).timetableAction(e.getIn().getHeader(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL, JobEvent.TimetableAction.class)).state(JobEvent.State.OK).build();
+                        JobEvent.providerJobBuilder(e).timetableAction(e.getIn().getHeader(JOB_STATUS_JOB_VALIDATION_LEVEL, JobEvent.TimetableAction.class)).state(JobEvent.State.OK).build();
                         if (e.getIn().getHeader(WORKLOW, String.class) != null) {
-                            if (e.getIn().getHeader(WORKLOW, String.class).equals("VALIDATION") && e.getIn().getHeader(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL, String.class).equals(VALIDATION_LEVEL_2.name())
-                                    || e.getIn().getHeader(WORKLOW, String.class).equals("IMPORT") && e.getIn().getHeader(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL, String.class).equals(VALIDATION_LEVEL_1.name()) && e.getIn().getHeader(GENERATE_MAP_MATCHING, Boolean.class).equals(false))
+                            if (e.getIn().getHeader(WORKLOW, String.class).equals("VALIDATION") && e.getIn().getHeader(JOB_STATUS_JOB_VALIDATION_LEVEL, String.class).equals(VALIDATION_LEVEL_2.name())
+                                    || e.getIn().getHeader(WORKLOW, String.class).equals("IMPORT") && e.getIn().getHeader(JOB_STATUS_JOB_VALIDATION_LEVEL, String.class).equals(VALIDATION_LEVEL_1.name()) && e.getIn().getHeader(GENERATE_MAP_MATCHING, Boolean.class).equals(false))
                             {
-                                JobEvent.TimetableAction timetableAction = e.getIn().getHeader(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL, String.class).equals(VALIDATION_LEVEL_2.name()) ? VALIDATION_LEVEL_2 : VALIDATION_LEVEL_1;
+                                JobEvent.TimetableAction timetableAction = e.getIn().getHeader(JOB_STATUS_JOB_VALIDATION_LEVEL, String.class).equals(VALIDATION_LEVEL_2.name()) ? VALIDATION_LEVEL_2 : VALIDATION_LEVEL_1;
                                 createMail.createMail(e, null, timetableAction, true);
                             }
                         }
@@ -173,7 +173,7 @@ public class ChouetteValidationRouteBuilder extends AbstractChouetteRouteBuilder
                     .choice()
                         .when(PredicateBuilder.and(
                                 PredicateBuilder.constant(autoExportsOnValidate),
-                                PredicateBuilder.and(constant(VALIDATION_LEVEL_2).isEqualTo(header(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL))),
+                                PredicateBuilder.and(constant(VALIDATION_LEVEL_2).isEqualTo(header(JOB_STATUS_JOB_VALIDATION_LEVEL))),
                                 PredicateBuilder.or(header(WORKLOW).isNull(), header(WORKLOW).isEqualTo("EXPORT"))))
                             .process(e -> {
                                 e.getIn().setHeader(OKINA_REFERENTIAL, getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)).chouetteInfo.referential);
@@ -194,9 +194,9 @@ public class ChouetteValidationRouteBuilder extends AbstractChouetteRouteBuilder
                 .when(simple("${header.action_report_result} == 'OK' and ${header.validation_report_result} == 'NOK'"))
                     .log(LoggingLevel.INFO, correlation() + "Validation failed (processed ok, but timetable data is faulty)")
                     .process(e -> {
-                        JobEvent.providerJobBuilder(e).timetableAction(e.getIn().getHeader(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL, JobEvent.TimetableAction.class)).state(State.FAILED).build();
+                        JobEvent.providerJobBuilder(e).timetableAction(e.getIn().getHeader(JOB_STATUS_JOB_VALIDATION_LEVEL, JobEvent.TimetableAction.class)).state(State.FAILED).build();
                         if (e.getIn().getHeader(WORKLOW, String.class) != null) {
-                            JobEvent.TimetableAction timetableAction = e.getIn().getHeader(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL, String.class).equals(VALIDATION_LEVEL_2.name()) ? VALIDATION_LEVEL_2 : VALIDATION_LEVEL_1;
+                            JobEvent.TimetableAction timetableAction = e.getIn().getHeader(JOB_STATUS_JOB_VALIDATION_LEVEL, String.class).equals(VALIDATION_LEVEL_2.name()) ? VALIDATION_LEVEL_2 : VALIDATION_LEVEL_1;
                             createMail.createMail(e, null, timetableAction, false);
                         }
                     })
@@ -204,9 +204,9 @@ public class ChouetteValidationRouteBuilder extends AbstractChouetteRouteBuilder
                 .otherwise()
                     .log(LoggingLevel.ERROR, correlation() + "Validation went wrong")
                     .process(e -> {
-                        JobEvent.providerJobBuilder(e).timetableAction(e.getIn().getHeader(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL, JobEvent.TimetableAction.class)).state(State.FAILED).build();
+                        JobEvent.providerJobBuilder(e).timetableAction(e.getIn().getHeader(JOB_STATUS_JOB_VALIDATION_LEVEL, JobEvent.TimetableAction.class)).state(State.FAILED).build();
                         if (e.getIn().getHeader(WORKLOW, String.class) != null) {
-                            JobEvent.TimetableAction timetableAction = e.getIn().getHeader(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL, String.class).equals(VALIDATION_LEVEL_2.name()) ?  VALIDATION_LEVEL_2 : VALIDATION_LEVEL_1;
+                            JobEvent.TimetableAction timetableAction = e.getIn().getHeader(JOB_STATUS_JOB_VALIDATION_LEVEL, String.class).equals(VALIDATION_LEVEL_2.name()) ?  VALIDATION_LEVEL_2 : VALIDATION_LEVEL_1;
                             createMail.createMail(e, null, timetableAction, false);
                         }
                     })
@@ -221,11 +221,11 @@ public class ChouetteValidationRouteBuilder extends AbstractChouetteRouteBuilder
                 .toD("${exchangeProperty.job_status_url}")
                 .choice()
                     .when().jsonpath("$.*[?(@.status == 'SCHEDULED')].status")
-                                        .when(PredicateBuilder.and(constant(VALIDATION_LEVEL_1).isEqualTo(header(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL)),
+                                        .when(PredicateBuilder.and(constant(VALIDATION_LEVEL_1).isEqualTo(header(JOB_STATUS_JOB_VALIDATION_LEVEL)),
                                                 header(GENERATE_MAP_MATCHING).isEqualTo(true)))
                                             .log(LoggingLevel.INFO, correlation() + "Validation ok, generating map matching")
                                             .to("activemq:queue:ChouetteGenerateMapMatchingQueue")
-                                        .when(e -> e.getIn().getHeader(CHOUETTE_JOB_STATUS_JOB_VALIDATION_LEVEL, String.class).equals(VALIDATION_LEVEL_1.name()) &&
+                                        .when(e -> e.getIn().getHeader(JOB_STATUS_JOB_VALIDATION_LEVEL, String.class).equals(VALIDATION_LEVEL_1.name()) &&
                                                 (e.getIn().getHeader(GENERATE_MAP_MATCHING, Boolean.class) == null || e.getIn().getHeader(GENERATE_MAP_MATCHING, Boolean.class).equals(false)) &&
                                                 (shouldTransferData(e) ||
                                                 e.getIn().getHeader(IMPORT, Boolean.class) == null ||

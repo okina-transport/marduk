@@ -18,8 +18,8 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.UUID;
 
-import static no.rutebanken.marduk.Constants.CHOUETTE_JOB_STATUS_JOB_TYPE;
-import static no.rutebanken.marduk.Constants.CHOUETTE_JOB_STATUS_URL;
+import static no.rutebanken.marduk.Constants.JOB_STATUS_JOB_TYPE;
+import static no.rutebanken.marduk.Constants.JOB_STATUS_URL;
 import static no.rutebanken.marduk.Constants.CHOUETTE_REFERENTIAL;
 import static no.rutebanken.marduk.Constants.EXPORT_FROM_TIAMAT;
 import static no.rutebanken.marduk.Constants.FILE_HANDLE;
@@ -86,14 +86,14 @@ public class TiamatExportStopPlacesBuilder extends AbstractChouetteRouteBuilder 
                     // required to skip chouette reports parsing when polling job status
                     e.getIn().setHeader(Constants.TIAMAT_STOP_PLACES_EXPORT, exportJob.getId());
                     String tiamatJobStatusUrl = stopPlacesExportUrl + "/" + exportJob.getId() + "/status";
-                    e.getIn().setHeader(CHOUETTE_JOB_STATUS_URL, tiamatJobStatusUrl);
-                    e.getIn().setHeader(Constants.CHOUETTE_JOB_ID, exportJob.getId());
+                    e.getIn().setHeader(JOB_STATUS_URL, tiamatJobStatusUrl);
+                    e.getIn().setHeader(Constants.JOB_ID, exportJob.getId());
                     log.info("Tiamat Stop Places Export  : export parsed => " + exportJob.getId() + " : " + tiamatJobStatusUrl);
                     log.info("Lancement export Arrêts - Fichier : " + exportJob.getFileName() + " - Espace de données : " + getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)).chouetteInfo.referential);
                 })
 
-                .setHeader(Constants.CHOUETTE_JOB_STATUS_ROUTING_DESTINATION, constant(TIAMAT_EXPORT_ROUTING_DESTINATION))
-                .setHeader(CHOUETTE_JOB_STATUS_JOB_TYPE, constant(JobEvent.TimetableAction.EXPORT.name()))
+                .setHeader(Constants.JOB_STATUS_ROUTING_DESTINATION, constant(TIAMAT_EXPORT_ROUTING_DESTINATION))
+                .setHeader(JOB_STATUS_JOB_TYPE, constant(JobEvent.TimetableAction.EXPORT.name()))
                 .to("activemq:queue:ChouettePollStatusQueue")
                 .routeId("tiamat-stop-places-export-job");
 
