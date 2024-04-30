@@ -25,11 +25,7 @@ import no.rutebanken.marduk.routes.chouette.json.exporter.GtfsExportParameters;
 import no.rutebanken.marduk.routes.chouette.json.exporter.NeptuneExportParameters;
 import no.rutebanken.marduk.routes.chouette.json.exporter.NetexExportParameters;
 import no.rutebanken.marduk.routes.chouette.json.exporter.TransferExportParameters;
-import no.rutebanken.marduk.routes.chouette.json.importer.GtfsImportParameters;
-import no.rutebanken.marduk.routes.chouette.json.importer.NeptuneImportParameters;
-import no.rutebanken.marduk.routes.chouette.json.importer.NetexImportParameters;
-import no.rutebanken.marduk.routes.chouette.json.importer.RawImportParameters;
-import no.rutebanken.marduk.routes.chouette.json.importer.RegtoppImportParameters;
+import no.rutebanken.marduk.routes.chouette.json.importer.*;
 import no.rutebanken.marduk.routes.file.FileType;
 import org.apache.commons.lang3.StringUtils;
 
@@ -53,6 +49,8 @@ public class Parameters {
             return getNetexImportParameters(rawImportParameters);
         } else if (FileType.NEPTUNE.name().equals(fileType)) {
             return getNeptuneImportParameters(rawImportParameters);
+        } else if (FileType.NETEX_PARKING.name().equals(fileType)) {
+            return getParkingNetexImportParameters(rawImportParameters);
         } else {
             throw new IllegalArgumentException("Cannot create import parameters from file type '" + fileType + "'");
         }
@@ -74,6 +72,11 @@ public class Parameters {
                 chouetteInfo.enableValidation, chouetteInfo.allowCreateMissingStopPlace,
                 chouetteInfo.enableStopPlaceIdMapping, false, true, chouetteInfo.generateMissingServiceLinksForModes, rawImportParameters.getCleanMode());
         return regtoppImportParameters.toJsonString();
+    }
+
+    static String getParkingNetexImportParameters(RawImportParameters rawImportParameters) {
+        ParkingNetexImportParameters parkingNetexImportParameters = ParkingNetexImportParameters.create(rawImportParameters);
+        return parkingNetexImportParameters.toJsonString();
     }
 
     static String getNeptuneImportParameters(RawImportParameters rawImportParameters) {

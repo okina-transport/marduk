@@ -23,5 +23,6 @@ public enum FileType {
     ZIP_WITH_SINGLE_FOLDER,
     RAR, 
     NEPTUNE,
-    NETEXPROFILE
+    NETEXPROFILE,
+    NETEX_PARKING
 }

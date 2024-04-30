@@ -1,4 +1,4 @@
-package no.rutebanken.marduk.routes.chouette;
+package no.rutebanken.marduk.routes.importAutomatics;
 
 import com.jcraft.jsch.Channel;
 import com.jcraft.jsch.ChannelSftp;
@@ -16,10 +16,12 @@ import no.rutebanken.marduk.domain.Recipient;
 import no.rutebanken.marduk.repository.ImportConfigurationDAO;
 import no.rutebanken.marduk.routes.ImportConfigurationJob;
 import no.rutebanken.marduk.routes.MyAuthenticator;
+import no.rutebanken.marduk.routes.chouette.AbstractChouetteRouteBuilder;
 import no.rutebanken.marduk.services.BlobStoreService;
 import no.rutebanken.marduk.services.FileSystemService;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
+import org.apache.camel.ProducerTemplate;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.net.ftp.FTPClient;
@@ -68,6 +70,7 @@ import java.util.Optional;
 import java.util.TimeZone;
 
 import static no.rutebanken.marduk.Constants.*;
+import static org.apache.camel.support.builder.PredicateBuilder.or;
 
 @Component
 public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilder {
@@ -90,6 +93,10 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
     @Autowired
     BlobStoreService blobStoreService;
 
+    @Autowired
+    ProducerTemplate producer;
+
+
     @Override
     public void configure() throws Exception {
         super.configure();
@@ -105,6 +112,7 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
                     ImportConfiguration importConfiguration = importConfigurationDAO.getImportConfiguration(referential, importConfigurationId);
                     e.getIn().setHeader(IMPORT_CONFIGURATION, importConfiguration);
                     e.getIn().setHeader(IS_ACTIVE, importConfiguration.isActivated());
+                    e.getIn().setHeader(IMPORT_TYPE, importConfiguration.getImportParameters().get(0).getImportType());
                 })
                 .choice()
                     .when(header(IS_ACTIVE).isEqualTo(true))
@@ -129,7 +137,10 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
                             }
                         })
                         .choice()
-                            .when(header(WORKLOW).isNotNull())
+                            .when(or(
+                                    header(WORKLOW).isNotNull(),
+                                    header(IMPORT_TYPE).isEqualTo("NETEX_PARKING")
+                            ))
                                 .to("direct:importLaunch")
                         .endChoice()
                     .otherwise()
@@ -421,13 +432,20 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
     }
 
     private void setBodyWithFileAndUpdateLastTimestamp(Exchange e, String referential, ImportConfiguration importConfiguration, InputStream inputStream, String fileName) throws IOException {
-        fileName = StringUtils.appendIfMissing(fileName, ".zip");
-        java.io.File file = new File(fileName);
-        FileItemFactory fac = new DiskFileItemFactory();
-        FileItem fileItem = fac.createItem("file", "application/zip", false, file.getName());
-        Streams.copy(inputStream, fileItem.getOutputStream(), true);
-        e.getIn().setBody(fileItem);
-
+        if (!fileName.endsWith(".xml")) {
+            fileName = StringUtils.appendIfMissing(fileName, ".zip");
+            java.io.File file = new File(fileName);
+            FileItemFactory fac = new DiskFileItemFactory();
+            FileItem fileItem = fac.createItem("file", "application/zip", false, file.getName());
+            Streams.copy(inputStream, fileItem.getOutputStream(), true);
+            e.getIn().setBody(fileItem);
+        } else {
+            java.io.File file = new File(fileName);
+            FileItemFactory fac = new DiskFileItemFactory();
+            FileItem fileItem = fac.createItem("file", "text/xml", false, file.getName());
+            Streams.copy(inputStream, fileItem.getOutputStream(), true);
+            e.getIn().setBody(fileItem);
+        }
         //Update last timestamp
         importConfigurationDAO.update(referential, importConfiguration);
         log.info("Import configuration of " + referential + " updated");
