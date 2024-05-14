@@ -17,9 +17,9 @@
 package no.rutebanken.marduk.routes.chouette.json;
 
 public enum Status {
-    SCHEDULED, STARTED, TERMINATED, CANCELED, ABORTED, RESCHEDULED;
+    SCHEDULED, STARTED, PROCESSING, TERMINATED, CANCELED, ABORTED, FAILED, FINISHED, RESCHEDULED;
 
     public boolean isDone() {
-        return this == TERMINATED || this == CANCELED || this == ABORTED;
+        return this == TERMINATED || this == CANCELED || this == ABORTED || this == FINISHED || this == FAILED;
     }
 }

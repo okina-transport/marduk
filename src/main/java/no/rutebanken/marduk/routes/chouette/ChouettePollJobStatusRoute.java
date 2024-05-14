@@ -19,8 +19,7 @@ package no.rutebanken.marduk.routes.chouette;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import no.rutebanken.marduk.Constants;
-import no.rutebanken.marduk.domain.ExportType;
-import no.rutebanken.marduk.metrics.PrometheusMetricsService;
+import no.rutebanken.marduk.Utils.PollJobStatusRoute;
 import no.rutebanken.marduk.routes.chouette.json.*;
 import no.rutebanken.marduk.routes.chouette.mapping.ProviderAndJobsMapper;
 import no.rutebanken.marduk.routes.status.JobEvent;
@@ -33,8 +32,6 @@ import org.apache.camel.builder.PredicateBuilder;
 import org.apache.camel.component.http4.HttpMethods;
 import org.apache.camel.model.dataformat.JsonLibrary;
 import org.apache.http.client.utils.URIBuilder;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -54,9 +51,6 @@ import static no.rutebanken.marduk.routes.chouette.json.Status.STARTED;
 
 @Component
 public class ChouettePollJobStatusRoute extends AbstractChouetteRouteBuilder {
-
-    private Logger logger = LoggerFactory.getLogger(this.getClass());
-
 
     @Value("${chouette.max.retries:3000}")
     private int maxRetries;
@@ -81,10 +75,8 @@ public class ChouettePollJobStatusRoute extends AbstractChouetteRouteBuilder {
     @Autowired
     CreateMail createMail;
 
-
     @Autowired
-    private PrometheusMetricsService metrics;
-
+    PollJobStatusRoute pollJobStatusRoute;
 
     /**
      * This routebuilder polls a job until it is terminated. It expects a few headers set on the message it receives:
@@ -191,8 +183,8 @@ public class ChouettePollJobStatusRoute extends AbstractChouetteRouteBuilder {
                     Object netexGlobalRaw = e.getIn().getHeader(NETEX_EXPORT_GLOBAL);
                     Object simulationExpRaw = e.getIn().getHeader(IS_SIMULATION_EXPORT);
 
-                    e.getIn().setHeader(NETEX_EXPORT_GLOBAL,convertToBoolean(netexGlobalRaw));
-                    e.getIn().setHeader(IS_SIMULATION_EXPORT,convertToBoolean(simulationExpRaw));
+                    e.getIn().setHeader(NETEX_EXPORT_GLOBAL, pollJobStatusRoute.convertToBoolean(netexGlobalRaw));
+                    e.getIn().setHeader(IS_SIMULATION_EXPORT, pollJobStatusRoute.convertToBoolean(simulationExpRaw));
                 })
                 .process(exportToConsumersProcessor)
                 .process(updateExportTemplateProcessor)
@@ -255,7 +247,7 @@ public class ChouettePollJobStatusRoute extends AbstractChouetteRouteBuilder {
                                     e.getProperties().put("STATUS", exportJob.getStatus().name());
                                     e.getIn().setBody(exportJob);
                                     isExportDone = exportJob.getStatus().isDone();
-                                    countEvent(isPOI, isParkings, exportJob);
+                                    pollJobStatusRoute.countEvent(isPOI, isParkings, exportJob);
                                 } else if(JobEvent.TimetableAction.EXPORT_NETEX.name().equals(e.getIn().getHeader(JOB_STATUS_JOB_TYPE))) {
                                     String json = e.getIn().getBody(String.class);
                                     JobResponse jobResponse = new ObjectMapper().readValue(json, JobResponse.class);
@@ -438,36 +430,6 @@ public class ChouettePollJobStatusRoute extends AbstractChouetteRouteBuilder {
                 .end()
                 .routeId("handle-global-netex-export-case");
     }
-
-    private void countEvent(Boolean isPOI, Boolean isParkings, ExportJob exportJob) {
-        if (exportJob == null || JobStatus.PROCESSING.equals(exportJob.getStatus())){
-            return;
-        }
-
-        ExportType exportType;
-        if (isPOI) {
-            exportType = ExportType.POI;
-        } else if (isParkings) {
-            exportType = ExportType.PARKING;
-        } else {
-            exportType = ExportType.ARRET;
-        }
-        metrics.countExports(exportType,JobStatus.FINISHED.equals(exportJob.getStatus()) ? "OK" : exportJob.getStatus().name());
-    }
-
-
-    private Boolean convertToBoolean (Object rawProperty){
-        if (rawProperty instanceof Boolean){
-            return (Boolean) rawProperty;
-        }
-
-        if (rawProperty instanceof String){
-            return Boolean.parseBoolean((String)rawProperty);
-        }
-        logger.error("Unable to cast object to boolean:" + rawProperty);
-        return null;
-    }
-
 }
 
 

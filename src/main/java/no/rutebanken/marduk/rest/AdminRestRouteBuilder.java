@@ -1231,10 +1231,6 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
                 .log(LoggingLevel.INFO, correlation() + "Update scheduler for the import configuration")
                 .removeHeaders("CamelHttp*")
-                .process(e -> {
-                    String toto = "";
-                    System.out.println("hello");
-                })
                 .to("direct:updateSchedulerImportConfiguration")
                 .routeId("admin-import-configuration-scheduler")
                 .endRest()
