@@ -26,6 +26,7 @@ import no.rutebanken.marduk.routes.chouette.AbstractChouetteRouteBuilder;
 import no.rutebanken.marduk.routes.chouette.CreateMail;
 import no.rutebanken.marduk.routes.chouette.json.Parameters;
 import no.rutebanken.marduk.routes.chouette.json.importer.RawImportParameters;
+import no.rutebanken.marduk.routes.file.FileType;
 import no.rutebanken.marduk.routes.status.JobEvent;
 import no.rutebanken.marduk.routes.status.JobEvent.State;
 import no.rutebanken.marduk.routes.status.JobEvent.TimetableAction;
@@ -121,7 +122,11 @@ public class TiamatImportRouteBuilder extends AbstractChouetteRouteBuilder {
                 .setHeader(Exchange.CONTENT_TYPE, simple("multipart/form-data; charset=UTF-8"))
                 .to("log:" + getClass().getName() + "?level=DEBUG&showAll=true&multiline=true")
                 .log(LoggingLevel.INFO, "tiamatUrl: " + tiamatUrl)
-                .setProperty("tiamat_url", simple(tiamatUrl + "/parkings_netex_import_xml"))
+                .choice()
+                    .when(header(IMPORT_TYPE).isEqualTo(FileType.NETEX_PARKING.name()))
+                        .setProperty("tiamat_url", simple(tiamatUrl + "/parkings_netex_import_xml"))
+                    .when(header(IMPORT_TYPE).isEqualTo(FileType.NETEX_POI.name()))
+                        .setProperty("tiamat_url", simple(tiamatUrl + "/poi_netex_import_xml"))
                 .log(LoggingLevel.DEBUG, correlation() + "Calling Tiamat with URL: ${exchangeProperty.tiamat_url}")
                 .setHeader(Exchange.HTTP_METHOD, constant(HttpMethods.POST))
                 // Attempt to retrigger delivery in case of errors
@@ -138,8 +143,8 @@ public class TiamatImportRouteBuilder extends AbstractChouetteRouteBuilder {
                     MultipartEntityBuilder entityBuilder = MultipartEntityBuilder.create();
                     entityBuilder.addBinaryBody("file", inputStream, ContentType.DEFAULT_BINARY, fileName);
                     entityBuilder.addTextBody("file_name", exchange.getIn().getHeader(FILE_NAME, String.class));
-                    entityBuilder.addTextBody("user", exchange.getIn().getHeader(CHOUETTE_REFERENTIAL, String.class));
                     entityBuilder.addTextBody("provider", exchange.getIn().getHeader(PROVIDER_ID, String.class));
+                    entityBuilder.addTextBody("folder", exchange.getIn().getHeader(FOLDER_NAME, String.class));
 
                     exchange.getOut().setBody(entityBuilder.build());
                     exchange.getOut().setHeaders(exchange.getIn().getHeaders());

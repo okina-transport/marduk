@@ -49,8 +49,8 @@ public class Parameters {
             return getNetexImportParameters(rawImportParameters);
         } else if (FileType.NEPTUNE.name().equals(fileType)) {
             return getNeptuneImportParameters(rawImportParameters);
-        } else if (FileType.NETEX_PARKING.name().equals(fileType)) {
-            return getParkingNetexImportParameters(rawImportParameters);
+        } else if (FileType.NETEX_PARKING.name().equals(fileType) || FileType.NETEX_POI.name().equals(fileType)) {
+            return getNetexAutomaticImportParameters(rawImportParameters);
         } else {
             throw new IllegalArgumentException("Cannot create import parameters from file type '" + fileType + "'");
         }
@@ -74,9 +74,9 @@ public class Parameters {
         return regtoppImportParameters.toJsonString();
     }
 
-    static String getParkingNetexImportParameters(RawImportParameters rawImportParameters) {
-        ParkingNetexImportParameters parkingNetexImportParameters = ParkingNetexImportParameters.create(rawImportParameters);
-        return parkingNetexImportParameters.toJsonString();
+    static String getNetexAutomaticImportParameters(RawImportParameters rawImportParameters) {
+        NetexAutomaticImportParameters netexAutomaticImportParameters = NetexAutomaticImportParameters.create(rawImportParameters);
+        return netexAutomaticImportParameters.toJsonString();
     }
 
     static String getNeptuneImportParameters(RawImportParameters rawImportParameters) {

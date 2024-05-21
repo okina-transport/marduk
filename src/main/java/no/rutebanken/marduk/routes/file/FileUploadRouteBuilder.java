@@ -69,7 +69,7 @@ public class FileUploadRouteBuilder extends BaseRouteBuilder {
 
         from("direct:tiamatUploadFileAndStartImport")
                 .process(e -> {
-                    JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.FILE_TRANSFER).type("PARKING").state(JobEvent.State.STARTED).build();
+                    JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.FILE_TRANSFER).type(e.getIn().getHeader(IMPORT_TYPE, String.class)).state(JobEvent.State.STARTED).build();
                 }).inOnly("direct:updateStatus")
                 .doTry()
                 .log(LoggingLevel.INFO, correlation() + "About to upload timetable file to blob store: ${header." + FILE_HANDLE + "}")
@@ -100,7 +100,7 @@ public class FileUploadRouteBuilder extends BaseRouteBuilder {
                 .setHeader(IMPORT, constant(true))
                 .process(e -> e.getIn().setHeader(FILE_CONTENT_HEADER, new CloseShieldInputStream(e.getIn().getBody(FileItem.class).getInputStream())))
                 .choice()
-                    .when(header(IMPORT_TYPE).isEqualTo("NETEX_PARKING"))
+                    .when(header(IMPORT_TYPE).in(FileType.NETEX_PARKING.name(), FileType.NETEX_POI.name()))
                         .to("direct:tiamatUploadFileAndStartImport")
                     .otherwise()
                         .to("direct:uploadFileAndStartImport")

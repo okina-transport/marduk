@@ -24,5 +24,6 @@ public enum FileType {
     RAR, 
     NEPTUNE,
     NETEXPROFILE,
-    NETEX_PARKING
+    NETEX_PARKING,
+    NETEX_POI
 }

@@ -17,6 +17,7 @@ import no.rutebanken.marduk.repository.ImportConfigurationDAO;
 import no.rutebanken.marduk.routes.ImportConfigurationJob;
 import no.rutebanken.marduk.routes.MyAuthenticator;
 import no.rutebanken.marduk.routes.chouette.AbstractChouetteRouteBuilder;
+import no.rutebanken.marduk.routes.file.FileType;
 import no.rutebanken.marduk.services.BlobStoreService;
 import no.rutebanken.marduk.services.FileSystemService;
 import org.apache.camel.Exchange;
@@ -139,7 +140,7 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
                         .choice()
                             .when(or(
                                     header(WORKLOW).isNotNull(),
-                                    header(IMPORT_TYPE).isEqualTo("NETEX_PARKING")
+                                    header(IMPORT_TYPE).in(FileType.NETEX_PARKING.name(), FileType.NETEX_POI.name())
                             ))
                                 .to("direct:importLaunch")
                         .endChoice()
@@ -356,6 +357,7 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
         FTPClientConfig ftpClientConfig = new FTPClientConfig();
         client.configure(ftpClientConfig);
         client.connect(configurationFtp.getUrl(), Math.toIntExact(configurationFtp.getPort()));
+        e.getIn().setHeader(FOLDER_NAME, configurationFtp.getFolder());
         if (StringUtils.isNotEmpty(configurationFtp.getLogin()) && configurationFtp.getPassword() != null && configurationFtp.getPassword().length > 0) {
             client.login(configurationFtp.getLogin(), cipherEncryption.decrypt(configurationFtp.getPassword()));
             client.enterLocalPassiveMode();

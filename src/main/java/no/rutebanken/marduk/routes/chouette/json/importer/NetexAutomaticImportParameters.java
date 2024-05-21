@@ -18,23 +18,23 @@ package no.rutebanken.marduk.routes.chouette.json.importer;
 
 import no.rutebanken.marduk.routes.chouette.json.ChouetteJobParameters;
 
-public class ParkingNetexImportParameters extends ChouetteJobParameters {
+public class NetexAutomaticImportParameters extends ChouetteJobParameters {
 
-    public Parking parameters;
+    public Parameters parameters;
 
-    static class Parking extends AbstractImportParameters  {
+    static class Parameters extends AbstractImportParameters  {
 
     }
 
-    public static ParkingNetexImportParameters create(RawImportParameters rawImportParameters) {
-        Parking parking = new Parking();
-        parking.name = rawImportParameters.getFileName();
-        parking.userName = rawImportParameters.getUser();
+    public static NetexAutomaticImportParameters create(RawImportParameters rawImportParameters) {
+        Parameters parameters = new Parameters();
+        parameters.name = rawImportParameters.getFileName();
+        parameters.userName = rawImportParameters.getUser();
 
-        ParkingNetexImportParameters parkingNetexImportParameters = new ParkingNetexImportParameters();
-        parkingNetexImportParameters.parameters = parking;
+        NetexAutomaticImportParameters netexAutomaticImportParameters = new NetexAutomaticImportParameters();
+        netexAutomaticImportParameters.parameters = parameters;
 
-        return parkingNetexImportParameters;
+        return netexAutomaticImportParameters;
     }
 
 }

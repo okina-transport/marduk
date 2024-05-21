@@ -68,14 +68,13 @@ public class FileTypeClassifierBean {
         return Charset.forName(CharEncoding.ISO_8859_1).newEncoder().canEncode(fileName);
     }
 
-    public FileType classifyFile(Exchange exchange,byte[] data) {
+    public FileType classifyFile(Exchange exchange, byte[] data) {
         String relativePath = exchange.getIn().getHeader(FILE_HANDLE, String.class);
         logger.debug("Validating file with path '" + relativePath + "'.");
 
             if (relativePath == null || relativePath.trim().equals("")) {
                 throw new IllegalArgumentException("Could not get file path from " + FILE_HANDLE + " header.");
             }
-
 
         String importType = exchange.getIn().getHeader(IMPORT_TYPE, String.class);
 
@@ -99,7 +98,11 @@ public class FileTypeClassifierBean {
         } else if (relativePath.toUpperCase().endsWith(".RAR")) {
             return RAR;
         } else if (relativePath.toUpperCase().endsWith(".XML")) {
-            return NETEX_PARKING;
+            if (importType.equals("NETEX_PARKING")) {
+                return NETEX_PARKING;
+            } else if (importType.equals("NETEX_POI")) {
+                return NETEX_POI;
+            }
         }
         throw new FileValidationException("Could not classify file '" + relativePath + "'.");
     }
