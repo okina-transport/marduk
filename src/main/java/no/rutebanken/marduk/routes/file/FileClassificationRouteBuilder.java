@@ -77,14 +77,16 @@ public class FileClassificationRouteBuilder extends BaseRouteBuilder {
                     .when(header(FILE_TYPE).isEqualTo(FileType.GTFS.name()))
                         .log(LoggingLevel.INFO, correlation() + "Transforming GTFS file ${header." + FILE_HANDLE + "}")
                         .to("direct:transformGtfsFile")
+                .end()
+                .log(LoggingLevel.INFO, correlation() + "Posting " + FILE_HANDLE + " ${header." + FILE_HANDLE + "} and " + FILE_TYPE + " ${header." + FILE_TYPE + "} on chouette import queue.")
+                .setBody(simple(""))   //remove file data from body since this is in blobstore
+                .process(e -> JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.FILE_CLASSIFICATION).state(JobEvent.State.OK).build()).to("direct:updateStatus")
+                .choice()
                     .when(header(FILE_TYPE).in(FileType.NETEX_PARKING.name(), FileType.NETEX_POI.name()))
                         .to("activemq:queue:TiamatImportQueue")
                     .otherwise()
                         .to("activemq:queue:ChouetteImportQueue")
                 .end()
-                .log(LoggingLevel.INFO, correlation() + "Posting " + FILE_HANDLE + " ${header." + FILE_HANDLE + "} and " + FILE_TYPE + " ${header." + FILE_TYPE + "} on chouette import queue.")
-                .setBody(simple(""))   //remove file data from body since this is in blobstore
-                .process(e -> JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.FILE_CLASSIFICATION).state(JobEvent.State.OK).build()).to("direct:updateStatus")
                 .routeId("file-classify");
 
         from("direct:repackZipFile")
