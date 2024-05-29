@@ -24,9 +24,9 @@
     </scm>
 
     <properties>
-        <java.version>1.8</java.version>
-        <maven.compiler.target>1.8</maven.compiler.target>
-        <maven.compiler.source>1.8</maven.compiler.source>
+        <java.version>11</java.version>
+        <maven.compiler.target>11</maven.compiler.target>
+        <maven.compiler.source>11</maven.compiler.source>
         <maven.compiler.plugin.version>3.8.0</maven.compiler.plugin.version>
         <maven-surefire-plugin.version>3.0.0-M1</maven-surefire-plugin.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -35,7 +35,7 @@
 
         <docker.maven.plugin.version>0.44.0</docker.maven.plugin.version>
         <spring-boot-plugin.version>2.0.3.RELEASE</spring-boot-plugin.version>
-        <spring-boot.version>2.0.3.RELEASE</spring-boot.version>
+        <spring-boot.version>2.3.4.RELEASE</spring-boot.version>
         <httpcomponents.version>4.5.9</httpcomponents.version>
         <otp.version>1.3.1.RB-SNAPSHOT</otp.version>
         <assertj-core.version>3.3.0</assertj-core.version>
@@ -45,7 +45,7 @@
         <keycloak.version>4.1.0.Final</keycloak.version>
         <spring.security.version>5.0.7.RELEASE</spring.security.version>
         <!-- Docker & Fabric8 Configs -->
-        <docker.from>registry.okina.fr/okina/java-base-image</docker.from>
+        <docker.from>registry.okina.fr/okina/java-base-image:1.0</docker.from>
         <docker.image>registry.okina.fr/mobiiti/${project.artifactId}:${project.version}</docker.image>
         <docker.cleanup>none</docker.cleanup>
 
@@ -72,6 +72,26 @@
 
     <dependencyManagement>
         <dependencies>
+            <dependency>
+                <groupId>org.glassfish.jaxb</groupId>
+                <artifactId>jaxb-runtime</artifactId>
+                <version>2.3.6</version>
+            </dependency>
+            <dependency>
+                <groupId>javax.xml.bind</groupId>
+                <artifactId>jaxb-api</artifactId>
+                <version>2.3.1</version>
+            </dependency>
+            <dependency>
+                <groupId>com.sun.xml.bind</groupId>
+                <artifactId>jaxb-core</artifactId>
+                <version>4.0.5</version>
+            </dependency>
+            <dependency>
+                <groupId>com.sun.xml.bind</groupId>
+                <artifactId>jaxb-impl</artifactId>
+                <version>2.3.0</version>
+            </dependency>
 
             <dependency>
                 <groupId>com.hazelcast</groupId>
@@ -120,9 +140,29 @@
 
     <dependencies>
         <dependency>
+            <groupId>org.glassfish.jaxb</groupId>
+            <artifactId>jaxb-runtime</artifactId>
+            <version>2.3.6</version>
+        </dependency>
+        <dependency>
             <groupId>io.micrometer</groupId>
             <artifactId>micrometer-core</artifactId>
             <version>1.12.3</version>
+        </dependency>
+        <dependency>
+            <groupId>javax.xml.bind</groupId>
+            <artifactId>jaxb-api</artifactId>
+            <version>2.3.1</version>
+        </dependency>
+        <dependency>
+            <groupId>com.sun.xml.bind</groupId>
+            <artifactId>jaxb-core</artifactId>
+            <version>4.0.5</version>
+        </dependency>
+        <dependency>
+            <groupId>com.sun.xml.bind</groupId>
+            <artifactId>jaxb-impl</artifactId>
+            <version>2.3.0</version>
         </dependency>
         <dependency>
             <groupId>io.micrometer</groupId>
@@ -567,6 +607,7 @@
         <dependency>
             <groupId>com.googlecode.json-simple</groupId>
             <artifactId>json-simple</artifactId>
+            <version>1.1.1</version>
         </dependency>
         <dependency>
             <groupId>org.apache.commons</groupId>
@@ -583,8 +624,8 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>${maven.compiler.plugin.version}</version>
                 <configuration>
-                    <source>1.8</source>
-                    <target>1.8</target>
+                    <source>11</source>
+                    <target>11</target>
                     <encoding>UTF-8</encoding>
                     <compilerArgs>
                         <!--arg>-Werror</arg-->
