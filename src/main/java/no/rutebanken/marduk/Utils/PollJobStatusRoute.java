@@ -2,7 +2,7 @@ package no.rutebanken.marduk.Utils;
 
 import no.rutebanken.marduk.domain.ExportType;
 import no.rutebanken.marduk.metrics.PrometheusMetricsService;
-import no.rutebanken.marduk.routes.chouette.json.ExportJob;
+import no.rutebanken.marduk.routes.chouette.json.Job;
 import no.rutebanken.marduk.routes.chouette.json.JobStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,8 +29,8 @@ public class PollJobStatusRoute {
         return null;
     }
 
-    public void countEvent(Boolean isPOI, Boolean isParkings, ExportJob exportJob) {
-        if (exportJob == null || JobStatus.PROCESSING.equals(exportJob.getStatus())){
+    public void countEvent(Boolean isPOI, Boolean isParkings, Job job) {
+        if (job == null || JobStatus.PROCESSING.equals(job.getStatus())){
             return;
         }
 
@@ -42,6 +42,6 @@ public class PollJobStatusRoute {
         } else {
             exportType = ExportType.ARRET;
         }
-        metrics.countExports(exportType,JobStatus.FINISHED.equals(exportJob.getStatus()) ? "OK" : exportJob.getStatus().name());
+        metrics.countExports(exportType,JobStatus.FINISHED.equals(job.getStatus()) ? "OK" : job.getStatus().name());
     }
 }

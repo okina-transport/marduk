@@ -243,11 +243,11 @@ public class ChouettePollJobStatusRoute extends AbstractChouetteRouteBuilder {
                                 }
                                 boolean isExportDone = false;
                                 if(JobEvent.TimetableAction.EXPORT.name().equals(e.getIn().getHeader(JOB_STATUS_JOB_TYPE))) {
-                                    ExportJob exportJob = e.getIn().getBody(ExportJob.class);
-                                    e.getProperties().put("STATUS", exportJob.getStatus().name());
-                                    e.getIn().setBody(exportJob);
-                                    isExportDone = exportJob.getStatus().isDone();
-                                    pollJobStatusRoute.countEvent(isPOI, isParkings, exportJob);
+                                    Job job = e.getIn().getBody(Job.class);
+                                    e.getProperties().put("STATUS", job.getStatus().name());
+                                    e.getIn().setBody(job);
+                                    isExportDone = job.getStatus().isDone();
+                                    pollJobStatusRoute.countEvent(isPOI, isParkings, job);
                                 } else if(JobEvent.TimetableAction.EXPORT_NETEX.name().equals(e.getIn().getHeader(JOB_STATUS_JOB_TYPE))) {
                                     String json = e.getIn().getBody(String.class);
                                     JobResponse jobResponse = new ObjectMapper().readValue(json, JobResponse.class);
