@@ -2,7 +2,7 @@ package no.rutebanken.marduk.services;
 
 import no.rutebanken.marduk.domain.Provider;
 import no.rutebanken.marduk.repository.CacheProviderRepository;
-import no.rutebanken.marduk.routes.chouette.json.ExportJob;
+import no.rutebanken.marduk.routes.chouette.json.Job;
 import org.apache.camel.Exchange;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
@@ -54,8 +54,8 @@ public class FileSystemService {
 
 
     public File getTiamatFile(Exchange e) {
-        ExportJob exportJob = e.getIn().getBody(ExportJob.class);
-        String filename = tiamatStoragePath + "/" + exportJob.getSubFolder() + "/" + exportJob.getFileName();
+        Job job = e.getIn().getBody(Job.class);
+        String filename = tiamatStoragePath + "/" + job.getSubFolder() + "/" + job.getFileName();
         File file = new File(filename);
         e.getIn().setHeader("fileName", file.getName());
         e.getIn().setHeader(EXPORT_FILE_NAME, file.getName());

@@ -4,9 +4,9 @@ import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlRootElement;
 
-@XmlRootElement(name = "exportJob")
+@XmlRootElement(name = "job")
 @XmlAccessorType(XmlAccessType.FIELD)
-public class ExportJob {
+public class Job {
 
     private Long id;
     private String jobUrl;

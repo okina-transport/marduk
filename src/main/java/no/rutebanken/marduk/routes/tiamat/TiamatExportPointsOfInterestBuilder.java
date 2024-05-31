@@ -4,7 +4,7 @@ import no.rutebanken.marduk.Constants;
 import no.rutebanken.marduk.routes.chouette.AbstractChouetteRouteBuilder;
 import no.rutebanken.marduk.routes.chouette.ExportToConsumersProcessor;
 import no.rutebanken.marduk.routes.chouette.UpdateExportTemplateProcessor;
-import no.rutebanken.marduk.routes.chouette.json.ExportJob;
+import no.rutebanken.marduk.routes.chouette.json.Job;
 import no.rutebanken.marduk.routes.status.JobEvent;
 import no.rutebanken.marduk.services.FileSystemService;
 import org.apache.camel.LoggingLevel;
@@ -73,15 +73,15 @@ public class TiamatExportPointsOfInterestBuilder extends AbstractChouetteRouteBu
                     HttpURLConnection con = (HttpURLConnection) url.openConnection();
                     e.getIn().setBody(con.getInputStream());
 
-                    ExportJob exportJob = e.getIn().getBody(ExportJob.class);
-                    e.getIn().getHeaders().put(FILE_NAME,  exportJob.getFileName());
+                    Job job = e.getIn().getBody(Job.class);
+                    e.getIn().getHeaders().put(FILE_NAME,  job.getFileName());
                     // required to skip chouette reports parsing when polling job status
-                    e.getIn().setHeader(TIAMAT_POINTS_OF_INTEREST_EXPORT, exportJob.getId());
-                    String tiamatJobStatusUrl = stopPlacesExportUrl + "/" + exportJob.getId() + "/status";
+                    e.getIn().setHeader(TIAMAT_POINTS_OF_INTEREST_EXPORT, job.getId());
+                    String tiamatJobStatusUrl = stopPlacesExportUrl + "/" + job.getId() + "/status";
                     e.getIn().setHeader(JOB_STATUS_URL, tiamatJobStatusUrl);
-                    e.getIn().setHeader(Constants.JOB_ID, exportJob.getId());
-                    log.info("Tiamat Points of Interest Export  : export parsed => " + exportJob.getId() + " : " + tiamatJobStatusUrl);
-                    log.info("Lancement export POI - Fichier : " + exportJob.getFileName() + " - Espace de données : " + getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)).chouetteInfo.referential);
+                    e.getIn().setHeader(Constants.JOB_ID, job.getId());
+                    log.info("Tiamat Points of Interest Export  : export parsed => " + job.getId() + " : " + tiamatJobStatusUrl);
+                    log.info("Lancement export POI - Fichier : " + job.getFileName() + " - Espace de données : " + getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)).chouetteInfo.referential);
                 })
 
                 .setHeader(Constants.JOB_STATUS_ROUTING_DESTINATION, constant(TIAMAT_EXPORT_POI_ROUTING_DESTINATION))
