@@ -32,6 +32,7 @@ import org.apache.tomcat.util.http.fileupload.FileItem;
 import org.apache.tomcat.util.http.fileupload.FileItemFactory;
 import org.apache.tomcat.util.http.fileupload.disk.DiskFileItemFactory;
 import org.apache.tomcat.util.http.fileupload.util.Streams;
+import org.json.JSONException;
 import org.json.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.quartz.CronScheduleBuilder;
@@ -456,7 +457,7 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
         parseImportParameters(e, importConfiguration);
     }
 
-    private void getCron(Exchange e) throws SchedulerException {
+    private void getCron(Exchange e) throws SchedulerException, JSONException {
         SchedulerFactoryBean scheduler = schedulerImportConfiguration.getSchedulerImportConfiguration();
         Provider provider = getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class));
         Integer importConfigurationId = e.getIn().getHeader(IMPORT_CONFIGURATION_ID, Integer.class);
