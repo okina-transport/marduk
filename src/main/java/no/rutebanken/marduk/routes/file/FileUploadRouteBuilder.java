@@ -21,12 +21,18 @@ import no.rutebanken.marduk.domain.Provider;
 import no.rutebanken.marduk.routes.BaseRouteBuilder;
 import no.rutebanken.marduk.routes.blobstore.BlobStoreRoute;
 import no.rutebanken.marduk.routes.status.JobEvent;
+import no.rutebanken.marduk.services.FileSystemService;
 import org.apache.camel.LoggingLevel;
 import org.apache.commons.io.input.CloseShieldInputStream;
 import org.apache.tomcat.util.http.fileupload.FileItem;
+import org.apache.tomcat.util.http.fileupload.FileItemFactory;
 import org.apache.tomcat.util.http.fileupload.disk.DiskFileItem;
+import org.apache.tomcat.util.http.fileupload.disk.DiskFileItemFactory;
+import org.apache.tomcat.util.http.fileupload.util.Streams;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import java.io.FileInputStream;
 import java.util.UUID;
 
 import static no.rutebanken.marduk.Constants.*;
@@ -38,6 +44,12 @@ import static no.rutebanken.marduk.Constants.*;
 public class FileUploadRouteBuilder extends BaseRouteBuilder {
 
     private static final String FILE_CONTENT_HEADER = "RutebankenFileContent";
+
+    @Autowired
+    FileSystemService fileSystemService;
+
+    @Autowired
+    GtfsFilesArchiver stopTimesArchiver;
 
     @Override
     public void configure() throws Exception {
@@ -97,6 +109,24 @@ public class FileUploadRouteBuilder extends BaseRouteBuilder {
                     String importPath = BlobStoreRoute.importPath(provider) + "/" + fileItem.getName();
                     e.getIn().setHeader(FILE_HANDLE, importPath);
                 })
+                .choice()
+                    .when(header(IMPORT_TYPE).isEqualTo(FileType.GTFS))
+                        .process(e -> {
+                            e.getIn().setHeader(CHOUETTE_REFERENTIAL, getProviderRepository().getReferential(e.getIn().getHeader(PROVIDER_ID, Long.class)));
+                            java.io.File file = fileSystemService.getAnalysisFile(e);
+                            FileItemFactory fac = new DiskFileItemFactory();
+                            FileItem fileItem = fac.createItem("file", "application/zip", false, file.getName());
+                            Streams.copy(new FileInputStream(file), fileItem.getOutputStream(), true);
+                            e.getIn().setBody(fileItem);
+                            String referential = e.getIn().getHeader(OKINA_REFERENTIAL, String.class);
+                            String cleanMode = e.getIn().getHeader(CLEAN_MODE, String.class);
+                            if ("purge".equals(cleanMode)) {
+                                stopTimesArchiver.cleanOrganisationStopTimes(referential);
+                                stopTimesArchiver.cleanOrganisationTrips(referential);
+                            }
+                            stopTimesArchiver.archiveStopTimes(file, referential);
+                            stopTimesArchiver.archiveTrips(file, referential);
+                        })
                 .setHeader(IMPORT, constant(true))
                 .process(e -> e.getIn().setHeader(FILE_CONTENT_HEADER, new CloseShieldInputStream(e.getIn().getBody(FileItem.class).getInputStream())))
                 .choice()

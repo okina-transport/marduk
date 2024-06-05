@@ -22,16 +22,13 @@ import no.rutebanken.marduk.domain.BlobStoreFiles.File;
 import no.rutebanken.marduk.domain.Provider;
 import no.rutebanken.marduk.routes.BaseRouteBuilder;
 import no.rutebanken.marduk.routes.blobstore.BlobStoreRoute;
-import no.rutebanken.marduk.routes.chouette.ExportJsonMapper;
 import no.rutebanken.marduk.routes.chouette.json.JobResponse;
 import no.rutebanken.marduk.routes.chouette.json.Status;
-import no.rutebanken.marduk.routes.file.GtfsFilesArchiver;
 import no.rutebanken.marduk.routes.file.ZipFileUtils;
 import no.rutebanken.marduk.routes.status.JobEvent;
 import no.rutebanken.marduk.security.AuthorizationClaim;
 import no.rutebanken.marduk.security.AuthorizationService;
 import no.rutebanken.marduk.services.BlobStoreService;
-import no.rutebanken.marduk.services.FileSystemService;
 import org.apache.camel.Body;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
@@ -41,10 +38,6 @@ import org.apache.camel.model.dataformat.JsonLibrary;
 import org.apache.camel.model.rest.RestBindingMode;
 import org.apache.camel.model.rest.RestParamType;
 import org.apache.camel.model.rest.RestPropertyDefinition;
-import org.apache.tomcat.util.http.fileupload.FileItem;
-import org.apache.tomcat.util.http.fileupload.FileItemFactory;
-import org.apache.tomcat.util.http.fileupload.disk.DiskFileItemFactory;
-import org.apache.tomcat.util.http.fileupload.util.Streams;
 import org.rutebanken.helper.organisation.AuthorizationConstants;
 import org.rutebanken.helper.organisation.NotAuthenticatedException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -84,16 +77,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
     private AuthorizationService authorizationService;
 
     @Autowired
-    private ExportJsonMapper exportJsonMapper;
-
-    @Autowired
     private BlobStoreService blobStoreService;
-
-    @Autowired
-    FileSystemService fileSystemService;
-
-    @Autowired
-    GtfsFilesArchiver stopTimesArchiver;
 
     @Value("${superspace.name}")
     private String superspaceName;
@@ -647,7 +631,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .removeHeaders("CamelHttp*")
                 .doTry()
                 .process(e -> checkFileContent(e))
-                .to("direct:uploadFilesAndStartImport")
+                    .to("direct:uploadFilesAndStartImport")
                 .doCatch(Exception.class)
                 .removeHeaders("Authorization")
                 .process(e -> {
@@ -678,23 +662,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .process(e -> log.info("Authorized request passed"))
                 .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
                 .process(e -> log.info("validation passed"))
-                .process(e -> {
-                    e.getIn().setHeader(CHOUETTE_REFERENTIAL, getProviderRepository().getReferential(e.getIn().getHeader(PROVIDER_ID, Long.class)));
-                    java.io.File file = fileSystemService.getAnalysisFile(e);
-                    FileItemFactory fac = new DiskFileItemFactory();
-                    FileItem fileItem = fac.createItem("file", "application/zip", false, file.getName());
-                    Streams.copy(new FileInputStream(file), fileItem.getOutputStream(), true);
-                    e.getIn().setBody(fileItem);
-                    String referential = e.getIn().getHeader(OKINA_REFERENTIAL, String.class);
-                    String cleanMode = e.getIn().getHeader(CLEAN_MODE, String.class);
-                    if ("purge".equals(cleanMode)) {
-                        stopTimesArchiver.cleanOrganisationStopTimes(referential);
-                        stopTimesArchiver.cleanOrganisationTrips(referential);
-                    }
-                    e.getIn().setHeader(GENERATE_MAP_MATCHING, getGenerateMapMatchingHeaders(e));
-                    stopTimesArchiver.archiveStopTimes(file, referential);
-                    stopTimesArchiver.archiveTrips(file, referential);
-                })
+                .process(e -> e.getIn().setHeader(GENERATE_MAP_MATCHING, getGenerateMapMatchingHeaders(e)))
                 .log(LoggingLevel.INFO, correlation() + "upload files and start import pipeline")
                 .removeHeaders("CamelHttp*")
                 .to("direct:importLaunch")
