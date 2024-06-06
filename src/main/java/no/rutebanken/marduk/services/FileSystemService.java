@@ -21,17 +21,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import static no.rutebanken.marduk.Constants.ANALYSIS_JOB_ID;
-import static no.rutebanken.marduk.Constants.JOB_ID;
-import static no.rutebanken.marduk.Constants.EXPORT_FILE_NAME;
-import static no.rutebanken.marduk.Constants.FILE_HANDLE;
-import static no.rutebanken.marduk.Constants.FILE_NAME;
-import static no.rutebanken.marduk.Constants.OKINA_REFERENTIAL;
+import static no.rutebanken.marduk.Constants.*;
 
 @Service
 public class FileSystemService {
@@ -148,11 +142,9 @@ public class FileSystemService {
             offerFile = files[0];
         }
 
-
         if (offerFile != null) {
             exchange.getIn().setHeader(FILE_NAME, offerFile.getName());
         }
-
         return offerFile;
     }
 

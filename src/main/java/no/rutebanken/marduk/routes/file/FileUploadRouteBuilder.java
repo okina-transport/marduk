@@ -109,24 +109,6 @@ public class FileUploadRouteBuilder extends BaseRouteBuilder {
                     String importPath = BlobStoreRoute.importPath(provider) + "/" + fileItem.getName();
                     e.getIn().setHeader(FILE_HANDLE, importPath);
                 })
-                .choice()
-                    .when(header(IMPORT_TYPE).isEqualTo(FileType.GTFS))
-                        .process(e -> {
-                            e.getIn().setHeader(CHOUETTE_REFERENTIAL, getProviderRepository().getReferential(e.getIn().getHeader(PROVIDER_ID, Long.class)));
-                            java.io.File file = fileSystemService.getAnalysisFile(e);
-                            FileItemFactory fac = new DiskFileItemFactory();
-                            FileItem fileItem = fac.createItem("file", "application/zip", false, file.getName());
-                            Streams.copy(new FileInputStream(file), fileItem.getOutputStream(), true);
-                            e.getIn().setBody(fileItem);
-                            String referential = e.getIn().getHeader(OKINA_REFERENTIAL, String.class);
-                            String cleanMode = e.getIn().getHeader(CLEAN_MODE, String.class);
-                            if ("purge".equals(cleanMode)) {
-                                stopTimesArchiver.cleanOrganisationStopTimes(referential);
-                                stopTimesArchiver.cleanOrganisationTrips(referential);
-                            }
-                            stopTimesArchiver.archiveStopTimes(file, referential);
-                            stopTimesArchiver.archiveTrips(file, referential);
-                        })
                 .setHeader(IMPORT, constant(true))
                 .process(e -> e.getIn().setHeader(FILE_CONTENT_HEADER, new CloseShieldInputStream(e.getIn().getBody(FileItem.class).getInputStream())))
                 .choice()

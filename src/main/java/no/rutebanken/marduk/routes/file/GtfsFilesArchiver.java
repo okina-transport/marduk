@@ -89,7 +89,7 @@ public class GtfsFilesArchiver {
      *  the organisation for which the directory must be deleted
      */
     public void cleanOrganisationStopTimes(String organisationName){
-        File organisationDirectory = new File( chouetteStoragePath + "/mobiiti_technique/stop_times/",organisationName.toUpperCase());
+        File organisationDirectory = new File( chouetteStoragePath + "/mobiiti_technique/stop_times/", organisationName.toUpperCase());
         ZipFileUtils.deleteDirectory(organisationDirectory);
     }
 
@@ -99,7 +99,7 @@ public class GtfsFilesArchiver {
      *  the organisation for which the directory must be deleted
      */
     public void cleanOrganisationTrips(String organisationName){
-        File organisationDirectory = new File( chouetteStoragePath + "/mobiiti_technique/trips/",organisationName.toUpperCase());
+        File organisationDirectory = new File( chouetteStoragePath + "/mobiiti_technique/trips/", organisationName.toUpperCase());
         ZipFileUtils.deleteDirectory(organisationDirectory);
     }
 

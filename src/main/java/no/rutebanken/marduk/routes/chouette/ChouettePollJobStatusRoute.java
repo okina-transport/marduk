@@ -22,9 +22,11 @@ import no.rutebanken.marduk.Constants;
 import no.rutebanken.marduk.Utils.PollJobStatusRoute;
 import no.rutebanken.marduk.routes.chouette.json.*;
 import no.rutebanken.marduk.routes.chouette.mapping.ProviderAndJobsMapper;
+import no.rutebanken.marduk.routes.file.GtfsFilesArchiver;
 import no.rutebanken.marduk.routes.status.JobEvent;
 import no.rutebanken.marduk.routes.status.JobEvent.State;
 import no.rutebanken.marduk.routes.status.JobEvent.TimetableAction;
+import no.rutebanken.marduk.services.FileSystemService;
 import org.apache.activemq.ScheduledMessage;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
@@ -32,10 +34,16 @@ import org.apache.camel.builder.PredicateBuilder;
 import org.apache.camel.component.http4.HttpMethods;
 import org.apache.camel.model.dataformat.JsonLibrary;
 import org.apache.http.client.utils.URIBuilder;
+import org.apache.tomcat.util.http.fileupload.FileItem;
+import org.apache.tomcat.util.http.fileupload.FileItemFactory;
+import org.apache.tomcat.util.http.fileupload.disk.DiskFileItemFactory;
+import org.apache.tomcat.util.http.fileupload.util.Streams;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import java.io.File;
+import java.io.FileInputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.Arrays;
@@ -77,6 +85,12 @@ public class ChouettePollJobStatusRoute extends AbstractChouetteRouteBuilder {
 
     @Autowired
     PollJobStatusRoute pollJobStatusRoute;
+
+    @Autowired
+    FileSystemService fileSystemService;
+
+    @Autowired
+    GtfsFilesArchiver gtfsFilesArchiver;
 
     /**
      * This routebuilder polls a job until it is terminated. It expects a few headers set on the message it receives:
@@ -286,8 +300,29 @@ public class ChouettePollJobStatusRoute extends AbstractChouetteRouteBuilder {
                         .stop()
                     .otherwise()
                         .unmarshal().json(JsonLibrary.Jackson, JobResponseWithLinks.class)
-                .end()
-
+                        .choice()
+                            .when(
+                                    PredicateBuilder.and(
+                                            simple("${body.status} == ${type:no.rutebanken.marduk.routes.chouette.json.Status.TERMINATED}"),
+                                            PredicateBuilder.isEqualTo(simple("${body.action}"), simple("importer")),
+                                            PredicateBuilder.isEqualTo(simple("${body.type}"), simple("gtfs"))))
+                                .process(e -> {
+                                    e.getIn().setHeader(CHOUETTE_REFERENTIAL, getProviderRepository().getReferential(e.getIn().getHeader(PROVIDER_ID, Long.class)));
+                                    java.io.File file = fileSystemService.getAnalysisFile(e);
+                                    FileItemFactory fac = new DiskFileItemFactory();
+                                    FileItem fileItem = fac.createItem("file", "application/zip", false, file.getName());
+                                    Streams.copy(new FileInputStream(file), fileItem.getOutputStream(), true);
+                                    e.getIn().setBody(fileItem);
+                                    String referential = e.getIn().getHeader(OKINA_REFERENTIAL, String.class);
+                                    String cleanMode = e.getIn().getHeader(CLEAN_MODE, String.class);
+                                    if ("purge".equals(cleanMode)) {
+                                        gtfsFilesArchiver.cleanOrganisationStopTimes(referential);
+                                        gtfsFilesArchiver.cleanOrganisationTrips(referential);
+                                    }
+                                    gtfsFilesArchiver.archiveStopTimes(file, referential);
+                                    gtfsFilesArchiver.archiveTrips(file, referential);
+                                })
+                        .end()
                 .setProperty("current_status", simple("${body.status}"))
                 .choice()
                     .when(PredicateBuilder.and(simple("${body.status} == ${type:no.rutebanken.marduk.routes.chouette.json.Status.TERMINATED}"),  simple("${header." + POST_PROCESS + "} != null")))
