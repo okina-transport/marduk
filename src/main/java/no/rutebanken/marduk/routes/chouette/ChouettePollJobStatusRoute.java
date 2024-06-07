@@ -312,7 +312,6 @@ public class ChouettePollJobStatusRoute extends AbstractChouetteRouteBuilder {
                                     FileItemFactory fac = new DiskFileItemFactory();
                                     FileItem fileItem = fac.createItem("file", "application/zip", false, file.getName());
                                     Streams.copy(new FileInputStream(file), fileItem.getOutputStream(), true);
-                                    e.getIn().setBody(fileItem);
                                     String referential = e.getIn().getHeader(OKINA_REFERENTIAL, String.class);
                                     String cleanMode = e.getIn().getHeader(CLEAN_MODE, String.class);
                                     if ("purge".equals(cleanMode)) {
