@@ -1,6 +1,7 @@
 package no.rutebanken.marduk.routes.file;
 
 import no.rutebanken.marduk.routes.BaseRouteBuilder;
+import no.rutebanken.marduk.routes.chouette.json.JobResponseWithLinks;
 import no.rutebanken.marduk.services.FileSystemService;
 import org.apache.camel.LoggingLevel;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,19 +26,17 @@ public class GtfsFilesArchiverRouteBuilder extends BaseRouteBuilder {
 
         from("direct:archiveTripsAndStopTimes")
                 .log(LoggingLevel.INFO, correlation() + "archive trips.txt and stop_times.txt from GTFS zip")
-                .validate(header(OKINA_REFERENTIAL).isNotNull())
-                .validate(header(JOB_ID).isNotNull())
+                .validate(body().isInstanceOf(JobResponseWithLinks.class))
                 .validate(header(CLEAN_MODE).isNotNull())
                 .process(e -> {
-                            String jobId = e.getIn().getHeader(JOB_ID, String.class);
-                            String referential = e.getIn().getHeader(OKINA_REFERENTIAL, String.class);
+                            JobResponseWithLinks body = e.getIn().getBody(JobResponseWithLinks.class);
                             String cleanMode = e.getIn().getHeader(CLEAN_MODE, String.class);
-                            File gtfsZipFile = fileSystemService.getGTFSZipFileByReferentialAndJobId(referential, jobId);
+                            File gtfsZipFile = fileSystemService.getGTFSZipFileByReferentialAndJobId(body.referential, String.valueOf(body.getId()));
                             if ("purge".equals(cleanMode)) {
-                                gtfsFilesArchiver.cleanOrganisationStopTimes(referential);
-                                gtfsFilesArchiver.cleanOrganisationTrips(referential);
+                                gtfsFilesArchiver.cleanOrganisationStopTimes(body.referential);
+                                gtfsFilesArchiver.cleanOrganisationTrips(body.referential);
                             }
-                            gtfsFilesArchiver.archiveTripsAndStopTimes(gtfsZipFile, referential);
+                            gtfsFilesArchiver.archiveTripsAndStopTimes(gtfsZipFile, body.referential);
                         })
                 .log(LoggingLevel.INFO, correlation() + "trips.txt and stop_times.txt have been successfully archived")
                 .routeId("archive-trips-and-stop-times");

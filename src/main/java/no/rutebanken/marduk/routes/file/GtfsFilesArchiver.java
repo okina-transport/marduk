@@ -42,7 +42,7 @@ public class GtfsFilesArchiver {
 
             // copy trips
             File originalTripsFile = new File(tmpDir, "trips.txt");
-            File archivedTripsFile = new File(getDestinationDir(organisation, "stop_times"), getDestinationFileName("stop_times_"));
+            File archivedTripsFile = new File(getDestinationDir(organisation, "trips"), getDestinationFileName("trips_"));
             archivedTripsFile.mkdirs();
             logger.info("Archiving trips.txt from zip : {} to file : {}", gtfsZipFile.getAbsolutePath(), archivedTripsFile.getAbsolutePath());
             Files.copy(originalTripsFile.toPath(), archivedTripsFile.toPath(), StandardCopyOption.REPLACE_EXISTING);

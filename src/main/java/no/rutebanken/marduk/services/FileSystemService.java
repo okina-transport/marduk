@@ -129,7 +129,7 @@ public class FileSystemService {
     }
 
     public File getGTFSZipFileByReferentialAndJobId(String referential, String jobId) {
-        logger.info("Recovering analysis file with referential:" + referential + " , and jobId:" + jobId);
+        logger.info("Recovering GTFS zip file for referential: {} and jobId: {}", referential, jobId);
         String analysisFilePath = chouetteStoragePath + "/" + referential + "/data/" + jobId;
         FileSystemResource fileSystemResource = new FileSystemResource(analysisFilePath);
 
