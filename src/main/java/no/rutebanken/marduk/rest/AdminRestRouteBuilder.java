@@ -1369,13 +1369,14 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
 
 
     private boolean getGenerateMapMatchingHeaders(Exchange e) {
-        Map body = (Map) e.getIn().getBody(Map.class);
-        Map headers;
-        headers = body == null ? e.getIn().getHeaders() : (Map) body.get("headers");
+        Map headers = e.getIn().getHeaders();
 
         if (headers != null && headers.get(GENERATE_MAP_MATCHING) != null && ((String) headers.get(GENERATE_MAP_MATCHING)).equalsIgnoreCase("true")) {
+            log.info("Generate mapMatching header found");
             return true;
         }
+
+        log.info("Generate mapMatching header not found");
         return false;
     }
 
