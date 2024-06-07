@@ -24,82 +24,60 @@ public class GtfsFilesArchiver {
 
 
     /**
-     * Read a gtfs, unzip it, and saves stop_times.txt into chouetteDir/mobiiti_technique/stop_times/"organisationName" directory
-     * @param inputFile
+     * Read a gtfs, unzip it, and saves trips.txt and stop_times.txt into chouetteDir/mobiiti_technique/[trips|stop_times]/"organisationName" directory
+     * @param gtfsZipFile
      *  the gtfs to read
      * @param organisation
      *  the organisation name
      */
-    public void archiveStopTimes(File inputFile, String organisation)  {
+    public void archiveTripsAndStopTimes(File gtfsZipFile, String organisation)  {
 
         try{
-            InputStream targetStream = new FileInputStream(inputFile);
-            String tmpDir = UUID.randomUUID().toString();
-            File newDir = new File("/tmp", tmpDir);
-            newDir.mkdirs();
+            InputStream targetStream = new FileInputStream(gtfsZipFile);
+            File tmpDir = new File("/tmp", String.valueOf(UUID.randomUUID()));
+            tmpDir.mkdirs();
 
-            logger.info("Archiving stop_times.txt from zip : " + inputFile.getAbsolutePath());
-            ZipFileUtils.unzipFile(targetStream,newDir.getAbsolutePath());
-            File originalFile = new File(newDir, "stop_times.txt");
-            File archivedFile = new File(getDestinationDir(organisation, "stop_times"), getDestinationFileName("stop_times_"));
-            archivedFile.mkdirs();
-            logger.info("to file : " + archivedFile.getAbsolutePath());
-            Files.copy(originalFile.toPath(), archivedFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-            ZipFileUtils.deleteDirectory(newDir);
+            // unzip GTFS archive in tmpDir
+            ZipFileUtils.unzipFile(targetStream,tmpDir.getAbsolutePath());
 
+            // copy trips
+            File originalTripsFile = new File(tmpDir, "trips.txt");
+            File archivedTripsFile = new File(getDestinationDir(organisation, "stop_times"), getDestinationFileName("stop_times_"));
+            archivedTripsFile.mkdirs();
+            logger.info("Archiving trips.txt from zip : {} to file : {}", gtfsZipFile.getAbsolutePath(), archivedTripsFile.getAbsolutePath());
+            Files.copy(originalTripsFile.toPath(), archivedTripsFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+
+            // copy stop_times
+            File originalStopTimesFile = new File(tmpDir, "stop_times.txt");
+            File archivedStopTimesFile = new File(getDestinationDir(organisation, "stop_times"), getDestinationFileName("stop_times_"));
+            archivedStopTimesFile.mkdirs();
+            logger.info("Archiving stop_times.txt from zip : {} to file : {}", gtfsZipFile.getAbsolutePath(), archivedStopTimesFile.getAbsolutePath());
+            Files.copy(originalStopTimesFile.toPath(), archivedStopTimesFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+
+            ZipFileUtils.deleteDirectory(tmpDir);
         }catch (Exception e){
-            logger.error("Error while archiving stop times", e);
+            logger.error("Error while archiving trips.txt and stop_times.txt", e);
         }
 
     }
 
     /**
-     * Read a gtfs, unzip it, and saves stop_times.txt into chouetteDir/mobiiti_technique/stop_times/"organisationName" directory
-     * @param inputFile
-     *  the gtfs to read
-     * @param organisation
-     *  the organisation name
-     */
-    public void archiveTrips(File inputFile, String organisation)  {
-
-        try{
-            InputStream targetStream = new FileInputStream(inputFile);
-            String tmpDir = UUID.randomUUID().toString();
-            File newDir = new File("/tmp", tmpDir);
-            newDir.mkdirs();
-
-            logger.info("Archiving trips.txt from zip : " + inputFile.getAbsolutePath());
-            ZipFileUtils.unzipFile(targetStream,newDir.getAbsolutePath());
-            File originalFile = new File(newDir, "trips.txt");
-            File archivedFile = new File(getDestinationDir(organisation, "trips"), getDestinationFileName("trips_"));
-            archivedFile.mkdirs();
-            logger.info("to file : " + archivedFile.getAbsolutePath());
-            Files.copy(originalFile.toPath(), archivedFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
-            ZipFileUtils.deleteDirectory(newDir);
-
-        }catch (Exception e){
-            logger.error("Error while archiving trips", e);
-        }
-
-    }
-
-    /**
-     * Delete the organisation directoty (in mobiiti_technique/stop_times) and all its files
+     * Delete the organisation directory (in mobiiti_technique/stop_times) and all its files
      * @param organisationName
      *  the organisation for which the directory must be deleted
      */
     public void cleanOrganisationStopTimes(String organisationName){
-        File organisationDirectory = new File( chouetteStoragePath + "/mobiiti_technique/stop_times/", organisationName.toUpperCase());
+        File organisationDirectory = new File(getDestinationDir(organisationName, "stop_times"));
         ZipFileUtils.deleteDirectory(organisationDirectory);
     }
 
     /**
-     * Delete the organisation directoty (in mobiiti_technique/trips) and all its files
+     * Delete the organisation directory (in mobiiti_technique/trips) and all its files
      * @param organisationName
      *  the organisation for which the directory must be deleted
      */
     public void cleanOrganisationTrips(String organisationName){
-        File organisationDirectory = new File( chouetteStoragePath + "/mobiiti_technique/trips/", organisationName.toUpperCase());
+        File organisationDirectory = new File(getDestinationDir(organisationName, "trips"));
         ZipFileUtils.deleteDirectory(organisationDirectory);
     }
 

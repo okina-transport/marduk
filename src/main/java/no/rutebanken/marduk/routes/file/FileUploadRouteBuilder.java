@@ -21,18 +21,12 @@ import no.rutebanken.marduk.domain.Provider;
 import no.rutebanken.marduk.routes.BaseRouteBuilder;
 import no.rutebanken.marduk.routes.blobstore.BlobStoreRoute;
 import no.rutebanken.marduk.routes.status.JobEvent;
-import no.rutebanken.marduk.services.FileSystemService;
 import org.apache.camel.LoggingLevel;
 import org.apache.commons.io.input.CloseShieldInputStream;
 import org.apache.tomcat.util.http.fileupload.FileItem;
-import org.apache.tomcat.util.http.fileupload.FileItemFactory;
 import org.apache.tomcat.util.http.fileupload.disk.DiskFileItem;
-import org.apache.tomcat.util.http.fileupload.disk.DiskFileItemFactory;
-import org.apache.tomcat.util.http.fileupload.util.Streams;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import java.io.FileInputStream;
 import java.util.UUID;
 
 import static no.rutebanken.marduk.Constants.*;
@@ -45,11 +39,6 @@ public class FileUploadRouteBuilder extends BaseRouteBuilder {
 
     private static final String FILE_CONTENT_HEADER = "RutebankenFileContent";
 
-    @Autowired
-    FileSystemService fileSystemService;
-
-    @Autowired
-    GtfsFilesArchiver stopTimesArchiver;
 
     @Override
     public void configure() throws Exception {

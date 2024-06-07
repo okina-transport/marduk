@@ -128,24 +128,19 @@ public class FileSystemService {
         return offerFile;
     }
 
-    public File getAnalysisFile(Exchange exchange) {
-        ExchangeUtils.addHeadersAndAttachments(exchange);
-        String referential = exchange.getIn().getHeader(OKINA_REFERENTIAL, String.class);
-        String jobId = exchange.getIn().getHeader(JOB_ID, String.class);
+    public File getGTFSZipFileByReferentialAndJobId(String referential, String jobId) {
         logger.info("Recovering analysis file with referential:" + referential + " , and jobId:" + jobId);
-        FileSystemResource fileSystemResource = new FileSystemResource(chouetteStoragePath + "/" + referential + "/data/" + jobId);
+        String analysisFilePath = chouetteStoragePath + "/" + referential + "/data/" + jobId;
+        FileSystemResource fileSystemResource = new FileSystemResource(analysisFilePath);
 
-        File offerFile = null;
         File[] files = fileSystemResource.getFile().listFiles((dir, name) -> name.toLowerCase().endsWith(".zip"));
 
-        if(files != null && files.length > 0){
-            offerFile = files[0];
+        if (files == null || files.length == 0) {
+            logger.error("Chouette GTFS file not found (referential: {}, jobId: {}, path : '{}'", referential, jobId, analysisFilePath);
+            return null;
         }
 
-        if (offerFile != null) {
-            exchange.getIn().setHeader(FILE_NAME, offerFile.getName());
-        }
-        return offerFile;
+        return files[0];
     }
 
     public List<Path> getAllFilesFromLocalStorage(String prefix, String fileExtension) {

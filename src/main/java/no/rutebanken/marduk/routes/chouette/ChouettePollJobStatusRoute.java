@@ -42,7 +42,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import java.io.File;
 import java.io.FileInputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -85,12 +84,6 @@ public class ChouettePollJobStatusRoute extends AbstractChouetteRouteBuilder {
 
     @Autowired
     PollJobStatusRoute pollJobStatusRoute;
-
-    @Autowired
-    FileSystemService fileSystemService;
-
-    @Autowired
-    GtfsFilesArchiver gtfsFilesArchiver;
 
     /**
      * This routebuilder polls a job until it is terminated. It expects a few headers set on the message it receives:
@@ -305,22 +298,8 @@ public class ChouettePollJobStatusRoute extends AbstractChouetteRouteBuilder {
                                     PredicateBuilder.and(
                                             simple("${body.status} == ${type:no.rutebanken.marduk.routes.chouette.json.Status.TERMINATED}"),
                                             PredicateBuilder.isEqualTo(simple("${body.action}"), simple("importer")),
-                                            PredicateBuilder.isEqualTo(simple("${body.type}"), simple("gtfs"))))
-                                .process(e -> {
-                                    e.getIn().setHeader(CHOUETTE_REFERENTIAL, getProviderRepository().getReferential(e.getIn().getHeader(PROVIDER_ID, Long.class)));
-                                    java.io.File file = fileSystemService.getAnalysisFile(e);
-                                    FileItemFactory fac = new DiskFileItemFactory();
-                                    FileItem fileItem = fac.createItem("file", "application/zip", false, file.getName());
-                                    Streams.copy(new FileInputStream(file), fileItem.getOutputStream(), true);
-                                    String referential = e.getIn().getHeader(OKINA_REFERENTIAL, String.class);
-                                    String cleanMode = e.getIn().getHeader(CLEAN_MODE, String.class);
-                                    if ("purge".equals(cleanMode)) {
-                                        gtfsFilesArchiver.cleanOrganisationStopTimes(referential);
-                                        gtfsFilesArchiver.cleanOrganisationTrips(referential);
-                                    }
-                                    gtfsFilesArchiver.archiveStopTimes(file, referential);
-                                    gtfsFilesArchiver.archiveTrips(file, referential);
-                                })
+                                            PredicateBuilder.isEqualTo(simple("${body.type}"), simple("gtfs")))
+                            ).to("direct:archiveTripsAndStopTimes")
                         .end()
                 .setProperty("current_status", simple("${body.status}"))
                 .choice()

@@ -30,6 +30,7 @@ import no.rutebanken.marduk.routes.status.JobEvent;
 import no.rutebanken.marduk.security.AuthorizationClaim;
 import no.rutebanken.marduk.security.AuthorizationService;
 import no.rutebanken.marduk.services.BlobStoreService;
+import no.rutebanken.marduk.services.FileSystemService;
 import org.apache.camel.Body;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
@@ -39,6 +40,10 @@ import org.apache.camel.model.dataformat.JsonLibrary;
 import org.apache.camel.model.rest.RestBindingMode;
 import org.apache.camel.model.rest.RestParamType;
 import org.apache.camel.model.rest.RestPropertyDefinition;
+import org.apache.tomcat.util.http.fileupload.FileItem;
+import org.apache.tomcat.util.http.fileupload.FileItemFactory;
+import org.apache.tomcat.util.http.fileupload.disk.DiskFileItemFactory;
+import org.apache.tomcat.util.http.fileupload.util.Streams;
 import org.rutebanken.helper.organisation.AuthorizationConstants;
 import org.rutebanken.helper.organisation.NotAuthenticatedException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -80,6 +85,9 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
     @Autowired
     private BlobStoreService blobStoreService;
 
+    @Autowired
+    FileSystemService fileSystemService;
+
     @Value("${superspace.name}")
     private String superspaceName;
 
@@ -88,6 +96,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
 
     @Value("${netex.merged.tmp.working.directory:/tmp/mergedNetex/allFiles}")
     private String mergedNetexTmpDirectory;
+
 
     @Override
     public void configure() throws Exception {
@@ -663,10 +672,20 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .process(e -> log.info("Authorized request passed"))
                 .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
                 .process(e -> log.info("validation passed"))
-                .process(e -> e.getIn().setHeader(GENERATE_MAP_MATCHING, getGenerateMapMatchingHeaders(e)))
+                .process(e -> {
+                    String referential = getProviderRepository().getReferential(e.getIn().getHeader(PROVIDER_ID, Long.class));
+                    String jobId = e.getIn().getHeader(ANALYSIS_JOB_ID, String.class);
+                    java.io.File gtfsZipFile = fileSystemService.getGTFSZipFileByReferentialAndJobId(referential, jobId);
+                    FileItemFactory fac = new DiskFileItemFactory();
+                    FileItem fileItem = fac.createItem("file", "application/zip", false, gtfsZipFile.getName());
+                    Streams.copy(new FileInputStream(gtfsZipFile), fileItem.getOutputStream(), true);
+                    e.getIn().setBody(fileItem);
+                    e.getIn().setHeader(CHOUETTE_REFERENTIAL, referential);
+                    e.getIn().setHeader(FILE_NAME, gtfsZipFile.getName());
+                    e.getIn().setHeader(GENERATE_MAP_MATCHING, getGenerateMapMatchingHeaders(e));
+                })
                 .log(LoggingLevel.INFO, correlation() + "upload files and start import pipeline")
                 .removeHeaders("CamelHttp*")
-                .process(FileInformations::getObjectUpload)
                 .to("direct:importLaunch")
                 .routeId("admin-chouette-upload-file")
                 .endRest()
@@ -1371,14 +1390,14 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
 
 
     private boolean getGenerateMapMatchingHeaders(Exchange e) {
-        Map headers = e.getIn().getHeaders();
+        Map body = (Map) e.getIn().getBody(Map.class);
+        Map headers;
+        headers = body == null ? e.getIn().getHeaders() : (Map) body.get("headers");
 
         if (headers != null && headers.get(GENERATE_MAP_MATCHING) != null && ((String) headers.get(GENERATE_MAP_MATCHING)).equalsIgnoreCase("true")) {
-            log.info("Generate mapMatching header found");
             return true;
         }
 
-        log.info("Generate mapMatching header not found");
         return false;
     }
 
