@@ -24,6 +24,7 @@ import no.rutebanken.marduk.routes.BaseRouteBuilder;
 import no.rutebanken.marduk.routes.blobstore.BlobStoreRoute;
 import no.rutebanken.marduk.routes.chouette.json.JobResponse;
 import no.rutebanken.marduk.routes.chouette.json.Status;
+import no.rutebanken.marduk.routes.file.FileInformations;
 import no.rutebanken.marduk.routes.file.ZipFileUtils;
 import no.rutebanken.marduk.routes.status.JobEvent;
 import no.rutebanken.marduk.security.AuthorizationClaim;
@@ -665,6 +666,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .process(e -> e.getIn().setHeader(GENERATE_MAP_MATCHING, getGenerateMapMatchingHeaders(e)))
                 .log(LoggingLevel.INFO, correlation() + "upload files and start import pipeline")
                 .removeHeaders("CamelHttp*")
+                .process(FileInformations::getObjectUpload)
                 .to("direct:importLaunch")
                 .routeId("admin-chouette-upload-file")
                 .endRest()
