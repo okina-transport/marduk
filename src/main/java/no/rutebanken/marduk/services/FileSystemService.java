@@ -131,7 +131,7 @@ public class FileSystemService {
     public File getAnalysisFile(Exchange exchange) {
         ExchangeUtils.addHeadersAndAttachments(exchange);
         String referential = exchange.getIn().getHeader(OKINA_REFERENTIAL, String.class);
-        String jobId = exchange.getIn().getHeader(ANALYSIS_JOB_ID, String.class);
+        String jobId = exchange.getIn().getHeader(JOB_ID, String.class);
         logger.info("Recovering analysis file with referential:" + referential + " , and jobId:" + jobId);
         FileSystemResource fileSystemResource = new FileSystemResource(chouetteStoragePath + "/" + referential + "/data/" + jobId);
 
