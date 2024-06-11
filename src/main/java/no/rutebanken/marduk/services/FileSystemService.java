@@ -128,15 +128,15 @@ public class FileSystemService {
         return offerFile;
     }
 
-    public File getGTFSZipFileByReferentialAndJobId(String referential, String jobId) {
-        logger.info("Recovering GTFS zip file for referential: {} and jobId: {}", referential, jobId);
-        String analysisFilePath = chouetteStoragePath + "/" + referential + "/data/" + jobId;
-        FileSystemResource fileSystemResource = new FileSystemResource(analysisFilePath);
+    public File getImportZipFileByReferentialAndJobId(String referential, String jobId) {
+        logger.info("Recovering import zip file for referential: {} and jobId: {}", referential, jobId);
+        String importFolder = chouetteStoragePath + "/" + referential + "/data/" + jobId;
+        FileSystemResource fileSystemResource = new FileSystemResource(importFolder);
 
         File[] files = fileSystemResource.getFile().listFiles((dir, name) -> name.toLowerCase().endsWith(".zip"));
 
         if (files == null || files.length == 0) {
-            logger.error("Chouette GTFS file not found (referential: {}, jobId: {}, path : '{}'", referential, jobId, analysisFilePath);
+            logger.error("Chouette import zip file not found (referential: {}, jobId: {}, importFolder : '{}'", referential, jobId, importFolder);
             return null;
         }
 

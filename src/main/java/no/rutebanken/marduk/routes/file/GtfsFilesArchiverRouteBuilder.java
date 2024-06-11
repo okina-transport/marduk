@@ -31,7 +31,7 @@ public class GtfsFilesArchiverRouteBuilder extends BaseRouteBuilder {
                 .process(e -> {
                             JobResponseWithLinks body = e.getIn().getBody(JobResponseWithLinks.class);
                             String cleanMode = e.getIn().getHeader(CLEAN_MODE, String.class);
-                            File gtfsZipFile = fileSystemService.getGTFSZipFileByReferentialAndJobId(body.referential, String.valueOf(body.getId()));
+                            File gtfsZipFile = fileSystemService.getImportZipFileByReferentialAndJobId(body.referential, String.valueOf(body.getId()));
                             if ("purge".equals(cleanMode)) {
                                 gtfsFilesArchiver.cleanOrganisationStopTimes(body.referential);
                                 gtfsFilesArchiver.cleanOrganisationTrips(body.referential);

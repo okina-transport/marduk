@@ -24,7 +24,6 @@ import no.rutebanken.marduk.routes.BaseRouteBuilder;
 import no.rutebanken.marduk.routes.blobstore.BlobStoreRoute;
 import no.rutebanken.marduk.routes.chouette.json.JobResponse;
 import no.rutebanken.marduk.routes.chouette.json.Status;
-import no.rutebanken.marduk.routes.file.FileInformations;
 import no.rutebanken.marduk.routes.file.ZipFileUtils;
 import no.rutebanken.marduk.routes.status.JobEvent;
 import no.rutebanken.marduk.security.AuthorizationClaim;
@@ -675,7 +674,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .process(e -> {
                     String referential = getProviderRepository().getReferential(e.getIn().getHeader(PROVIDER_ID, Long.class));
                     String jobId = e.getIn().getHeader(ANALYSIS_JOB_ID, String.class);
-                    java.io.File gtfsZipFile = fileSystemService.getGTFSZipFileByReferentialAndJobId(referential, jobId);
+                    java.io.File gtfsZipFile = fileSystemService.getImportZipFileByReferentialAndJobId(referential, jobId);
                     FileItemFactory fac = new DiskFileItemFactory();
                     FileItem fileItem = fac.createItem("file", "application/zip", false, gtfsZipFile.getName());
                     Streams.copy(new FileInputStream(gtfsZipFile), fileItem.getOutputStream(), true);
