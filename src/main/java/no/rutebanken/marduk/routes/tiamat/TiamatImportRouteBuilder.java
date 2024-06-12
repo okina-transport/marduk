@@ -32,6 +32,7 @@ import no.rutebanken.marduk.routes.status.JobEvent.State;
 import no.rutebanken.marduk.routes.status.JobEvent.TimetableAction;
 import static no.rutebanken.marduk.Constants.*;
 
+import no.rutebanken.marduk.security.TokenService;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.builder.PredicateBuilder;
@@ -62,6 +63,9 @@ public class TiamatImportRouteBuilder extends AbstractChouetteRouteBuilder {
 
     @Autowired
     ImportConfigurationDAO importConfigurationDAO;
+
+    @Autowired
+    TokenService tokenService;
 
     // @formatter:off
     @Override
@@ -148,6 +152,10 @@ public class TiamatImportRouteBuilder extends AbstractChouetteRouteBuilder {
 
                     exchange.getOut().setBody(entityBuilder.build());
                     exchange.getOut().setHeaders(exchange.getIn().getHeaders());
+
+                    if (exchange.getIn().getHeader("Authorization") == null) {
+                        exchange.getOut().setHeader("Authorization", "Bearer " + tokenService.getToken());
+                    }
                 })
                 .toD("${exchangeProperty.tiamat_url}")
                 .to("log:" + getClass().getName() + "?level=DEBUG&showAll=true&multiline=true")
