@@ -40,4 +40,11 @@ public class JobResponse {
 		return status;
 	}
 
+	public String getAction() {
+		return action;
+	}
+
+	public String getType() {
+		return type;
+	}
 }

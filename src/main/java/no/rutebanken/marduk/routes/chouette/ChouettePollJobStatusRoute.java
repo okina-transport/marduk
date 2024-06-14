@@ -22,9 +22,11 @@ import no.rutebanken.marduk.Constants;
 import no.rutebanken.marduk.Utils.PollJobStatusRoute;
 import no.rutebanken.marduk.routes.chouette.json.*;
 import no.rutebanken.marduk.routes.chouette.mapping.ProviderAndJobsMapper;
+import no.rutebanken.marduk.routes.file.GtfsFilesArchiver;
 import no.rutebanken.marduk.routes.status.JobEvent;
 import no.rutebanken.marduk.routes.status.JobEvent.State;
 import no.rutebanken.marduk.routes.status.JobEvent.TimetableAction;
+import no.rutebanken.marduk.services.FileSystemService;
 import org.apache.activemq.ScheduledMessage;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
@@ -32,10 +34,15 @@ import org.apache.camel.builder.PredicateBuilder;
 import org.apache.camel.component.http4.HttpMethods;
 import org.apache.camel.model.dataformat.JsonLibrary;
 import org.apache.http.client.utils.URIBuilder;
+import org.apache.tomcat.util.http.fileupload.FileItem;
+import org.apache.tomcat.util.http.fileupload.FileItemFactory;
+import org.apache.tomcat.util.http.fileupload.disk.DiskFileItemFactory;
+import org.apache.tomcat.util.http.fileupload.util.Streams;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import java.io.FileInputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.Arrays;
@@ -286,8 +293,14 @@ public class ChouettePollJobStatusRoute extends AbstractChouetteRouteBuilder {
                         .stop()
                     .otherwise()
                         .unmarshal().json(JsonLibrary.Jackson, JobResponseWithLinks.class)
-                .end()
-
+                        .choice()
+                            .when(
+                                    PredicateBuilder.and(
+                                            simple("${body.status} == ${type:no.rutebanken.marduk.routes.chouette.json.Status.TERMINATED}"),
+                                            PredicateBuilder.isEqualTo(simple("${body.action}"), simple("importer")),
+                                            PredicateBuilder.isEqualTo(simple("${body.type}"), simple("gtfs")))
+                            ).to("direct:archiveTripsAndStopTimes")
+                        .end()
                 .setProperty("current_status", simple("${body.status}"))
                 .choice()
                     .when(PredicateBuilder.and(simple("${body.status} == ${type:no.rutebanken.marduk.routes.chouette.json.Status.TERMINATED}"),  simple("${header." + POST_PROCESS + "} != null")))

@@ -22,10 +22,8 @@ import no.rutebanken.marduk.domain.BlobStoreFiles.File;
 import no.rutebanken.marduk.domain.Provider;
 import no.rutebanken.marduk.routes.BaseRouteBuilder;
 import no.rutebanken.marduk.routes.blobstore.BlobStoreRoute;
-import no.rutebanken.marduk.routes.chouette.ExportJsonMapper;
 import no.rutebanken.marduk.routes.chouette.json.JobResponse;
 import no.rutebanken.marduk.routes.chouette.json.Status;
-import no.rutebanken.marduk.routes.file.GtfsFilesArchiver;
 import no.rutebanken.marduk.routes.file.ZipFileUtils;
 import no.rutebanken.marduk.routes.status.JobEvent;
 import no.rutebanken.marduk.security.AuthorizationClaim;
@@ -84,16 +82,10 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
     private AuthorizationService authorizationService;
 
     @Autowired
-    private ExportJsonMapper exportJsonMapper;
-
-    @Autowired
     private BlobStoreService blobStoreService;
 
     @Autowired
     FileSystemService fileSystemService;
-
-    @Autowired
-    GtfsFilesArchiver stopTimesArchiver;
 
     @Value("${superspace.name}")
     private String superspaceName;
@@ -103,6 +95,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
 
     @Value("${netex.merged.tmp.working.directory:/tmp/mergedNetex/allFiles}")
     private String mergedNetexTmpDirectory;
+
 
     @Override
     public void configure() throws Exception {
@@ -647,7 +640,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .removeHeaders("CamelHttp*")
                 .doTry()
                 .process(e -> checkFileContent(e))
-                .to("direct:uploadFilesAndStartImport")
+                    .to("direct:uploadFilesAndStartImport")
                 .doCatch(Exception.class)
                 .removeHeaders("Authorization")
                 .process(e -> {
@@ -679,21 +672,16 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
                 .process(e -> log.info("validation passed"))
                 .process(e -> {
-                    e.getIn().setHeader(CHOUETTE_REFERENTIAL, getProviderRepository().getReferential(e.getIn().getHeader(PROVIDER_ID, Long.class)));
-                    java.io.File file = fileSystemService.getAnalysisFile(e);
+                    String referential = getProviderRepository().getReferential(e.getIn().getHeader(PROVIDER_ID, Long.class));
+                    String jobId = e.getIn().getHeader(ANALYSIS_JOB_ID, String.class);
+                    java.io.File gtfsZipFile = fileSystemService.getImportZipFileByReferentialAndJobId(referential, jobId);
                     FileItemFactory fac = new DiskFileItemFactory();
-                    FileItem fileItem = fac.createItem("file", "application/zip", false, file.getName());
-                    Streams.copy(new FileInputStream(file), fileItem.getOutputStream(), true);
+                    FileItem fileItem = fac.createItem("file", "application/zip", false, gtfsZipFile.getName());
+                    Streams.copy(new FileInputStream(gtfsZipFile), fileItem.getOutputStream(), true);
                     e.getIn().setBody(fileItem);
-                    String referential = e.getIn().getHeader(OKINA_REFERENTIAL, String.class);
-                    String cleanMode = e.getIn().getHeader(CLEAN_MODE, String.class);
-                    if ("purge".equals(cleanMode)) {
-                        stopTimesArchiver.cleanOrganisationStopTimes(referential);
-                        stopTimesArchiver.cleanOrganisationTrips(referential);
-                    }
+                    e.getIn().setHeader(CHOUETTE_REFERENTIAL, referential);
+                    e.getIn().setHeader(FILE_NAME, gtfsZipFile.getName());
                     e.getIn().setHeader(GENERATE_MAP_MATCHING, getGenerateMapMatchingHeaders(e));
-                    stopTimesArchiver.archiveStopTimes(file, referential);
-                    stopTimesArchiver.archiveTrips(file, referential);
                 })
                 .log(LoggingLevel.INFO, correlation() + "upload files and start import pipeline")
                 .removeHeaders("CamelHttp*")
@@ -1408,6 +1396,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
         if (headers != null && headers.get(GENERATE_MAP_MATCHING) != null && ((String) headers.get(GENERATE_MAP_MATCHING)).equalsIgnoreCase("true")) {
             return true;
         }
+
         return false;
     }
 

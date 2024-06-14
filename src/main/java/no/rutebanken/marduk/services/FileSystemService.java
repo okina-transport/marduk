@@ -25,12 +25,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import static no.rutebanken.marduk.Constants.ANALYSIS_JOB_ID;
-import static no.rutebanken.marduk.Constants.JOB_ID;
-import static no.rutebanken.marduk.Constants.EXPORT_FILE_NAME;
-import static no.rutebanken.marduk.Constants.FILE_HANDLE;
-import static no.rutebanken.marduk.Constants.FILE_NAME;
-import static no.rutebanken.marduk.Constants.OKINA_REFERENTIAL;
+import static no.rutebanken.marduk.Constants.*;
 
 @Service
 public class FileSystemService {
@@ -133,26 +128,19 @@ public class FileSystemService {
         return offerFile;
     }
 
-    public File getAnalysisFile(Exchange exchange) {
-        ExchangeUtils.addHeadersAndAttachments(exchange);
-        String referential = exchange.getIn().getHeader(OKINA_REFERENTIAL, String.class);
-        String jobId = exchange.getIn().getHeader(ANALYSIS_JOB_ID, String.class);
-        logger.info("Recovering analysis file with referential:" + referential + " , and jobId:" + jobId);
-        FileSystemResource fileSystemResource = new FileSystemResource(chouetteStoragePath + "/" + referential + "/data/" + jobId);
+    public File getImportZipFileByReferentialAndJobId(String referential, String jobId) {
+        logger.info("Recovering import zip file for referential: {} and jobId: {}", referential, jobId);
+        String importFolder = chouetteStoragePath + "/" + referential + "/data/" + jobId;
+        FileSystemResource fileSystemResource = new FileSystemResource(importFolder);
 
-        File offerFile = null;
         File[] files = fileSystemResource.getFile().listFiles((dir, name) -> name.toLowerCase().endsWith(".zip"));
 
-        if(files != null && files.length > 0){
-            offerFile = files[0];
+        if (files == null || files.length == 0) {
+            logger.error("Chouette import zip file not found (referential: {}, jobId: {}, importFolder : '{}'", referential, jobId, importFolder);
+            return null;
         }
 
-
-        if (offerFile != null) {
-            exchange.getIn().setHeader(FILE_NAME, offerFile.getName());
-        }
-
-        return offerFile;
+        return files[0];
     }
 
     public List<Path> getAllFilesFromLocalStorage(String prefix, String fileExtension) {
@@ -162,7 +150,7 @@ public class FileSystemService {
                     .collect(Collectors.toList());
         } catch (IOException e) {
             logger.error("Récupération fichiers localStorage impossible: " + e);
-            return new ArrayList();
+            return new ArrayList<>();
         }
     }
 

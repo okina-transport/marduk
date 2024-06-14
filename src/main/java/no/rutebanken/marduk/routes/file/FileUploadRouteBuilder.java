@@ -39,6 +39,7 @@ public class FileUploadRouteBuilder extends BaseRouteBuilder {
 
     private static final String FILE_CONTENT_HEADER = "RutebankenFileContent";
 
+
     @Override
     public void configure() throws Exception {
         super.configure();

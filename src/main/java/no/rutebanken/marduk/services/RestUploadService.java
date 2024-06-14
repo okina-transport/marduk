@@ -37,7 +37,7 @@ public class RestUploadService {
         headers.setContentType(MediaType.MULTIPART_FORM_DATA);
         headers.add("Authorization", "Bearer " + secret);
 
-        LinkedMultiValueMap<String, Object> body = new LinkedMultiValueMap();
+        LinkedMultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
         body.add("workbench_import[name]", filename);
         body.add("workbench_import[file]", new MultipartFileResource(inputStreamToSend, filename));
 
