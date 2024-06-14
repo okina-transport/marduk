@@ -16,9 +16,11 @@
 
 package no.rutebanken.marduk.routes.chouette;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import no.rutebanken.marduk.Constants;
 import no.rutebanken.marduk.domain.AttributionsExportModes;
 import no.rutebanken.marduk.domain.IdFormat;
+import no.rutebanken.marduk.domain.OrganisationView;
 import no.rutebanken.marduk.domain.Provider;
 import no.rutebanken.marduk.routes.chouette.json.IdParameters;
 import no.rutebanken.marduk.routes.chouette.json.Parameters;
@@ -26,6 +28,7 @@ import no.rutebanken.marduk.routes.file.ZipFileUtils;
 import no.rutebanken.marduk.routes.status.JobEvent;
 import no.rutebanken.marduk.routes.status.JobEvent.State;
 import no.rutebanken.marduk.routes.status.JobEvent.TimetableAction;
+import no.rutebanken.marduk.security.TokenService;
 import no.rutebanken.marduk.services.FileSystemService;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
@@ -34,19 +37,16 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import java.io.File;
-import java.io.InputStream;
-import java.io.PrintWriter;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Date;
-import java.util.List;
-import java.util.UUID;
+import java.io.*;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.toList;
 import static no.rutebanken.marduk.Constants.*;
 import static no.rutebanken.marduk.Utils.Utils.getLastPathElementOfUrl;
+import static no.rutebanken.marduk.repository.RestDAO.HEADER_REFERENTIAL;
 
 /**
  * Exports gtfs files from Chouette
@@ -72,6 +72,12 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
     @Autowired
     CreateMail createMail;
 
+    @Value("${export-templates.api.url}")
+    private String exportTemplatesUrl;
+
+    @Autowired
+    TokenService tokenService;
+
 
     @Override
     public void configure() throws Exception {
@@ -82,8 +88,8 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
                 .log(LoggingLevel.INFO, getClass().getName(), "Starting Chouette GTFS export for provider with id ${header." + PROVIDER_ID + "}")
                 .process(e -> {
                     // Force new correlation ID : each export must have its own correlation ID to me displayed correctly in export screen
-                    e.getIn().setHeader(Constants.CORRELATION_ID,  UUID.randomUUID().toString());
-                    e.getIn().removeHeader(Constants.JOB_ID);
+                    e.getIn().setHeader(CORRELATION_ID,  UUID.randomUUID().toString());
+                    e.getIn().removeHeader(JOB_ID);
                     String exportName = "gtfs";
                     if(!e.getIn().getHeader(GTFS_EXPORT_GLOBAL, Boolean.class)){
                         exportName = org.springframework.util.StringUtils.hasText(e.getIn().getHeader(EXPORTED_FILENAME, String.class)) ?
@@ -125,6 +131,14 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
                         Long end = e.getIn().getHeader(EXPORT_END_DATE) != null ? e.getIn().getHeader(EXPORT_END_DATE, Long.class) : null;
                         startDate = (start != null) ? new Date(start) : null;
                         endDate = (end != null) ? new Date(end) : null;
+                    }else{
+                        String referential = e.getIn().getHeader(OKINA_REFERENTIAL, String.class);
+                        Optional<OrganisationView> schemasInfosOpt = getSchemasInfos(referential);
+                        if (schemasInfosOpt.isPresent()){
+                            OrganisationView organisationView = schemasInfosOpt.get();
+                            startDate = organisationView.getProductionInfos().getStartDate();
+                            endDate = organisationView.getProductionInfos().getEndDate();
+                        }
                     }
 
                     boolean mappingLinesIds = false;
@@ -160,10 +174,10 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
                 .to("log:" + getClass().getName() + "?level=DEBUG&showAll=true&multiline=true")
                 .process(e -> {
                     e.getIn().setHeader(JOB_STATUS_URL, e.getIn().getHeader("Location").toString().replaceFirst("http", "http4"));
-                    e.getIn().setHeader(Constants.JOB_ID, getLastPathElementOfUrl(e.getIn().getHeader("Location", String.class)));
+                    e.getIn().setHeader(JOB_ID, getLastPathElementOfUrl(e.getIn().getHeader("Location", String.class)));
                 })
-                .setHeader(Constants.JOB_STATUS_ROUTING_DESTINATION, constant("direct:processExportResult"))
-                .setHeader(Constants.JOB_STATUS_JOB_TYPE, constant(JobEvent.TimetableAction.EXPORT.name()))
+                .setHeader(JOB_STATUS_ROUTING_DESTINATION, constant("direct:processExportResult"))
+                .setHeader(JOB_STATUS_JOB_TYPE, constant(TimetableAction.EXPORT.name()))
                 .removeHeader("loopCounter")
                 .to("activemq:queue:ChouettePollStatusQueue")
                 .routeId("chouette-send-export-job");
@@ -268,6 +282,37 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
                 .setBody(constant(null))
                 .inOnly("activemq:queue:ChouetteExportGtfsQueue")
                 .routeId("chouette-gtfs-export-all-providers");
+    }
+
+    private Optional<OrganisationView> getSchemasInfos(String referential) {
+        String schemaInfoUrl = exportTemplatesUrl.replace("export-templates", "schemas/schema-info");
+        try {
+            URL obj = new URL(schemaInfoUrl);
+            HttpURLConnection con = (HttpURLConnection) obj.openConnection();
+            con.setRequestMethod("GET");
+            con.setRequestProperty("Accept", "application/json, text/plain, */*");
+            con.setRequestProperty("Accept-Language", "fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7");
+            con.setRequestProperty(HEADER_REFERENTIAL,referential);
+            con.setRequestProperty("Authorization", "Bearer " + tokenService.getToken());
+
+            BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream()));
+            String inputLine;
+            StringBuffer response = new StringBuffer();
+
+            while ((inputLine = in.readLine()) != null) {
+                response.append(inputLine);
+            }
+            in.close();
+
+
+            ObjectMapper objectMapper = new ObjectMapper();
+            OrganisationView organisationView = objectMapper.readValue(response.toString(), OrganisationView.class);
+            return Optional.of(organisationView);
+
+        } catch (Exception e) {
+           log.error("Error while requesting schema informations", e);
+           return Optional.empty();
+        }
     }
 
 }
