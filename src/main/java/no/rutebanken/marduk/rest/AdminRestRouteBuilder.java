@@ -1427,7 +1427,9 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
             if (headers.get(EXPORT_NAME) != null) {
                 e.getIn().setHeader(EXPORT_NAME, headers.get(EXPORT_NAME));
             }
-
+            if (headers.get(ID_FORMAT) != null) {
+                e.getIn().setHeader(ID_FORMAT, headers.get(ID_FORMAT));
+            }
             if (headers.get(EXPORT_ATTRIBUTIONS) != null) {
                 e.getIn().setHeader(EXPORT_ATTRIBUTIONS, headers.get(EXPORT_ATTRIBUTIONS));
             }
