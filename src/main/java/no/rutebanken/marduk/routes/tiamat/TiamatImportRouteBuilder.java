@@ -157,6 +157,11 @@ public class TiamatImportRouteBuilder extends AbstractChouetteRouteBuilder {
                         exchange.getOut().setHeader("Authorization", "Bearer " + tokenService.getToken());
                     }
                 })
+                .process(e -> {
+                    String url = e.getProperty("tiamat_url", String.class);
+                    url = url.replace("http://", "http4://");
+                    e.setProperty("tiamat_url", url);
+                })
                 .toD("${exchangeProperty.tiamat_url}")
                 .to("log:" + getClass().getName() + "?level=DEBUG&showAll=true&multiline=true")
                 .process(e -> {

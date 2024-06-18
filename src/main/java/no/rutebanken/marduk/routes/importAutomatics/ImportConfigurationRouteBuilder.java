@@ -192,7 +192,7 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
             e.getIn().setHeader(LINE_PREFIX_TO_REMOVE, importParameters.getLinePrefixToRemove());
             e.getIn().setHeader(IGNORE_COMMERCIAL_POINTS, importParameters.getIgnoreCommercialPoints());
             e.getIn().setHeader(IMPORT_MODE, importParameters.getImportMode());
-            e.getIn().setHeader(WORKLOW, importConfiguration.getWorkflow().toString());
+            e.getIn().setHeader(WORKLOW, importConfiguration.getWorkflow() != null ? importConfiguration.getWorkflow().toString() : null);
             e.getIn().setHeader(REMOVE_PARENT_STATIONS, importParameters.getRemoveParentStations());
             e.getIn().setHeader(UPDATE_STOP_ACCESSIBILITY, importParameters.getUpdateStopAccessibility());
             e.getIn().setHeader(RAIL_UIC_PROCESSING, importParameters.getRailUICprocessing());
