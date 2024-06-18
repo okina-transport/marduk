@@ -131,6 +131,7 @@ public class TiamatImportRouteBuilder extends AbstractChouetteRouteBuilder {
                         .setProperty("tiamat_url", simple(tiamatUrl + "/parkings_netex_import_xml"))
                     .when(header(IMPORT_TYPE).isEqualTo(FileType.NETEX_POI.name()))
                         .setProperty("tiamat_url", simple(tiamatUrl + "/poi_netex_import_xml"))
+                .end()
                 .log(LoggingLevel.DEBUG, correlation() + "Calling Tiamat with URL: ${exchangeProperty.tiamat_url}")
                 .setHeader(Exchange.HTTP_METHOD, constant(HttpMethods.POST))
                 // Attempt to retrigger delivery in case of errors
