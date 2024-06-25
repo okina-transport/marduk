@@ -56,9 +56,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.net.Authenticator;
-import java.net.HttpURLConnection;
-import java.net.URL;
+import java.net.*;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -141,7 +139,7 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
                         .choice()
                             .when(or(
                                     header(WORKLOW).isNotNull(),
-                                    header(IMPORT_TYPE).in(FileType.NETEX_PARKING.name(), FileType.NETEX_POI.name())
+                                    header(IMPORT_TYPE).in(FileType.NETEX_PARKING.name(), FileType.NETEX_POI.name(), FileType.NETEX_STOP_PLACE.name())
                             ))
                                 .to("direct:importLaunch")
                         .endChoice()

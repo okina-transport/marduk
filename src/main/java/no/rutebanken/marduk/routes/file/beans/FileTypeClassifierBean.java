@@ -21,14 +21,12 @@ import no.rutebanken.marduk.routes.chouette.json.importer.ImportMode;
 import no.rutebanken.marduk.routes.file.FileType;
 import no.rutebanken.marduk.routes.file.ZipFileUtils;
 import org.apache.camel.Exchange;
-import org.apache.commons.codec.CharEncoding;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
-import java.nio.charset.Charset;
-import java.nio.file.Path;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
@@ -65,14 +63,14 @@ public class FileTypeClassifierBean {
     }
 
     boolean isValidFileName(String fileName) {
-        return Charset.forName(CharEncoding.ISO_8859_1).newEncoder().canEncode(fileName);
+        return StandardCharsets.ISO_8859_1.newEncoder().canEncode(fileName);
     }
 
     public FileType classifyFile(Exchange exchange, byte[] data) {
         String relativePath = exchange.getIn().getHeader(FILE_HANDLE, String.class);
         logger.debug("Validating file with path '" + relativePath + "'.");
 
-            if (relativePath == null || relativePath.trim().equals("")) {
+            if (relativePath == null || relativePath.trim().isEmpty()) {
                 throw new IllegalArgumentException("Could not get file path from " + FILE_HANDLE + " header.");
             }
 
@@ -98,10 +96,12 @@ public class FileTypeClassifierBean {
         } else if (relativePath.toUpperCase().endsWith(".RAR")) {
             return RAR;
         } else if (relativePath.toUpperCase().endsWith(".XML")) {
-            if (importType.equals("NETEX_PARKING")) {
+            if (importType.equals(NETEX_PARKING.name())) {
                 return NETEX_PARKING;
-            } else if (importType.equals("NETEX_POI")) {
+            } else if (importType.equals(NETEX_POI.name())) {
                 return NETEX_POI;
+            } else if (importType.equals(NETEX_STOP_PLACE.name())) {
+                return NETEX_STOP_PLACE;
             }
         }
         throw new FileValidationException("Could not classify file '" + relativePath + "'.");
@@ -109,14 +109,14 @@ public class FileTypeClassifierBean {
 
     /**
      * Determine the import mode by reading file names
-     * @param filesNamesInZip
+     * @param fileNamesFromZIP name of files from ZIP
      * @return
      * - LINE : at least one line file is existing in the zip
      * - STOPAREAS : only common files are in the zip
      */
-    private ImportMode getImportMode(Set<String> filesNamesInZip){
+    private ImportMode getImportMode(Set<String> fileNamesFromZIP){
 
-        List<String> lineFiles = filesNamesInZip.stream()
+        List<String> lineFiles = fileNamesFromZIP.stream()
                                                   .filter(filename -> ! isCommonFile(filename))
                                                   .collect(Collectors.toList());
         return lineFiles.isEmpty() ? ImportMode.STOPAREAS : ImportMode.LINE;

@@ -31,8 +31,6 @@ import org.apache.commons.lang3.StringUtils;
 
 import java.io.IOException;
 import java.io.StringWriter;
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
 import java.util.Date;
 import java.util.List;
 
@@ -49,7 +47,7 @@ public class Parameters {
             return getNetexImportParameters(rawImportParameters);
         } else if (FileType.NEPTUNE.name().equals(fileType)) {
             return getNeptuneImportParameters(rawImportParameters);
-        } else if (FileType.NETEX_PARKING.name().equals(fileType) || FileType.NETEX_POI.name().equals(fileType)) {
+        } else if (FileType.NETEX_PARKING.name().equals(fileType) || FileType.NETEX_POI.name().equals(fileType) || FileType.NETEX_STOP_PLACE.name().equals(fileType)) {
             return getNetexAutomaticImportParameters(rawImportParameters);
         } else {
             throw new IllegalArgumentException("Cannot create import parameters from file type '" + fileType + "'");
@@ -165,7 +163,6 @@ public class Parameters {
 
     public static String getConcertoExportParameters(Provider provider, String user) {
         try {
-            LocalDateTime localDateTime = LocalDateTime.now(ZoneOffset.UTC).withNano(0);
             ChouetteInfo chouetteInfo = provider.chouetteInfo;
             ConcertoExportParameters.ConcertoExport concertoExport = new ConcertoExportParameters.ConcertoExport("offre",
                     chouetteInfo.referential, chouetteInfo.organisation, user);

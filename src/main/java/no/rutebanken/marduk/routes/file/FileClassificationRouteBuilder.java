@@ -23,12 +23,11 @@ import no.rutebanken.marduk.routes.file.beans.FileTypeClassifierBean;
 import no.rutebanken.marduk.routes.status.JobEvent;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.ValidationException;
-import org.apache.commons.codec.CharEncoding;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
-import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
 import static no.rutebanken.marduk.Constants.CORRELATION_ID;
@@ -82,7 +81,7 @@ public class FileClassificationRouteBuilder extends BaseRouteBuilder {
                 .setBody(simple(""))   //remove file data from body since this is in blobstore
                 .process(e -> JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.FILE_CLASSIFICATION).state(JobEvent.State.OK).build()).to("direct:updateStatus")
                 .choice()
-                    .when(header(FILE_TYPE).in(FileType.NETEX_PARKING.name(), FileType.NETEX_POI.name()))
+                    .when(header(FILE_TYPE).in(FileType.NETEX_PARKING.name(), FileType.NETEX_POI.name(), FileType.NETEX_STOP_PLACE.name()))
                         .to("activemq:queue:TiamatImportQueue")
                     .otherwise()
                         .to("activemq:queue:ChouetteImportQueue")
@@ -144,7 +143,7 @@ public class FileClassificationRouteBuilder extends BaseRouteBuilder {
         StringBuilder result = new StringBuilder();
         for (char val : value.toCharArray()) {
 
-            if (Charset.forName(CharEncoding.ISO_8859_1).newEncoder().canEncode(val)) result.append(val);
+            if (StandardCharsets.ISO_8859_1.newEncoder().canEncode(val)) result.append(val);
         }
         return result.toString();
     }

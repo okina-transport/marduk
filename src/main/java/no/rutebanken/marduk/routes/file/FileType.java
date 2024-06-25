@@ -26,5 +26,5 @@ public enum FileType {
     NETEXPROFILE,
     NETEX_PARKING,
     NETEX_POI,
-    NETEX_ARRET
+    NETEX_STOP_PLACE
 }
