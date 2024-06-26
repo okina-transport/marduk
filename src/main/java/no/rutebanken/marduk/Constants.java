@@ -21,11 +21,8 @@ public class Constants {
     public static final String FILE_HANDLE = "RutebankenFileHandle";
     public static final String EXPORT_FILE_NAME = "ExportFileName";
     public static final String EXPORT_CONFIGURATION_ID = "ExportConfigurationId";
-    public static final String ARCHIVE_FILE_HANDLE = "ArchiveFileHandle";
     public static final String FILE_PARENT_COLLECTION = "RutebankenFileParentCollection";
     public static final String PROVIDER_ID = "RutebankenProviderId";
-    public static final String TOTALCOUNTPROVIDERS = "RutebankenAllCountProviders";
-    public static final String COUNTPROVIDERS = "RutebankenCountProviders";
     public static final String PROVIDER_IDS = "RutebankenProviderIds";
     public static final String ORIGINAL_PROVIDER_ID = "RutebankenOriginalProviderId"; // The original provider id that started this chain of events
     public static final String EXPORT_LINES_IDS = "EXPORT_LINES_IDS";
@@ -36,7 +33,6 @@ public class Constants {
     public static final String EXPORT_ATTRIBUTIONS = "EXPORT_ATTRIBUTIONS";
     public static final String EXPORTED_FILENAME = "EXPORTED_FILENAME";
     public static final String CURRENT_EXPORT = "CURRENT_EXPORT";
-    public static final String JSON_EXPORTS = "JSON_EXPORTS";
     public static final String STOP_ID_PREFIX = "STOP_ID_PREFIX";
     public static final String LINE_ID_PREFIX = "LINE_ID_PREFIX";
     public static final String ID_FORMAT = "ID_FORMAT";
@@ -86,7 +82,6 @@ public class Constants {
     public static final String CORRELATION_ID = "RutebankenCorrelationId";
     public static final String CHOUETTE_REFERENTIAL = "RutebankenChouetteReferential";
     public static final String JSON_PART = "RutebankenJsonPart";
-    public static final String OTP_GRAPH_DIR = "RutebankenOtpGraphDirectory";
     public static final String FILE_NAME = "RutebankenFileName";
     public static final String USER = "RutebankenUser";
     public static final String DESCRIPTION = "RutebankenDescription";
@@ -135,7 +130,6 @@ public class Constants {
 
     public static final String OKINA_REFERENTIAL = "x-okina-referential";
 
-    public static final String NOTIFICATION = "Notification";
     public static final String NOTIFICATION_URL = "NotificationUrl";
 
     public static final String IMPORT_CONFIGURATION_SCHEDULER = "importConfigurationScheduler";
@@ -153,7 +147,6 @@ public class Constants {
     public static final String MERGED_NETEX_POI_ROOT_DIR = "mobiiti_technique/netex_poi";
     public static final String MERGED_NETEX_PARKINGS_ROOT_DIR = "mobiiti_technique/netex_parkings";
     public static final String MISSING_EXPORTS = "missingExports";
-    public static final String IS_MERGED_NETEX_FAILED = "isMergedNetexFailed";
 
     public static final String IMPORT_CONFIGURATION_ID = "importConfigurationId";
     public static final String IMPORT_CONFIGURATION = "importConfiguration";
@@ -175,6 +168,7 @@ public class Constants {
     public static final String POST_PROCESS = "postProcess";
 
     public static final String EXPORT_TO_CONSUMER_STATUS = "exportToConsumerStatus";
+    public static final String CONTINUE_IMPORT = "continueImport";
 
 }
 

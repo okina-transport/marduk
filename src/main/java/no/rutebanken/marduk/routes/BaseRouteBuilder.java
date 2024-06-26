@@ -59,7 +59,7 @@ public abstract class BaseRouteBuilder extends SpringRouteBuilder {
         return providerRepository;
     }
 
-    protected String correlation() {
+    protected String  correlation() {
         return "[providerId=${header." + Constants.PROVIDER_ID + "} referential=${header." + Constants.CHOUETTE_REFERENTIAL + "} correlationId=${header." + Constants.CORRELATION_ID + "}] ";
     }
 

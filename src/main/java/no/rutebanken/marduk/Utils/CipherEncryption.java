@@ -3,9 +3,10 @@ package no.rutebanken.marduk.Utils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import javax.crypto.Cipher;
-import javax.crypto.SecretKey;
+import javax.crypto.*;
 import javax.crypto.spec.SecretKeySpec;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
 
 @Component
 public class CipherEncryption {
@@ -13,7 +14,7 @@ public class CipherEncryption {
     @Value("${encryption.key:keyfortests}")
     private String encryptionKeyString;
 
-    public byte[] encrypt(String password) throws Exception {
+    public byte[] encrypt(String password) throws NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException {
 
         byte[] encryptionKeyBytes = encryptionKeyString.getBytes();
         Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
@@ -23,7 +24,7 @@ public class CipherEncryption {
         return cipher.doFinal(password.getBytes());
     }
 
-    public String decrypt(byte[] password) throws Exception {
+    public String decrypt(byte[] password) throws NoSuchPaddingException, NoSuchAlgorithmException, IllegalBlockSizeException, BadPaddingException, InvalidKeyException {
 
         byte[] encryptionKeyBytes = encryptionKeyString.getBytes();
         Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
