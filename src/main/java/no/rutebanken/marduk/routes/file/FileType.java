@@ -25,5 +25,6 @@ public enum FileType {
     NEPTUNE,
     NETEXPROFILE,
     NETEX_PARKING,
-    NETEX_POI
+    NETEX_POI,
+    NETEX_ARRET
 }
