@@ -4,31 +4,36 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import no.rutebanken.marduk.Utils.CipherEncryption;
 import no.rutebanken.marduk.domain.ConsumerType;
 import no.rutebanken.marduk.domain.ExportTemplate;
+import no.rutebanken.marduk.domain.OrganisationView;
 import no.rutebanken.marduk.metrics.PrometheusMetricsService;
 import no.rutebanken.marduk.routes.chouette.json.JobResponse;
 import no.rutebanken.marduk.routes.chouette.json.exporter.AbstractExportParameters;
 import no.rutebanken.marduk.routes.chouette.json.exporter.GtfsExportParameters;
+import no.rutebanken.marduk.security.TokenService;
 import no.rutebanken.marduk.services.*;
 import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.text.SimpleDateFormat;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.Date;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static no.rutebanken.marduk.Constants.*;
+import static no.rutebanken.marduk.repository.RestDAO.HEADER_REFERENTIAL;
 
 @Component
 public class ExportToConsumersProcessor implements Processor {
@@ -84,6 +89,13 @@ public class ExportToConsumersProcessor implements Processor {
     @Autowired
     private PrometheusMetricsService metrics;
 
+    @Value("${export-templates.api.url}")
+    private String exportTemplatesUrl;
+
+
+    @Autowired
+    TokenService tokenService;
+
     /**
      * Gets the result stream of an export  and upload it towards consumers defined for this export
      *
@@ -98,9 +110,11 @@ public class ExportToConsumersProcessor implements Processor {
         Boolean exportSimulation = exchange.getIn().getHeaders().get(IS_SIMULATION_EXPORT) != null && (Boolean) exchange.getIn().getHeaders().get(IS_SIMULATION_EXPORT);
         if (StringUtils.isNotBlank(jsonExport)) {
             ExportTemplate export = exportJsonMapper.fromJson(jsonExport);
-            String startDate = getValueFromParameters(exchange, "start_date").orElse(null);
-            String endDate = getValueFromParameters(exchange, "end_date").orElse(null);
+
             log.info("Found " + export.getConsumers().size() + " for export " + export.getId() + "/" + export.getName());
+            Pair<String, String> workingDates = getWorkingDates( referential);
+            String startDate = workingDates.getLeft();
+            String endDate = workingDates.getRight();
             export.getConsumers().forEach(consumer -> {
                 try {
                     InputStream streamToUpload = getInputStream(exchange);
@@ -186,10 +200,61 @@ public class ExportToConsumersProcessor implements Processor {
         }
     }
 
+    private Pair<String, String> getWorkingDates(String referential) {
+
+        LocalDate now = LocalDate.now();
+        String startDate = now.getYear() + "-" + now.getMonthValue() + "-" + now.getDayOfMonth();
+        int nextYear = now.getYear() + 1;
+        String endDate = nextYear + "-" + now.getMonthValue() + "-" + now.getDayOfMonth();
+
+
+        Optional<OrganisationView> schemasInfosOpt = getSchemasInfos(referential);
+        if (schemasInfosOpt.isPresent()) {
+            SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd");
+            OrganisationView organisationView = schemasInfosOpt.get();
+            startDate = formatter.format(organisationView.getProductionInfos().getStartDate());
+            endDate = formatter.format(organisationView.getProductionInfos().getEndDate());
+
+
+        }
+        return Pair.of(startDate, endDate);
+    }
+
+    private Optional<OrganisationView> getSchemasInfos(String referential) {
+        String schemaInfoUrl = exportTemplatesUrl.replace("export-templates", "schemas/schema-info");
+        try {
+            URL obj = new URL(schemaInfoUrl);
+            HttpURLConnection con = (HttpURLConnection) obj.openConnection();
+            con.setRequestMethod("GET");
+            con.setRequestProperty("Accept", "application/json, text/plain, */*");
+            con.setRequestProperty("Accept-Language", "fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7");
+            con.setRequestProperty(HEADER_REFERENTIAL, referential);
+            con.setRequestProperty("Authorization", "Bearer " + tokenService.getToken());
+
+            BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream()));
+            String inputLine;
+            StringBuffer response = new StringBuffer();
+
+            while ((inputLine = in.readLine()) != null) {
+                response.append(inputLine);
+            }
+            in.close();
+
+
+            ObjectMapper objectMapper = new ObjectMapper();
+            OrganisationView organisationView = objectMapper.readValue(response.toString(), OrganisationView.class);
+            return Optional.of(organisationView);
+
+        } catch (Exception e) {
+            log.error("Error while requesting schema informations", e);
+            return Optional.empty();
+        }
+    }
+
     private Optional<String> getValueFromParameters(Exchange exchange, String parameterToSearch) {
 
         String jsonParameters = (String) exchange.getIn().getHeaders().get(JSON_PART);
-        if(jsonParameters != null){
+        if (jsonParameters != null) {
             String regex = "\"" + parameterToSearch + "\"\\s*:\\s*\"(\\d{4}-\\d{2}-\\d{2})\"";
             Pattern pattern = Pattern.compile(regex);
             Matcher matcher = pattern.matcher(jsonParameters);
