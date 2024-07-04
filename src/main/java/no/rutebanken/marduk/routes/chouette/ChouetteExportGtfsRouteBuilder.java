@@ -131,14 +131,6 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
                         Long end = e.getIn().getHeader(EXPORT_END_DATE) != null ? e.getIn().getHeader(EXPORT_END_DATE, Long.class) : null;
                         startDate = (start != null) ? new Date(start) : null;
                         endDate = (end != null) ? new Date(end) : null;
-                    }else{
-                        String referential = e.getIn().getHeader(OKINA_REFERENTIAL, String.class);
-                        Optional<OrganisationView> schemasInfosOpt = getSchemasInfos(referential);
-                        if (schemasInfosOpt.isPresent()){
-                            OrganisationView organisationView = schemasInfosOpt.get();
-                            startDate = organisationView.getProductionInfos().getStartDate();
-                            endDate = organisationView.getProductionInfos().getEndDate();
-                        }
                     }
 
                     boolean mappingLinesIds = false;
@@ -282,37 +274,6 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
                 .setBody(constant(null))
                 .inOnly("activemq:queue:ChouetteExportGtfsQueue")
                 .routeId("chouette-gtfs-export-all-providers");
-    }
-
-    private Optional<OrganisationView> getSchemasInfos(String referential) {
-        String schemaInfoUrl = exportTemplatesUrl.replace("export-templates", "schemas/schema-info");
-        try {
-            URL obj = new URL(schemaInfoUrl);
-            HttpURLConnection con = (HttpURLConnection) obj.openConnection();
-            con.setRequestMethod("GET");
-            con.setRequestProperty("Accept", "application/json, text/plain, */*");
-            con.setRequestProperty("Accept-Language", "fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7");
-            con.setRequestProperty(HEADER_REFERENTIAL,referential);
-            con.setRequestProperty("Authorization", "Bearer " + tokenService.getToken());
-
-            BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream()));
-            String inputLine;
-            StringBuffer response = new StringBuffer();
-
-            while ((inputLine = in.readLine()) != null) {
-                response.append(inputLine);
-            }
-            in.close();
-
-
-            ObjectMapper objectMapper = new ObjectMapper();
-            OrganisationView organisationView = objectMapper.readValue(response.toString(), OrganisationView.class);
-            return Optional.of(organisationView);
-
-        } catch (Exception e) {
-           log.error("Error while requesting schema informations", e);
-           return Optional.empty();
-        }
     }
 
 }
