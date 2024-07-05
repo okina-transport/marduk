@@ -17,6 +17,7 @@ import no.rutebanken.marduk.routes.ImportConfigurationJob;
 import no.rutebanken.marduk.routes.MyAuthenticator;
 import no.rutebanken.marduk.routes.chouette.AbstractChouetteRouteBuilder;
 import no.rutebanken.marduk.routes.file.FileType;
+import no.rutebanken.marduk.services.FileSystemService;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.apache.commons.io.FileUtils;
@@ -66,6 +67,7 @@ import java.util.Date;
 import java.util.Map;
 import java.util.Optional;
 import java.util.TimeZone;
+import java.util.zip.ZipException;
 
 import static no.rutebanken.marduk.Constants.*;
 
@@ -82,20 +84,24 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
     public static final String ERROR_ACCESSING_IMPORT_FOLDER_OR_FILE = "Erreur lors de l'accès au dossier/fichier d'import sur le serveur FTP, veuillez vérifier que le dossier/fichier d'import existent bien";
     public static final String ERROR_NO_FTP_OR_URL_CONFIGURATION = "L'import automatique n'a pas de configuration FTP ou URL définie, veuillez mettre à jour l'import en vous connectant sur Mobi-iti";
     public static final String ERROR_NO_WORKFLOW_AND_NOT_NETEX_IMPORT = "La configuration de l'import est incorrect, il doit soit avoir un workflow, soit être un import de type Netex parking, Netex POI ou Netex arrêt";
+    public static final String ERROR_INVALID_NETEX_POI_OR_PARKING_OR_STOP_PLACE_ZIP = "Le fichier ZIP NeTEx POI ou parking ou arrêts à importer est invalide, il doit contenir seulement un fichier XML";
 
     private final SchedulerImportConfiguration schedulerImportConfiguration;
     private final CipherEncryption cipherEncryption;
     private final ImportConfigurationDAO importConfigurationDAO;
     private final SendMail sendMail;
+    private final FileSystemService fileSystemService;
 
     public ImportConfigurationRouteBuilder(SchedulerImportConfiguration schedulerImportConfiguration,
                                            CipherEncryption cipherEncryption,
                                            ImportConfigurationDAO importConfigurationDAO,
-                                           SendMail sendMail) {
+                                           SendMail sendMail,
+                                           FileSystemService fileSystemService) {
         this.schedulerImportConfiguration = schedulerImportConfiguration;
         this.cipherEncryption = cipherEncryption;
         this.importConfigurationDAO = importConfigurationDAO;
         this.sendMail = sendMail;
+        this.fileSystemService = fileSystemService;
     }
 
     @Override
@@ -169,15 +175,35 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
             }
         } catch (AutomaticImportException ex) {
             log.error(String.format("%s Error retrieving import file", correlation()), ex);
+            log.warn("{} Abort automatic import", correlation());
             sendMailForImportFailure(importConfiguration, referential, ex.getMessage());
         } catch (Exception ex) {
             log.error(String.format("%s Error retrieving import file not handled correctly, " +
                     "make sure to catch this error and wrap it into an AutomaticImportException " +
                     "with an explicit error message for client", correlation()), ex);
+            log.warn("{} Abort automatic import", correlation());
             sendMailForImportFailure(importConfiguration, referential, ERROR_INTERNAL);
         }
 
         if (importFile.isPresent()) {
+            FileItem importFileItem = importFile.get();
+            if (Arrays.asList(FileType.NETEX_POI.name(), FileType.NETEX_STOP_PLACE.name(), FileType.NETEX_PARKING.name())
+                    .contains(importConfiguration.getImportParameters().get(0).getImportType())
+            && importFileItem.getName().endsWith(".zip")) {
+                try {
+                    importFileItem = fileSystemService.unzipNetexZip(importFileItem);
+                } catch (ZipException ex) {
+                    log.error(String.format("%s Invalid NeTEx POI or parking or stop place ZIP file", correlation()), ex);
+                    log.warn("{} Abort automatic import", correlation());
+                    sendMailForImportFailure(importConfiguration, referential, ERROR_INVALID_NETEX_POI_OR_PARKING_OR_STOP_PLACE_ZIP);
+                    return;
+                } catch (IOException ex) {
+                    log.error(String.format("%s Error unzipping NeTEx zip file", correlation()), ex);
+                    log.warn("{} Abort automatic import", correlation());
+                    sendMailForImportFailure(importConfiguration, referential, ERROR_INTERNAL);
+                    return;
+                }
+            }
             try {
                 // updates last_timestamp from url or ftp configuration
                 importConfigurationDAO.update(referential, importConfiguration);
@@ -186,7 +212,7 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
                 log.warn("{} Import configuration last timestamp will not be updated", correlation());
                 log.info("{} Continue automatic import", correlation());
             }
-            e.getIn().setBody(importFile.get());
+            e.getIn().setBody(importFileItem);
             e.getIn().setHeader(CONTINUE_IMPORT, Boolean.TRUE);
             e.getIn().setHeader(FOLDER_NAME, referential);
         }
@@ -315,8 +341,8 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
                 LocalDateTime localDateTime = LocalDateTime.ofInstant(file.getTimestamp().toInstant(), file.getTimestamp().getTimeZone().toZoneId());
                 if (configurationFtp.getLastTimestamp() == null || localDateTime.isAfter(configurationFtp.getLastTimestamp())) {
                     configurationFtp.setLastTimestamp(localDateTime);
-                    try {
-                        return Optional.of(copyFileFromInputStream(client.retrieveFileStream(configurationFtp.getFolder() + "/" + file.getName()), file.getName()));
+                    try (InputStream importFile = client.retrieveFileStream(configurationFtp.getFolder() + "/" + file.getName())){
+                        return Optional.of(copyFileFromInputStream(importFile, file.getName()));
                     } catch (IOException e) {
                         log.error("{} Error retrieving file from FTP server", correlation());
                         throw new AutomaticImportException(ERROR_RETRIEVING_IMPORT_FILE, e);
@@ -382,8 +408,8 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
         }
 
         try {
-            Optional<FileItem> importFile = Optional.of(downloadImportFileFromUrl(importFileUrl));
             configurationUrl.setLastTimestamp(importLastTimeModified);
+            Optional<FileItem> importFile = Optional.of(downloadImportFileFromUrl(importFileUrl));
             importFileUrlConnection.disconnect();
             return importFile;
         } catch (IOException e) {
@@ -415,6 +441,11 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
     private LocalDateTime getImportModificationDateFromUrl(ConfigurationUrl configurationUrl, HttpURLConnection httpURLConnection) throws AutomaticImportException {
         if (StringUtils.isEmpty(configurationUrl.getUrlInfo())) {
             long date = httpURLConnection.getLastModified();
+            if (date == 0) {
+                // take current time instead of 1970/01/01 00:00:00 to trigger
+                // next import if date is 0 too
+                return LocalDateTime.now();
+            }
             return LocalDateTime.ofInstant(Instant.ofEpochMilli(date), TimeZone.getDefault().toZoneId());
         }
         URL urlInfo = parseUrl(configurationUrl.getUrlInfo());
@@ -536,6 +567,7 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
         LocalDate now = LocalDate.now();
         String text = "Bonjour, <br>" +
                 "Après vérification, il n'y pas de nouvelle offre à intégrer pour la date du " + now + ". <br>" +
+                "Nom de l'import : " + importConfiguration.getName() + " <br>" +
                 "Nom du fichier : " + filename + " <br>" +
                 "Organisation : " + referential + " <br>" +
                 "Cordialement,<br>" +
@@ -559,8 +591,7 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
         String mailObject = "MOBIITI - import automatique - Erreur lors de la récupération du fichier";
         LocalDate now = LocalDate.now();
         String text = "Bonjour, <br>" +
-                "L'import automatique du " + now + " a échoué lors de la récupération du fichier.<br>" +
-                "Identifiant de l'import : " + importConfiguration.getId() +" <br>" +
+                "L'import automatique du " + now + " a échoué lors de la récupération du fichier à importer.<br>" +
                 "Nom de l'import : " + importConfiguration.getName() + " <br>" +
                 "Organisation : " + referential + " <br>" +
                 "Message d'erreur: " + errorMessage + " <br>" +
@@ -585,6 +616,7 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
         LocalDate now = LocalDate.now();
         String text = "Bonjour, <br>" +
                 "Après vérification, il n'y pas de nouvelle offre à intégrer pour la date du " + now + ", le fichier ayant déjà été importé précédemment. <br>" +
+                "Nom de l'import : " + importConfiguration.getName() + " <br>" +
                 "Nom du fichier : " + filename + " <br>" +
                 "Organisation : " + referential + " <br>" +
                 "Cordialement,<br>" +

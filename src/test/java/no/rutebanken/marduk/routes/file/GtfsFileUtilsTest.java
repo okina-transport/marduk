@@ -33,7 +33,7 @@ public class GtfsFileUtilsTest {
     private static final String GTFS_FILE_2 = "src/test/resources/no/rutebanken/marduk/routes/file/beans/gtfs2.zip";
 
     @Test
-    public void mergeGtfsFiles_identicalFilesShouldYieldMergedFileIdenticalToOrg() throws Exception {
+    public void mergeGtfsFiles_identicalFilesShouldYieldMergedFileIdenticalToOrg() {
 
         File input1 = new File(GTFS_FILE_1);
         File merged = GtfsFileUtils.mergeGtfsFiles(Arrays.asList(input1, input1));
@@ -41,11 +41,11 @@ public class GtfsFileUtilsTest {
         // Should assert content, but no exceptions must do for now
         // Assert.assertTrue(FileUtils.sizeOf(merged) <= FileUtils.sizeOf(input1));
 
-        Assert.assertTrue(new ZipFileUtils().listFilesInZip(merged).stream().anyMatch(n -> "feed_info.txt".equals(n)));
+        Assert.assertTrue(ZipFileUtils.listFilesInZip(merged).stream().anyMatch("feed_info.txt"::equals));
     }
 
     @Test
-    public void mergeGtfsFiles_nonIdenticalFilesShouldYieldUnion() throws Exception {
+    public void mergeGtfsFiles_nonIdenticalFilesShouldYieldUnion() {
 
         File input1 = new File(GTFS_FILE_1);
         File input2 = new File(GTFS_FILE_2);
@@ -54,7 +54,7 @@ public class GtfsFileUtilsTest {
         Assert.assertTrue(FileUtils.sizeOf(merged) >= FileUtils.sizeOf(input1));
         Assert.assertTrue(FileUtils.sizeOf(merged) >= FileUtils.sizeOf(input2));
 
-        Assert.assertTrue(new ZipFileUtils().listFilesInZip(merged).stream().anyMatch(n -> "feed_info.txt".equals(n)));
+        Assert.assertTrue(ZipFileUtils.listFilesInZip(merged).stream().anyMatch("feed_info.txt"::equals));
     }
 
 

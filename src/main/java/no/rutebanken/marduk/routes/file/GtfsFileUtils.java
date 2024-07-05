@@ -50,7 +50,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 
 public class GtfsFileUtils {
-    private static Logger logger = LoggerFactory.getLogger(GtfsFileUtils.class);
+    private static final Logger logger = LoggerFactory.getLogger(GtfsFileUtils.class);
 
     public static final String FEED_INFO_FILE_NAME = "feed_info.txt";
 
@@ -191,11 +191,10 @@ public class GtfsFileUtils {
 
 
     private static ByteArrayOutputStream extractFeedInfoFile(Collection<File> files) throws IOException {
-        ZipFileUtils zipFileUtils = new ZipFileUtils();
         for (File file : files) {
-            if (zipFileUtils.listFilesInZip(file).stream().anyMatch(f -> FEED_INFO_FILE_NAME.equals(f))) {
+            if (ZipFileUtils.listFilesInZip(file).stream().anyMatch(f -> FEED_INFO_FILE_NAME.equals(f))) {
                 try(FileInputStream inputStream = new FileInputStream(file)) {
-                    return zipFileUtils.extractFileFromZipFile(inputStream, FEED_INFO_FILE_NAME);
+                    return ZipFileUtils.extractFileFromZipFile(inputStream, FEED_INFO_FILE_NAME);
                 }
             }
 

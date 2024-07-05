@@ -48,8 +48,6 @@ public class FileTypeClassifierBean {
 
     public static final String NON_XML_FILE_XML = ".*\\.(?!XML$|xml$)[^.]+";
 
-    private final static ZipFileUtils zipFileUtils = new ZipFileUtils();
-
     public boolean validateFile(byte[] data, Exchange exchange) {
         try {
             FileType fileType = classifyFile(exchange, data);
@@ -77,7 +75,7 @@ public class FileTypeClassifierBean {
         String importType = exchange.getIn().getHeader(IMPORT_TYPE, String.class);
 
         if (relativePath.toUpperCase().endsWith(".ZIP")) {
-            Set<String> filesNamesInZip = zipFileUtils.listFilesInZip(new ByteArrayInputStream(data));
+            Set<String> filesNamesInZip = ZipFileUtils.listFilesInZip(new ByteArrayInputStream(data));
             exchange.getIn().setHeader(IMPORT_MODE, getImportMode(filesNamesInZip).toString());
             if (!isValidFileName(relativePath)) {
                 return INVALID_FILE_NAME;

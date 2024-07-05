@@ -1318,8 +1318,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
     private void checkFileContent(Exchange e) throws IOException {
         String importType = (String) e.getIn().getHeader("importType");
         String incomingFile = copyIncomingFile(e);
-        ZipFileUtils zipFileUtils = new ZipFileUtils();
-        Set<String> files = zipFileUtils.listFilesInZip(new java.io.File(incomingFile));
+        Set<String> files = ZipFileUtils.listFilesInZip(new java.io.File(incomingFile));
         checkFilesInZip(files, importType);
     }
 

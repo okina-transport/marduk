@@ -39,11 +39,11 @@ import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
 
 public class ZipFileUtils {
-    private static Logger logger = LoggerFactory.getLogger(ZipFileUtils.class);
+    private static final Logger logger = LoggerFactory.getLogger(ZipFileUtils.class);
 
-    public Set<String> listFilesInZip(File file) {
+    public static Set<String> listFilesInZip(File file) {
         try (ZipFile zipFile = new ZipFile(file)) {
-            return zipFile.stream().filter(ze -> !ze.isDirectory()).map(ze -> ze.getName()).collect(Collectors.toSet());
+            return zipFile.stream().filter(ze -> !ze.isDirectory()).map(ZipEntry::getName).collect(Collectors.toSet());
         } catch (IOException e) {
             return Collections.emptySet();
         }
@@ -53,7 +53,7 @@ public class ZipFileUtils {
         return listFilesInZip(new ByteArrayInputStream(data));
     }
 
-    public Set<String> listFilesInZip(InputStream inputStream) {
+    public static Set<String> listFilesInZip(InputStream inputStream) {
         Set<String> fileNames = new HashSet<>();
         try (ZipInputStream zipInputStream = new ZipInputStream(inputStream)) {
             ZipEntry zipEntry = zipInputStream.getNextEntry();
@@ -155,10 +155,10 @@ public class ZipFileUtils {
     public static File zipFilesInFolder(String folder, String targetFilePath) {
         try {
 
-            FileOutputStream out = new FileOutputStream(new File(targetFilePath));
+            FileOutputStream out = new FileOutputStream(targetFilePath);
             ZipOutputStream outZip = new ZipOutputStream(out);
 
-            FileUtils.listFiles(new File(folder), null, true).stream().forEach(file -> addToZipFile(file, outZip));
+            FileUtils.listFiles(new File(folder), null, true).forEach(file -> addToZipFile(file, outZip));
 
             outZip.close();
             out.close();

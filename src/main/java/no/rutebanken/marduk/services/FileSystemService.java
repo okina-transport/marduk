@@ -3,8 +3,14 @@ package no.rutebanken.marduk.services;
 import no.rutebanken.marduk.domain.Provider;
 import no.rutebanken.marduk.repository.CacheProviderRepository;
 import no.rutebanken.marduk.routes.chouette.json.Job;
+import no.rutebanken.marduk.routes.file.ZipFileUtils;
 import org.apache.camel.Exchange;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.tomcat.util.http.fileupload.FileItem;
+import org.apache.tomcat.util.http.fileupload.FileItemFactory;
+import org.apache.tomcat.util.http.fileupload.disk.DiskFileItemFactory;
+import org.apache.tomcat.util.http.fileupload.util.Streams;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,10 +26,9 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
+import java.util.zip.ZipException;
 
 import static no.rutebanken.marduk.Constants.*;
 
@@ -39,7 +44,7 @@ public class FileSystemService {
     @Autowired
     CacheProviderRepository providerRepository;
 
-    private Logger logger = LoggerFactory.getLogger(this.getClass());
+    private final Logger logger = LoggerFactory.getLogger(this.getClass());
 
     @Value("${superspace.name}")
     private String superspaceName;
@@ -73,7 +78,7 @@ public class FileSystemService {
 
         FileSystemResource fileSystemResource = new FileSystemResource(tiamatStoragePath + "/" + provider.name);
 
-        List<File> zipFiles = new ArrayList<File>();
+        List<File> zipFiles = new ArrayList<>();
         File[] files = fileSystemResource.getFile().listFiles();
 
         if (files != null) {
@@ -241,6 +246,42 @@ public class FileSystemService {
         File f = new File(chouetteStoragePath + "/" + fileName);
         return f.exists() && !f.isDirectory();
     }
+
+    /**
+     * Unzip a NeTEx POI, parking or stop place ZIP containing a single XML file
+     * and return this XML file
+     *
+     * @param netexZipFile NeTEx ZIP to unzip
+     * @return unzipped XML file
+     * @throws ZipException if ZIP contains 0 or strictly more than one file or
+     *         ZIP contains no XML file
+     * @throws IOException if unzipping fail
+     */
+    public FileItem unzipNetexZip(FileItem netexZipFile) throws ZipException, IOException{
+        // works only for Netex POI, parking and stop places where there is a single XML file
+        File unzipTmpDir = new File("/tmp", String.valueOf(UUID.randomUUID()));
+        try (InputStream zipFileStream = netexZipFile.getInputStream()) {
+            if (!unzipTmpDir.mkdirs()) {
+                throw new IOException("Error creating directory: " + unzipTmpDir);
+            }
+            ZipFileUtils.unzipFile(zipFileStream, unzipTmpDir.getAbsolutePath());
+            File[] unzippedTmpFiles = unzipTmpDir.listFiles();
+            if (unzippedTmpFiles == null || unzippedTmpFiles.length != 1) {
+                throw new ZipException(String.format("NeTEx ZIP contains %d file(s) but should contain exactly one", unzippedTmpFiles.length));
+            }
+            if (!unzippedTmpFiles[0].getName().endsWith(".xml")) {
+                throw new ZipException("NeTEx ZIP contains no XML file but should contain exactly one");
+            }
+            FileItemFactory fac = new DiskFileItemFactory();
+            String xmlFilename = unzippedTmpFiles[0].getName();
+            FileItem unzippedXml = fac.createItem("file", "text/xml", false, xmlFilename);
+            Streams.copy(new FileInputStream(unzippedTmpFiles[0]), unzippedXml.getOutputStream(), true);
+            return unzippedXml;
+        } finally {
+            FileUtils.deleteQuietly(unzipTmpDir);
+        }
+    }
+
 }
 
 
