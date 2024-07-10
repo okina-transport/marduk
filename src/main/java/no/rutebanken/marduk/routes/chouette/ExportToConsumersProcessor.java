@@ -112,9 +112,6 @@ public class ExportToConsumersProcessor implements Processor {
             ExportTemplate export = exportJsonMapper.fromJson(jsonExport);
 
             log.info("Found " + export.getConsumers().size() + " for export " + export.getId() + "/" + export.getName());
-            Pair<String, String> workingDates = getWorkingDates( referential);
-            String startDate = workingDates.getLeft();
-            String endDate = workingDates.getRight();
             export.getConsumers().forEach(consumer -> {
                 try {
                     InputStream streamToUpload = getInputStream(exchange);
@@ -153,6 +150,9 @@ public class ExportToConsumersProcessor implements Processor {
                                 }
                                 break;
                             case OPENDATASOFT:
+                                Pair<String, String> workingDates = getWorkingDates(referential);
+                                String startDate = workingDates.getLeft();
+                                String endDate = workingDates.getRight();
                                 opendatasoftService.sendToOpendatasoft(streamToUpload, consumer.getServiceUrl(), consumer.getDatasetId(), secretKeyDecryptedConsumer, consumer.getExportDate(), consumer.getDescription(), filePath, startDate, endDate, consumer.isAppendDescription());
 
                         }
@@ -251,21 +251,6 @@ public class ExportToConsumersProcessor implements Processor {
         }
     }
 
-    private Optional<String> getValueFromParameters(Exchange exchange, String parameterToSearch) {
-
-        String jsonParameters = (String) exchange.getIn().getHeaders().get(JSON_PART);
-        if (jsonParameters != null) {
-            String regex = "\"" + parameterToSearch + "\"\\s*:\\s*\"(\\d{4}-\\d{2}-\\d{2})\"";
-            Pattern pattern = Pattern.compile(regex);
-            Matcher matcher = pattern.matcher(jsonParameters);
-
-            if (matcher.find()) {
-                String value = matcher.group(1);
-                return Optional.of(value);
-            }
-        }
-        return Optional.empty();
-    }
 
     private InputStream getInputStream(Exchange exchange) throws FileNotFoundException {
         File file;
