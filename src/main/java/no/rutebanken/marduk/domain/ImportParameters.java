@@ -19,24 +19,17 @@ public class ImportParameters {
     private Boolean importShapesFile;
     private Long importConfigurationId;
     private Boolean removeParentStations;
-
     private Boolean updateStopAccessibility;
-
     private Boolean railUICprocessing;
-
     private Boolean generateMapMatching;
-
     private Boolean routesReorganization;
-
     private Boolean routeSortOrder;
-
     private Boolean netexImportLayouts;
-
     private Boolean netexImportColors;
-
     private Long distanceGeolocation;
-
     private String description;
+    private Boolean useTargetNetwork;
+    private String targetNetwork;
 
     public Long getId() {
         return id;
@@ -236,5 +229,21 @@ public class ImportParameters {
 
     public void setRoutesReorganization(Boolean routesReorganization) {
         this.routesReorganization = routesReorganization;
+    }
+
+    public Boolean getUseTargetNetwork() {
+        return useTargetNetwork;
+    }
+
+    public void setUseTargetNetwork(Boolean useTargetNetwork) {
+        this.useTargetNetwork = useTargetNetwork;
+    }
+
+    public String getTargetNetwork() {
+        return targetNetwork;
+    }
+
+    public void setTargetNetwork(String targetNetwork) {
+        this.targetNetwork = targetNetwork;
     }
 }

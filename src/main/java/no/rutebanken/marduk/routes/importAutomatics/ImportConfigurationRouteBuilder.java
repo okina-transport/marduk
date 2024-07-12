@@ -55,7 +55,10 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.net.*;
+import java.net.Authenticator;
+import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -512,6 +515,8 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
             e.getIn().setHeader(RAIL_UIC_PROCESSING, importParameters.getRailUICprocessing());
             e.getIn().setHeader(DISTANCE_GEOLOCATION, importParameters.getDistanceGeolocation());
             e.getIn().setHeader(DESCRIPTION, importParameters.getDescription());
+            e.getIn().setHeader(USE_TARGET_NETWORK, importParameters.getUseTargetNetwork());
+            e.getIn().setHeader(TARGET_NETWORK, importParameters.getTargetNetwork());
             StringBuilder recipients = new StringBuilder();
             for (Recipient recipient : importConfiguration.getRecipients()) {
                 recipients.append(recipient.getEmail());

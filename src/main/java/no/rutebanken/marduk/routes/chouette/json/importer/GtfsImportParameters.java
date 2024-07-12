@@ -21,8 +21,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import no.rutebanken.marduk.domain.ChouetteInfo;
 import no.rutebanken.marduk.routes.chouette.json.ChouetteJobParameters;
 
-import java.util.Set;
-
 public class GtfsImportParameters extends ChouetteJobParameters {
 
     public Parameters parameters;
@@ -103,6 +101,12 @@ public class GtfsImportParameters extends ChouetteJobParameters {
 
         @JsonProperty("route_sort_order")
         public Boolean routeSortOrder = false;
+
+        @JsonProperty("use_target_network")
+        public Boolean useTargetNetwork = false;
+
+        @JsonProperty("target_network")
+        public String targetNetwork;
     }
 
     public static GtfsImportParameters create(RawImportParameters rawImportParameters) {
@@ -145,7 +149,8 @@ public class GtfsImportParameters extends ChouetteJobParameters {
         gtfsImport.updateStopAccess = rawImportParameters.isUpdateStopAccess();
         gtfsImport.railUICprocessing = rawImportParameters.isRailUICprocessing();
         gtfsImport.distanceGeolocation = rawImportParameters.getDistanceGeolocation();
-
+        gtfsImport.useTargetNetwork = rawImportParameters.isUseTargetNetwork();
+        gtfsImport.targetNetwork = rawImportParameters.getTargetNetwork();
 
         return gtfsImportParameters;
     }

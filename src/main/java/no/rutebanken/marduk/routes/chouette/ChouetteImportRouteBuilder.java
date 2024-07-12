@@ -31,6 +31,7 @@ import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.builder.PredicateBuilder;
 import org.apache.camel.component.http4.HttpMethods;
+import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
@@ -237,6 +238,8 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
                         rawImportParameters.setImportMode(importMode);
                     }
 
+                    boolean useTargetNetwork = BooleanUtils.isTrue(e.getIn().getHeader(USE_TARGET_NETWORK, Boolean.class));
+                    String targetNetwork = e.getIn().getHeader(TARGET_NETWORK, String.class);
 
                     rawImportParameters.setFileName(fileName);
                     rawImportParameters.setFileType(fileType);
@@ -262,7 +265,8 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
                     rawImportParameters.setUpdateStopAccess(updateStopAccess);
                     rawImportParameters.setRailUICprocessing(railUICProcessing);
                     rawImportParameters.setDistanceGeolocation(distanceGeolocation);
-
+                    rawImportParameters.setUseTargetNetwork(useTargetNetwork);
+                    rawImportParameters.setTargetNetwork(targetNetwork);
 
                     e.getIn().setHeader(JSON_PART, getStringImportParameters(rawImportParameters));
                 }) //Using header to addToExchange json data

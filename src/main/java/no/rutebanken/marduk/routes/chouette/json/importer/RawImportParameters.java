@@ -27,22 +27,16 @@ public class RawImportParameters {
     private String cleanMode;
     private boolean removeParentStations;
     private boolean importShapesFile;
-
     private boolean updateStopAccess;
-
     private boolean railUICprocessing;
-
     private boolean generateMapMatching;
-
     private boolean routesReorganization;
-
     private boolean routeSortOrder;
-
     private boolean netexImportLayouts;
-
     private boolean netexImportColors;
-
     private Long distanceGeolocation;
+    private boolean useTargetNetwork;
+    private String targetNetwork;
 
     public String getFileName() {
         return fileName;
@@ -245,4 +239,20 @@ public class RawImportParameters {
     public Long getDistanceGeolocation(){return distanceGeolocation;}
 
     public void setDistanceGeolocation(Long distanceGeolocation){this.distanceGeolocation = distanceGeolocation;}
+
+    public boolean isUseTargetNetwork() {
+        return useTargetNetwork;
+    }
+
+    public void setUseTargetNetwork(boolean useTargetNetwork) {
+        this.useTargetNetwork = useTargetNetwork;
+    }
+
+    public String getTargetNetwork() {
+        return targetNetwork;
+    }
+
+    public void setTargetNetwork(String targetNetwork) {
+        this.targetNetwork = targetNetwork;
+    }
 }

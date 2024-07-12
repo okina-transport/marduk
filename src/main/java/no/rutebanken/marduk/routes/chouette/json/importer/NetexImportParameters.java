@@ -16,13 +16,10 @@
 
 package no.rutebanken.marduk.routes.chouette.json.importer;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import no.rutebanken.marduk.domain.ChouetteInfo;
 import no.rutebanken.marduk.domain.Provider;
 import no.rutebanken.marduk.routes.chouette.json.ChouetteJobParameters;
-
-import java.util.Set;
 
 public class NetexImportParameters extends ChouetteJobParameters {
 
@@ -35,39 +32,37 @@ public class NetexImportParameters extends ChouetteJobParameters {
 
     static class Netex extends AbstractImportParameters {
         @JsonProperty("parse_site_frames")
-        @JsonInclude(JsonInclude.Include.ALWAYS)
         private boolean parseSiteFrames = true;
 
         @JsonProperty("validate_against_schema")
-        @JsonInclude(JsonInclude.Include.ALWAYS)
         private boolean validateAgainstSchema = true;
 
         @JsonProperty("validate_against_profile")
-        @JsonInclude(JsonInclude.Include.ALWAYS)
         private boolean validateAgainstProfile = true;
 
         @JsonProperty("continue_on_line_errors")
-        @JsonInclude(JsonInclude.Include.ALWAYS)
         private boolean continueOnLineErrors = true;
 
         @JsonProperty("clean_on_error")
-        @JsonInclude(JsonInclude.Include.ALWAYS)
         private boolean cleanOnErrors = true;
 
         @JsonProperty("object_id_prefix")
-        @JsonInclude(JsonInclude.Include.ALWAYS)
         private String objectIdPrefix;
 
         @JsonProperty("import_mode")
         private ImportMode importMode = ImportMode.LINE;
 
         @JsonProperty("netex_import_layouts")
-        @JsonInclude(JsonInclude.Include.ALWAYS)
         private boolean netexImportLayouts = false;
 
         @JsonProperty("netex_import_colors")
-        @JsonInclude(JsonInclude.Include.ALWAYS)
         private boolean netexImportColors = false;
+
+        @JsonProperty("use_target_network")
+        private boolean useTargetNetwork = false;
+
+        @JsonProperty("target_network")
+        private String targetNetwork;
     }
 
     public static NetexImportParameters create(RawImportParameters rawImportParameters) {
@@ -93,6 +88,8 @@ public class NetexImportParameters extends ChouetteJobParameters {
         if (chouetteInfo.allowCreateMissingStopPlace) {
             netexImport.stopAreaImportMode = AbstractImportParameters.StopAreaImportMode.CREATE_NEW;
         }
+        netexImport.useTargetNetwork = rawImportParameters.isUseTargetNetwork();
+        netexImport.targetNetwork = rawImportParameters.getTargetNetwork();
         Parameters parameters = new Parameters();
         parameters.netexImport = netexImport;
         NetexImportParameters netexImportParameters = new NetexImportParameters();

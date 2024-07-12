@@ -49,6 +49,8 @@ public class Constants {
     public static final String ROUTE_SORT_ORDER = "routeSortOrder";
     public static final String NETEX_IMPORT_LAYOUTS = "netexImportLayouts";
     public static final String NETEX_IMPORT_COLORS = "netexImportColors";
+    public static final String USE_TARGET_NETWORK = "useTargetNetwork";
+    public static final String TARGET_NETWORK = "targetNetwork";
 
     public static final String UPDATE_STOP_ACCESSIBILITY = "updateStopAccessibility";
 
