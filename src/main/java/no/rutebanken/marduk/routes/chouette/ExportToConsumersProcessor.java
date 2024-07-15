@@ -162,13 +162,13 @@ public class ExportToConsumersProcessor implements Processor {
 
                     } catch (IOException e) {
                         log.error("Error while getting the file before to upload to consumer " + exchange.getIn().getHeader(FILE_HANDLE, String.class), e);
-                        exchange.getIn().setHeader(EXPORT_TO_CONSUMER_STATUS, "ERROR");
-                        metrics.countConsumerCalls(consumer.getType(), export.getType(), "ERROR");
+                        exchange.getIn().setHeader(EXPORT_TO_CONSUMER_STATUS, "FAILED");
+                        metrics.countConsumerCalls(consumer.getType(), export.getType(), "FAILED");
                     }
                 } catch (Exception e) {
                     log.error("Error while uploading to consumer " + consumer.toString(), e);
-                    exchange.getIn().setHeader(EXPORT_TO_CONSUMER_STATUS, "ERROR");
-                    metrics.countConsumerCalls(consumer.getType(), export.getType(), "ERROR");
+                    exchange.getIn().setHeader(EXPORT_TO_CONSUMER_STATUS, "FAILED");
+                    metrics.countConsumerCalls(consumer.getType(), export.getType(), "FAILED");
                 }
             });
 
@@ -195,7 +195,7 @@ public class ExportToConsumersProcessor implements Processor {
             } catch (IllegalArgumentException iae) {
                 log.error("Simulation export type unknown : " + simulationExportType + ".");
                 log.error("Please use one of this values : FTP, SFTP, REST or URL");
-                exchange.getIn().setHeader(EXPORT_TO_CONSUMER_STATUS, "ERROR");
+                exchange.getIn().setHeader(EXPORT_TO_CONSUMER_STATUS, "FAILED");
             }
         }
     }
