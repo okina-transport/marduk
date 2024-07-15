@@ -85,7 +85,7 @@ public class OpendatasoftService {
      * @param secretKey
      *  secret key to access the dataset
      */
-    private void publishDataSet(String opendatasoftURL, String datasetUID, String secretKey) {
+    private void publishDataSet(String opendatasoftURL, String datasetUID, String secretKey) throws IOException {
         String publishUrl = buildPublishURL(opendatasoftURL, datasetUID);
         launchConnectionOnURL(publishUrl, secretKey, "POST", MediaType.APPLICATION_JSON, Optional.empty());
     }
@@ -250,7 +250,7 @@ public class OpendatasoftService {
      * @param newDescription     description written in the metadata
      * @param period          temporal period written in the metadata
      */
-    private void updateMetadata(String opendatasoftURL, String datasetUID, String secretKey, String newDescription, String period, boolean appendDescription) {
+    private void updateMetadata(String opendatasoftURL, String datasetUID, String secretKey, String newDescription, String period, boolean appendDescription) throws IOException {
         String descriptionMetadataURL = buildDescriptionMetaDataURL(opendatasoftURL, datasetUID);
         Optional<String> currentDescriptionOpt = launchConnectionOnURL(descriptionMetadataURL, secretKey, "GET", MediaType.APPLICATION_JSON);
         if (appendDescription && currentDescriptionOpt.isPresent()){
@@ -286,7 +286,7 @@ public class OpendatasoftService {
      * @param fileName        name of the file
      * @param newFileUID      UID of the stored file, previously updated
      */
-    private void createOrUpdateResource(String opendatasoftURL, String datasetUID, String secretKey, String fileName, String newFileUID) {
+    private void createOrUpdateResource(String opendatasoftURL, String datasetUID, String secretKey, String fileName, String newFileUID) throws IOException {
 
         Optional<String> rawResourcesInfosOpt = getResourcesInfos(opendatasoftURL, datasetUID, secretKey);
 
@@ -405,7 +405,7 @@ public class OpendatasoftService {
      * @param secretKey       secret key to access dataset
      * @return the json result containing informations about resources of a dataset
      */
-    private Optional<String> getResourcesInfos(String opendatasoftURL, String datasetUID, String secretKey) {
+    private Optional<String> getResourcesInfos(String opendatasoftURL, String datasetUID, String secretKey) throws IOException {
         String connectionURL = buildResourcesURL(opendatasoftURL, datasetUID);
         return launchConnectionOnURL(connectionURL, secretKey, "GET", MediaType.APPLICATION_JSON);
     }
@@ -419,7 +419,7 @@ public class OpendatasoftService {
      * @param mediaType       Content-type of the request
      * @return result of the request
      */
-    private Optional<String> launchConnectionOnURL(String opendatasoftURL, String secretKey, String requestMethod, MediaType mediaType) {
+    private Optional<String> launchConnectionOnURL(String opendatasoftURL, String secretKey, String requestMethod, MediaType mediaType) throws IOException {
         return launchConnectionOnURL(opendatasoftURL, secretKey, requestMethod, mediaType, Optional.empty());
     }
 
@@ -434,34 +434,26 @@ public class OpendatasoftService {
      * @param jsonBody        json body of the request
      * @return the result of the request
      */
-    private Optional<String> launchConnectionOnURL(String opendatasoftURL, String secretKey, String requestMethod, MediaType mediaType, Optional<String> jsonBody) {
+    private Optional<String> launchConnectionOnURL(String opendatasoftURL, String secretKey, String requestMethod, MediaType mediaType, Optional<String> jsonBody) throws IOException {
+        URL url = new URL(opendatasoftURL);
+        HttpURLConnection connection;
+        connection = (HttpURLConnection) url.openConnection();
+        connection.setRequestMethod(requestMethod);
+        connection.setRequestProperty("Content-type", mediaType.toString());
+        connection.setRequestProperty("Authorization", "apikey " + secretKey);
+        connection.setDoOutput(true);
 
-        try {
-            URL url = new URL(opendatasoftURL);
-            HttpURLConnection connection;
-            connection = (HttpURLConnection) url.openConnection();
-            connection.setRequestMethod(requestMethod);
-            connection.setRequestProperty("Content-type", mediaType.toString());
-            connection.setRequestProperty("Authorization", "apikey " + secretKey);
-            connection.setDoOutput(true);
-
-            if (jsonBody.isPresent()) {
-                try (OutputStream os = connection.getOutputStream()) {
-                    byte[] input = jsonBody.get().getBytes(StandardCharsets.UTF_8);
-                    os.write(input, 0, input.length);
-                }
+        if (jsonBody.isPresent()) {
+            try (OutputStream os = connection.getOutputStream()) {
+                byte[] input = jsonBody.get().getBytes(StandardCharsets.UTF_8);
+                os.write(input, 0, input.length);
             }
-
-
-            InputStream inputStream = connection.getInputStream();
-            String rawResult = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8)).lines().collect(Collectors.joining("\n"));
-            connection.disconnect();
-            return Optional.of(rawResult);
-        } catch (IOException e) {
-            logger.error("Error while launching command for URL : " + opendatasoftURL, e);
         }
-        return Optional.empty();
 
+        InputStream inputStream = connection.getInputStream();
+        String rawResult = new BufferedReader(new InputStreamReader(inputStream, StandardCharsets.UTF_8)).lines().collect(Collectors.joining("\n"));
+        connection.disconnect();
+        return Optional.of(rawResult);
     }
 
 
@@ -656,7 +648,7 @@ public class OpendatasoftService {
      * @param secretKey       secret key to access dataset
      * @return the dataset informations
      */
-    public Optional<String> getDatasetInfos(String opendatasoftURL, String datasetUID, String secretKey) {
+    public Optional<String> getDatasetInfos(String opendatasoftURL, String datasetUID, String secretKey) throws IOException {
 
         if (StringUtils.isEmpty(opendatasoftURL)) {
             logger.error("opendatasoft URL is empty");
