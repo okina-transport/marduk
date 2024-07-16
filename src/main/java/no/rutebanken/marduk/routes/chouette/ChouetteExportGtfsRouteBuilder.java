@@ -16,11 +16,9 @@
 
 package no.rutebanken.marduk.routes.chouette;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import no.rutebanken.marduk.Constants;
 import no.rutebanken.marduk.domain.AttributionsExportModes;
 import no.rutebanken.marduk.domain.IdFormat;
-import no.rutebanken.marduk.domain.OrganisationView;
 import no.rutebanken.marduk.domain.Provider;
 import no.rutebanken.marduk.routes.chouette.json.IdParameters;
 import no.rutebanken.marduk.routes.chouette.json.Parameters;
@@ -32,21 +30,21 @@ import no.rutebanken.marduk.security.TokenService;
 import no.rutebanken.marduk.services.FileSystemService;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
+import org.apache.commons.lang3.BooleanUtils;
 import org.codehaus.plexus.util.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import java.io.*;
-import java.net.HttpURLConnection;
-import java.net.URL;
+import java.io.File;
+import java.io.InputStream;
+import java.io.PrintWriter;
 import java.util.*;
 import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.toList;
 import static no.rutebanken.marduk.Constants.*;
 import static no.rutebanken.marduk.Utils.Utils.getLastPathElementOfUrl;
-import static no.rutebanken.marduk.repository.RestDAO.HEADER_REFERENTIAL;
 
 /**
  * Exports gtfs files from Chouette
@@ -116,8 +114,9 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
                     String idSuffix = e.getIn().getHeader(ID_SUFFIX) != null ? (String) e.getIn().getHeader(ID_SUFFIX) : null;
                     String linePrefix = e.getIn().getHeader(LINE_ID_PREFIX) != null ? (String) e.getIn().getHeader(LINE_ID_PREFIX) : null;
                     String commercialPointIdPrefix = e.getIn().getHeader(COMMERCIAL_POINT_ID_PREFIX) != null ? (String) e.getIn().getHeader(COMMERCIAL_POINT_ID_PREFIX) : null;
-                    Boolean commercialPointExport = e.getIn().getHeader(COMMERCIAL_POINT_EXPORT) != null ? (Boolean) e.getIn().getHeader(COMMERCIAL_POINT_EXPORT) : null;
-                    Boolean googleMapsCompatibility = e.getIn().getHeader(GOOGLE_MAPS_COMPATIBILITY) != null ? (Boolean) e.getIn().getHeader(GOOGLE_MAPS_COMPATIBILITY) : null;
+                    boolean commercialPointExport = BooleanUtils.isTrue((Boolean) e.getIn().getHeader(COMMERCIAL_POINT_EXPORT));
+                    boolean googleMapsCompatibility = BooleanUtils.isTrue((Boolean) e.getIn().getHeader(GOOGLE_MAPS_COMPATIBILITY));
+                    boolean useExtendedGtfsRouteTypes = BooleanUtils.isTrue((Boolean) e.getIn().getHeader(USE_EXTENDED_GTFS_ROUTE_TYPES));
                     IdParameters idParams = new IdParameters(stopIdPrefix,idFormat,idSuffix,linePrefix,commercialPointIdPrefix);
                     AttributionsExportModes attributionsExportModes = e.getIn().getHeader(EXPORT_ATTRIBUTIONS) != null ? AttributionsExportModes.valueOf((String) e.getIn().getHeader(EXPORT_ATTRIBUTIONS)) : AttributionsExportModes.NONE;
                     String exportedFilename = "gtfs.zip";;
@@ -128,30 +127,22 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
 
                     if(e.getIn().getHeader(EXPORT_START_DATE) != null && e.getIn().getHeader(EXPORT_END_DATE) != null){
                         Long start = e.getIn().getHeader(EXPORT_START_DATE) != null ? e.getIn().getHeader(EXPORT_START_DATE, Long.class) : null;
-                        Long end = e.getIn().getHeader(EXPORT_END_DATE) != null ? e.getIn().getHeader(EXPORT_END_DATE, Long.class) : null;
+                        Long end =  e.getIn().getHeader(EXPORT_END_DATE) != null ? e.getIn().getHeader(EXPORT_END_DATE, Long.class) : null;
                         startDate = (start != null) ? new Date(start) : null;
                         endDate = (end != null) ? new Date(end) : null;
                     }
 
-                    boolean mappingLinesIds = false;
-                    if (e.getIn().getHeader(MAPPING_LINES_IDS) != null){
-                        mappingLinesIds = (boolean) e.getIn().getHeader(MAPPING_LINES_IDS);
-                    }
-
-                    boolean keepOriginalId = true;
-                    if (e.getIn().getHeader(KEEP_ORIGINAL_ID) != null){
-                        keepOriginalId = (boolean) e.getIn().getHeader(KEEP_ORIGINAL_ID);
-                    }
-
+                    boolean mappingLinesIds = BooleanUtils.isTrue((Boolean) e.getIn().getHeader(MAPPING_LINES_IDS));
+                    boolean keepOriginalId = BooleanUtils.isTrue((Boolean) e.getIn().getHeader(KEEP_ORIGINAL_ID));
 
                     if (e.getIn().getHeader(EXPORT_LINES_IDS) == null && startDate != null && endDate != null) {
-                        gtfsParams = Parameters.getGtfsExportParameters(getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)), exportName, user, keepOriginalId, null, startDate, endDate, exportedFilename, idParams, mappingLinesIds, commercialPointExport, attributionsExportModes, googleMapsCompatibility);
+                        gtfsParams = Parameters.getGtfsExportParameters(getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)), exportName, user, keepOriginalId, null, startDate, endDate, exportedFilename, idParams, mappingLinesIds, commercialPointExport, attributionsExportModes, googleMapsCompatibility, useExtendedGtfsRouteTypes);
                     } else if (e.getIn().getHeader(EXPORT_LINES_IDS) != null) {
                         String linesIdsS = e.getIn().getHeader(EXPORT_LINES_IDS, String.class);
                         List<Long> linesIds = Arrays.stream(StringUtils.split(linesIdsS, ",")).map(Long::valueOf).collect(toList());
-                        gtfsParams = Parameters.getGtfsExportParameters(getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)), exportName, user, keepOriginalId, linesIds, startDate, endDate, exportedFilename, idParams, mappingLinesIds, commercialPointExport, attributionsExportModes, googleMapsCompatibility);
+                        gtfsParams = Parameters.getGtfsExportParameters(getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)), exportName, user, keepOriginalId, linesIds, startDate, endDate, exportedFilename, idParams, mappingLinesIds, commercialPointExport, attributionsExportModes, googleMapsCompatibility, useExtendedGtfsRouteTypes);
                     } else {
-                        gtfsParams = Parameters.getGtfsExportParameters(getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)), user, keepOriginalId, exportedFilename, commercialPointExport, attributionsExportModes, googleMapsCompatibility);
+                        gtfsParams = Parameters.getGtfsExportParameters(getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)), user, keepOriginalId, exportedFilename, commercialPointExport, attributionsExportModes, googleMapsCompatibility, useExtendedGtfsRouteTypes);
                     }
 
                     e.getIn().setHeader(JSON_PART, gtfsParams);

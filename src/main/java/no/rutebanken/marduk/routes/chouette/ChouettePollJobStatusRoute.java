@@ -22,27 +22,21 @@ import no.rutebanken.marduk.Constants;
 import no.rutebanken.marduk.Utils.PollJobStatusRoute;
 import no.rutebanken.marduk.routes.chouette.json.*;
 import no.rutebanken.marduk.routes.chouette.mapping.ProviderAndJobsMapper;
-import no.rutebanken.marduk.routes.file.GtfsFilesArchiver;
 import no.rutebanken.marduk.routes.status.JobEvent;
 import no.rutebanken.marduk.routes.status.JobEvent.State;
 import no.rutebanken.marduk.routes.status.JobEvent.TimetableAction;
-import no.rutebanken.marduk.services.FileSystemService;
 import org.apache.activemq.ScheduledMessage;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.builder.PredicateBuilder;
 import org.apache.camel.component.http4.HttpMethods;
 import org.apache.camel.model.dataformat.JsonLibrary;
+import org.apache.commons.lang3.BooleanUtils;
 import org.apache.http.client.utils.URIBuilder;
-import org.apache.tomcat.util.http.fileupload.FileItem;
-import org.apache.tomcat.util.http.fileupload.FileItemFactory;
-import org.apache.tomcat.util.http.fileupload.disk.DiskFileItemFactory;
-import org.apache.tomcat.util.http.fileupload.util.Streams;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import java.io.FileInputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.Arrays;
@@ -50,11 +44,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static no.rutebanken.marduk.Constants.*;
-import static no.rutebanken.marduk.routes.chouette.json.Status.ABORTED;
-import static no.rutebanken.marduk.routes.chouette.json.Status.CANCELED;
-import static no.rutebanken.marduk.routes.chouette.json.Status.RESCHEDULED;
-import static no.rutebanken.marduk.routes.chouette.json.Status.SCHEDULED;
-import static no.rutebanken.marduk.routes.chouette.json.Status.STARTED;
+import static no.rutebanken.marduk.routes.chouette.json.Status.*;
 
 @Component
 public class ChouettePollJobStatusRoute extends AbstractChouetteRouteBuilder {
@@ -438,7 +428,7 @@ public class ChouettePollJobStatusRoute extends AbstractChouetteRouteBuilder {
 
         from("direct:handleGlobalNetexExportCase")
                 .choice()
-                    .when(e->  e.getIn().getHeader(NETEX_EXPORT_GLOBAL) != null && (boolean) e.getIn().getHeader(NETEX_EXPORT_GLOBAL))
+                    .when(e-> BooleanUtils.isTrue((Boolean) e.getIn().getHeader(NETEX_EXPORT_GLOBAL)))
                         .inOnly("direct:updateMergedNetexStatus")
                 .end()
                 .routeId("handle-global-netex-export-case");

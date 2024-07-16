@@ -1,11 +1,7 @@
 package no.rutebanken.marduk.routes.chouette;
 
 import no.rutebanken.marduk.Constants;
-import no.rutebanken.marduk.domain.ExportTemplate;
-import no.rutebanken.marduk.domain.ExportType;
-import no.rutebanken.marduk.domain.IdFormat;
-import no.rutebanken.marduk.domain.Line;
-import no.rutebanken.marduk.domain.Provider;
+import no.rutebanken.marduk.domain.*;
 import no.rutebanken.marduk.repository.ExportTemplateDAO;
 import no.rutebanken.marduk.repository.ProviderRepository;
 import org.apache.camel.Exchange;
@@ -145,6 +141,10 @@ public class MultipleExportProcessor implements Processor {
 
         if (export.getGoogleMapsCompatibility() != null) {
             exchange.getIn().getHeaders().put(GOOGLE_MAPS_COMPATIBILITY, export.getGoogleMapsCompatibility());
+        }
+
+        if (export.getUseExtendedGtfsRouteTypes() != null) {
+            exchange.getIn().getHeaders().put(USE_EXTENDED_GTFS_ROUTE_TYPES, export.getUseExtendedGtfsRouteTypes());
         }
 
         if (export.getAttributionsExportModes() != null) {

@@ -20,7 +20,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import no.rutebanken.marduk.Constants;
 import no.rutebanken.marduk.Utils.PollJobStatusRoute;
 import no.rutebanken.marduk.routes.chouette.*;
-import no.rutebanken.marduk.routes.chouette.json.*;
+import no.rutebanken.marduk.routes.chouette.json.JobResponse;
+import no.rutebanken.marduk.routes.chouette.json.JobResponseWithLinks;
 import no.rutebanken.marduk.routes.status.JobEvent;
 import no.rutebanken.marduk.routes.status.JobEvent.State;
 import no.rutebanken.marduk.routes.status.JobEvent.TimetableAction;
@@ -30,6 +31,7 @@ import org.apache.camel.LoggingLevel;
 import org.apache.camel.builder.PredicateBuilder;
 import org.apache.camel.component.http4.HttpMethods;
 import org.apache.camel.model.dataformat.JsonLibrary;
+import org.apache.commons.lang3.BooleanUtils;
 import org.apache.http.client.utils.URIBuilder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -270,7 +272,7 @@ public class TiamatPollJobStatusRoute extends AbstractChouetteRouteBuilder {
 
         from("direct:tiamatHandleGlobalNetexExportCase")
                 .choice()
-                    .when(e->  e.getIn().getHeader(NETEX_EXPORT_GLOBAL) != null && (boolean) e.getIn().getHeader(NETEX_EXPORT_GLOBAL))
+                    .when(e-> BooleanUtils.isTrue((Boolean) e.getIn().getHeader(NETEX_EXPORT_GLOBAL)))
                         .inOnly("direct:updateMergedNetexStatus")
                 .end()
                 .routeId("tiamat-handle-global-netex-export-case");

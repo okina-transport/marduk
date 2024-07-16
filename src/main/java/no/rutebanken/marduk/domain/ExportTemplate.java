@@ -5,8 +5,6 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import java.io.Serializable;
 import java.util.List;
 
-import static java.util.stream.Collectors.toList;
-
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class ExportTemplate implements Serializable {
 
@@ -14,32 +12,24 @@ public class ExportTemplate implements Serializable {
     private String name;
     private String description;
     private ExportType type;
-
     private Long startDate;
     private Long endDate;
-
     private String exportedFileName;
-
     private List<Line> lines;
     private List<Consumer> consumers;
     private List<String> referentials;
-
     private String stopIdPrefix;
     private String lineIdPrefix;
     private IdFormat idFormat;
     private String idSuffix;
     private String commercialPointIdPrefix;
-
     private Boolean commercialPointExport;
-
     private Boolean googleMapsCompatibility;
-
     private Boolean exportEnabled;
     private AttributionsExportModes attributionsExportModes;
-
     private String postProcess;
-
     private Long exportJobId;
+    private Boolean useExtendedGtfsRouteTypes;
 
     public Long getId() {
         return id;
@@ -65,14 +55,6 @@ public class ExportTemplate implements Serializable {
         this.description = description;
     }
 
-    public String getExportedFileName() {
-        return exportedFileName;
-    }
-
-    public void setExportedFileName(String exportedFileName) {
-        this.exportedFileName = exportedFileName;
-    }
-
     public ExportType getType() {
         return type;
     }
@@ -80,15 +62,6 @@ public class ExportTemplate implements Serializable {
     public void setType(ExportType type) {
         this.type = type;
     }
-
-    public List<Line> getLines() {
-        return lines;
-    }
-
-    public void setLines(List<Line> lines) {
-        this.lines = lines;
-    }
-
 
     public Long getStartDate() {
         return startDate;
@@ -106,12 +79,36 @@ public class ExportTemplate implements Serializable {
         this.endDate = endDate;
     }
 
+    public String getExportedFileName() {
+        return exportedFileName;
+    }
+
+    public void setExportedFileName(String exportedFileName) {
+        this.exportedFileName = exportedFileName;
+    }
+
+    public List<Line> getLines() {
+        return lines;
+    }
+
+    public void setLines(List<Line> lines) {
+        this.lines = lines;
+    }
+
     public List<Consumer> getConsumers() {
         return consumers;
     }
 
     public void setConsumers(List<Consumer> consumers) {
         this.consumers = consumers;
+    }
+
+    public List<String> getReferentials() {
+        return referentials;
+    }
+
+    public void setReferentials(List<String> referentials) {
+        this.referentials = referentials;
     }
 
     public String getStopIdPrefix() {
@@ -134,7 +131,7 @@ public class ExportTemplate implements Serializable {
         return idFormat;
     }
 
-    public void setIdformat(IdFormat idFormat) {
+    public void setIdFormat(IdFormat idFormat) {
         this.idFormat = idFormat;
     }
 
@@ -178,14 +175,6 @@ public class ExportTemplate implements Serializable {
         this.exportEnabled = exportEnabled;
     }
 
-    public List<String> getReferentials() {
-        return referentials;
-    }
-
-    public void setReferentials(List<String> referentials) {
-        this.referentials = referentials;
-    }
-
     public AttributionsExportModes getAttributionsExportModes() {
         return attributionsExportModes;
     }
@@ -210,4 +199,11 @@ public class ExportTemplate implements Serializable {
         this.exportJobId = exportJobId;
     }
 
+    public Boolean getUseExtendedGtfsRouteTypes() {
+        return useExtendedGtfsRouteTypes;
+    }
+
+    public void setUseExtendedGtfsRouteTypes(Boolean useExtendedGtfsRouteTypes) {
+        this.useExtendedGtfsRouteTypes = useExtendedGtfsRouteTypes;
+    }
 }

@@ -20,11 +20,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import no.rutebanken.marduk.domain.AttributionsExportModes;
 import no.rutebanken.marduk.domain.ChouetteInfo;
 import no.rutebanken.marduk.domain.Provider;
-import no.rutebanken.marduk.routes.chouette.json.exporter.ConcertoExportParameters;
-import no.rutebanken.marduk.routes.chouette.json.exporter.GtfsExportParameters;
-import no.rutebanken.marduk.routes.chouette.json.exporter.NeptuneExportParameters;
-import no.rutebanken.marduk.routes.chouette.json.exporter.NetexExportParameters;
-import no.rutebanken.marduk.routes.chouette.json.exporter.TransferExportParameters;
+import no.rutebanken.marduk.routes.chouette.json.exporter.*;
 import no.rutebanken.marduk.routes.chouette.json.importer.*;
 import no.rutebanken.marduk.routes.file.FileType;
 import org.apache.commons.lang3.StringUtils;
@@ -113,13 +109,13 @@ public class Parameters {
         }
     }
 
-    public static String getGtfsExportParameters(Provider provider, String exportName, String user, boolean keepOriginalId, List<Long> linesIds, Date startDate, Date endDate, String exportedFilename, IdParameters idParams, boolean mappingLinesIds, Boolean commercialPointExport, AttributionsExportModes attributionsExportModes, Boolean googleMapsCompatibility) {
+    public static String getGtfsExportParameters(Provider provider, String exportName, String user, boolean keepOriginalId, List<Long> linesIds, Date startDate, Date endDate, String exportedFilename, IdParameters idParams, boolean mappingLinesIds, Boolean commercialPointExport, AttributionsExportModes attributionsExportModes, Boolean googleMapsCompatibility, boolean useExtendedGtfsRouteTypes) {
         try {
             ChouetteInfo chouetteInfo = provider.chouetteInfo;
 
             GtfsExportParameters.GtfsExport gtfsExport = new GtfsExportParameters.GtfsExport(exportName == null ? "offre" : exportName,
                     StringUtils.isNotEmpty(chouetteInfo.gtfsPrefixExport) ? chouetteInfo.gtfsPrefixExport : chouetteInfo.xmlns,
-                    chouetteInfo.referential, chouetteInfo.organisation, user, keepOriginalId, startDate, endDate, exportedFilename, idParams, mappingLinesIds, commercialPointExport, attributionsExportModes, googleMapsCompatibility);
+                    chouetteInfo.referential, chouetteInfo.organisation, user, keepOriginalId, startDate, endDate, exportedFilename, idParams, mappingLinesIds, commercialPointExport, attributionsExportModes, googleMapsCompatibility, useExtendedGtfsRouteTypes);
             gtfsExport.ids = linesIds;
             if (linesIds != null && !linesIds.isEmpty()) {
                 gtfsExport.referencesType = "line";
@@ -136,8 +132,8 @@ public class Parameters {
         }
     }
 
-    public static String getGtfsExportParameters(Provider provider, String user, boolean keepOriginalId, String exportedFilename, Boolean commercialPointExport, AttributionsExportModes attributionsExportModes, Boolean googleMapsCompatibility) {
-        return getGtfsExportParameters(provider, null, user, keepOriginalId, null, null, null, exportedFilename, new IdParameters(), false, commercialPointExport, attributionsExportModes, googleMapsCompatibility);
+    public static String getGtfsExportParameters(Provider provider, String user, boolean keepOriginalId, String exportedFilename, Boolean commercialPointExport, AttributionsExportModes attributionsExportModes, Boolean googleMapsCompatibility, Boolean useExtendedGtfsRouteTypes) {
+        return getGtfsExportParameters(provider, null, user, keepOriginalId, null, null, null, exportedFilename, new IdParameters(), false, commercialPointExport, attributionsExportModes, googleMapsCompatibility, useExtendedGtfsRouteTypes);
     }
 
 

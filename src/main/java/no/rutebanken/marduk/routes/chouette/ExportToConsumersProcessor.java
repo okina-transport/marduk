@@ -6,13 +6,11 @@ import no.rutebanken.marduk.domain.ConsumerType;
 import no.rutebanken.marduk.domain.ExportTemplate;
 import no.rutebanken.marduk.domain.OrganisationView;
 import no.rutebanken.marduk.metrics.PrometheusMetricsService;
-import no.rutebanken.marduk.routes.chouette.json.JobResponse;
-import no.rutebanken.marduk.routes.chouette.json.exporter.AbstractExportParameters;
-import no.rutebanken.marduk.routes.chouette.json.exporter.GtfsExportParameters;
 import no.rutebanken.marduk.security.TokenService;
 import no.rutebanken.marduk.services.*;
 import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
+import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
@@ -26,11 +24,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
-import java.util.Date;
 import java.util.Optional;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import static no.rutebanken.marduk.Constants.*;
 import static no.rutebanken.marduk.repository.RestDAO.HEADER_REFERENTIAL;
@@ -106,8 +100,9 @@ public class ExportToConsumersProcessor implements Processor {
     public void process(Exchange exchange) throws Exception {
         // get the json export string:
         String jsonExport = (String) exchange.getIn().getHeaders().get(CURRENT_EXPORT);
-        String referential = exchange.getIn().getHeaders().get(NETEX_EXPORT_GLOBAL) != null && (Boolean) exchange.getIn().getHeaders().get(NETEX_EXPORT_GLOBAL) ? "mobiiti_technique" : (String) exchange.getIn().getHeaders().get(CHOUETTE_REFERENTIAL);
-        Boolean exportSimulation = exchange.getIn().getHeaders().get(IS_SIMULATION_EXPORT) != null && (Boolean) exchange.getIn().getHeaders().get(IS_SIMULATION_EXPORT);
+        String referential = BooleanUtils.isTrue((Boolean) exchange.getIn().getHeaders().get(NETEX_EXPORT_GLOBAL)) ?
+                "mobiiti_technique" : (String) exchange.getIn().getHeaders().get(CHOUETTE_REFERENTIAL);
+        boolean exportSimulation = BooleanUtils.isTrue((Boolean) exchange.getIn().getHeaders().get(IS_SIMULATION_EXPORT));
         if (StringUtils.isNotBlank(jsonExport)) {
             ExportTemplate export = exportJsonMapper.fromJson(jsonExport);
 

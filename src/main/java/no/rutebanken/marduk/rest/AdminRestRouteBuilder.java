@@ -51,11 +51,13 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Component;
 
 import javax.ws.rs.NotFoundException;
-import java.io.*;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.net.URLDecoder;
 import java.util.*;
 import java.util.stream.Collectors;
-
 
 import static javax.ws.rs.core.MediaType.MULTIPART_FORM_DATA;
 import static no.rutebanken.marduk.Constants.*;
@@ -400,7 +402,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
 
 
                 .post("/export/gtfs/extended")
-                .description("Prepare and upload GTFS extened export")
+                .description("Prepare and upload GTFS extended export")
                 .consumes(PLAIN)
                 .produces(PLAIN)
                 .responseMessage().code(200).endResponseMessage()
@@ -1431,6 +1433,9 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
             }
             if (headers.get(EXPORT_ATTRIBUTIONS) != null) {
                 e.getIn().setHeader(EXPORT_ATTRIBUTIONS, headers.get(EXPORT_ATTRIBUTIONS));
+            }
+            if (headers.get(USE_EXTENDED_GTFS_ROUTE_TYPES) != null) {
+                e.getIn().setHeader(USE_EXTENDED_GTFS_ROUTE_TYPES, headers.get(USE_EXTENDED_GTFS_ROUTE_TYPES));
             }
         }
     }
