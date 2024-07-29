@@ -95,6 +95,7 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
     public static final String ERROR_NO_FTP_OR_URL_CONFIGURATION = "L'import automatique n'a pas de configuration FTP ou URL définie, veuillez mettre à jour l'import en vous connectant sur Mobi-iti";
     public static final String ERROR_NO_WORKFLOW_AND_NOT_NETEX_IMPORT = "La configuration de l'import est incorrect, il doit soit avoir un workflow, soit être un import de type Netex parking, Netex POI ou Netex arrêt";
     public static final String ERROR_INVALID_NETEX_POI_OR_PARKING_OR_STOP_PLACE_ZIP = "Le fichier ZIP NeTEx POI ou parking ou arrêts à importer est invalide, il doit contenir seulement un fichier XML";
+    public static final String SIGNING = "<br><br>Cordialement,<br>L'équipe Mobi-iti";
 
     private final SchedulerImportConfiguration schedulerImportConfiguration;
     private final CipherEncryption cipherEncryption;
@@ -576,14 +577,11 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
     private void sendMailForFileNotFound(ImportConfiguration importConfiguration, String referential, String filename) {
 
         String mailObject = "[" + client.toUpperCase() + " - " + server.toUpperCase() + "] Referentiel Mobi-iti - import automatique - Fichier non trouve";
-        LocalDate now = LocalDate.now();
         String text = "Bonjour, <br>" +
-                "Après vérification, il n'y pas de nouvelle offre à intégrer pour la date du " + now + ". <br>" +
+                "Après vérification, il n’existe aucun fichier à importer avec cette configuration d’import automatique.<br><br>" +
                 "Nom de l'import : " + importConfiguration.getName() + " <br>" +
                 "Nom du fichier : " + filename + " <br>" +
-                "Organisation : " + referential + " <br>" +
-                "Cordialement,<br>" +
-                "L'équipe Mobi-iti";
+                "Organisation : " + referential + SIGNING;
 
         for (Recipient recipient : importConfiguration.getRecipients()) {
             sendMail.sendEmail(mailObject, recipient.getEmail(), text, null);
@@ -603,12 +601,10 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
         String mailObject = "[" + client.toUpperCase() + " - " + server.toUpperCase() + "] Referentiel Mobi-iti - import automatique - Erreur lors de la récupération du fichier";
         LocalDate now = LocalDate.now();
         String text = "Bonjour, <br>" +
-                "L'import automatique du " + now + " a échoué lors de la récupération du fichier à importer.<br>" +
+                "L'import automatique du " + now + " a échoué lors de la récupération du fichier à importer.<br><br>" +
                 "Nom de l'import : " + importConfiguration.getName() + " <br>" +
                 "Organisation : " + referential + " <br>" +
-                "Message d'erreur: " + errorMessage + " <br>" +
-                "Cordialement,<br>" +
-                "L'équipe Mobi-iti";
+                "Message d'erreur: " + errorMessage + SIGNING;
 
         for (Recipient recipient : importConfiguration.getRecipients()) {
             sendMail.sendEmail(mailObject, recipient.getEmail(), text, null);
@@ -627,12 +623,10 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
         String mailObject = "[" + client.toUpperCase() + " - " + server.toUpperCase() + "] Referentiel Mobi-iti - import automatique - Fichier deja importe";
         LocalDate now = LocalDate.now();
         String text = "Bonjour, <br>" +
-                "Après vérification, il n'y pas de nouvelle offre à intégrer pour la date du " + now + ", le fichier ayant déjà été importé précédemment. <br>" +
+                "Après vérification, il n'y pas de nouvelle offre à intégrer pour la date du " + now + ", le fichier ayant déjà été importé précédemment. <br><br>" +
                 "Nom de l'import : " + importConfiguration.getName() + " <br>" +
                 "Nom du fichier : " + filename + " <br>" +
-                "Organisation : " + referential + " <br>" +
-                "Cordialement,<br>" +
-                "L'équipe Mobi-iti";
+                "Organisation : " + referential + SIGNING;
 
         for (Recipient recipient : importConfiguration.getRecipients()) {
             sendMail.sendEmail(mailObject, recipient.getEmail(), text, null);
