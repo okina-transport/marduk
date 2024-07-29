@@ -13,11 +13,7 @@ import javax.mail.Multipart;
 import javax.mail.PasswordAuthentication;
 import javax.mail.Session;
 import javax.mail.Transport;
-import javax.mail.internet.AddressException;
-import javax.mail.internet.InternetAddress;
-import javax.mail.internet.MimeBodyPart;
-import javax.mail.internet.MimeMessage;
-import javax.mail.internet.MimeMultipart;
+import javax.mail.internet.*;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Properties;
@@ -82,9 +78,10 @@ public class SendMail {
                 }
             }
 
-            Transport transport = session.getTransport("smtp");
-            transport.connect(emailHost, emailFrom, emailPassword);
-            Transport.send(msg);
+            try(Transport transport = session.getTransport("smtp")) {
+                transport.connect(emailHost, emailFrom, emailPassword);
+                Transport.send(msg);
+            }
         } catch (AddressException e) {
             e.printStackTrace();
         } catch (MessagingException e) {

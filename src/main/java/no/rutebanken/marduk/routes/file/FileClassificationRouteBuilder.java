@@ -18,29 +18,31 @@ package no.rutebanken.marduk.routes.file;
 
 
 import no.rutebanken.marduk.Constants;
+import no.rutebanken.marduk.domain.WorkflowEnum;
+import no.rutebanken.marduk.repository.ImportConfigurationDAO;
 import no.rutebanken.marduk.routes.BaseRouteBuilder;
 import no.rutebanken.marduk.routes.file.beans.FileTypeClassifierBean;
 import no.rutebanken.marduk.routes.status.JobEvent;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.ValidationException;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
-import static no.rutebanken.marduk.Constants.CORRELATION_ID;
-import static no.rutebanken.marduk.Constants.FILE_HANDLE;
-import static no.rutebanken.marduk.Constants.FILE_NAME;
-import static no.rutebanken.marduk.Constants.FILE_TYPE;
-import static no.rutebanken.marduk.Constants.PROVIDER_ID;
+import static no.rutebanken.marduk.Constants.*;
 
 /**
  * Receives file handle, pulls file from blob store, classifies files and performs initial validation.
  */
 @Component
 public class FileClassificationRouteBuilder extends BaseRouteBuilder {
+
+    @Autowired
+    ImportConfigurationDAO importConfigurationDAO;
 
     // @formatter:off
     @Override
@@ -82,6 +84,7 @@ public class FileClassificationRouteBuilder extends BaseRouteBuilder {
                 .process(e -> JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.FILE_CLASSIFICATION).state(JobEvent.State.OK).build()).to("direct:updateStatus")
                 .choice()
                     .when(header(FILE_TYPE).in(FileType.NETEX_PARKING.name(), FileType.NETEX_POI.name(), FileType.NETEX_STOP_PLACE.name()))
+                        .process(e -> e.getIn().setHeader(WORKLOW, WorkflowEnum.IMPORT.toString()))
                         .to("activemq:queue:TiamatImportQueue")
                     .otherwise()
                         .to("activemq:queue:ChouetteImportQueue")

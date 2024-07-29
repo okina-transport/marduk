@@ -18,6 +18,7 @@ package no.rutebanken.marduk.routes.tiamat;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import no.rutebanken.marduk.Constants;
+import no.rutebanken.marduk.Utils.ImportRouteBuilder;
 import no.rutebanken.marduk.Utils.PollJobStatusRoute;
 import no.rutebanken.marduk.routes.chouette.*;
 import no.rutebanken.marduk.routes.chouette.json.JobResponse;
@@ -245,12 +246,6 @@ public class TiamatPollJobStatusRoute extends AbstractChouetteRouteBuilder {
                         .stop()
                     .when(simple("${header.current_status} == '" + ABORTED + "'"))
                         .log(LoggingLevel.WARN, correlation() + "Job ended in state FAILED. Stopping route.")
-                        .process(e -> {
-                            JobEvent.providerJobBuilder(e).timetableAction(TimetableAction.valueOf((String) e.getIn().getHeader(JOB_STATUS_JOB_TYPE))).state(State.FAILED).build();
-                            if (e.getIn().getHeader(WORKLOW, String.class) != null) {
-                                createMail.createMail(e, null, null, false);
-                            }
-                        })
                         .to("direct:updateStatus")
                         .stop()
                     .when(simple("${header.current_status} == '" + CANCELED + "' || ${header.current_status} == '" + FAILED + "'"))
@@ -260,7 +255,12 @@ public class TiamatPollJobStatusRoute extends AbstractChouetteRouteBuilder {
                         .stop()
                 .end()
                 // Fetch and parse action report
-                .process(e -> JobEvent.providerJobBuilder(e).timetableAction(TimetableAction.IMPORT).state(State.OK).type(e.getIn().getHeader(FILE_TYPE, String.class)).build())
+                .process(e -> {
+                    JobEvent.providerJobBuilder(e).timetableAction(TimetableAction.IMPORT).state(State.OK).type(e.getIn().getHeader(FILE_TYPE, String.class)).build();
+                    if (e.getIn().getHeader(WORKLOW, String.class) != null) {
+                        createMail.createMail(e, "NETEX", ImportRouteBuilder.getTimeTableAction(e), true);
+                    }
+                })
                 .to("direct:updateStatus")
                 .removeHeaders("Camel*")
                 .setBody(simple(""))

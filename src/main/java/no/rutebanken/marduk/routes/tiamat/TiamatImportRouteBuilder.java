@@ -102,7 +102,6 @@ public class TiamatImportRouteBuilder extends AbstractChouetteRouteBuilder {
 
         from("direct:tiamatAddImportParameters")
                 .process(e -> {
-                    e.getIn().setHeader("Analyze", false);
                     String fileName = e.getIn().getHeader(FILE_NAME, String.class);
                     String fileType = e.getIn().getHeader(FILE_TYPE, String.class);
                     Long providerId = e.getIn().getHeader(PROVIDER_ID, Long.class);
