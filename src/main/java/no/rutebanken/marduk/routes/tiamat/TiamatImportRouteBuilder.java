@@ -172,6 +172,7 @@ public class TiamatImportRouteBuilder extends AbstractChouetteRouteBuilder {
                 .toD("${exchangeProperty.tiamat_url}")
                 .to("log:" + getClass().getName() + "?level=DEBUG&showAll=true&multiline=true")
                 .process(e -> {
+                    e.getIn().setHeader(ANALYZE_ACTION, false);
                     e.getIn().setHeader(Constants.JOB_STATUS_URL, getHttp4(e.getIn().getHeader("Location", String.class)));
                     e.getIn().setHeader(Constants.JOB_ID, getLastPathElementOfUrl(e.getIn().getHeader("Location", String.class)));
                 })
@@ -190,8 +191,19 @@ public class TiamatImportRouteBuilder extends AbstractChouetteRouteBuilder {
                 .choice()
                     //import ok
                     .when(PredicateBuilder.and(constant("false").isEqualTo(header(ENABLE_VALIDATION)), simple("${header.action_report_result} == 'OK'")))
-                        .to("direct:tiamatCheckScheduledJobsBeforeTriggeringNextAction")                 //import ok
+                        .process(e -> {
+                            if (e.getIn().getHeader(WORKLOW, String.class) != null) {
+                                createMail.createMail(e, "NETEX", ImportRouteBuilder.getTimeTableAction(e), false);
+                            }
+                        })
+                        .to("direct:tiamatCheckScheduledJobsBeforeTriggeringNextAction")
+                    //import ok
                     .when(simple("${header.action_report_result} == 'OK' and ${header.validation_report_result} == 'OK'"))
+                        .process(e -> {
+                            if (e.getIn().getHeader(WORKLOW, String.class) != null) {
+                                createMail.createMail(e, "NETEX", ImportRouteBuilder.getTimeTableAction(e), false);
+                            }
+                        })
                         .to("direct:tiamatCheckScheduledJobsBeforeTriggeringNextAction")
                         .process(e -> JobEvent.providerJobBuilder(e).timetableAction(ImportRouteBuilder.getTimeTableAction(e)).state(State.OK).build())
                     //import ko
@@ -203,7 +215,7 @@ public class TiamatImportRouteBuilder extends AbstractChouetteRouteBuilder {
                             }
                             JobEvent.providerJobBuilder(e).timetableAction(ImportRouteBuilder.getTimeTableAction(e)).state(State.FAILED).build();
                             if (e.getIn().getHeader(WORKLOW, String.class) != null) {
-                                createMail.createMail(e, null, ImportRouteBuilder.getTimeTableAction(e), false);
+                                createMail.createMail(e, "NETEX", ImportRouteBuilder.getTimeTableAction(e), false);
                             }
                         })
                     //import ko
@@ -215,7 +227,7 @@ public class TiamatImportRouteBuilder extends AbstractChouetteRouteBuilder {
                             }
                             JobEvent.providerJobBuilder(e).timetableAction(ImportRouteBuilder.getTimeTableAction(e)).state(State.FAILED).build();
                             if (e.getIn().getHeader(WORKLOW, String.class) != null) {
-                                createMail.createMail(e, null, ImportRouteBuilder.getTimeTableAction(e), false);
+                                createMail.createMail(e, "NETEX", ImportRouteBuilder.getTimeTableAction(e), false);
                             }
 
                         })
@@ -228,7 +240,7 @@ public class TiamatImportRouteBuilder extends AbstractChouetteRouteBuilder {
                             }
                             JobEvent.providerJobBuilder(e).timetableAction(ImportRouteBuilder.getTimeTableAction(e)).state(State.FAILED).build();
                             if (e.getIn().getHeader(WORKLOW, String.class) != null) {
-                                createMail.createMail(e, null, ImportRouteBuilder.getTimeTableAction(e), false);
+                                createMail.createMail(e, "NETEX", ImportRouteBuilder.getTimeTableAction(e), false);
                             }
                         })
                 .end()

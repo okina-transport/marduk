@@ -42,6 +42,7 @@ import org.quartz.SchedulerException;
 import org.quartz.Trigger;
 import org.quartz.TriggerBuilder;
 import org.quartz.TriggerKey;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.quartz.SchedulerFactoryBean;
 import org.springframework.stereotype.Component;
 import org.springframework.util.CollectionUtils;
@@ -76,6 +77,12 @@ import static no.rutebanken.marduk.Constants.*;
 
 @Component
 public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilder {
+
+    @Value("${client.name}")
+    private String client;
+
+    @Value("${server.name}")
+    private String server;
 
     public static final String ERROR_INTERNAL = "Erreur interne";
     public static final String ERROR_URL_CONNEXION_FAIL = "La connexion à l'URL a échoué, veuillez vérifier que l'URL renseignée est bien valide et que le serveur est démarré";
@@ -568,7 +575,7 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
      */
     private void sendMailForFileNotFound(ImportConfiguration importConfiguration, String referential, String filename) {
 
-        String mailObject = "MOBIITI - import automatique - Fichier non trouve";
+        String mailObject = "[" + client.toUpperCase() + " - " + server.toUpperCase() + "] Referentiel Mobi-iti - import automatique - Fichier non trouve";
         LocalDate now = LocalDate.now();
         String text = "Bonjour, <br>" +
                 "Après vérification, il n'y pas de nouvelle offre à intégrer pour la date du " + now + ". <br>" +
@@ -593,7 +600,7 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
      */
     private void sendMailForImportFailure(ImportConfiguration importConfiguration, String referential, String errorMessage) {
 
-        String mailObject = "MOBIITI - import automatique - Erreur lors de la récupération du fichier";
+        String mailObject = "[" + client.toUpperCase() + " - " + server.toUpperCase() + "] Referentiel Mobi-iti - import automatique - Erreur lors de la récupération du fichier";
         LocalDate now = LocalDate.now();
         String text = "Bonjour, <br>" +
                 "L'import automatique du " + now + " a échoué lors de la récupération du fichier à importer.<br>" +
@@ -617,7 +624,7 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
      */
     private void sendMailForFileAlreadyImported(ImportConfiguration importConfiguration, String referential, String filename) {
 
-        String mailObject = "MOBIITI - import automatique - Fichier deja importe";
+        String mailObject = "[" + client.toUpperCase() + " - " + server.toUpperCase() + "] Referentiel Mobi-iti - import automatique - Fichier deja importe";
         LocalDate now = LocalDate.now();
         String text = "Bonjour, <br>" +
                 "Après vérification, il n'y pas de nouvelle offre à intégrer pour la date du " + now + ", le fichier ayant déjà été importé précédemment. <br>" +
