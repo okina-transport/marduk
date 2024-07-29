@@ -29,6 +29,8 @@ public class CreateMail {
     @Value("${server.name}")
     private String server;
 
+    public static final String SIGNING = "<br><br>Cordialement,<br>L'équipe Mobi-iti";
+
     public void createMail(Exchange e, String format, JobEvent.TimetableAction timetableAction, boolean ok) {
         String recipientString = e.getIn().getHeader(RECIPIENTS, String.class);
         String[] recipients = recipientString != null ? recipientString.trim().split(",") : null;
@@ -57,34 +59,41 @@ public class CreateMail {
         if(timetableAction == null){
             sendMail.sendEmail("[" + client.toUpperCase() + " - " + server.toUpperCase() + "] Referentiel Mobi-iti - Nouvelle integration de donnees du reseau de " + referential,
                     recipient,
-                    "Bonjour," + "\nL'import automatique du fichier : " + fileName + " a échoué. Veuillez contacter un administrateur.",
+                    "Bonjour,"
+                            + "<br>L'import automatique du fichier : " + fileName + " a échoué. Veuillez contacter un administrateur."
+                            + SIGNING,
                     null);
         }
         if(JobEvent.TimetableAction.FILE_ANALYZE.equals(timetableAction)){
             sendMail.sendEmail("[" + client.toUpperCase() + " - " + server.toUpperCase() + "] Referentiel Mobi-iti - Nouvelle integration de donnees du reseau de " + referential,
                     recipient,
                     "Bonjour,"
-                            + "\nL'analyse du fichier : " + fileName + " a échoué.",
+                            + "<br>L'analyse du fichier : " + fileName + " a échoué."
+                            + SIGNING,
                     null);
         }
         if(JobEvent.TimetableAction.IMPORT.equals(timetableAction)){
             sendMail.sendEmail("[" + client.toUpperCase() + " - " + server.toUpperCase() + "] Referentiel Mobi-iti - Nouvelle integration de donnees du reseau de " + referential,
                     recipient,
                     "Bonjour,"
-                            + "\nL'import du fichier : " + fileName + " a échoué.",
+                            + "<br>L'import du fichier : " + fileName + " a échoué."
+                            + SIGNING,
                     null);
         }
         if(VALIDATION_LEVEL_1.equals(timetableAction) || JobEvent.TimetableAction.VALIDATION_LEVEL_2.equals(timetableAction) ){
             sendMail.sendEmail("[" + client.toUpperCase() + " - " + server.toUpperCase() + "] Referentiel Mobi-iti - Nouvelle integration de donnees du reseau de " + referential,
                     recipient,
-                    "Bonjour," + "\nLa validation de niveau " + levelValidation + " du fichier : " + fileName + " a échoué.",
+                    "Bonjour,"
+                            + "<br>La validation de niveau " + levelValidation + " du fichier : " + fileName + " a échoué."
+                            + SIGNING,
                     null);
         }
         if(JobEvent.TimetableAction.BUILD_MAP_MATCHING.equals(timetableAction)){
             sendMail.sendEmail("[" + client.toUpperCase() + " - " + server.toUpperCase() + "] Referentiel Mobi-iti - Nouvelle integration de donnees du reseau de " + referential,
                     recipient,
                     "Bonjour,"
-                            + "\nLa génération des tracés du fichier : " + fileName + " a échoué.",
+                            + "<br>La génération des tracés du fichier : " + fileName + " a échoué."
+                            + SIGNING,
                     null);
         }
         if(StringUtils.equals(format, "GTFS")){
@@ -92,7 +101,8 @@ public class CreateMail {
                 sendMail.sendEmail("[" + client.toUpperCase() + " - " + server.toUpperCase() + "] Referentiel Mobi-iti - Nouvelle integration de donnees du reseau de " + referential,
                         recipient,
                         "Bonjour,"
-                                + "\nL'export GTFS : " + exportName + " suite à l'import du fichier : " + fileName + " a échoué.",
+                                + "<br>L'export GTFS : " + exportName + " suite à l'import du fichier : " + fileName + " a échoué."
+                                + SIGNING,
                         null);
             }
         }
@@ -101,7 +111,8 @@ public class CreateMail {
                 sendMail.sendEmail("[" + client.toUpperCase() + " - " + server.toUpperCase() + "] Referentiel Mobi-iti - Nouvelle integration de donnees du reseau de " + referential,
                         recipient,
                         "Bonjour,"
-                                + "\nL'export Neptune : " + exportName + " suite à l'import du fichier : " + fileName + " a échoué.",
+                                + "<br>L'export Neptune : " + exportName + " suite à l'import du fichier : " + fileName + " a échoué."
+                                + SIGNING,
                         null);
             }
         }
@@ -110,7 +121,8 @@ public class CreateMail {
                 sendMail.sendEmail("[" + client.toUpperCase() + " - " + server.toUpperCase() + "] Referentiel Mobi-iti - Nouvelle integration de donnees du reseau de " + referential,
                         recipient,
                         "Bonjour,"
-                                + "\nL'export Netex : " + exportName + " suite à l'import du fichier : " + fileName + " a échoué.",
+                                + "<br>L'export Netex : " + exportName + " suite à l'import du fichier : " + fileName + " a échoué."
+                                + SIGNING,
                         null);
             }
         }
@@ -118,7 +130,8 @@ public class CreateMail {
             sendMail.sendEmail("[" + client.toUpperCase() + " - " + server.toUpperCase() + "] Referentiel Mobi-iti - Nouvelle integration de donnees du reseau de " + referential,
                     recipient,
                     "Bonjour,"
-                            + "\nLe workflow de l'import automatique concernant le fichier : " + fileName + " doit être défini jusqu'à l'export mais il semblerait qu'aucun export automatique ne soit configuré. ",
+                            + "<br>Le workflow de l'import automatique concernant le fichier : " + fileName + " doit être défini jusqu'à l'export mais il semblerait qu'aucun export automatique ne soit configuré."
+                            + SIGNING,
                     null);
         }
     }
@@ -128,14 +141,16 @@ public class CreateMail {
             sendMail.sendEmail("[" + client.toUpperCase() + " - " + server.toUpperCase() + "] Referentiel Mobi-iti - Nouvelle integration de donnees du reseau de " + referential,
                     recipient,
                     "Bonjour,"
-                            + "\nL'analyse du fichier: " + fileName + " s'est correctement effectuée.",
+                            + "<br>L'analyse du fichier: " + fileName + " s'est correctement effectuée."
+                            + SIGNING,
                     null);
         }
         if(JobEvent.TimetableAction.IMPORT.equals(timetableAction)){
             sendMail.sendEmail("[" + client.toUpperCase() + " - " + server.toUpperCase() + "] Referentiel Mobi-iti - Nouvelle integration de donnees du reseau de " + referential,
                     recipient,
                     "Bonjour,"
-                            + "\nL'import du fichier: " + fileName + " s'est correctement effectué.",
+                            + "<br>L'import du fichier: " + fileName + " s'est correctement effectué."
+                            + SIGNING,
                     null);
         }
         if(VALIDATION_LEVEL_1.equals(timetableAction) || JobEvent.TimetableAction.VALIDATION_LEVEL_2.equals(timetableAction) ){
@@ -157,14 +172,15 @@ public class CreateMail {
             }
             sendMail.sendEmail("[" + client.toUpperCase() + " - " + server.toUpperCase() + "] Referentiel Mobi-iti - Nouvelle integration de donnees du reseau de " + referential,
                     recipient,
-                    "Bonjour," + "\n" + message,
+                    "Bonjour," + "<br>" + message + SIGNING,
                     null);
         }
         if(JobEvent.TimetableAction.BUILD_MAP_MATCHING.equals(timetableAction)){
             sendMail.sendEmail("[" + client.toUpperCase() + " - " + server.toUpperCase() + "] Referentiel Mobi-iti - Nouvelle integration de donnees du reseau de " + referential,
                     recipient,
                     "Bonjour,"
-                            + "\nL'import, la validation niveau 1 et la génération des tracés du fichier : " + fileName + " se sont correctement effectués.",
+                            + "<br>L'import, la validation niveau 1 et la génération des tracés du fichier : " + fileName + " se sont correctement effectués."
+                            + SIGNING,
                     null);
         }
         if (StringUtils.equals(format, "GTFS")) {
@@ -172,7 +188,8 @@ public class CreateMail {
                 sendMail.sendEmail("[" + client.toUpperCase() + " - " + server.toUpperCase() + "] Referentiel Mobi-iti - Nouvelle integration de donnees du reseau de " + referential,
                         recipient,
                         "Bonjour,"
-                                + "\nL'export GTFS : " + exportName + " suite à l'import du fichier : " + fileName + " s'est correctement effectué.",
+                                + "<br>L'export GTFS : " + exportName + " suite à l'import du fichier : " + fileName + " s'est correctement effectué."
+                                + SIGNING,
                         null);
             }
         }
@@ -181,7 +198,8 @@ public class CreateMail {
                 sendMail.sendEmail("[" + client.toUpperCase() + " - " + server.toUpperCase() + "] Referentiel Mobi-iti - Nouvelle integration de donnees du reseau de " + referential,
                         recipient,
                         "Bonjour,"
-                                + "\nL'export Neptune : " + exportName + "suite à l'import du fichier : " + fileName + " s'est correctement effectué.",
+                                + "<br>L'export Neptune : " + exportName + "suite à l'import du fichier : " + fileName + " s'est correctement effectué."
+                                + SIGNING,
                         null);
             }
             if (StringUtils.equals(format, "NETEX")) {
@@ -189,7 +207,8 @@ public class CreateMail {
                     sendMail.sendEmail("[" + client.toUpperCase() + " - " + server.toUpperCase() + "] Referentiel Mobi-iti - Nouvelle integration de donnees du reseau de " + referential,
                             recipient,
                             "Bonjour,"
-                                    + "\nL'export Netex : " + exportName + " suite à l'import du fichier : " + fileName + " s'est correctement effectué.",
+                                    + "<br>L'export Netex : " + exportName + " suite à l'import du fichier : " + fileName + " s'est correctement effectué."
+                                    + SIGNING,
                             null);
                 }
             }
