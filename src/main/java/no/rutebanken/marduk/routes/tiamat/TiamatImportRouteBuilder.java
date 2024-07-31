@@ -49,9 +49,7 @@ import java.io.InputStream;
 import static no.rutebanken.marduk.Utils.Utils.getHttp4;
 import static no.rutebanken.marduk.Utils.Utils.getLastPathElementOfUrl;
 
-/**
- * Submits files to Chouette
- */
+
 @Component
 public class TiamatImportRouteBuilder extends AbstractChouetteRouteBuilder {
 
@@ -104,6 +102,7 @@ public class TiamatImportRouteBuilder extends AbstractChouetteRouteBuilder {
 
         from("direct:tiamatAddImportParameters")
                 .process(e -> {
+                    e.getIn().setHeader("Analyze", false);
                     String fileName = e.getIn().getHeader(FILE_NAME, String.class);
                     String fileType = e.getIn().getHeader(FILE_TYPE, String.class);
                     Long providerId = e.getIn().getHeader(PROVIDER_ID, Long.class);
@@ -128,11 +127,11 @@ public class TiamatImportRouteBuilder extends AbstractChouetteRouteBuilder {
                 .log(LoggingLevel.INFO, "tiamatUrl: " + tiamatUrl)
                 .choice()
                     .when(header(IMPORT_TYPE).isEqualTo(FileType.NETEX_PARKING.name()))
-                        .setProperty("tiamat_url", simple(tiamatUrl + "/parkings_netex_import_xml"))
+                        .setProperty("tiamat_url", simple(tiamatUrl + "/netex_parking/parking_async_import_netex"))
                     .when(header(IMPORT_TYPE).isEqualTo(FileType.NETEX_POI.name()))
-                        .setProperty("tiamat_url", simple(tiamatUrl + "/poi_netex_import_xml"))
+                        .setProperty("tiamat_url", simple(tiamatUrl + "/netex_poi/poi_async_import_netex"))
                     .when(header(IMPORT_TYPE).isEqualTo(FileType.NETEX_STOP_PLACE.name()))
-                        .setProperty("tiamat_url", simple(tiamatUrl + "/stop_places_netex_import_xml"))
+                        .setProperty("tiamat_url", simple(tiamatUrl + "/netex_stops/stops_async_import_netex"))
                 .end()
                 .log(LoggingLevel.DEBUG, correlation() + "Calling Tiamat with URL: ${exchangeProperty.tiamat_url}")
                 .setHeader(Exchange.HTTP_METHOD, constant(HttpMethods.POST))
@@ -188,68 +187,20 @@ public class TiamatImportRouteBuilder extends AbstractChouetteRouteBuilder {
                 .to("log:" + getClass().getName() + "?level=DEBUG&showAll=true&multiline=true")
                 .setBody(constant(""))
                 .choice()
-                    //import ok
-                    .when(PredicateBuilder.and(constant("false").isEqualTo(header(ENABLE_VALIDATION)), simple("${header.action_report_result} == 'OK'")))
-                        .to("direct:tiamatCheckScheduledJobsBeforeTriggeringNextAction")                 //import ok
-                    .when(simple("${header.action_report_result} == 'OK' and ${header.validation_report_result} == 'OK'"))
-                        .to("direct:tiamatCheckScheduledJobsBeforeTriggeringNextAction")
-                        .process(e -> JobEvent.providerJobBuilder(e).timetableAction(ImportRouteBuilder.getTimeTableAction(e)).state(State.OK).build())
-                    //import ko
-                    .when(simple("${header.action_report_result} == 'OK' and ${header.validation_report_result} == 'NOK'"))
-                        .log(LoggingLevel.INFO, correlation() + "Import ok but validation failed")
-                        .process(e -> {
-                            if(TimetableAction.IMPORT.equals(ImportRouteBuilder.getTimeTableAction(e)) && e.getIn().getHeader(IMPORT_CONFIGURATION_ID) != null){
-                                ImportRouteBuilder.updateLastTimestamp(e);
-                            }
-                            JobEvent.providerJobBuilder(e).timetableAction(ImportRouteBuilder.getTimeTableAction(e)).state(State.FAILED).build();
-                            if (e.getIn().getHeader(WORKLOW, String.class) != null) {
-                                createMail.createMail(e, null, ImportRouteBuilder.getTimeTableAction(e), false);
-                            }
-                        })
-                    //import ko
-                    .when(simple("${header.action_report_result} == 'NOK'"))
-                        .log(LoggingLevel.WARN, correlation() + "Import not ok")
-                        .process(e -> {
-                            if(TimetableAction.IMPORT.equals(ImportRouteBuilder.getTimeTableAction(e)) && e.getIn().getHeader(IMPORT_CONFIGURATION_ID) != null){
-                                ImportRouteBuilder.updateLastTimestamp(e);
-                            }
-                            JobEvent.providerJobBuilder(e).timetableAction(ImportRouteBuilder.getTimeTableAction(e)).state(State.FAILED).build();
-                            if (e.getIn().getHeader(WORKLOW, String.class) != null) {
-                                createMail.createMail(e, null, ImportRouteBuilder.getTimeTableAction(e), false);
-                            }
 
-                        })
-                    //import ko
-                    .otherwise()
-                        .log(LoggingLevel.ERROR, correlation() + "Something went wrong on import")
-                        .process(e -> {
-                            if(TimetableAction.IMPORT.equals(ImportRouteBuilder.getTimeTableAction(e)) && e.getIn().getHeader(IMPORT_CONFIGURATION_ID) != null){
-                                ImportRouteBuilder.updateLastTimestamp(e);
-                            }
-                            JobEvent.providerJobBuilder(e).timetableAction(ImportRouteBuilder.getTimeTableAction(e)).state(State.FAILED).build();
-                            if (e.getIn().getHeader(WORKLOW, String.class) != null) {
-                                createMail.createMail(e, null, ImportRouteBuilder.getTimeTableAction(e), false);
-                            }
-                        })
+                .when(simple("${exchangeProperty.STATUS} == 'FINISHED'"))
+                     .process(e -> JobEvent.providerJobBuilder(e).timetableAction(ImportRouteBuilder.getTimeTableAction(e)).state(State.OK).build())
+                .when(simple("${exchangeProperty.STATUS} == 'FAILED'"))
+                     .process(e -> {
+                         JobEvent.providerJobBuilder(e).timetableAction(ImportRouteBuilder.getTimeTableAction(e)).state(State.FAILED).build();
+                         createMail.createMail(e, null, ImportRouteBuilder.getTimeTableAction(e), false);
+                     })
                 .end()
+
                 .to("direct:updateStatus")
                 .routeId("timat-process-import-status");
 
-        // Check that no other import jobs in status SCHEDULED exists for this referential. If so, do not trigger export
-        from("direct:tiamatCheckScheduledJobsBeforeTriggeringNextAction")
-                .setProperty("job_status_url", simple(tiamatUrl + "/jobs/${header.\" + CHOUETTE_REFERENTIAL + \"}?timetableAction=importer&status=SCHEDULED&status=STARTED"))
-                .toD("${exchangeProperty.job_status_url}")
-                .choice()
-                    .when().jsonpath("$.*[?(@.status == 'SCHEDULED')].status")
-                        .log(LoggingLevel.INFO, correlation() + "Import ok, skipping next step as there are more import jobs active")
-                    .otherwise()
-                        .log(LoggingLevel.INFO, correlation() + "Import ok, triggering next step.")
-                        .setBody(constant(""))
-                        .to("log:" + getClass().getName() + "?level=DEBUG&showAll=true&multiline=true")
-                        .log(LoggingLevel.INFO, correlation() + "Import ok")
-                        .to("activemq:queue:TiamatPollStatusQueue")
-                .end()
-                .routeId("tiamat-process-job-list-after-import");
+
     }
 
     private String getStringImportParameters(RawImportParameters rawImportParameters) {

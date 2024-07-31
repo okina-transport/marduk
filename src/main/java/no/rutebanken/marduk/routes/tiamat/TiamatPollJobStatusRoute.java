@@ -182,18 +182,15 @@ public class TiamatPollJobStatusRoute extends AbstractChouetteRouteBuilder {
                 .toD("${exchangeProperty.tiamat_url}")
                 .process(e -> e.getIn().setBody(new URL(e.getIn().getHeader(Constants.JOB_STATUS_URL, String.class).replace("http4", "http")).openConnection().getInputStream()))
                 .choice()
-                    .when(simple("${header.JOB_ID} != null"))
+                    .when(simple("${header.RutebankenJobId} != null"))
                         .process(e -> {
                             boolean isExportDone = false;
                             if(JobEvent.TimetableAction.IMPORT_NETEX.name().equals(e.getIn().getHeader(JOB_STATUS_JOB_TYPE))) {
                                 String json = e.getIn().getBody(String.class);
                                 JobResponse jobResponse = new ObjectMapper().readValue(json, JobResponse.class);
                                 isExportDone = jobResponse.getStatus().isDone();
-                                if (FINISHED == jobResponse.getStatus()) {
-                                    e.getProperties().put("STATUS", "FINISHED");
-                                    e.getIn().setHeader("action_report_result", "OK");
-                                    e.getIn().setBody(json);
-                                }
+                                e.getProperties().put("STATUS", jobResponse.getStatus());
+
                             }
                             if (isExportDone) {
                                 e.getIn().removeHeader(Constants.TIAMAT_STOP_PLACES_EXPORT);
@@ -202,7 +199,7 @@ public class TiamatPollJobStatusRoute extends AbstractChouetteRouteBuilder {
                             }
                         })
                         .choice()
-                            .when(simple("${exchangeProperty.STATUS} == 'FINISHED'"))
+                            .when(simple("${exchangeProperty.STATUS} == 'FINISHED' || ${exchangeProperty.STATUS} == 'FAILED'"))
                                 .toD("${header." + Constants.JOB_STATUS_ROUTING_DESTINATION + "}")
                             .otherwise()
                                 .to("direct:tiamatRescheduleJob")
@@ -233,7 +230,7 @@ public class TiamatPollJobStatusRoute extends AbstractChouetteRouteBuilder {
                 .removeHeader("scheduledJobId")
                 .setBody(constant(""))
                 //.log(LoggingLevel.INFO,"Scheduling next polling message in ${header."+ActiveMQMessage.AMQ_SCHEDULED_DELAY+"}ms")
-                .to("activemq:queue:tiamatPollStatusQueue")
+                .to("activemq:queue:TiamatPollStatusQueue")
                 .routeId("tiamat-reschedule-job");
 
         from("direct:tiamatJobStatusDone")
