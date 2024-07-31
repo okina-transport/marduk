@@ -6,6 +6,8 @@ import io.micrometer.prometheus.PrometheusConfig;
 import io.micrometer.prometheus.PrometheusMeterRegistry;
 import no.rutebanken.marduk.domain.ConsumerType;
 import no.rutebanken.marduk.domain.ExportType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.PreDestroy;
@@ -28,6 +30,7 @@ public class PrometheusMetricsService extends PrometheusMeterRegistry {
     private static final String RESULT_TAG = "result";
 
     private static final String EXPORT_TYPE_TAG_NAME = "exportType";
+    private static final Logger log = LoggerFactory.getLogger(PrometheusMetricsService.class);
 
 
     public PrometheusMetricsService() {
@@ -50,7 +53,7 @@ public class PrometheusMetricsService extends PrometheusMeterRegistry {
     }
 
     public void countExports(ExportType type, String result) {
-
+        log.info("Prometheus metrics service : {} - {}", type.name(), result);
         List<Tag> counterTags = new ArrayList<>();
         counterTags.add(new ImmutableTag(EXPORT_TYPE_TAG_NAME, type.name()));
         counterTags.add(new ImmutableTag(RESULT_TAG, result));
