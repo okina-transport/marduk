@@ -51,11 +51,7 @@ import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.net.Authenticator;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
@@ -394,6 +390,11 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
 
         // try connection with server
         URL importFileUrl = parseUrl(configurationUrl.getUrl());
+
+        String fileName;
+        if (!importFileUrl.getQuery().split("=")[1].isEmpty()) fileName = importFileUrl.getPath().substring(importFileUrl.getPath().lastIndexOf('/') + 1) + "?" + importFileUrl.getQuery().split("=")[1];
+        else fileName = importFileUrl.getPath().substring(importFileUrl.getPath().lastIndexOf('/') + 1);
+
         HttpURLConnection importFileUrlConnection;
         int responseCode;
         try {
@@ -406,7 +407,7 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
         }
         if (responseCode != HttpURLConnection.HTTP_OK) {
             log.error("{} File not found for the dataspace : {} for the import configuration URL : {} (responseCode: {})", correlation(), referential, configurationUrl.getUrl(), responseCode);
-            sendMailForFileNotFound(importConfiguration, referential, importFileUrl.getPath().substring(importFileUrl.getPath().lastIndexOf('/') + 1));
+            sendMailForFileNotFound(importConfiguration, referential, fileName, String.valueOf(importFileUrl));
             return Optional.empty();
         }
 
@@ -414,13 +415,22 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
         LocalDateTime importLastTimeModified = getImportModificationDateFromUrl(configurationUrl, importFileUrlConnection);
         if (configurationUrl.getLastTimestamp() != null && configurationUrl.getLastTimestamp().isAfter(importLastTimeModified)) {
             log.warn("{} No new file to import for the referential : {} for the import configuration URL : {}", correlation(), referential, configurationUrl.getUrl());
-            sendMailForFileAlreadyImported(importConfiguration, referential, importFileUrl.getPath().substring(importFileUrl.getPath().lastIndexOf('/') + 1));
+            sendMailForFileAlreadyImported(importConfiguration, referential, fileName);
             return Optional.empty();
         }
 
         try {
             configurationUrl.setLastTimestamp(importLastTimeModified);
             Optional<FileItem> importFile = Optional.of(downloadImportFileFromUrl(importFileUrl));
+
+            // Verification after download to ensure file is valid
+            if (!isValidImportFile(importFile.get())) {
+                log.error("{} Downloaded file is invalid or not the expected file from URL: {}", correlation(), importFileUrl);
+                importFileUrlConnection.disconnect();
+                sendMailForFileNotFound(importConfiguration, referential, fileName, String.valueOf(importFileUrl));
+                return Optional.empty();
+            }
+
             importFileUrlConnection.disconnect();
             return importFile;
         } catch (IOException e) {
@@ -428,6 +438,17 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
             throw new AutomaticImportException(ERROR_RETRIEVING_IMPORT_FILE, e);
         }
     }
+
+    private boolean isValidImportFile(FileItem importFile) {
+        // Implement validation logic to check if the downloaded file is valid
+        // For example, check the file name, content type, size, etc.
+        if (importFile == null || importFile.getSize() == 0 || importFile.getString().contains("<html")) {
+            return false;
+        }
+        // Add other validation checks as necessary
+        return true;
+    }
+
 
     /**
      * @param encryptedPassword password to decrypt
@@ -565,6 +586,30 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
         } catch (Exception exception) {
             log.error("Certificate management error to download a file from a URL :", exception);
         }
+    }
+
+    /**
+     * Send a mail to warn that file was not found
+     *
+     * @param importConfiguration the configuration of the automatic import
+     * @param referential         the referential for which file was not found
+     * @param filename            the file name that was not found
+     * @param url                 the file url that was not found
+     */
+    private void sendMailForFileNotFound(ImportConfiguration importConfiguration, String referential, String filename, String url) {
+
+        String mailObject = "[" + client.toUpperCase() + " - " + server.toUpperCase() + "] Referentiel Mobi-iti - import automatique - Fichier non trouve";
+        String text = "Bonjour, <br>" +
+                "Après vérification, il n’existe aucun fichier à importer avec cette configuration d’import automatique.<br><br>" +
+                "Nom de l'import : " + importConfiguration.getName() + " <br>" +
+                "Nom du fichier : " + filename + " <br>" +
+                "Organisation : " + referential + " <br><br>" +
+                "Url saisie : " + url + SIGNING;
+
+        for (Recipient recipient : importConfiguration.getRecipients()) {
+            sendMail.sendEmail(mailObject, recipient.getEmail(), text, null);
+        }
+
     }
 
     /**
