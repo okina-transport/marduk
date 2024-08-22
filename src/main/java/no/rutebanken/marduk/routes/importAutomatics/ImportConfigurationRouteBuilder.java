@@ -391,9 +391,9 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
         // try connection with server
         URL importFileUrl = parseUrl(configurationUrl.getUrl());
 
-        String fileName;
-        if (!importFileUrl.getQuery().split("=")[1].isEmpty()) fileName = importFileUrl.getPath().substring(importFileUrl.getPath().lastIndexOf('/') + 1) + "?" + importFileUrl.getQuery().split("=")[1];
-        else fileName = importFileUrl.getPath().substring(importFileUrl.getPath().lastIndexOf('/') + 1);
+        String fileName = importFileUrl.getPath();
+//        if (!importFileUrl.getQuery().split("=")[1].isEmpty()) fileName = importFileUrl.getPath().substring(importFileUrl.getPath().lastIndexOf('/') + 1) + "?" + importFileUrl.getQuery().split("=")[1];
+//        else fileName = importFileUrl.getPath().substring(importFileUrl.getPath().lastIndexOf('/') + 1);
 
         HttpURLConnection importFileUrlConnection;
         int responseCode;
