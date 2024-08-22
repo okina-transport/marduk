@@ -40,7 +40,11 @@ public class TiamatGetPostCodeMissingRouteBuilder extends BaseRouteBuilder {
                 .setBody(constant(null))
                 .setHeader(Exchange.HTTP_METHOD, constant(HttpMethods.POST))
                 .setHeader("Authorization", constant("Bearer " + tokenService.getToken()))
-                .toD(tiamatUrl + "/get_missing_postcode")
+                .process(e -> {
+                    String url = tiamatUrl.replace("http://", "http4://") + "/get_missing_postcode";
+                    e.setProperty("tiamat_url", url);
+                })
+                .toD("${exchangeProperty.tiamat_url}")
                 .log(LoggingLevel.INFO, correlation() + "Completed get missing post code in Tiamat")
                 .routeId("tiamat-get-missing-post-code");
     }
