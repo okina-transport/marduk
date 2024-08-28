@@ -16,14 +16,10 @@
 
 package no.rutebanken.marduk.routes.chouette.json.importer;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import no.rutebanken.marduk.domain.ChouetteInfo;
 import no.rutebanken.marduk.domain.Provider;
 import no.rutebanken.marduk.routes.chouette.json.ChouetteJobParameters;
-import no.rutebanken.marduk.routes.chouette.json.IdParameters;
-
-import java.util.Set;
 
 public class NeptuneImportParameters extends ChouetteJobParameters {
 
@@ -39,19 +35,15 @@ public class NeptuneImportParameters extends ChouetteJobParameters {
     static class Neptune extends AbstractImportParameters {
 
         @JsonProperty("object_id_prefix")
-        @JsonInclude(JsonInclude.Include.ALWAYS)
         public String objectIdPrefix;
 
         @JsonProperty("stopArea_prefix_to_remove")
-        @JsonInclude(JsonInclude.Include.ALWAYS)
         public String stopAreaPrefixToRemove = "";
 
         @JsonProperty("areaCentroid_prefix_to_remove")
-        @JsonInclude(JsonInclude.Include.ALWAYS)
         public String areaCentroidPrefixToRemove = "";
 
         @JsonProperty("line_prefix_to_remove")
-        @JsonInclude(JsonInclude.Include.ALWAYS)
         public String linePrefixToRemove = "";
 
         @JsonProperty("ignore_commercial_points")

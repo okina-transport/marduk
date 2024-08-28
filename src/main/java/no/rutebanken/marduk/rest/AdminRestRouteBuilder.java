@@ -56,6 +56,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -105,7 +106,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
 
         RestPropertyDefinition corsAllowedHeaders = new RestPropertyDefinition();
         corsAllowedHeaders.setKey("Access-Control-Allow-Headers");
-        corsAllowedHeaders.setValue("Origin, Accept, X-Requested-With, Content-Type, Access-Control-Request-Method, Access-Control-Request-Headers, Authorization, x-okina-referential, RutebankenUser, RutebankenDescription, EXPORT_LINES_IDS, EXPORT_START_DATE, EXPORT_END_DATE, ImportType, routeMerge, splitCharacter, commercialPointIdPrefixToRemove, quayIdPrefixToRemove, areaCentroidPrefixToRemove, linePrefixToRemove, stopAreaPrefixToRemove, ignoreCommercialPoints, analysisJobId, cleanMode, keepBoardingAlightingPossibility, keepStopGeolocalisation, keepStopNames, removeParentStations, importShapesFile, updateStopAccessibility, railUICprocessing, generateMapMatching, routesReorganization, distanceGeolocation, routeSortOrder, netexImportLayouts, netexImportColors, useTargetNetwork, targetNetwork");
+        corsAllowedHeaders.setValue("Origin, Accept, X-Requested-With, Content-Type, Access-Control-Request-Method, Access-Control-Request-Headers, Authorization, x-okina-referential, RutebankenUser, RutebankenDescription, EXPORT_LINES_IDS, EXPORT_START_DATE, EXPORT_END_DATE, ImportType, routeMerge, splitCharacter, commercialPointIdPrefixToRemove, quayIdPrefixToRemove, areaCentroidPrefixToRemove, linePrefixToRemove, stopAreaPrefixToRemove, ignoreCommercialPoints, analysisJobId, cleanMode, keepBoardingAlightingPossibility, keepStopGeolocalisation, keepStopNames, removeParentStations, importShapesFile, updateStopAccessibility, railUICprocessing, generateMapMatching, routesReorganization, distanceGeolocation, routeSortOrder, netexImportLayouts, netexImportColors, useTargetNetwork, targetNetwork, renameRoutesAfterMerge");
 
         RestPropertyDefinition corsAllowedOrigin = new RestPropertyDefinition();
         corsAllowedOrigin.setKey("Access-Control-Allow-Origin");
@@ -703,7 +704,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .setHeader(PROVIDER_ID, header("providerId"))
                 .to("direct:authorizeRequest")
                 .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
-                .process(e -> e.getIn().setHeader("fileName", URLDecoder.decode(e.getIn().getHeader("fileName", String.class), "utf-8")))
+                .process(e -> e.getIn().setHeader("fileName", URLDecoder.decode(e.getIn().getHeader("fileName", String.class), StandardCharsets.UTF_8)))
                 .process(e -> e.getIn().setHeader(FILE_HANDLE, BLOBSTORE_PATH_INBOUND
                         + getProviderRepository().getReferential(e.getIn().getHeader(PROVIDER_ID, Long.class))
                         + "/" + e.getIn().getHeader("fileName", String.class)))
@@ -1347,7 +1348,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
 
     private String copyIncomingFile(Exchange e) throws IOException {
 
-        String tmpDir = "/tmp/" + UUID.randomUUID().toString();
+        String tmpDir = "/tmp/" + UUID.randomUUID();
         String tmpFile = tmpDir + "/incoming.zip";
         java.io.File incomingDir = new java.io.File(tmpDir);
         incomingDir.mkdirs();
@@ -1378,7 +1379,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
     }
 
     private String getHeaders(Exchange e, String headerToCollect) {
-        Map body = (Map) e.getIn().getBody(Map.class);
+        Map body = e.getIn().getBody(Map.class);
         Map headers;
         headers = body == null ? e.getIn().getHeaders() : (Map) body.get("headers");
 
@@ -1390,15 +1391,11 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
 
 
     private boolean getGenerateMapMatchingHeaders(Exchange e) {
-        Map body = (Map) e.getIn().getBody(Map.class);
+        Map body = e.getIn().getBody(Map.class);
         Map headers;
         headers = body == null ? e.getIn().getHeaders() : (Map) body.get("headers");
 
-        if (headers != null && headers.get(GENERATE_MAP_MATCHING) != null && ((String) headers.get(GENERATE_MAP_MATCHING)).equalsIgnoreCase("true")) {
-            return true;
-        }
-
-        return false;
+        return headers != null && headers.get(GENERATE_MAP_MATCHING) != null && ((String) headers.get(GENERATE_MAP_MATCHING)).equalsIgnoreCase("true");
     }
 
     private String getSimulationExportPrefix(Exchange e) {

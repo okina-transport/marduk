@@ -30,6 +30,7 @@ public class ImportParameters {
     private String description;
     private Boolean useTargetNetwork;
     private String targetNetwork;
+    private Boolean renameRoutesAfterMerge;
 
     public Long getId() {
         return id;
@@ -245,5 +246,13 @@ public class ImportParameters {
 
     public void setTargetNetwork(String targetNetwork) {
         this.targetNetwork = targetNetwork;
+    }
+
+    public Boolean getRenameRoutesAfterMerge() {
+        return renameRoutesAfterMerge;
+    }
+
+    public void setRenameRoutesAfterMerge(Boolean renameRoutesAfterMerge) {
+        this.renameRoutesAfterMerge = renameRoutesAfterMerge;
     }
 }

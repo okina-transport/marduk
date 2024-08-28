@@ -16,7 +16,6 @@
 
 package no.rutebanken.marduk.routes.chouette.json.importer;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import no.rutebanken.marduk.domain.ChouetteInfo;
 import no.rutebanken.marduk.routes.chouette.json.ChouetteJobParameters;
@@ -35,11 +34,9 @@ public class GtfsImportParameters extends ChouetteJobParameters {
     static class Gtfs extends AbstractImportParameters {
 
         @JsonProperty("object_id_prefix")
-        @JsonInclude(JsonInclude.Include.ALWAYS)
         public String objectIdPrefix;
 
         @JsonProperty("split_id_on_dot")
-        @JsonInclude(JsonInclude.Include.ALWAYS)
         private String splitIdOnDot = "0";
 
         @JsonProperty("max_distance_for_commercial")
@@ -52,48 +49,37 @@ public class GtfsImportParameters extends ChouetteJobParameters {
         public String ignoreEndChars = "0";
 
         @JsonProperty("max_distance_for_connection_link")
-        @JsonInclude(JsonInclude.Include.ALWAYS)
         public String maxDistanceForConnectionLink = "0";
 
         @JsonProperty("route_type_id_scheme")
-        @JsonInclude(JsonInclude.Include.ALWAYS)
         public String routeTypeIdScheme = "any";
 
         @JsonProperty("parse_connection_links")
-        @JsonInclude(JsonInclude.Include.ALWAYS)
         public Boolean parseConnectionLinks = true;
 
         @JsonProperty("route_merge")
-        @JsonInclude(JsonInclude.Include.ALWAYS)
         public Boolean routeMerge = false;
 
         @JsonProperty("split_character")
-        @JsonInclude(JsonInclude.Include.ALWAYS)
         public String splitCharacter = "";
 
         @JsonProperty("commercial_point_prefix_to_remove")
-        @JsonInclude(JsonInclude.Include.ALWAYS)
         public String commercialPointIdPrefixToRemove = "";
 
         @JsonProperty("quay_id_prefix_to_remove")
-        @JsonInclude(JsonInclude.Include.ALWAYS)
         public String quayIdPrefixToRemove = "";
 
         @JsonProperty("line_prefix_to_remove")
-        @JsonInclude(JsonInclude.Include.ALWAYS)
         public String linePrefixToRemove = "";
 
         @JsonProperty("import_shapes_file")
-        @JsonInclude(JsonInclude.Include.ALWAYS)
         public Boolean importShapesFile = true;
 
         @JsonProperty("update_stop_accessibility")
-        @JsonInclude(JsonInclude.Include.ALWAYS)
         public Boolean updateStopAccess = false;
 
 
         @JsonProperty("rail_uic_processing")
-        @JsonInclude(JsonInclude.Include.ALWAYS)
         public Boolean railUICprocessing = false;
 
         @JsonProperty("distance_geolocation")
@@ -107,6 +93,9 @@ public class GtfsImportParameters extends ChouetteJobParameters {
 
         @JsonProperty("target_network")
         public String targetNetwork;
+
+        @JsonProperty("rename_routes_after_merge")
+        public Boolean renameRoutesAfterMerge;
     }
 
     public static GtfsImportParameters create(RawImportParameters rawImportParameters) {
@@ -151,6 +140,7 @@ public class GtfsImportParameters extends ChouetteJobParameters {
         gtfsImport.distanceGeolocation = rawImportParameters.getDistanceGeolocation();
         gtfsImport.useTargetNetwork = rawImportParameters.isUseTargetNetwork();
         gtfsImport.targetNetwork = rawImportParameters.getTargetNetwork();
+        gtfsImport.renameRoutesAfterMerge = rawImportParameters.isRenameRoutesAfterMerge();
 
         return gtfsImportParameters;
     }

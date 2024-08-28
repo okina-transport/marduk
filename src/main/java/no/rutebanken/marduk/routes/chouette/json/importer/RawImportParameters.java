@@ -37,6 +37,7 @@ public class RawImportParameters {
     private Long distanceGeolocation;
     private boolean useTargetNetwork;
     private String targetNetwork;
+    private boolean renameRoutesAfterMerge;
 
     public String getFileName() {
         return fileName;
@@ -254,5 +255,13 @@ public class RawImportParameters {
 
     public void setTargetNetwork(String targetNetwork) {
         this.targetNetwork = targetNetwork;
+    }
+
+    public boolean isRenameRoutesAfterMerge() {
+        return renameRoutesAfterMerge;
+    }
+
+    public void setRenameRoutesAfterMerge(boolean renameRoutesAfterMerge) {
+        this.renameRoutesAfterMerge = renameRoutesAfterMerge;
     }
 }
