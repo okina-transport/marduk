@@ -24,13 +24,13 @@ public class GtfsFilesArchiver {
 
 
     /**
-     * Read a gtfs, unzip it, and saves trips.txt and stop_times.txt into chouetteDir/mobiiti_technique/[trips|stop_times]/"organisationName" directory
+     * Read a gtfs, unzip it, and saves trips.txt,stop_times.txt, calendar.txt and calendar_dates into chouetteDir/mobiiti_technique/[trips|stop_times|calendar|calendar_dates]/"organisationName" directory
      * @param gtfsZipFile
      *  the gtfs to read
      * @param organisation
      *  the organisation name
      */
-    public void archiveTripsAndStopTimes(File gtfsZipFile, String organisation)  {
+    public void archiveGtfsData(File gtfsZipFile, String organisation)  {
 
         try{
             InputStream targetStream = new FileInputStream(gtfsZipFile);
@@ -54,6 +54,27 @@ public class GtfsFilesArchiver {
             logger.info("Archiving stop_times.txt from zip : {} to file : {}", gtfsZipFile.getAbsolutePath(), archivedStopTimesFile.getAbsolutePath());
             Files.copy(originalStopTimesFile.toPath(), archivedStopTimesFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
 
+
+            // copy calendar
+            File originalCalendarFile = new File(tmpDir, "calendar.txt");
+            if (originalCalendarFile.exists()){
+                File archivedCalendarFile = new File(getDestinationDir(organisation, "calendar"), getDestinationFileName("calendar_"));
+                archivedCalendarFile.mkdirs();
+                logger.info("Archiving calendar.txt from zip : {} to file : {}", gtfsZipFile.getAbsolutePath(), archivedCalendarFile.getAbsolutePath());
+                Files.copy(originalCalendarFile.toPath(), archivedCalendarFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            }
+
+
+            // copy calendar_dates
+            File originalCalendarDatesFile = new File(tmpDir, "calendar_dates.txt");
+            if (originalCalendarDatesFile.exists()){
+                File archivedCalendarDatesFile = new File(getDestinationDir(organisation, "calendar_dates"), getDestinationFileName("calendar_dates_"));
+                archivedCalendarDatesFile.mkdirs();
+                logger.info("Archiving calendar_dates.txt from zip : {} to file : {}", gtfsZipFile.getAbsolutePath(), archivedCalendarDatesFile.getAbsolutePath());
+                Files.copy(originalCalendarDatesFile.toPath(), archivedCalendarDatesFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+            }
+
+
             ZipFileUtils.deleteDirectory(tmpDir);
         }catch (Exception e){
             logger.error("Error while archiving trips.txt and stop_times.txt", e);
@@ -62,24 +83,15 @@ public class GtfsFilesArchiver {
     }
 
     /**
-     * Delete the organisation directory (in mobiiti_technique/stop_times) and all its files
+     * Delete the organisation directory (in mobiiti_technique/xxxx) and all its files
      * @param organisationName
      *  the organisation for which the directory must be deleted
      */
-    public void cleanOrganisationStopTimes(String organisationName){
-        File organisationDirectory = new File(getDestinationDir(organisationName, "stop_times"));
+    public void cleanOrganisationArchivedFiles(String organisationName, String fileType){
+        File organisationDirectory = new File(getDestinationDir(organisationName, fileType));
         ZipFileUtils.deleteDirectory(organisationDirectory);
     }
 
-    /**
-     * Delete the organisation directory (in mobiiti_technique/trips) and all its files
-     * @param organisationName
-     *  the organisation for which the directory must be deleted
-     */
-    public void cleanOrganisationTrips(String organisationName){
-        File organisationDirectory = new File(getDestinationDir(organisationName, "trips"));
-        ZipFileUtils.deleteDirectory(organisationDirectory);
-    }
 
     /**
      * Get the destination directory to store stop_times.txt files

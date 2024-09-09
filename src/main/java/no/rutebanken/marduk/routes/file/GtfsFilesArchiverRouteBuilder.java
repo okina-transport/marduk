@@ -24,8 +24,8 @@ public class GtfsFilesArchiverRouteBuilder extends BaseRouteBuilder {
     public void configure() throws Exception {
         super.configure();
 
-        from("direct:archiveTripsAndStopTimes")
-                .log(LoggingLevel.INFO, correlation() + "archive trips.txt and stop_times.txt from GTFS zip")
+        from("direct:archiveGtfsData")
+                .log(LoggingLevel.INFO, correlation() + "archive, stop_times.txt, calendar.txt and calendar_dates.txt from GTFS zip")
                 .validate(body().isInstanceOf(JobResponseWithLinks.class))
                 .validate(header(CLEAN_MODE).isNotNull())
                 .process(e -> {
@@ -33,13 +33,16 @@ public class GtfsFilesArchiverRouteBuilder extends BaseRouteBuilder {
                             String cleanMode = e.getIn().getHeader(CLEAN_MODE, String.class);
                             File gtfsZipFile = fileSystemService.getImportZipFileByReferentialAndJobId(body.referential, String.valueOf(body.getId()));
                             if ("purge".equals(cleanMode)) {
-                                gtfsFilesArchiver.cleanOrganisationStopTimes(body.referential);
-                                gtfsFilesArchiver.cleanOrganisationTrips(body.referential);
+                                gtfsFilesArchiver.cleanOrganisationArchivedFiles(body.referential, "stop_times");
+                                gtfsFilesArchiver.cleanOrganisationArchivedFiles(body.referential, "trips");
+                                gtfsFilesArchiver.cleanOrganisationArchivedFiles(body.referential, "calendar");
+                                gtfsFilesArchiver.cleanOrganisationArchivedFiles(body.referential, "calendar_dates");
+
                             }
-                            gtfsFilesArchiver.archiveTripsAndStopTimes(gtfsZipFile, body.referential);
+                            gtfsFilesArchiver.archiveGtfsData(gtfsZipFile, body.referential);
                         })
-                .log(LoggingLevel.INFO, correlation() + "trips.txt and stop_times.txt have been successfully archived")
-                .routeId("archive-trips-and-stop-times");
+                .log(LoggingLevel.INFO, correlation() + "trips.txt, stop_times.txt, calendar.txt and calendar_dates.txt have been successfully archived")
+                .routeId("archive-gtfs-data");
 
     }
 }

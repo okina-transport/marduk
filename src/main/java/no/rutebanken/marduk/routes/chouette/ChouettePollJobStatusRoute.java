@@ -289,7 +289,7 @@ public class ChouettePollJobStatusRoute extends AbstractChouetteRouteBuilder {
                                             simple("${body.status} == ${type:no.rutebanken.marduk.routes.chouette.json.Status.TERMINATED}"),
                                             PredicateBuilder.isEqualTo(simple("${body.action}"), simple("importer")),
                                             PredicateBuilder.isEqualTo(simple("${body.type}"), simple("gtfs")))
-                            ).to("direct:archiveTripsAndStopTimes")
+                            ).to("direct:archiveGtfsData")
                         .end()
                 .setProperty("current_status", simple("${body.status}"))
                 .choice()
