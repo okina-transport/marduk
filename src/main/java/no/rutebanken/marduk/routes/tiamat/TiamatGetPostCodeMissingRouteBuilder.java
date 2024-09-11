@@ -30,11 +30,11 @@ public class TiamatGetPostCodeMissingRouteBuilder extends BaseRouteBuilder {
                 .autoStartup("{{tiamat.get.missing.post.code.autoStartup:true}}")
                 .filter(e -> shouldQuartzRouteTrigger(e, cronSchedule))
                 .log(LoggingLevel.INFO, "Quartz triggers get missing post code in Tiamat.")
-                .to("direct:tiamatGetMissingPostCode")
+                .to("seda:tiamatGetMissingPostCodeAsync")
                 .routeId("tiamat-get-missing-post-code-quartz");
 
-
-        from("direct:tiamatGetMissingPostCode")
+        // using Seda for asynchronous calling & manages 3 threads in parallel to accelerate overall processing
+        from("seda:tiamatGetMissingPostCodeAsync?concurrentConsumers=3")
                 .log(LoggingLevel.INFO, correlation() + "Starting get missing post code in Tiamat")
                 .removeHeaders("Camel*")
                 .setBody(constant(null))
