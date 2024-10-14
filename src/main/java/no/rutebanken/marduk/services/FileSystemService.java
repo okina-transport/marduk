@@ -54,8 +54,14 @@ public class FileSystemService {
 
 
     public File getTiamatFile(Exchange e) {
-        Job job = e.getIn().getBody(Job.class);
-        String filename = tiamatStoragePath + "/" + job.getSubFolder() + "/" + job.getFileName();
+        String filename = null;
+        if (e.getIn().getBody() != null && e.getIn().getBody() instanceof Job){
+            Job job = e.getIn().getBody(Job.class);
+            filename = tiamatStoragePath + "/" + job.getSubFolder() + "/" + job.getFileName();
+        }else{
+            filename = tiamatStoragePath + "/" +  e.getIn().getHeader(SUB_FOLDER) + "/" + e.getIn().getHeader(FILE_NAME);
+        }
+
         File file = new File(filename);
         e.getIn().setHeader("fileName", file.getName());
         e.getIn().setHeader(EXPORT_FILE_NAME, file.getName());

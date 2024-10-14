@@ -33,6 +33,10 @@ public class UpdateExportTemplateProcessor implements Processor {
         if (StringUtils.isNotBlank(jsonExport)) {
             ExportTemplate export = exportJsonMapper.fromJson(jsonExport);
 
+            if (STOP_OPERATORS_POST_PROCESS_NAME.equals(export.getPostProcess())){
+                exchange.getIn().setHeader(POST_PROCESS, STOP_OPERATORS_POST_PROCESS_NAME);
+            }
+
             Object jobIdObj = exchange.getIn().getHeaders().get(JOB_ID);
             Long jobId = 0L;
             if (jobIdObj instanceof Long){

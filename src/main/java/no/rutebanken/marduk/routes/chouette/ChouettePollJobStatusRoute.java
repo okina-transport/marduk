@@ -174,8 +174,7 @@ public class ChouettePollJobStatusRoute extends AbstractChouetteRouteBuilder {
 
 
 
-        from("activemq:queue:PostProcessCompleted?transacted=true&maxConcurrentConsumers=" + maxConsumers)
-                .log(LoggingLevel.INFO, "PostProcess completed")
+        from("direct:terminateChouettePostProcess")
                 .process(e -> {
                     Object netexGlobalRaw = e.getIn().getHeader(NETEX_EXPORT_GLOBAL);
                     Object simulationExpRaw = e.getIn().getHeader(IS_SIMULATION_EXPORT);
@@ -187,7 +186,7 @@ public class ChouettePollJobStatusRoute extends AbstractChouetteRouteBuilder {
                 .process(updateExportTemplateProcessor)
                 .process(e -> JobEvent.providerJobBuilder(e).timetableAction(TimetableAction.valueOf((String) e.getIn().getHeader(Constants.JOB_STATUS_JOB_TYPE))).state(State.OK).build())
                 .to("direct:updateStatus")
-                .routeId("post-process-completed");
+                .routeId("terminate-chouette-post-process");
 
         from("activemq:queue:ChouettePollStatusQueue?transacted=true&maxConcurrentConsumers=" + maxConsumers)
                 .transacted()
