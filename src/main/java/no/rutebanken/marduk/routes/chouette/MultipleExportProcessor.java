@@ -227,6 +227,9 @@ public class MultipleExportProcessor implements Processor {
         headers.put(Constants.FILE_NAME, "export-" + export.getId() + "-" + export.getName());
         headers.put(Constants.CURRENT_EXPORT, exportJsonMapper.toJson(export));
         headers.put(EXPORTED_FILENAME, export.getExportedFileName());
+        if (export.getPostProcess() != null){
+            headers.put(POST_PROCESS, export.getPostProcess());
+        }
         setProvidersIdsHeaders(exchange, headers);
         exchange.getOut().setHeaders(headers);
     }

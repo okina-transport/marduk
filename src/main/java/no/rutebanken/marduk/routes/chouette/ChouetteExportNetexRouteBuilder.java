@@ -62,6 +62,9 @@ public class ChouetteExportNetexRouteBuilder extends AbstractChouetteRouteBuilde
     @Autowired
     CreateMail createMail;
 
+    @Value("${lug.url}")
+    private String lugUrl;
+
     @Override
     public void configure() throws Exception {
         super.configure();
@@ -115,62 +118,88 @@ public class ChouetteExportNetexRouteBuilder extends AbstractChouetteRouteBuilde
 
 
         from("direct:processNetexExportResult")
+                .log(LoggingLevel.INFO, "Export Netex terminé - Fichier : ${header." + FILE_NAME + "} - Espace de données : ${header." + CHOUETTE_REFERENTIAL + "}")
+                .log(LoggingLevel.INFO, correlation() + "Export ended with status '${header.action_report_result}'")
+
                 .choice()
-                    .when(simple("${header.action_report_result} == 'OK'"))
-                        .log(LoggingLevel.INFO,"Export Netex terminé - Fichier : ${header." + FILE_NAME + "} - Espace de données : ${header." + CHOUETTE_REFERENTIAL + "}")
-                        .log(LoggingLevel.INFO, correlation() + "Export ended with status '${header.action_report_result}'")
-                        .log(LoggingLevel.DEBUG, correlation() + "Calling url ${header.data_url}")
-                        .removeHeaders("Camel*")
-                        .setBody(simple(""))
-                        .setHeader(Exchange.HTTP_METHOD, constant(org.apache.camel.component.http4.HttpMethods.GET))
-                        .choice()
-                            .when(e -> e.getIn().getHeader(NETEX_EXPORT_GLOBAL, Boolean.class))
-                                .toD("${header.data_url}")
-                                .setHeader(FILE_HANDLE, simple(MERGED_NETEX_ROOT_DIR+"/${header." + CHOUETTE_REFERENTIAL + "}-" + Constants.CURRENT_AGGREGATED_NETEX_FILENAME))
-                                .to("direct:uploadBlob")
-                                .to("direct:updateStatus")
-                            .otherwise()
-                                .process(exportToConsumersProcessor)
-                                .to("direct:updateExportToConsumerStatus")
-                                .log(LoggingLevel.INFO, "Upload to consumers and blob store completed")
-                                .process(updateExportTemplateProcessor)
-                                .process(e -> {
-                                    JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.EXPORT_NETEX).state(JobEvent.State.OK).build();
-                                    if (e.getIn().getHeader(WORKLOW, String.class) != null) {
-                                        createMail.createMail(e, "NETEX", JobEvent.TimetableAction.EXPORT_NETEX, true);
-                                    }
-                                })
-                        .endChoice()
-                        .setHeader(BLOBSTORE_MAKE_BLOB_PUBLIC, constant(publicPublication))
-                        .to("direct:updateStatus")
-                        .removeHeader(Constants.JOB_ID)
-                        .setBody(constant(null))
-                        .choice()
-                            .when(e -> !e.getIn().getHeader(NO_GTFS_EXPORT, Boolean.class))
-                                .to("activemq:queue:ChouetteExportGtfsQueue")
-                            .end()
-                        .endChoice()
-                    .endChoice()
-                    .when(simple("${header.action_report_result} == 'NOK'"))
-                        .log(LoggingLevel.WARN, correlation() + "Netex export failed")
-                        .process(e -> {
-                            JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.EXPORT_NETEX).state(JobEvent.State.FAILED).build();
-                            if (e.getIn().getHeader(WORKLOW, String.class) != null) {
-                                createMail.createMail(e, "NETEX", JobEvent.TimetableAction.EXPORT_NETEX, false);
-                            }
-                        })
-                    .otherwise()
-                        .log(LoggingLevel.ERROR, correlation() + "Something went wrong on Netex export")
-                        .process(e -> {
-                            JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.EXPORT_NETEX).state(JobEvent.State.FAILED).build();
-                            if (e.getIn().getHeader(WORKLOW, String.class) != null) {
-                                createMail.createMail(e, "NETEX", JobEvent.TimetableAction.EXPORT_NETEX, false);
-                            }
-                        })
-                    .end()
-                .to("direct:updateStatus")
+                .when(simple("${header.action_report_result} == 'OK'"))
+                        .to("direct:processNetexExportResultCompletedSuccessFully")
+                .when(simple("${header.action_report_result} == 'NOK'"))
+                        .to("direct:processNetexExportResultNOKstatus")
+                .otherwise()
+                        .to("direct:processNetexExportResultUndefinedStatus")
+                .end()
+
                 .removeHeader(Constants.JOB_ID)
                 .routeId("chouette-process-export-netex-status");
+
+
+        from("direct:processNetexExportResultUndefinedStatus")
+                .log(LoggingLevel.ERROR, correlation() + "Something went wrong on Netex export")
+                .process(e -> {
+                    JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.EXPORT_NETEX).state(JobEvent.State.FAILED).build();
+                    if (e.getIn().getHeader(WORKLOW, String.class) != null) {
+                        createMail.createMail(e, "NETEX", JobEvent.TimetableAction.EXPORT_NETEX, false);
+                    }
+                })
+                .to("direct:updateStatus")
+                .routeId("chouette-process-export-netex-undefined-status");
+
+
+
+        from("direct:processNetexExportResultNOKstatus")
+                .log(LoggingLevel.WARN, correlation() + "Netex export failed")
+                .process(e -> {
+                    JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.EXPORT_NETEX).state(JobEvent.State.FAILED).build();
+                    if (e.getIn().getHeader(WORKLOW, String.class) != null) {
+                        createMail.createMail(e, "NETEX", JobEvent.TimetableAction.EXPORT_NETEX, false);
+                    }
+                })
+                .to("direct:updateStatus")
+                .routeId("chouette-process-export-netex-nok-status");
+
+        from("direct:processNetexExportResultCompletedSuccessFully")
+                .choice()
+                .when( simple("${header." + POST_PROCESS + "} != null"))
+                    .to("direct:sendToLUG")
+                .otherwise()
+                    .to("direct:processNetexExportResultEnd")
+                .endChoice()
+                .routeId("chouette-process-export-netex-completed-successfully");
+
+        from("direct:processNetexExportResultEnd")
+                .log(LoggingLevel.DEBUG, correlation() + "Calling url ${header.data_url}")
+                .removeHeaders("Camel*")
+                .setBody(simple(""))
+                .setHeader(Exchange.HTTP_METHOD, constant(org.apache.camel.component.http4.HttpMethods.GET))
+                .choice()
+                .when(e -> e.getIn().getHeader(NETEX_EXPORT_GLOBAL, Boolean.class))
+                    .toD("${header.data_url}")
+                    .setHeader(FILE_HANDLE, simple(MERGED_NETEX_ROOT_DIR + "/${header." + CHOUETTE_REFERENTIAL + "}-" + Constants.CURRENT_AGGREGATED_NETEX_FILENAME))
+                    .to("direct:uploadBlob")
+                    .to("direct:updateStatus")
+                .otherwise()
+                    .process(exportToConsumersProcessor)
+                    .to("direct:updateExportToConsumerStatus")
+                    .log(LoggingLevel.INFO, "Upload to consumers and blob store completed")
+                    .process(updateExportTemplateProcessor)
+                    .process(e -> {
+                        JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.EXPORT_NETEX).state(JobEvent.State.OK).build();
+                        if (e.getIn().getHeader(WORKLOW, String.class) != null) {
+                            createMail.createMail(e, "NETEX", JobEvent.TimetableAction.EXPORT_NETEX, true);
+                        }
+                    })
+                .end()
+                .setHeader(BLOBSTORE_MAKE_BLOB_PUBLIC, constant(publicPublication))
+                .to("direct:updateStatus")
+                .removeHeader(Constants.JOB_ID)
+                .setBody(constant(null))
+                .choice()
+                .when(e -> !e.getIn().getHeader(NO_GTFS_EXPORT, Boolean.class))
+                    .to("activemq:queue:ChouetteExportGtfsQueue")
+                .end()
+                .routeId("chouette-process-export-netex-status-end");
+
 
         from("direct:chouetteNetexExportForAllProviders")
                 .process(e -> {
@@ -178,10 +207,9 @@ public class ChouetteExportNetexRouteBuilder extends AbstractChouetteRouteBuilde
                         String allReferentialsNames = e.getIn().getHeader(EXPORT_REFERENTIALS_NAMES, String.class);
                         List<String> referentialsNames = Arrays.stream(StringUtils.split(allReferentialsNames, ",")).map(s -> "mobiiti_" + s).collect(toList());
                         log.info("Netex export global with mobi_iti providers => " + referentialsNames);
-                        Collection<Provider> mobiitiProviders =  getProviderRepository().getMobiitiProviders().stream().filter(provider -> referentialsNames.contains(provider.name)).collect(Collectors.toList());
+                        Collection<Provider> mobiitiProviders = getProviderRepository().getMobiitiProviders().stream().filter(provider -> referentialsNames.contains(provider.name)).collect(Collectors.toList());
                         e.getIn().setBody(mobiitiProviders);
-                    }
-                    else {
+                    } else {
                         log.info("Netex export global with all mobi_iti providers");
                         e.getIn().setBody(getProviderRepository().getMobiitiProviders());
                     }
