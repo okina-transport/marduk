@@ -68,15 +68,14 @@ public class TiamatExportStopPlacesBuilder extends AbstractChouetteRouteBuilder 
                 .choice()
                     .when(simple("${header.RutebankenCorrelationId} == null"))
                     .log(LoggingLevel.INFO, "Ajout d'un correlation id")
-                    .process(e -> {
-                        e.getIn().setHeader(Constants.CORRELATION_ID, e.getIn().getHeader(Constants.CORRELATION_ID, UUID.randomUUID().toString()));
-                    })
+                    .process(e -> e.getIn().setHeader(Constants.CORRELATION_ID, e.getIn().getHeader(Constants.CORRELATION_ID, UUID.randomUUID().toString())))
                 .end()
                 .process(e -> {
                     Object tiamatProviderId = e.getIn().getHeaders().get("tiamatProviderId");
-                    log.info("Tiamat Stop Places Export : launching export for provider " + tiamatProviderId.toString());
+                    log.info("Tiamat Stop Places Export : launching export for provider {}", tiamatProviderId.toString());
                     URL url = new URL(stopPlacesExportUrl.replace("http4", "http") + "/initiate?providerId=" + tiamatProviderId.toString());
                     HttpURLConnection con = (HttpURLConnection) url.openConnection();
+                    con.setRequestProperty(USER, e.getIn().getHeader(USER).toString());
                     e.getIn().setBody(con.getInputStream());
 
                     Job job = e.getIn().getBody(Job.class);
@@ -86,8 +85,8 @@ public class TiamatExportStopPlacesBuilder extends AbstractChouetteRouteBuilder 
                     String tiamatJobStatusUrl = stopPlacesExportUrl + "/" + job.getId() + "/status";
                     e.getIn().setHeader(JOB_STATUS_URL, tiamatJobStatusUrl);
                     e.getIn().setHeader(Constants.JOB_ID, job.getId());
-                    log.info("Tiamat Stop Places Export  : export parsed => " + job.getId() + " : " + tiamatJobStatusUrl);
-                    log.info("Lancement export Arrêts - Fichier : " + job.getFileName() + " - Espace de données : " + getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)).chouetteInfo.referential);
+                    log.info("Tiamat Stop Places Export  : export parsed => {} : {}", job.getId(), tiamatJobStatusUrl);
+                    log.info("Lancement export Arrêts - Fichier : {} - Espace de données : {}" , job.getFileName(), getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)).chouetteInfo.referential);
                 })
 
                 .setHeader(Constants.JOB_STATUS_ROUTING_DESTINATION, constant(TIAMAT_EXPORT_ROUTING_DESTINATION))
