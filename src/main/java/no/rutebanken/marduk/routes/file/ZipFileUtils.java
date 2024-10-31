@@ -80,7 +80,7 @@ public class ZipFileUtils {
 
         transformer.setOutputDirectory(outputFile);
 //        transformer.addTransform(new RemoveRepeatedStopTimesStrategy());
-        transformer.addTransform(new RemoveDuplicateTripsStrategy());
+//        transformer.addTransform(new RemoveDuplicateTripsStrategy());
         transformer.addTransform(new EnsureStopTimesIncreaseUpdateStrategy());
         transformer.addTransform(new LocalVsExpressUpdateStrategy());
         transformer.addTransform(new RemoveStopDescStrategy());
