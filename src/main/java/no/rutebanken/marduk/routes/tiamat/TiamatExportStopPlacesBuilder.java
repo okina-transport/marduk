@@ -7,9 +7,7 @@ import no.rutebanken.marduk.routes.chouette.UpdateExportTemplateProcessor;
 import no.rutebanken.marduk.routes.chouette.json.Job;
 import no.rutebanken.marduk.routes.status.JobEvent;
 import no.rutebanken.marduk.services.FileSystemService;
-import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
-import org.apache.camel.http.common.HttpMethods;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.FileSystemResource;
@@ -73,9 +71,9 @@ public class TiamatExportStopPlacesBuilder extends AbstractChouetteRouteBuilder 
                 .process(e -> {
                     Object tiamatProviderId = e.getIn().getHeaders().get("tiamatProviderId");
                     log.info("Tiamat Stop Places Export : launching export for provider {}", tiamatProviderId.toString());
-                    URL url = new URL(stopPlacesExportUrl.replace("http4", "http") + "/initiate?providerId=" + tiamatProviderId.toString());
+                    URL url = new URL(stopPlacesExportUrl.replace("http4", "http") + "/initiate?providerId=" + tiamatProviderId);
                     HttpURLConnection con = (HttpURLConnection) url.openConnection();
-                    con.setRequestProperty(USER, e.getIn().getHeader(USER).toString());
+                    con.setRequestProperty(USER, e.getIn().getHeader(USER) != null ? e.getIn().getHeader(USER).toString() : "Mobi-iti");
                     e.getIn().setBody(con.getInputStream());
 
                     Job job = e.getIn().getBody(Job.class);
