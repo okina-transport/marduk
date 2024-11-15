@@ -43,7 +43,9 @@ public class Parameters {
             return getNetexImportParameters(rawImportParameters);
         } else if (FileType.NEPTUNE.name().equals(fileType)) {
             return getNeptuneImportParameters(rawImportParameters);
-        } else if (FileType.NETEX_PARKING.name().equals(fileType) || FileType.NETEX_POI.name().equals(fileType) || FileType.NETEX_STOP_PLACE.name().equals(fileType)) {
+        } else if (FileType.NETEX_PARKING.name().equals(fileType) ||
+                FileType.NETEX_POI.name().equals(fileType) ||
+                FileType.NETEX_STOP_PLACE.name().equals(fileType) || FileType.NETEX_FARES.name().equals(fileType)) {
             return getNetexAutomaticImportParameters(rawImportParameters);
         } else {
             throw new IllegalArgumentException("Cannot create import parameters from file type '" + fileType + "'");

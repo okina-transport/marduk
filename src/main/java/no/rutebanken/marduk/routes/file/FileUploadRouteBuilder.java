@@ -84,6 +84,22 @@ public class FileUploadRouteBuilder extends BaseRouteBuilder {
                 .end()
                 .routeId("tiamat-file-upload-and-start-import");
 
+        from("direct:faresUploadFileAndStartImport")
+                .process(e -> JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.FILE_TRANSFER).type(e.getIn().getHeader(IMPORT_TYPE, String.class)).state(JobEvent.State.STARTED).build()).inOnly("direct:updateStatus")
+                .doTry()
+                .log(LoggingLevel.INFO, correlation() + "About to upload timetable file to blob store: ${header." + FILE_HANDLE + "}")
+                .setBody(header(FILE_CONTENT_HEADER))
+                .to("direct:uploadBlob")
+                .log(LoggingLevel.INFO, correlation() + "Finished uploading timetable file to blob store: ${header." + FILE_HANDLE + "}")
+                .setBody(constant(null))
+                .inOnly("activemq:queue:ProcessFileQueue")
+                .log(LoggingLevel.INFO, correlation() + "Triggered import pipeline for timetable file: ${header." + FILE_HANDLE + "}")
+                .doCatch(Exception.class)
+                .log(LoggingLevel.WARN, correlation() + "Upload of timetable data to blob store failed for file: ${header." + FILE_HANDLE + "}")
+                .process(e -> JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.FILE_TRANSFER).state(JobEvent.State.FAILED).build()).inOnly("direct:updateStatus")
+                .end()
+                .routeId("fares-file-upload-and-start-import");
+
         from("direct:importLaunch")
                 .process(e -> e.getIn().setHeader(Constants.CORRELATION_ID, e.getIn().getHeader(Constants.CORRELATION_ID, UUID.randomUUID().toString())))
                 .setHeader(FILE_NAME, simple("${body.name}"))
@@ -101,6 +117,8 @@ public class FileUploadRouteBuilder extends BaseRouteBuilder {
                 .choice()
                     .when(header(IMPORT_TYPE).in(FileType.NETEX_PARKING.name(), FileType.NETEX_POI.name(), FileType.NETEX_STOP_PLACE.name()))
                         .to("direct:tiamatUploadFileAndStartImport")
+                    .when(header(IMPORT_TYPE).in(FileType.NETEX_FARES.name()))
+                        .to("direct:faresUploadFileAndStartImport")
                     .otherwise()
                         .to("direct:uploadFileAndStartImport")
                 .endChoice()

@@ -140,9 +140,17 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
             return;
         }
 
-        if (importConfiguration.getWorkflow() == null && !Arrays.asList(FileType.NETEX_PARKING.name(), FileType.NETEX_POI.name(), FileType.NETEX_STOP_PLACE.name()).contains(importConfiguration.getImportParameters().get(0).getImportType())) {
+        if (importConfiguration.getWorkflow() == null && !Arrays.asList(FileType.NETEX_PARKING.name(), FileType.NETEX_POI.name(), FileType.NETEX_STOP_PLACE.name(), FileType.NETEX_FARES.name()).contains(importConfiguration.getImportParameters().get(0).getImportType())) {
             log.error("{} Import configuration is incorrect (id : {})", correlation(), importConfigurationId);
             log.error("{} It should either have a workflow defined or be a NeTEx parking, POI or stop place import", correlation());
+            log.warn("{} Abort automatic import", correlation());
+            sendMailForImportFailure(importConfiguration, referential, ERROR_NO_WORKFLOW_AND_NOT_NETEX_IMPORT);
+            return;
+        }
+
+        if (importConfiguration.getWorkflow() == null && !Arrays.asList(FileType.NETEX_FARES.name()).contains(importConfiguration.getImportParameters().get(0).getImportType())) {
+            log.error("{} Import configuration is incorrect (id : {})", correlation(), importConfigurationId);
+            log.error("{} It should either have a workflow defined or be a NeTEx fares import", correlation());
             log.warn("{} Abort automatic import", correlation());
             sendMailForImportFailure(importConfiguration, referential, ERROR_NO_WORKFLOW_AND_NOT_NETEX_IMPORT);
             return;
