@@ -151,6 +151,19 @@ public class TiamatImportRouteBuilder extends AbstractChouetteRouteBuilder {
                     entityBuilder.addTextBody("provider", exchange.getIn().getHeader(PROVIDER_ID, String.class));
                     entityBuilder.addTextBody("folder", exchange.getIn().getHeader(FOLDER_NAME, String.class));
 
+                    if (exchange.getIn().getHeader(KEEP_STOP_NAMES) != null){
+                        entityBuilder.addTextBody("keepStopNames", exchange.getIn().getHeader(KEEP_STOP_NAMES, String.class));
+                    }
+
+                    if (exchange.getIn().getHeader(KEEP_STOP_GEOLOCALISATION) != null){
+                        entityBuilder.addTextBody("keepStopGeolocalisation", exchange.getIn().getHeader(KEEP_STOP_GEOLOCALISATION, String.class));
+                    }
+
+                    if (exchange.getIn().getHeader(UPDATE_STOP_ACCESSIBILITY) != null){
+                        entityBuilder.addTextBody("updateStopAccessibility", exchange.getIn().getHeader(UPDATE_STOP_ACCESSIBILITY, String.class));
+                    }
+
+
                     if (FileType.NETEX_STOP_PLACE.name().equals(exchange.getIn().getHeader(IMPORT_TYPE))) {
                         entityBuilder.addTextBody("containsMobiitiIds", String.valueOf(true));
                     }
