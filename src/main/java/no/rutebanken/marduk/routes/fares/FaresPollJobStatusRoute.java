@@ -91,7 +91,7 @@ public class FaresPollJobStatusRoute extends AbstractChouetteRouteBuilder {
                 .process(e -> {
                     e.getIn().setHeader(CHOUETTE_REFERENTIAL, getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)).chouetteInfo.referential);
                 })
-                .setProperty("fares_url", simple(faresUrl + "/jobs/${header." + CHOUETTE_REFERENTIAL + "}"))
+                .setProperty("fares_url", simple(faresUrl + "/${header." + CHOUETTE_REFERENTIAL + "}"))
                 .to("direct:faresGetJobs")
                 .routeId("fares-list-jobs-for-provider");
 
@@ -152,7 +152,7 @@ public class FaresPollJobStatusRoute extends AbstractChouetteRouteBuilder {
                         exchange.getOut().setHeader("Authorization", "Bearer " + tokenService.getToken());
                     }
 
-                    String url = faresUrl + "/scheduled_jobs";
+                    String url = faresUrl + "/" + folder + "/scheduled_jobs" + jobId;
                     url = url.replace("http://", "http4://").replaceAll("([^:])//+", "$1/");
 
                     exchange.setProperty("fares_url", url);
@@ -216,7 +216,7 @@ public class FaresPollJobStatusRoute extends AbstractChouetteRouteBuilder {
                         exchange.getOut().setHeader("Authorization", "Bearer " + tokenService.getToken());
                     }
 
-                    String url = faresUrl + "/scheduled_jobs";
+                    String url = faresUrl + "/" + folder + "/scheduled_jobs/" + jobId;
                     url = url.replace("http://", "http4://").replaceAll("([^:])//+", "$1/");
 
                     exchange.setProperty("fares_url", url);
@@ -236,10 +236,11 @@ public class FaresPollJobStatusRoute extends AbstractChouetteRouteBuilder {
                             boolean isExportDone = false;
                             if(TimetableAction.IMPORT_NETEX.name().equals(e.getIn().getHeader(JOB_STATUS_JOB_TYPE))) {
                                 String json = e.getIn().getBody(String.class);
-                                JobResponse jobResponse = new ObjectMapper().readValue(json, JobResponse.class);
-                                isExportDone = jobResponse.getStatus().isDone();
-                                e.getProperties().put("STATUS", jobResponse.getStatus());
-
+                                if (!json.equals("{}")) {
+                                    JobResponse jobResponse = new ObjectMapper().readValue(json, JobResponse.class);
+                                    isExportDone = jobResponse.getStatus().isDone();
+                                    e.getProperties().put("STATUS", jobResponse.getStatus());
+                                }
                             }
                             if (isExportDone) {
                                 e.getIn().removeHeader(FARE_NETEX_EXPORT);
