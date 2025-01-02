@@ -113,7 +113,7 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
                 .toD("${property.chouette_url}")
                 .routeId("chouette-clean-dataspace");
 
-        from("activemq:queue:ChouetteImportQueue?transacted=true").streamCaching()
+        from("jms:queue:ChouetteImportQueue?transacted=true").streamCaching()
                 .transacted()
                 .log(LoggingLevel.INFO, correlation() + "Starting Chouette import")
                 .removeHeader(JOB_ID)
@@ -300,7 +300,7 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
                         .setHeader(Constants.JOB_STATUS_JOB_TYPE, constant(JobEvent.TimetableAction.IMPORT.name()))
                     .end()
                 .removeHeader("loopCounter")
-                .to("activemq:queue:ChouettePollStatusQueue")
+                .to("jms:queue:ChouettePollStatusQueue")
                 .routeId("chouette-send-import-job");
 
 
@@ -325,7 +325,7 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
                                                     e.getIn().getHeader(WORKLOW, String.class).equals("VALIDATION") ||
                                                     e.getIn().getHeader(WORKLOW, String.class).equals("EXPORT")))
                                     .process(e -> e.getIn().setHeader(ANALYZE_ACTION, false))
-                                    .to("activemq:queue:ChouetteImportQueue")
+                                    .to("jms:queue:ChouetteImportQueue")
                                 .endChoice()
                             .otherwise()
                                 .log(LoggingLevel.ERROR, correlation() + "File analysis found a major issue.Cannot launch import")
@@ -404,13 +404,13 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
                             .when(constant("true").isEqualTo(header(Constants.ENABLE_VALIDATION)))
                                 .log(LoggingLevel.INFO, correlation() + "Import ok, triggering validation")
                                 .setHeader(JOB_STATUS_JOB_VALIDATION_LEVEL, constant(JobEvent.TimetableAction.VALIDATION_LEVEL_1.name()))
-                                .to("activemq:queue:ChouetteValidationQueue")
+                                .to("jms:queue:ChouetteValidationQueue")
                             .when(method(getClass(), "shouldTransferData").isEqualTo(true))
                                 .log(LoggingLevel.INFO, correlation() + "Import ok, transfering data to next dataspace")
-                                .to("activemq:queue:ChouetteTransferExportQueue")
+                                .to("jms:queue:ChouetteTransferExportQueue")
                             .when(method(getClass(), "isAutoTransferData").isEqualTo(true))
                                 .log(LoggingLevel.INFO, correlation() + "Import ok, triggering export")
-                                .to("activemq:queue:ChouetteExportNetexQueue")
+                                .to("jms:queue:ChouetteExportNetexQueue")
                         .end()
                 .end()
                 .routeId("chouette-process-job-list-after-import");

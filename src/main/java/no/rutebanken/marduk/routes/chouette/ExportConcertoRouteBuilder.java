@@ -61,7 +61,7 @@ public class ExportConcertoRouteBuilder extends AbstractChouetteRouteBuilder {
     public void configure() throws Exception {
         super.configure();
 
-        from("activemq:queue:ChouetteExportConcertoQueue?transacted=true").streamCaching()
+        from("jms:queue:ChouetteExportConcertoQueue?transacted=true").streamCaching()
                 .transacted()
                 .log(LoggingLevel.INFO, getClass().getName(), "Starting Chouette mapping ZDEP ZDER ZDLR for provider with id ${header." + PROVIDER_ID + "}")
                 .doTry()
@@ -105,7 +105,7 @@ public class ExportConcertoRouteBuilder extends AbstractChouetteRouteBuilder {
                 .setHeader(Constants.JOB_STATUS_ROUTING_DESTINATION, constant("direct:processExportConcertoResult"))
                 .setHeader(Constants.JOB_STATUS_JOB_TYPE, constant(TimetableAction.EXPORT_CONCERTO.name()))
                 .removeHeader("loopCounter")
-                .to("activemq:queue:ChouettePollStatusQueue")
+                .to("jms:queue:ChouettePollStatusQueue")
                 .routeId("chouette-send-export-concerto-job");
 
 

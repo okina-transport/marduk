@@ -24,7 +24,7 @@ public class LugRouteBuilder extends BaseRouteBuilder {
 
     @Override
     public void configure() throws Exception {
-        from("activemq:queue:PostProcessCompleted?transacted=true&maxConcurrentConsumers=" + maxConsumers)
+        from("jms:queue:PostProcessCompleted?transacted=true&maxConcurrentConsumers=" + maxConsumers)
                 .log(LoggingLevel.INFO, "PostProcess completed")
                 .process(e -> {
                     Object netexGlobalRaw = e.getIn().getHeader(NETEX_EXPORT_GLOBAL);

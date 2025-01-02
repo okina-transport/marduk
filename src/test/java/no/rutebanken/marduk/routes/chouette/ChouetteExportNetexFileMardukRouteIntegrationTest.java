@@ -65,7 +65,7 @@ public class ChouetteExportNetexFileMardukRouteIntegrationTest extends MardukRou
 	@EndpointInject(uri = "mock:exportMergedNetex")
 	protected MockEndpoint exportMergedNetex;
 
-	@Produce(uri = "activemq:queue:ChouetteExportNetexQueue")
+	@Produce(uri = "jms:queue:ChouetteExportNetexQueue")
 	protected ProducerTemplate importTemplate;
 
 	@Produce(uri = "direct:processNetexExportResult")
@@ -105,7 +105,7 @@ public class ChouetteExportNetexFileMardukRouteIntegrationTest extends MardukRou
 			public void configure() throws Exception {
 				interceptSendToEndpoint("direct:updateStatus").skipSendToOriginalEndpoint()
 						.to("mock:updateStatus");
-//				interceptSendToEndpoint("activemq:queue:OtpGraphBuildQueue").skipSendToOriginalEndpoint().to("mock:OtpGraphBuildQueue");
+//				interceptSendToEndpoint("jms:queue:OtpGraphBuildQueue").skipSendToOriginalEndpoint().to("mock:OtpGraphBuildQueue");
 				interceptSendToEndpoint("direct:exportMergedNetex").skipSendToOriginalEndpoint().to("mock:exportMergedNetex");
 			}
 		});

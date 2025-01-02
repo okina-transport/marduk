@@ -83,7 +83,7 @@ public class NRIFtpReceiverRouteBuilder extends BaseRouteBuilder {
 
                 .choice().when(e-> autoImport && getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID,Long.class)).chouetteInfo.enableAutoImport)
                 .log(LoggingLevel.INFO, correlation() + "Putting handle ${header." + FILE_HANDLE + "}")
-                .to("activemq:queue:ProcessFileQueue")
+                .to("jms:queue:ProcessFileQueue")
                 .otherwise()
                 .log(LoggingLevel.INFO, "Do not initiate processing of  ${header." + FILE_HANDLE + "} as autoImport is not enabled globally and for provider")
                 .end()

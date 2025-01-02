@@ -51,7 +51,7 @@ public class ChouetteTransferToDataspaceMardukRouteIntegrationTest extends Mardu
 	@EndpointInject(uri = "mock:updateStatus")
 	protected MockEndpoint updateStatus;
 
-	@Produce(uri = "activemq:queue:ChouetteTransferExportQueue")
+	@Produce(uri = "jms:queue:ChouetteTransferExportQueue")
 	protected ProducerTemplate transferTemplate;
 
 	@Produce(uri = "direct:processTransferExportResult")
@@ -71,7 +71,7 @@ public class ChouetteTransferToDataspaceMardukRouteIntegrationTest extends Mardu
 				interceptSendToEndpoint(chouetteUrl + "/chouette_iev/referentials/rut/exporter/transfer")
 					.skipSendToOriginalEndpoint().to("mock:chouetteCreateExport");
 				
-				interceptSendToEndpoint("activemq:queue:ChouettePollStatusQueue")
+				interceptSendToEndpoint("jms:queue:ChouettePollStatusQueue")
 					.skipSendToOriginalEndpoint().to("mock:pollJobStatus");
 
 				interceptSendToEndpoint("direct:updateStatus").skipSendToOriginalEndpoint()

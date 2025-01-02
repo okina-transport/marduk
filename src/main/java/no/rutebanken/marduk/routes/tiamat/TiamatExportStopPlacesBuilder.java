@@ -51,7 +51,7 @@ public class TiamatExportStopPlacesBuilder extends AbstractChouetteRouteBuilder 
     public void configure() throws Exception {
         super.configure();
 
-        from("activemq:queue:TiamatStopPlacesExport").streamCaching()
+        from("jms:queue:TiamatStopPlacesExport").streamCaching()
                 .transacted()
                 .log(LoggingLevel.INFO, getClass().getName(), "Starting Tiamat export stop places for provider with id ${header.tiamatProviderId}")
                 .choice()
@@ -89,7 +89,7 @@ public class TiamatExportStopPlacesBuilder extends AbstractChouetteRouteBuilder 
 
                 .setHeader(Constants.JOB_STATUS_ROUTING_DESTINATION, constant(TIAMAT_EXPORT_ROUTING_DESTINATION))
                 .setHeader(JOB_STATUS_JOB_TYPE, constant(JobEvent.TimetableAction.EXPORT.name()))
-                .to("activemq:queue:ChouettePollStatusQueue")
+                .to("jms:queue:ChouettePollStatusQueue")
                 .routeId("tiamat-stop-places-export-job");
 
         // called after a tiamat stop places export has been terminated (see CHOUETTE_JOB_STATUS_ROUTING_DESTINATION above and route direct:checkJobStatus)

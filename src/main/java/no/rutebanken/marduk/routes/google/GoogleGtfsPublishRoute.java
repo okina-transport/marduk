@@ -85,7 +85,7 @@ public class GoogleGtfsPublishRoute extends BaseRouteBuilder {
                 .autoStartup("{{google.publish.scheduler.autoStartup:true}}")
                 .filter(e -> shouldQuartzRouteTrigger(e, cronSchedule))
                 .log(LoggingLevel.INFO, "Quartz triggers publish of google gtfs export.")
-                .inOnly("activemq:queue:GooglePublishQueue")
+                .inOnly("jms:queue:GooglePublishQueue")
                 .routeId("google-publish--quartz");
 
 
@@ -93,11 +93,11 @@ public class GoogleGtfsPublishRoute extends BaseRouteBuilder {
                 .autoStartup("{{google.publish.qa.scheduler.autoStartup:true}}")
                 .filter(e -> shouldQuartzRouteTrigger(e, qaCronSchedule))
                 .log(LoggingLevel.INFO, "Quartz triggers publish of google gtfs QA export.")
-                .inOnly("activemq:queue:GooglePublishQaQueue")
+                .inOnly("jms:queue:GooglePublishQaQueue")
                 .routeId("google-publish-qa-quartz");
 
 
-        singletonFrom("activemq:queue:GooglePublishQueue?transacted=true&maxConcurrentConsumers=1&messageListenerContainerFactoryRef=batchListenerContainerFactory").autoStartup("{{google.publish.autoStartup:true}}")
+        singletonFrom("jms:queue:GooglePublishQueue?transacted=true&maxConcurrentConsumers=1&messageListenerContainerFactoryRef=batchListenerContainerFactory").autoStartup("{{google.publish.autoStartup:true}}")
                 .transacted()
 
                 .log(LoggingLevel.INFO, getClass().getName(), "Start publish of GTFS file to Google")
@@ -111,7 +111,7 @@ public class GoogleGtfsPublishRoute extends BaseRouteBuilder {
                 .routeId("google-publish-route");
 
 
-        singletonFrom("activemq:queue:GooglePublishQaQueue?transacted=true&maxConcurrentConsumers=1&messageListenerContainerFactoryRef=batchListenerContainerFactory").autoStartup("{{google.publish.qa.autoStartup:false}}")
+        singletonFrom("jms:queue:GooglePublishQaQueue?transacted=true&maxConcurrentConsumers=1&messageListenerContainerFactoryRef=batchListenerContainerFactory").autoStartup("{{google.publish.qa.autoStartup:false}}")
                 .transacted()
 
                 .log(LoggingLevel.INFO, getClass().getName(), "Start publish of GTFS QA file to Google")

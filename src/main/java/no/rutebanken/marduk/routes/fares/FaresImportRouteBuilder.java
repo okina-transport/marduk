@@ -67,7 +67,7 @@ public class FaresImportRouteBuilder extends AbstractChouetteRouteBuilder {
     public void configure() throws Exception {
         super.configure();
 
-        from("activemq:queue:FaresImportQueue?transacted=true").streamCaching()
+        from("jms:queue:FaresImportQueue?transacted=true").streamCaching()
                 .transacted()
                 .log(LoggingLevel.INFO, correlation() + "Starting Fares import")
                 .removeHeader(JOB_ID)
@@ -151,7 +151,7 @@ public class FaresImportRouteBuilder extends AbstractChouetteRouteBuilder {
                 .removeHeader("loopCounter")
                 .process(e -> JobEvent.providerJobBuilder(e).timetableAction(TimetableAction.IMPORT).state(State.STARTED).type(e.getIn().getHeader(FILE_TYPE, String.class)).build())
                 .to("direct:updateStatus")
-                .to("activemq:queue:FaresPollStatusQueue")
+                .to("jms:queue:FaresPollStatusQueue")
                 .routeId("fares-send-import-job");
 
 

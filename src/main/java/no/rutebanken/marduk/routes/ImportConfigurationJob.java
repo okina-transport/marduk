@@ -42,6 +42,6 @@ public class ImportConfigurationJob implements Job {
         headers.put(Constants.PROVIDER_ID, provider.getId());
         headers.put(Constants.IMPORT_CONFIGURATION_ID, importConfigurationId);
 
-        producer.sendBodyAndHeaders("activemq:queue:ImportConfigurationQueue", null, headers);
+        producer.sendBodyAndHeaders("jms:queue:ImportConfigurationQueue?jmsMessageType=Map", null, headers);
     }
 }

@@ -61,7 +61,7 @@ public class ChouettePollJobStatusMardukRouteIntegrationTest extends MardukRoute
 	@EndpointInject(uri = "mock:chouetteGetValidationReport")
 	protected MockEndpoint chouetteGetValidationReport;
 
-	@Produce(uri = "activemq:queue:ChouettePollStatusQueue")
+	@Produce(uri = "jms:queue:ChouettePollStatusQueue")
 	protected ProducerTemplate pollStartTemplate;
 
 	@Produce(uri = "direct:checkValidationReport")

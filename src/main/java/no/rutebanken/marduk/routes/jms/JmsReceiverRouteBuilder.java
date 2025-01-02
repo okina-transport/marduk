@@ -47,10 +47,10 @@ public class JmsReceiverRouteBuilder extends BaseRouteBuilder {
                 .process(e -> JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.FILE_CLASSIFICATION).state(JobEvent.State.FAILED).build())
                 .to("direct:updateStatus")
                 .setBody(simple(""))      //remove file data from body
-                .to("activemq:queue:DeadLetterQueue");
+                .to("jms:queue:DeadLetterQueue");
 
 
-        from("activemq:queue:MardukInboundQueue?transacted=true").streamCaching()
+        from("jms:queue:MardukInboundQueue?transacted=true").streamCaching()
                 .transacted()
                 .setHeader(Exchange.FILE_NAME, header(Constants.FILE_NAME))
                 .log(LoggingLevel.INFO, correlation() + "Received notification about file '${header." + Constants.FILE_NAME + "}' on jms. Fetching file ...")
@@ -76,7 +76,7 @@ public class JmsReceiverRouteBuilder extends BaseRouteBuilder {
                 .when(simple("{{blobstore.delete.external.blobs:true}}"))
                 .to("direct:deleteExternalBlob")
                 .end()
-                .to("activemq:queue:ProcessFileQueue");
+                .to("jms:queue:ProcessFileQueue");
 
     }
 

@@ -86,7 +86,7 @@ public class MultipleExportProcessor implements Processor {
             log.info("Routing to Netex export global with referentials => " + referentialsNames);
             producer.sendBodyAndHeaders("direct:launchGlobalNetexExport", exchange, exchange.getOut().getHeaders());
         } else {
-            producer.send("activemq:queue:ChouetteExportNetexQueue", exchange);
+            producer.send("jms:queue:ChouetteExportNetexQueue", exchange);
         }
     }
 
@@ -94,7 +94,7 @@ public class MultipleExportProcessor implements Processor {
     private void toNeptuneExport(ExportTemplate export, Exchange exchange) throws Exception {
         log.info("Routing to NEPTUNE export => " + export.getId() + "/" + export.getName());
         prepareHeadersForExport(exchange, export);
-        producer.send("activemq:queue:ChouetteExportNeptuneQueue", exchange);
+        producer.send("jms:queue:ChouetteExportNeptuneQueue", exchange);
     }
 
     private void toGtfsExport(ExportTemplate export, Exchange exchange) throws Exception {
@@ -164,7 +164,7 @@ public class MultipleExportProcessor implements Processor {
             producer.sendBodyAndHeaders("direct:chouetteGtfsExportForAllProviders", exchange, exchange.getOut().getHeaders());
         }
         else{
-            producer.send("activemq:queue:ChouetteExportGtfsQueue", exchange);
+            producer.send("jms:queue:ChouetteExportGtfsQueue", exchange);
         }
     }
 
@@ -174,7 +174,7 @@ public class MultipleExportProcessor implements Processor {
         Long tiamatProviderId = Long.valueOf(exchange.getIn().getHeaders().get(ORIGINAL_PROVIDER_ID).toString());
         exchange.getIn().getHeaders().put("tiamatProviderId", tiamatProviderId);
         prepareHeadersForExport(exchange, export);
-        producer.send("activemq:queue:TiamatStopPlacesExport", exchange);
+        producer.send("jms:queue:TiamatStopPlacesExport", exchange);
 
     }
 
@@ -184,7 +184,7 @@ public class MultipleExportProcessor implements Processor {
         Long tiamatProviderId = Long.valueOf(exchange.getIn().getHeaders().get(ORIGINAL_PROVIDER_ID).toString());
         exchange.getIn().getHeaders().put("tiamatProviderId", tiamatProviderId);
         prepareHeadersForExport(exchange, export);
-        producer.send("activemq:queue:TiamatPointOfInterestExport", exchange);
+        producer.send("jms:queue:TiamatPointOfInterestExport", exchange);
     }
 
     private void toParkingsExport(ExportTemplate export, Exchange exchange) throws Exception {
@@ -193,7 +193,7 @@ public class MultipleExportProcessor implements Processor {
         Long tiamatProviderId = Long.valueOf(exchange.getIn().getHeaders().get(ORIGINAL_PROVIDER_ID).toString());
         exchange.getIn().getHeaders().put("tiamatProviderId", tiamatProviderId);
         prepareHeadersForExport(exchange, export);
-        producer.send("activemq:queue:TiamatParkingsExport", exchange);
+        producer.send("jms:queue:TiamatParkingsExport", exchange);
     }
 
 

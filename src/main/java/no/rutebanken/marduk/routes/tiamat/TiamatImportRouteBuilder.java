@@ -70,7 +70,7 @@ public class TiamatImportRouteBuilder extends AbstractChouetteRouteBuilder {
     public void configure() throws Exception {
         super.configure();
 
-        from("activemq:queue:TiamatImportQueue?transacted=true").streamCaching()
+        from("jms:queue:TiamatImportQueue?transacted=true").streamCaching()
                 .transacted()
                 .log(LoggingLevel.INFO, correlation() + "Starting Tiamat import")
                 .removeHeader(JOB_ID)
@@ -191,7 +191,7 @@ public class TiamatImportRouteBuilder extends AbstractChouetteRouteBuilder {
                 .removeHeader("loopCounter")
                 .process(e -> JobEvent.providerJobBuilder(e).timetableAction(TimetableAction.IMPORT).state(State.STARTED).type(e.getIn().getHeader(FILE_TYPE, String.class)).build())
                 .to("direct:updateStatus")
-                .to("activemq:queue:TiamatPollStatusQueue")
+                .to("jms:queue:TiamatPollStatusQueue")
                 .routeId("tiamat-send-import-job");
 
 

@@ -55,9 +55,9 @@ public class FileClassificationRouteBuilder extends BaseRouteBuilder {
                 .process(e -> JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.FILE_CLASSIFICATION).state(JobEvent.State.FAILED).build())
                 .to("direct:updateStatus")
                 .setBody(simple(""))      //remove file data from body
-                .to("activemq:queue:DeadLetterQueue");
+                .to("jms:queue:DeadLetterQueue");
 
-        from("activemq:queue:ProcessFileQueue?transacted=true")
+        from("jms:queue:ProcessFileQueue?transacted=true")
                 .transacted()
                 .process(e -> JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.FILE_TRANSFER).state(JobEvent.State.OK).build())
                 .to("direct:updateStatus")
@@ -85,11 +85,11 @@ public class FileClassificationRouteBuilder extends BaseRouteBuilder {
                 .choice()
                     .when(header(FILE_TYPE).in(FileType.NETEX_PARKING.name(), FileType.NETEX_POI.name(), FileType.NETEX_STOP_PLACE.name()))
                         .process(e -> e.getIn().setHeader(WORKLOW, WorkflowEnum.IMPORT.toString()))
-                        .to("activemq:queue:TiamatImportQueue")
+                        .to("jms:queue:TiamatImportQueue")
                     .when(header(FILE_TYPE).in(FileType.NETEX_FARES.name()))
-                        .to("activemq:queue:FaresImportQueue")
+                        .to("jms:queue:FaresImportQueue")
                     .otherwise()
-                        .to("activemq:queue:ChouetteImportQueue")
+                        .to("jms:queue:ChouetteImportQueue")
                 .end()
                 .routeId("file-classify");
 
@@ -97,7 +97,7 @@ public class FileClassificationRouteBuilder extends BaseRouteBuilder {
                 .bean(method(ZipFileUtils.class, "rePackZipFile"))
                 .log(LoggingLevel.INFO, correlation() + "ZIP-file repacked ${header." + FILE_HANDLE + "}")
                 .to("direct:uploadBlob")
-                .to("activemq:queue:ProcessFileQueue")
+                .to("jms:queue:ProcessFileQueue")
                 .routeId("file-repack-zip");
 
         from("direct:transformGtfsFile")
@@ -122,7 +122,7 @@ public class FileClassificationRouteBuilder extends BaseRouteBuilder {
                 })
                 .log(LoggingLevel.INFO, correlation() + "New fragment from RAR file ${header." + FILE_HANDLE + "}")
                 .to("direct:uploadBlob")
-                .to("activemq:queue:ProcessFileQueue")
+                .to("jms:queue:ProcessFileQueue")
                 .routeId("file-split-rar");
 
 
@@ -137,7 +137,7 @@ public class FileClassificationRouteBuilder extends BaseRouteBuilder {
                 })
                 .log(LoggingLevel.INFO, correlation() + "Uploading file with new file name ${header." + FILE_HANDLE + "}")
                 .to("direct:uploadBlob")
-                .to("activemq:queue:ProcessFileQueue")
+                .to("jms:queue:ProcessFileQueue")
                 .routeId("file-sanitize-filename");
     }
 

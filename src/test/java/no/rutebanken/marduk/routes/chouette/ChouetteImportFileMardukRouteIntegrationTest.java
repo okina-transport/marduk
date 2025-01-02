@@ -77,7 +77,7 @@ public class ChouetteImportFileMardukRouteIntegrationTest extends MardukRouteBui
     @EndpointInject(uri = "mock:updateStatus")
     protected MockEndpoint updateStatus;
 
-    @Produce(uri = "activemq:queue:ProcessFileQueue")
+    @Produce(uri = "jms:queue:ProcessFileQueue")
     protected ProducerTemplate importTemplate;
 
     @Produce(uri = "direct:processImportResult")
@@ -271,7 +271,7 @@ public class ChouetteImportFileMardukRouteIntegrationTest extends MardukRouteBui
                 interceptSendToEndpoint(chouetteUrl + "/*")
                         .skipSendToOriginalEndpoint()
                         .to("mock:chouetteGetJobsForProvider");
-                interceptSendToEndpoint("activemq:queue:ChouetteValidationQueue")
+                interceptSendToEndpoint("jms:queue:ChouetteValidationQueue")
                         .skipSendToOriginalEndpoint()
                         .to("mock:chouetteValidationQueue");
             }

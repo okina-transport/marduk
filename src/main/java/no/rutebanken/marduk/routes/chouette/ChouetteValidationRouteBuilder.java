@@ -94,7 +94,7 @@ public class ChouetteValidationRouteBuilder extends AbstractChouetteRouteBuilder
                 .setHeader(CHOUETTE_REFERENTIAL, simple("${body.chouetteInfo.referential}"))
                 .setHeader(JOB_STATUS_JOB_VALIDATION_LEVEL, constant(VALIDATION_LEVEL_1.name()))
                 .setBody(constant(null))
-                .inOnly("activemq:queue:ChouetteValidationQueue")
+                .inOnly("jms:queue:ChouetteValidationQueue")
                 .routeId("chouette-validate-level1-all-providers");
 
 
@@ -108,10 +108,10 @@ public class ChouetteValidationRouteBuilder extends AbstractChouetteRouteBuilder
                 .setHeader(CHOUETTE_REFERENTIAL, simple("${body.chouetteInfo.referential}"))
                 .setHeader(JOB_STATUS_JOB_VALIDATION_LEVEL, constant(JobEvent.TimetableAction.VALIDATION_LEVEL_2.name()))
                 .setBody(constant(null))
-                .inOnly("activemq:queue:ChouetteValidationQueue")
+                .inOnly("jms:queue:ChouetteValidationQueue")
                 .routeId("chouette-validate-level2-all-providers");
 
-        from("activemq:queue:ChouetteValidationQueue?transacted=true&maxConcurrentConsumers=3").streamCaching()
+        from("jms:queue:ChouetteValidationQueue?transacted=true&maxConcurrentConsumers=3").streamCaching()
                 .transacted()
                 .log(LoggingLevel.INFO, correlation() + "Starting Chouette validation")
                 .process(e -> {
@@ -138,7 +138,7 @@ public class ChouetteValidationRouteBuilder extends AbstractChouetteRouteBuilder
                 .setHeader(Constants.JOB_STATUS_ROUTING_DESTINATION, constant("direct:processValidationResult"))
                 .process(e -> e.getIn().setHeader(Constants.JOB_STATUS_JOB_TYPE, e.getIn().getHeader(Constants.JOB_STATUS_JOB_VALIDATION_LEVEL)))
                 .removeHeader("loopCounter")
-                .to("activemq:queue:ChouettePollStatusQueue")
+                .to("jms:queue:ChouettePollStatusQueue")
                 .routeId("chouette-send-validation-job");
 
         from("direct:assertHeadersForChouetteValidation")
@@ -224,7 +224,7 @@ public class ChouetteValidationRouteBuilder extends AbstractChouetteRouteBuilder
                                         .when(PredicateBuilder.and(constant(VALIDATION_LEVEL_1).isEqualTo(header(JOB_STATUS_JOB_VALIDATION_LEVEL)),
                                                 header(GENERATE_MAP_MATCHING).isEqualTo(true)))
                                             .log(LoggingLevel.INFO, correlation() + "Validation ok, generating map matching")
-                                            .to("activemq:queue:ChouetteGenerateMapMatchingQueue")
+                                            .to("jms:queue:ChouetteGenerateMapMatchingQueue")
                                         .when(e -> e.getIn().getHeader(JOB_STATUS_JOB_VALIDATION_LEVEL, String.class).equals(VALIDATION_LEVEL_1.name()) &&
                                                 (e.getIn().getHeader(GENERATE_MAP_MATCHING, Boolean.class) == null || e.getIn().getHeader(GENERATE_MAP_MATCHING, Boolean.class).equals(false)) &&
                                                 (shouldTransferData(e) ||
@@ -234,7 +234,7 @@ public class ChouetteValidationRouteBuilder extends AbstractChouetteRouteBuilder
                                         )
                                 )
                             .log(LoggingLevel.INFO, correlation() + "Validation ok, transfering data to next dataspace")
-                            .to("activemq:queue:ChouetteTransferExportQueue")
+                            .to("jms:queue:ChouetteTransferExportQueue")
                         .end()
                 .routeId("chouette-process-job-list-after-validation");
     }

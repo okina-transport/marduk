@@ -81,7 +81,7 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
     public void configure() throws Exception {
         super.configure();
 
-        from("activemq:queue:ChouetteExportGtfsQueue?transacted=true").streamCaching()
+        from("jms:queue:ChouetteExportGtfsQueue?transacted=true").streamCaching()
                 .transacted()
                 .log(LoggingLevel.INFO, getClass().getName(), "Starting Chouette GTFS export for provider with id ${header." + PROVIDER_ID + "}")
                 .process(e -> {
@@ -162,7 +162,7 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
                 .setHeader(JOB_STATUS_ROUTING_DESTINATION, constant("direct:processExportResult"))
                 .setHeader(JOB_STATUS_JOB_TYPE, constant(TimetableAction.EXPORT.name()))
                 .removeHeader("loopCounter")
-                .to("activemq:queue:ChouettePollStatusQueue")
+                .to("jms:queue:ChouettePollStatusQueue")
                 .routeId("chouette-send-export-job");
 
 
@@ -263,7 +263,7 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
                 .split().body().parallelProcessing().executorService(allProvidersExecutorService)
                 .setHeader(PROVIDER_ID, simple("${body.id}"))
                 .setBody(constant(null))
-                .inOnly("activemq:queue:ChouetteExportGtfsQueue")
+                .inOnly("jms:queue:ChouetteExportGtfsQueue")
                 .routeId("chouette-gtfs-export-all-providers");
     }
 

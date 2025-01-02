@@ -41,7 +41,7 @@ public class PredefinedExportsRouteBuilder extends AbstractChouetteRouteBuilder 
     public void configure() throws Exception {
         super.configure();
 
-        from("activemq:queue:predefinedExports?transacted=true").streamCaching()
+        from("jms:queue:predefinedExports?transacted=true").streamCaching()
                 .transacted()
                 .log(LoggingLevel.INFO, getClass().getName(), "Starting Chouette all export for provider with id ${header." + PROVIDER_ID + "}")
                 .process(e -> {
@@ -79,7 +79,7 @@ public class PredefinedExportsRouteBuilder extends AbstractChouetteRouteBuilder 
                 .process(multipleExportProcessor)
                 .routeId("chouette-send-export-all-job");
 
-        from("activemq:queue:predefinedExport?transacted=true").streamCaching()
+        from("jms:queue:predefinedExport?transacted=true").streamCaching()
                 .transacted()
                 .log(LoggingLevel.INFO, getClass().getName(), "Starting Chouette export for provider with id ${header." + PROVIDER_ID + "} and export template with id ${header." + EXPORT_CONFIGURATION_ID + "}")
                 .process(e -> {
@@ -119,7 +119,7 @@ public class PredefinedExportsRouteBuilder extends AbstractChouetteRouteBuilder 
                 .transacted()
                 .filter(e -> shouldQuartzRouteTrigger(e, chouettePredefinedExportsMobiitiTechniqueProviderCronSchedule))
                 .log(LoggingLevel.INFO, "Quartz triggers predefined exports mobiiti technique provider in Chouette.")
-                .inOnly("activemq:queue:predefinedExports")
+                .inOnly("jms:queue:predefinedExports")
                 .routeId("chouette-predefined-export-mobiiti_technique-quartz");
 
 
@@ -132,7 +132,7 @@ public class PredefinedExportsRouteBuilder extends AbstractChouetteRouteBuilder 
                     Provider provider = providerRepository.findByName("mobiiti_technique");
                     e.getOut().getHeaders().put(PROVIDER_ID, provider.getId());
                 })
-                .inOnly("activemq:queue:TiamatParkingsExport")
+                .inOnly("jms:queue:TiamatParkingsExport")
                 .routeId("parkings-predefined-export-mobiiti_technique-quartz");
 
     }

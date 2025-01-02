@@ -69,7 +69,7 @@ public class ChouetteExportNetexRouteBuilder extends AbstractChouetteRouteBuilde
     public void configure() throws Exception {
         super.configure();
 
-        from("activemq:queue:ChouetteExportNetexQueue?transacted=true").streamCaching()
+        from("jms:queue:ChouetteExportNetexQueue?transacted=true").streamCaching()
                 .transacted()
                 .log(LoggingLevel.INFO, getClass().getName(), "Starting Chouette Netex export for provider with id ${header." + PROVIDER_ID + "}")
                 .process(e -> {
@@ -113,7 +113,7 @@ public class ChouetteExportNetexRouteBuilder extends AbstractChouetteRouteBuilde
                 .setHeader(Constants.JOB_STATUS_ROUTING_DESTINATION, constant("direct:processNetexExportResult"))
                 .setHeader(Constants.JOB_STATUS_JOB_TYPE, constant(JobEvent.TimetableAction.EXPORT_NETEX.name()))
                 .removeHeader("loopCounter")
-                .to("activemq:queue:ChouettePollStatusQueue")
+                .to("jms:queue:ChouettePollStatusQueue")
                 .routeId("chouette-start-export-netex");
 
 
@@ -196,7 +196,7 @@ public class ChouetteExportNetexRouteBuilder extends AbstractChouetteRouteBuilde
                 .setBody(constant(null))
                 .choice()
                 .when(e -> !e.getIn().getHeader(NO_GTFS_EXPORT, Boolean.class))
-                    .to("activemq:queue:ChouetteExportGtfsQueue")
+                    .to("jms:queue:ChouetteExportGtfsQueue")
                 .end()
                 .routeId("chouette-process-export-netex-status-end");
 
@@ -217,7 +217,7 @@ public class ChouetteExportNetexRouteBuilder extends AbstractChouetteRouteBuilde
                 .split().body().parallelProcessing().executorService(allProvidersExecutorService)
                 .setHeader(PROVIDER_ID, simple("${body.id}"))
                 .setBody(constant(null))
-                .inOnly("activemq:queue:ChouetteExportNetexQueue")
+                .inOnly("jms:queue:ChouetteExportNetexQueue")
                 .routeId("chouette-netex-export-all-providers");
     }
 }

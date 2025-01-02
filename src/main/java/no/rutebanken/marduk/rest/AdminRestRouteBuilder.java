@@ -74,6 +74,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
     private static final String JSON = "application/json";
     private static final String X_OCTET_STREAM = "application/x-octet-stream";
     private static final String PLAIN = "text/plain";
+    private static final String CAMEL_HEADERS = "${headers}";
 
     @Value("${server.admin.port}")
     public String port;
@@ -412,7 +413,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .to("direct:authorizeRequest")
                 .log(LoggingLevel.INFO, "Triggered GTFS extended export")
                 .removeHeaders("CamelHttp*")
-                .inOnly("activemq:queue:GtfsExportMergedQueue")
+                .inOnly("jms:queue:GtfsExportMergedQueue")
                 .routeId("admin-timetable-gtfs-extended-export")
                 .endRest()
 
@@ -428,7 +429,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .log(LoggingLevel.INFO, "Triggered GTFS basic export")
                 .removeHeaders("CamelHttp*")
                 .removeHeader("Authorization")
-                .inOnly("activemq:queue:GtfsBasicExportMergedQueue")
+                .inOnly("jms:queue:GtfsBasicExportMergedQueue")
                 .routeId("admin-timetable-gtfs-basic-export")
                 .endRest()
 
@@ -442,7 +443,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .to("direct:authorizeRequest")
                 .log(LoggingLevel.INFO, "Triggered GTFS export to Google")
                 .removeHeaders("CamelHttp*")
-                .inOnly("activemq:queue:GoogleExportQueue")
+                .inOnly("jms:queue:GoogleExportQueue")
                 .routeId("admin-timetable-google-export")
                 .endRest()
 
@@ -456,7 +457,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .to("direct:authorizeRequest")
                 .log(LoggingLevel.INFO, "Triggered GTFS QA export to Google")
                 .removeHeaders("CamelHttp*")
-                .inOnly("activemq:queue:GoogleQaExportQueue")
+                .inOnly("jms:queue:GoogleQaExportQueue")
                 .routeId("admin-timetable-google-qa-export")
                 .endRest()
 
@@ -470,7 +471,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .to("direct:authorizeRequest")
                 .log(LoggingLevel.INFO, "Triggered publish of GTFS to Google")
                 .removeHeaders("CamelHttp*")
-                .inOnly("activemq:queue:GooglePublishQueue")
+                .inOnly("jms:queue:GooglePublishQueue")
                 .routeId("admin-timetable-google-publish")
                 .endRest()
 
@@ -484,7 +485,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .to("direct:authorizeRequest")
                 .log(LoggingLevel.INFO, "Triggered publish of GTFS QA export to Google")
                 .removeHeaders("CamelHttp*")
-                .inOnly("activemq:queue:GooglePublishQaQueue")
+                .inOnly("jms:queue:GooglePublishQaQueue")
                 .routeId("admin-timetable-google-qa-publish")
                 .endRest()
 
@@ -499,7 +500,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .to("direct:authorizeRequest")
                 .log(LoggingLevel.INFO, "Triggered Netex export of merged file for Norway")
                 .removeHeaders("CamelHttp*")
-                .inOnly("activemq:queue:NetexExportMergedQueue")
+                .inOnly("jms:queue:NetexExportMergedQueue")
                 .routeId("admin-timetable-netex-merged-export")
                 .endRest()
 
@@ -521,7 +522,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .removeHeaders("CamelHttp*")
                 .setBody(simple(""))
                 .setHeader(Constants.OTP_BASE_GRAPH_BUILD, constant(true))
-                .inOnly("activemq:queue:OtpGraphBuildQueue")
+                .inOnly("jms:queue:OtpGraphBuildQueue")
                 .routeId("admin-build-base-graph")
                 .endRest()
 
@@ -535,7 +536,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .log(LoggingLevel.INFO, "OTP build graph from NeTEx")
                 .removeHeaders("CamelHttp*")
                 .setBody(simple(""))
-                .inOnly("activemq:queue:OtpGraphBuildQueue")
+                .inOnly("jms:queue:OtpGraphBuildQueue")
                 .routeId("admin-build-graph-netex")
                 .endRest()
 
@@ -583,7 +584,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 })
                 .setBody(constant(null))
 
-                .inOnly("activemq:queue:ProcessFileQueue")
+                .inOnly("jms:queue:ProcessFileQueue")
                 .routeId("admin-chouette-import")
                 .endRest()
 
@@ -601,7 +602,8 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .log(LoggingLevel.INFO, correlation() + "Chouette start import predefined")
                 .removeHeaders("CamelHttp*")
                 .process(e -> e.getIn().setHeader(USER, getHeaders(e, USER)))
-                .inOnly("activemq:queue:ImportConfigurationQueue")
+                 .setBody().simple(CAMEL_HEADERS)
+                .inOnly("jms:queue:ImportConfigurationQueue")
                 .routeId("admin-chouette-import-all")
                 .endRest()
 
@@ -903,7 +905,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
                 .log(LoggingLevel.INFO, correlation() + "Chouette start export")
                 .removeHeaders("CamelHttp*")
-                .inOnly("activemq:queue:ChouetteExportNetexQueue")
+                .inOnly("jms:queue:ChouetteExportNetexQueue")
                 .routeId("admin-chouette-export")
                 .endRest()
 
@@ -924,7 +926,8 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .removeHeaders("CamelHttp*")
                 .removeHeader("Authorization")
                 .process(e -> e.getIn().setHeader(USER, getHeaders(e, USER)))
-                .inOnly("activemq:queue:ChouetteExportNetexQueue")
+                .setBody().simple(CAMEL_HEADERS)
+                .inOnly("jms:queue:ChouetteExportNetexQueue")
                 .routeId("admin-chouette-export-netex")
                 .endRest()
 
@@ -945,7 +948,8 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .removeHeaders("CamelHttp*")
                 .removeHeader("Authorization")
                 .process(e -> e.getIn().setHeader(USER, getHeaders(e, USER)))
-                .inOnly("activemq:queue:ChouetteExportNeptuneQueue")
+                .setBody().simple(CAMEL_HEADERS)
+                .inOnly("jms:queue:ChouetteExportNeptuneQueue")
                 .routeId("admin-chouette-export-neptune")
                 .endRest()
 
@@ -967,7 +971,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                     e.getIn().setHeader(USER, getHeaders(e, USER));
                     e.getIn().setHeader(EXPORT_SIMULATION_NAME, getSimulationExportPrefix(e));
                 })
-                .inOnly("activemq:queue:ChouetteExportNetexQueue")
+                .inOnly("jms:queue:ChouetteExportNetexQueue")
                 .routeId("simulation-export-netex")
                 .endRest()
 
@@ -1006,7 +1010,8 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .removeHeaders("CamelHttp*")
                 .removeHeader("Authorization")
                 .process(this::getFromHeadersForGTFS)
-                .inOnly("activemq:queue:ChouetteExportGtfsQueue")
+                .setBody().simple(CAMEL_HEADERS)
+                .inOnly("jms:queue:ChouetteExportGtfsQueue")
                 .routeId("admin-chouette-export-gtfs")
                 .endRest()
 
@@ -1042,7 +1047,8 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .log(LoggingLevel.INFO, correlation() + "Chouette start all export process")
                 .removeHeaders("CamelHttp*")
                 .process(e -> e.getIn().setHeader(USER, getHeaders(e, USER)))
-                .inOnly("activemq:queue:predefinedExports")
+                .setBody().simple(CAMEL_HEADERS)
+                .inOnly("jms:queue:predefinedExports")
                 .routeId("admin-chouette-export-all")
                 .endRest()
 
@@ -1060,7 +1066,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .log(LoggingLevel.INFO, correlation() + "Chouette start export process")
                 .removeHeaders("CamelHttp*")
                 .process(e -> e.getIn().setHeader(USER, getHeaders(e, USER)))
-                .inOnly("activemq:queue:predefinedExport")
+                .inOnly("jms:queue:predefinedExport")
                 .routeId("admin-chouette-export-by-id")
                 .endRest()
 
@@ -1078,7 +1084,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .log(LoggingLevel.INFO, correlation() + "Chouette start export Concerto")
                 .removeHeaders("CamelHttp*")
                 .process(e -> e.getIn().setHeader(USER, getHeaders(e, USER)))
-                .inOnly("activemq:queue:ChouetteExportConcertoQueue")
+                .inOnly("jms:queue:ChouetteExportConcertoQueue")
                 .routeId("admin-chouette-export-concerto")
                 .endRest()
 
@@ -1095,7 +1101,8 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .log(LoggingLevel.INFO, correlation() + "Tiamat start export Stops")
                 .removeHeaders("CamelHttp*")
                 .process(e -> e.getIn().setHeader(USER, getHeaders(e, USER)))
-                .inOnly("activemq:queue:TiamatStopPlacesExport")
+                .setBody().simple(CAMEL_HEADERS)
+                .inOnly("jms:queue:TiamatStopPlacesExport")
                 .routeId("admin-tiamat-export-stops")
                 .endRest()
 
@@ -1112,7 +1119,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .log(LoggingLevel.INFO, correlation() + "Tiamat start export Parkings")
                 .removeHeaders("CamelHttp*")
                 .process(e -> e.getIn().setHeader(USER, getHeaders(e, USER)))
-                .inOnly("activemq:queue:TiamatParkingsExport")
+                .inOnly("jms:queue:TiamatParkingsExport")
                 .routeId("admin-tiamat-export-parkings")
                 .endRest()
 
@@ -1133,7 +1140,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .removeHeaders("CamelHttp*")
                 .process(e -> e.getIn().setHeader(USER, getHeaders(e, USER)))
                 .removeHeader("Authorization")
-                .inOnly("activemq:queue:TiamatPointOfInterestExport")
+                .inOnly("jms:queue:TiamatPointOfInterestExport")
                 .routeId("admin-tiamat-export-poi")
                 .endRest()
 
@@ -1149,9 +1156,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
                 .log(LoggingLevel.INFO, correlation() + "Chouette start validation")
                 .removeHeaders("CamelHttp*")
-                .process(e -> {
-                    e.getIn().setHeader(USER, getHeaders(e, USER));
-                })
+                .process(e -> e.getIn().setHeader(USER, getHeaders(e, USER)))
                 .choice()
                 .when(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)).chouetteInfo.migrateDataToProvider == null)
                 .setHeader(JOB_STATUS_JOB_VALIDATION_LEVEL, constant(JobEvent.TimetableAction.VALIDATION_LEVEL_2.name()))
@@ -1159,7 +1164,8 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .setHeader(JOB_STATUS_JOB_VALIDATION_LEVEL, constant(JobEvent.TimetableAction.VALIDATION_LEVEL_1.name()))
                 .end()
                 .removeHeader("Authorization")
-                .inOnly("activemq:queue:ChouetteValidationQueue")
+                .setBody().simple(CAMEL_HEADERS)
+                .inOnly("jms:queue:ChouetteValidationQueue")
                 .routeId("admin-chouette-validate")
                 .endRest()
 
@@ -1207,7 +1213,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .removeHeaders("CamelHttp*")
                 .setHeader(PROVIDER_ID, header("providerId"))
                 .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
-                .inOnly("activemq:queue:ChouetteTransferExportQueue")
+                .inOnly("jms:queue:ChouetteTransferExportQueue")
                 .routeId("admin-chouette-transfer")
                 .endRest()
 
