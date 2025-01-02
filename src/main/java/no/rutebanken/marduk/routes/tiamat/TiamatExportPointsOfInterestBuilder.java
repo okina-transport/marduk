@@ -46,7 +46,7 @@ public class TiamatExportPointsOfInterestBuilder extends AbstractChouetteRouteBu
     public void configure() throws Exception {
         super.configure();
 
-        from("activemq:queue:TiamatPointOfInterestExport").streamCaching()
+        from("jms:queue:TiamatPointOfInterestExport").streamCaching()
                 .transacted()
                 .log(LoggingLevel.INFO, getClass().getName(), "Starting Tiamat export points of interest for provider with id ${header.tiamatProviderId}")
                 .choice()
@@ -86,7 +86,7 @@ public class TiamatExportPointsOfInterestBuilder extends AbstractChouetteRouteBu
 
                 .setHeader(Constants.JOB_STATUS_ROUTING_DESTINATION, constant(TIAMAT_EXPORT_POI_ROUTING_DESTINATION))
                 .setHeader(JOB_STATUS_JOB_TYPE, constant(JobEvent.TimetableAction.EXPORT.name()))
-                .to("activemq:queue:ChouettePollStatusQueue")
+                .to("jms:queue:ChouettePollStatusQueue")
                 .routeId("tiamat-points-of-interest-export-job");
 
         // called after a tiamat stop places export has been terminated (see CHOUETTE_JOB_STATUS_ROUTING_DESTINATION above and route direct:checkJobStatus)

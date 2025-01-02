@@ -68,7 +68,7 @@ public class ChouetteValidationRouteIntegrationTest extends MardukRouteBuilderIn
 	@EndpointInject(uri = "mock:updateStatus")
 	protected MockEndpoint updateStatus;
 
-	@Produce(uri = "activemq:queue:ChouetteValidationQueue")
+	@Produce(uri = "jms:queue:ChouetteValidationQueue")
 	protected ProducerTemplate validationTemplate;
 
 	@Produce(uri = "direct:processValidationResult")
@@ -182,7 +182,7 @@ public class ChouetteValidationRouteIntegrationTest extends MardukRouteBuilderIn
 				interceptSendToEndpoint(chouetteUrl + "/*")
 						.skipSendToOriginalEndpoint()
 						.to("mock:chouetteGetJobsForProvider");
-				interceptSendToEndpoint("activemq:queue:ChouetteTransferExportQueue")
+				interceptSendToEndpoint("jms:queue:ChouetteTransferExportQueue")
 					.skipSendToOriginalEndpoint()
 					.to("mock:chouetteTransferExportQueue");
 			}

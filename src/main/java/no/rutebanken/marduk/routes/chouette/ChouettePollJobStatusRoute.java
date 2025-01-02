@@ -188,7 +188,7 @@ public class ChouettePollJobStatusRoute extends AbstractChouetteRouteBuilder {
                 .to("direct:updateStatus")
                 .routeId("terminate-chouette-post-process");
 
-        from("activemq:queue:ChouettePollStatusQueue?transacted=true&maxConcurrentConsumers=" + maxConsumers)
+        from("jms:queue:ChouettePollStatusQueue?transacted=true&maxConcurrentConsumers=" + maxConsumers)
                 .transacted()
                 .validate(header(Constants.CORRELATION_ID).isNotNull())
                 .validate(header(Constants.JOB_STATUS_ROUTING_DESTINATION).isNotNull())
@@ -315,7 +315,7 @@ public class ChouettePollJobStatusRoute extends AbstractChouetteRouteBuilder {
                 .removeHeader("scheduledJobId")
                 .setBody(constant(""))
                 //.log(LoggingLevel.INFO,"Scheduling next polling message in ${header."+ActiveMQMessage.AMQ_SCHEDULED_DELAY+"}ms")
-                .to("activemq:queue:ChouettePollStatusQueue")
+                .to("jms:queue:ChouettePollStatusQueue")
                 .routeId("chouette-reschedule-job");
 
 

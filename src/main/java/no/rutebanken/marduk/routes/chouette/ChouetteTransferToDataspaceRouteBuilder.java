@@ -63,7 +63,7 @@ public class ChouetteTransferToDataspaceRouteBuilder extends AbstractChouetteRou
     public void configure() throws Exception {
         super.configure();
 
-        from("activemq:queue:ChouetteTransferExportQueue?transacted=true").streamCaching()
+        from("jms:queue:ChouetteTransferExportQueue?transacted=true").streamCaching()
 				.transacted()
         		.log(LoggingLevel.INFO, getClass().getName(), "Starting Chouette transfer for provider with id ${header." + PROVIDER_ID + "}")
                 .process(e -> { 
@@ -90,7 +90,7 @@ public class ChouetteTransferToDataspaceRouteBuilder extends AbstractChouetteRou
                 .log(LoggingLevel.INFO,correlation()+"Sending transfer export to poll job status")
                 .to("log:" + getClass().getName() + "?level=INFO&showAll=true&multiline=true")
 		        .removeHeader("loopCounter")
-                .to("activemq:queue:ChouettePollStatusQueue")
+                .to("jms:queue:ChouettePollStatusQueue")
                 .routeId("chouette-send-transfer-job");
 
  		 from("direct:processTransferExportResult")
@@ -130,7 +130,7 @@ public class ChouetteTransferToDataspaceRouteBuilder extends AbstractChouetteRou
  		        .setBody(constant(""))
  		        .to("log:" + getClass().getName() + "?level=DEBUG&showAll=true&multiline=true")
 				.setHeader(JOB_STATUS_JOB_VALIDATION_LEVEL,constant(JobEvent.TimetableAction.VALIDATION_LEVEL_2.name()))
-				.to("activemq:queue:ChouetteValidationQueue")
+				.to("jms:queue:ChouetteValidationQueue")
              .end()
              .routeId("chouette-process-job-list-after-transfer");
 

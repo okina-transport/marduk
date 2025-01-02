@@ -75,7 +75,7 @@ public class ChouetteExportNeptuneRouteBuilder extends AbstractChouetteRouteBuil
     public void configure() throws Exception {
         super.configure();
 
-        from("activemq:queue:ChouetteExportNeptuneQueue?transacted=true").streamCaching()
+        from("jms:queue:ChouetteExportNeptuneQueue?transacted=true").streamCaching()
                 .transacted()
                 .log(LoggingLevel.INFO, getClass().getName(), "Starting Chouette NEPTUNE export for provider with id ${header." + PROVIDER_ID + "}")
                 .process(e -> {
@@ -134,7 +134,7 @@ public class ChouetteExportNeptuneRouteBuilder extends AbstractChouetteRouteBuil
                 .setHeader(Constants.JOB_STATUS_ROUTING_DESTINATION, constant("direct:processNeptuneExportResult"))
                 .setHeader(Constants.JOB_STATUS_JOB_TYPE, constant(TimetableAction.EXPORT.name()))
                 .removeHeader("loopCounter")
-                .to("activemq:queue:ChouettePollStatusQueue")
+                .to("jms:queue:ChouettePollStatusQueue")
                 .routeId("chouette-send-export-neptune-job");
 
 

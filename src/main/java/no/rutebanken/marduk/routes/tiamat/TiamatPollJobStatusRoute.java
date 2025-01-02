@@ -161,7 +161,7 @@ public class TiamatPollJobStatusRoute extends AbstractChouetteRouteBuilder {
                 .to("direct:tiamatCancelAllJobsForProvider")
                 .routeId("tiamat-cancel-all-jobs-for-all-providers");
 
-        from("activemq:queue:TiamatPollStatusQueue?transacted=true&maxConcurrentConsumers=" + maxConsumers)
+        from("jms:queue:TiamatPollStatusQueue?transacted=true&maxConcurrentConsumers=" + maxConsumers)
                 .transacted()
                 .validate(header(Constants.CORRELATION_ID).isNotNull())
                 .validate(header(Constants.JOB_STATUS_ROUTING_DESTINATION).isNotNull())
@@ -231,7 +231,7 @@ public class TiamatPollJobStatusRoute extends AbstractChouetteRouteBuilder {
                 .removeHeader("scheduledJobId")
                 .setBody(constant(""))
                 //.log(LoggingLevel.INFO,"Scheduling next polling message in ${header."+ActiveMQMessage.AMQ_SCHEDULED_DELAY+"}ms")
-                .to("activemq:queue:TiamatPollStatusQueue")
+                .to("jms:queue:TiamatPollStatusQueue")
                 .routeId("tiamat-reschedule-job");
 
         from("direct:tiamatJobStatusDone")

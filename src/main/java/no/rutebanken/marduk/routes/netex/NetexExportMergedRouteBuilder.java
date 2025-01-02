@@ -164,7 +164,7 @@ public class NetexExportMergedRouteBuilder extends BaseRouteBuilder {
 
                 .routeId("check-merged-netex");
 
-        from("activemq:queue:MergedNetexPollStatusQueue")
+        from("jms:queue:MergedNetexPollStatusQueue")
                 .transacted()
                 .to("direct:checkMergedNetex")
                 .routeId("check-merged-netex-poll-queue");
@@ -180,7 +180,7 @@ public class NetexExportMergedRouteBuilder extends BaseRouteBuilder {
                     // Remove or ActiveMQ will think message is overdue and resend immediately
                     .removeHeader("scheduledJobId")
                     .log(LoggingLevel.INFO,"Scheduling next merged netex check in ${header."+ ActiveMQMessage.AMQ_SCHEDULED_DELAY+"}ms")
-                    .to("activemq:queue:MergedNetexPollStatusQueue")
+                    .to("jms:queue:MergedNetexPollStatusQueue")
                 .end()
                 .routeId("new_retry_check_merged_netex");
 

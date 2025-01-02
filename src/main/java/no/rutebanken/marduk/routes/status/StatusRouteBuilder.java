@@ -47,7 +47,7 @@ public class StatusRouteBuilder extends RouteBuilder {
                     }
 
                 })
-                .to("activemq:queue:JobEventQueue")
+                .to("jms:queue:JobEventQueue")
                 .routeId("update-status").startupOrder(1);
 
 

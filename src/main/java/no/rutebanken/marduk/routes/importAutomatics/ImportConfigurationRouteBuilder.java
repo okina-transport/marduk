@@ -99,7 +99,7 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
     public void configure() throws Exception {
         super.configure();
 
-        from("activemq:queue:ImportConfigurationQueue?transacted=true")
+        from("jms:queue:ImportConfigurationQueue?transacted=true")
                 .streamCaching()
                 .transacted()
                 .log(LoggingLevel.INFO, getClass().getName(), "Starting import configuration for provider with id ${header." + PROVIDER_ID + "}")

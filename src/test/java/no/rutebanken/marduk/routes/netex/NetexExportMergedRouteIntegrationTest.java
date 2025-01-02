@@ -64,7 +64,7 @@ public class NetexExportMergedRouteIntegrationTest extends MardukRouteBuilderInt
     @Ignore
     public void testExportMergedNetex() throws Exception {
 
-       replaceEndpoint("netex-export-merged-route", "activemq:queue:ChouetteExportGtfsQueue", "mockEndpoint");
+       replaceEndpoint("netex-export-merged-route", "jms:queue:ChouetteExportGtfsQueue", "mockEndpoint");
 
 
         // Create stop file in in memory blob store

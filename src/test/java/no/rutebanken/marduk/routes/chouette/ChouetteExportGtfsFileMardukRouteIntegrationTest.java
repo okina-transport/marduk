@@ -61,7 +61,7 @@ public class ChouetteExportGtfsFileMardukRouteIntegrationTest extends MardukRout
 	@EndpointInject(uri = "mock:chouetteGetData")
 	protected MockEndpoint chouetteGetData;
 
-	@Produce(uri = "activemq:queue:ChouetteExportGtfsQueue")
+	@Produce(uri = "jms:queue:ChouetteExportGtfsQueue")
 	protected ProducerTemplate importTemplate;
 
 	@Produce(uri = "direct:processExportResult")

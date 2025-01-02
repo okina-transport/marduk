@@ -183,7 +183,7 @@ public class FaresPollJobStatusRoute extends AbstractChouetteRouteBuilder {
                 .to("direct:faresCancelAllJobsForProvider")
                 .routeId("fares-cancel-all-jobs-for-all-providers");
 
-        from("activemq:queue:FaresPollStatusQueue?transacted=true&maxConcurrentConsumers=" + maxConsumers)
+        from("jms:queue:FaresPollStatusQueue?transacted=true&maxConcurrentConsumers=" + maxConsumers)
                 .transacted()
                 .validate(header(Constants.CORRELATION_ID).isNotNull())
                 .validate(header(Constants.JOB_STATUS_ROUTING_DESTINATION).isNotNull())
@@ -278,7 +278,7 @@ public class FaresPollJobStatusRoute extends AbstractChouetteRouteBuilder {
                 .removeHeader("scheduledJobId")
                 .setBody(constant(""))
                 //.log(LoggingLevel.INFO,"Scheduling next polling message in ${header."+ActiveMQMessage.AMQ_SCHEDULED_DELAY+"}ms")
-                .to("activemq:queue:FaresPollStatusQueue")
+                .to("jms:queue:FaresPollStatusQueue")
                 .routeId("fares-reschedule-job");
 
         from("direct:faresJobStatusDone")

@@ -30,7 +30,7 @@ public class ChouetteGenerateMapMatchingBuilder extends AbstractChouetteRouteBui
     public void configure() throws Exception {
         super.configure();
 
-        from("activemq:queue:ChouetteGenerateMapMatchingQueue?transacted=true").streamCaching()
+        from("jms:queue:ChouetteGenerateMapMatchingQueue?transacted=true").streamCaching()
                 .transacted()
                 .log(LoggingLevel.INFO, correlation() + "Starting Chouette map matching")
                 .process(e -> {
@@ -55,7 +55,7 @@ public class ChouetteGenerateMapMatchingBuilder extends AbstractChouetteRouteBui
                 .setHeader(Constants.JOB_STATUS_ROUTING_DESTINATION, constant("direct:processMapMatchingResult"))
                 .process(e -> e.getIn().setHeader(Constants.JOB_STATUS_JOB_TYPE, JobEvent.TimetableAction.BUILD_MAP_MATCHING.name()))
                 .removeHeader("loopCounter")
-                .to("activemq:queue:ChouettePollStatusQueue")
+                .to("jms:queue:ChouettePollStatusQueue")
                 .routeId("chouette-send-map-matching-job");
 
         from("direct:assertHeadersForChouetteMapMatching")
@@ -113,7 +113,7 @@ public class ChouetteGenerateMapMatchingBuilder extends AbstractChouetteRouteBui
                     .when().jsonpath("$.*[?(@.status == 'SCHEDULED')].status")
                         .when(e -> "VALIDATION".equals(e.getIn().getHeader(WORKLOW, String.class)) || "EXPORT".equals(e.getIn().getHeader(WORKLOW, String.class)))
                             .log(LoggingLevel.INFO, correlation() + "Map matching ok, transfering data to next dataspace")
-                            .to("activemq:queue:ChouetteTransferExportQueue")
+                            .to("jms:queue:ChouetteTransferExportQueue")
                     .end()
                 .routeId("chouette-process-job-list-after-map-matching");
     }
