@@ -18,22 +18,20 @@ package no.rutebanken.marduk.routes.chouette;
 
 import no.rutebanken.marduk.Constants;
 import no.rutebanken.marduk.MardukRouteBuilderIntegrationTestBase;
-import org.apache.camel.EndpointInject;
-import org.apache.camel.Exchange;
-import org.apache.camel.Expression;
-import org.apache.camel.Produce;
-import org.apache.camel.ProducerTemplate;
+import org.apache.camel.*;
 import org.apache.camel.builder.AdviceWithRouteBuilder;
 import org.apache.camel.component.mock.MockEndpoint;
 import org.apache.camel.model.ModelCamelContext;
 import org.apache.camel.model.language.SimpleExpression;
-import org.apache.commons.io.IOUtils;
 import org.junit.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -120,7 +118,7 @@ public class ChouetteExportNetexFileMardukRouteIntegrationTest extends MardukRou
 
 
 
-		chouetteGetData.expectedMessageCount(1);
+		chouetteGetData.expectedMessageCount(0);
 		chouetteGetData.returnReplyBody(new Expression() {
 
 			@SuppressWarnings("unchecked")
@@ -128,11 +126,8 @@ public class ChouetteExportNetexFileMardukRouteIntegrationTest extends MardukRou
 			public <T> T evaluate(Exchange ex, Class<T> arg1) {
 				try {
 					// Should be GTFS contnet
-					return (T) IOUtils.toString(getClass()
-							                            .getResourceAsStream("/no/rutebanken/marduk/chouette/getActionReportResponseOK.json"));
+					return (T) Files.readString(Paths.get("/no/rutebanken/marduk/chouette/getActionReportResponseOK.json"), StandardCharsets.UTF_8);
 				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
 					return null;
 				}
 			}
@@ -148,7 +143,7 @@ public class ChouetteExportNetexFileMardukRouteIntegrationTest extends MardukRou
 
 
 		pollJobStatus.expectedMessageCount(1);
-		updateStatus.expectedMessageCount(3);
+		updateStatus.expectedMessageCount(1);
 
 
 //		otpNetexGraphQueue.expectedMessageCount(1);

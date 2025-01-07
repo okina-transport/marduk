@@ -85,9 +85,9 @@ public class FileTypeClassifierBean {
                 return REGTOPP;
             } else if (GTFS.toString().equalsIgnoreCase(importType) || isGtfsZip(filesNamesInZip)) {
                 return GTFS;
-            } else if (importType.equals(NETEX_FARES.name())) {
+            } else if (NETEX_FARES.name().equals(importType)) {
                 return NETEX_FARES;
-            } else if (NETEXPROFILE.toString().equalsIgnoreCase(importType) || isNetexZip(filesNamesInZip, new ByteArrayInputStream(data)) || importType.equals("NETEX")) {
+            } else if (NETEXPROFILE.toString().equalsIgnoreCase(importType) || isNetexZip(filesNamesInZip, new ByteArrayInputStream(data)) || "NETEX".equals(importType)) {
                 return NETEXPROFILE;
             } else if (ZipFileUtils.zipFileContainsSingleFolder(data)) {
                 return ZIP_WITH_SINGLE_FOLDER;
