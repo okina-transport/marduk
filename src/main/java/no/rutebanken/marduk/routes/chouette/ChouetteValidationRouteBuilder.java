@@ -18,6 +18,7 @@ package no.rutebanken.marduk.routes.chouette;
 
 import no.rutebanken.marduk.Constants;
 import no.rutebanken.marduk.domain.ExportTemplate;
+import no.rutebanken.marduk.domain.ImportGenerateMapMatching;
 import no.rutebanken.marduk.repository.ExportTemplateDAO;
 import no.rutebanken.marduk.routes.chouette.json.Parameters;
 import no.rutebanken.marduk.routes.status.JobEvent;
@@ -161,8 +162,11 @@ public class ChouetteValidationRouteBuilder extends AbstractChouetteRouteBuilder
                     .process(e -> {
                         JobEvent.providerJobBuilder(e).timetableAction(e.getIn().getHeader(JOB_STATUS_JOB_VALIDATION_LEVEL, JobEvent.TimetableAction.class)).state(JobEvent.State.OK).build();
                         if (e.getIn().getHeader(WORKLOW, String.class) != null) {
-                            if (e.getIn().getHeader(WORKLOW, String.class).equals("VALIDATION") && e.getIn().getHeader(JOB_STATUS_JOB_VALIDATION_LEVEL, String.class).equals(VALIDATION_LEVEL_2.name())
-                                    || e.getIn().getHeader(WORKLOW, String.class).equals("IMPORT") && e.getIn().getHeader(JOB_STATUS_JOB_VALIDATION_LEVEL, String.class).equals(VALIDATION_LEVEL_1.name()) && e.getIn().getHeader(GENERATE_MAP_MATCHING, Boolean.class).equals(false))
+                            if ("VALIDATION".equals(e.getIn().getHeader(WORKLOW, String.class))
+                                    && VALIDATION_LEVEL_2.name().equals(e.getIn().getHeader(JOB_STATUS_JOB_VALIDATION_LEVEL, String.class))
+                                    || "IMPORT".equals(e.getIn().getHeader(WORKLOW, String.class))
+                                    && VALIDATION_LEVEL_1.name().equals(e.getIn().getHeader(JOB_STATUS_JOB_VALIDATION_LEVEL, String.class))
+                                    && ImportGenerateMapMatching.NONE.name().equals(e.getIn().getHeader(GENERATE_MAP_MATCHING, String.class)))
                             {
                                 JobEvent.TimetableAction timetableAction = e.getIn().getHeader(JOB_STATUS_JOB_VALIDATION_LEVEL, String.class).equals(VALIDATION_LEVEL_2.name()) ? VALIDATION_LEVEL_2 : VALIDATION_LEVEL_1;
                                 createMail.createMail(e, null, timetableAction, true);
@@ -222,11 +226,12 @@ public class ChouetteValidationRouteBuilder extends AbstractChouetteRouteBuilder
                 .choice()
                     .when().jsonpath("$.*[?(@.status == 'SCHEDULED')].status")
                                         .when(PredicateBuilder.and(constant(VALIDATION_LEVEL_1).isEqualTo(header(JOB_STATUS_JOB_VALIDATION_LEVEL)),
-                                                header(GENERATE_MAP_MATCHING).isEqualTo(true)))
+                                                PredicateBuilder.or(header(GENERATE_MAP_MATCHING).isEqualTo(ImportGenerateMapMatching.CAR),
+                                                        header(GENERATE_MAP_MATCHING).isEqualTo(ImportGenerateMapMatching.AIR))))
                                             .log(LoggingLevel.INFO, correlation() + "Validation ok, generating map matching")
                                             .to("jms:queue:ChouetteGenerateMapMatchingQueue")
                                         .when(e -> e.getIn().getHeader(JOB_STATUS_JOB_VALIDATION_LEVEL, String.class).equals(VALIDATION_LEVEL_1.name()) &&
-                                                (e.getIn().getHeader(GENERATE_MAP_MATCHING, Boolean.class) == null || e.getIn().getHeader(GENERATE_MAP_MATCHING, Boolean.class).equals(false)) &&
+                                                (e.getIn().getHeader(GENERATE_MAP_MATCHING, String.class) == null || ImportGenerateMapMatching.NONE.name().equals(e.getIn().getHeader(GENERATE_MAP_MATCHING, String.class))) &&
                                                 (shouldTransferData(e) ||
                                                 e.getIn().getHeader(IMPORT, Boolean.class) == null ||
                                                 "VALIDATION".equals(e.getIn().getHeader(WORKLOW, String.class)) ||

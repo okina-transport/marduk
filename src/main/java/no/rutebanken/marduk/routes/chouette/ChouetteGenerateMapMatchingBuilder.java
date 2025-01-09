@@ -1,6 +1,8 @@
 package no.rutebanken.marduk.routes.chouette;
 
 import no.rutebanken.marduk.Constants;
+import no.rutebanken.marduk.domain.ImportGenerateMapMatching;
+import no.rutebanken.marduk.domain.Provider;
 import no.rutebanken.marduk.routes.chouette.json.Parameters;
 import no.rutebanken.marduk.routes.status.JobEvent;
 import org.apache.camel.Exchange;
@@ -11,10 +13,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.UUID;
 
-import static no.rutebanken.marduk.Constants.CHOUETTE_REFERENTIAL;
-import static no.rutebanken.marduk.Constants.JSON_PART;
-import static no.rutebanken.marduk.Constants.PROVIDER_ID;
-import static no.rutebanken.marduk.Constants.WORKLOW;
+import static no.rutebanken.marduk.Constants.*;
 import static no.rutebanken.marduk.Utils.Utils.getLastPathElementOfUrl;
 
 @Component
@@ -38,7 +37,9 @@ public class ChouetteGenerateMapMatchingBuilder extends AbstractChouetteRouteBui
                     e.getIn().setHeader(Constants.CORRELATION_ID, e.getIn().getHeader(Constants.CORRELATION_ID, UUID.randomUUID().toString()));
                     e.getIn().removeHeader(Constants.JOB_ID);
                     JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.BUILD_MAP_MATCHING).state(JobEvent.State.PENDING).build();
-                    String mapmatchingParameters =  Parameters.getMapMatchingParameters(getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)), getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)).chouetteInfo.referential);
+                    Provider provider = getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class));
+                    String mapMatching = e.getIn().getHeader(GENERATE_MAP_MATCHING, String.class);
+                    String mapmatchingParameters =  Parameters.getMapMatchingParameters(provider, provider.chouetteInfo.referential, mapMatching);
                     e.getIn().setHeader(JSON_PART, mapmatchingParameters);
                 })
                 .to("direct:updateStatus")

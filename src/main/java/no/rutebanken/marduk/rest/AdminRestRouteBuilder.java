@@ -19,6 +19,7 @@ package no.rutebanken.marduk.rest;
 import no.rutebanken.marduk.Constants;
 import no.rutebanken.marduk.domain.BlobStoreFiles;
 import no.rutebanken.marduk.domain.BlobStoreFiles.File;
+import no.rutebanken.marduk.domain.ImportGenerateMapMatching;
 import no.rutebanken.marduk.domain.Provider;
 import no.rutebanken.marduk.routes.BaseRouteBuilder;
 import no.rutebanken.marduk.routes.blobstore.BlobStoreRoute;
@@ -1400,12 +1401,15 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
     }
 
 
-    private boolean getGenerateMapMatchingHeaders(Exchange e) {
-        Map body = e.getIn().getBody(Map.class);
-        Map headers;
-        headers = body == null ? e.getIn().getHeaders() : (Map) body.get("headers");
-
-        return headers != null && headers.get(GENERATE_MAP_MATCHING) != null && ((String) headers.get(GENERATE_MAP_MATCHING)).equalsIgnoreCase("true");
+    protected String getGenerateMapMatchingHeaders(Exchange e) {
+        Map<String, Object> body = e.getIn().getBody(Map.class);
+        Map<String, Object> headers;
+        headers = body == null ? e.getIn().getHeaders() : (Map<String, Object>) body.get("headers");
+        String result = ImportGenerateMapMatching.NONE.name();
+        if (headers != null && headers.get(GENERATE_MAP_MATCHING) != null) {
+            result = (String) headers.get(GENERATE_MAP_MATCHING);
+        }
+        return result;
     }
 
     private String getSimulationExportPrefix(Exchange e) {

@@ -160,6 +160,10 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
         e.getIn().setHeader(IS_ACTIVE, importConfiguration.isActivated());
         parseImportParameters(e, importConfiguration);
         e.getIn().setHeader(CONTINUE_IMPORT, Boolean.FALSE);
+        if (!CollectionUtils.isEmpty(importConfiguration.getImportParameters()) && importConfiguration.getImportParameters().get(0) != null) {
+            e.getIn().setHeader(GENERATE_MAP_MATCHING, importConfiguration.getImportParameters().get(0).getGenerateMapMatching().name());
+        }
+
         Optional<FileItem> importFile = Optional.empty();
         try {
             if (!CollectionUtils.isEmpty(importConfiguration.getConfigurationFtpList())) {

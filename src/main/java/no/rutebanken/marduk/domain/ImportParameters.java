@@ -21,7 +21,7 @@ public class ImportParameters {
     private Boolean removeParentStations;
     private Boolean updateStopAccessibility;
     private Boolean railUICprocessing;
-    private Boolean generateMapMatching;
+    private ImportGenerateMapMatching generateMapMatching;
     private Boolean routesReorganization;
     private Boolean routeSortOrder;
     private Boolean netexImportLayouts;
@@ -208,11 +208,11 @@ public class ImportParameters {
         this.updateStopAccessibility = updateStopAccessibility;
     }
 
-    public Boolean getGenerateMapMatching() {
+    public ImportGenerateMapMatching getGenerateMapMatching() {
         return generateMapMatching;
     }
 
-    public void setGenerateMapMatching(Boolean generateMapMatching) {
+    public void setGenerateMapMatching(ImportGenerateMapMatching generateMapMatching) {
         this.generateMapMatching = generateMapMatching;
     }
 

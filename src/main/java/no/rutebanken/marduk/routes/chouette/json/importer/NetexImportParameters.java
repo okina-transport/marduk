@@ -81,7 +81,7 @@ public class NetexImportParameters extends ChouetteJobParameters {
         netexImport.keepBoardingAlighting = rawImportParameters.isKeepBoardingAlighting();
         netexImport.keepStopGeolocalisation = rawImportParameters.isKeepStopGeolocalisation();
         netexImport.keepStopNames = rawImportParameters.isKeepStopNames();
-        netexImport.generateMapMatching = rawImportParameters.isGenerateMapMatching();
+        netexImport.generateMapMatching = rawImportParameters.getGenerateMapMatching();
         netexImport.description = rawImportParameters.getDescription();
         netexImport.netexImportLayouts = rawImportParameters.isNetexImportLayouts();
         netexImport.netexImportColors = rawImportParameters.isNetexImportColors();

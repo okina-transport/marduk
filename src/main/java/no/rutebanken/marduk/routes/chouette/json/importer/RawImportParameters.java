@@ -1,5 +1,6 @@
 package no.rutebanken.marduk.routes.chouette.json.importer;
 
+import no.rutebanken.marduk.domain.ImportGenerateMapMatching;
 import no.rutebanken.marduk.domain.Provider;
 import no.rutebanken.marduk.routes.chouette.json.IdParameters;
 
@@ -29,7 +30,7 @@ public class RawImportParameters {
     private boolean importShapesFile;
     private boolean updateStopAccess;
     private boolean railUICprocessing;
-    private boolean generateMapMatching;
+    private ImportGenerateMapMatching generateMapMatching;
     private boolean routesReorganization;
     private boolean routeSortOrder;
     private boolean netexImportLayouts;
@@ -200,10 +201,10 @@ public class RawImportParameters {
         this.railUICprocessing = railUICprocessing;
     }
 
-    public boolean isGenerateMapMatching() {
+    public ImportGenerateMapMatching getGenerateMapMatching() {
         return generateMapMatching;
     }
-    public void setGenerateMapMatching(boolean generateMapMatching) {
+    public void setGenerateMapMatching(ImportGenerateMapMatching generateMapMatching) {
         this.generateMapMatching = generateMapMatching;
     }
 
