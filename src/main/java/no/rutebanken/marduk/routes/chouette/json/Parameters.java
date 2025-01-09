@@ -200,10 +200,10 @@ public class Parameters {
     }
 
 
-    public static String getMapMatchingParameters(Provider provider, String user) {
+    public static String getMapMatchingParameters(Provider provider, String user, String mapMatchingType) {
         try {
             ChouetteInfo chouetteInfo = provider.chouetteInfo;
-            MapMatchingParameters.Mapmatching mapmatchingParameters = new MapMatchingParameters.Mapmatching(user, chouetteInfo.referential);
+            MapMatchingParameters.Mapmatching mapmatchingParameters = new MapMatchingParameters.Mapmatching(user, chouetteInfo.referential, mapMatchingType);
             MapMatchingParameters.Parameters parameters = new MapMatchingParameters.Parameters(mapmatchingParameters);
             MapMatchingParameters importParameters = new MapMatchingParameters(parameters);
             ObjectMapper mapper = new ObjectMapper();

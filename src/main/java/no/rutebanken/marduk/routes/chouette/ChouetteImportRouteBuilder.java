@@ -18,6 +18,7 @@ package no.rutebanken.marduk.routes.chouette;
 
 import no.rutebanken.marduk.Constants;
 import no.rutebanken.marduk.Utils.ImportRouteBuilder;
+import no.rutebanken.marduk.domain.ImportGenerateMapMatching;
 import no.rutebanken.marduk.domain.Provider;
 import no.rutebanken.marduk.repository.ImportConfigurationDAO;
 import no.rutebanken.marduk.routes.chouette.json.IdParameters;
@@ -160,7 +161,10 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
                     String cleanMode = e.getIn().getHeader(CLEAN_MODE, String.class);
 
                     String generateMapMatchingStr = e.getIn().getHeader(GENERATE_MAP_MATCHING, String.class);
-                    boolean generateMapMatching = !StringUtils.isEmpty(generateMapMatchingStr) && Boolean.parseBoolean(generateMapMatchingStr);
+                    ImportGenerateMapMatching generateMapMatching = ImportGenerateMapMatching.NONE;
+                    if (StringUtils.isNotBlank(generateMapMatchingStr)){
+                        generateMapMatching = ImportGenerateMapMatching.valueOf(generateMapMatchingStr);
+                    }
 
                     String routesReorgStr = e.getIn().getHeader(ROUTES_REORGANIZATION, String.class);
                     boolean routesReorg = !StringUtils.isEmpty(routesReorgStr) && Boolean.parseBoolean(routesReorgStr);
@@ -236,7 +240,6 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
                     String targetNetwork = e.getIn().getHeader(TARGET_NETWORK, String.class);
 
                     boolean renameRoutesAfterMerge = BooleanUtils.isTrue(e.getIn().getHeader(RENAME_ROUTES_AFTER_MERGE, Boolean.class));
-
                     rawImportParameters.setFileName(fileName);
                     rawImportParameters.setFileType(fileType);
                     rawImportParameters.setProviderId(providerId);

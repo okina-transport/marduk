@@ -21,46 +21,34 @@ import no.rutebanken.marduk.Constants;
 import no.rutebanken.marduk.MardukRouteBuilderIntegrationTestBase;
 import no.rutebanken.marduk.Utils.Utils;
 import no.rutebanken.marduk.domain.BlobStoreFiles;
+import no.rutebanken.marduk.domain.ImportGenerateMapMatching;
 import no.rutebanken.marduk.domain.Provider;
 import no.rutebanken.marduk.repository.BlobStoreRepository;
-import org.apache.camel.CamelExecutionException;
-import org.apache.camel.EndpointInject;
-import org.apache.camel.Exchange;
-import org.apache.camel.Produce;
-import org.apache.camel.ProducerTemplate;
+import org.apache.camel.*;
 import org.apache.camel.builder.AdviceWithRouteBuilder;
+import org.apache.camel.builder.ExchangeBuilder;
 import org.apache.camel.component.mock.MockEndpoint;
 import org.apache.camel.model.ModelCamelContext;
 import org.apache.commons.compress.utils.IOUtils;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
-import org.keycloak.KeycloakPrincipal;
-import org.keycloak.KeycloakSecurityContext;
-import org.keycloak.adapters.RefreshableKeycloakSecurityContext;
-import org.keycloak.adapters.spi.KeycloakAccount;
-import org.keycloak.adapters.springsecurity.account.SimpleKeycloakAccount;
-import org.keycloak.adapters.springsecurity.token.KeycloakAuthenticationToken;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.security.core.context.SecurityContext;
-import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
 import java.io.StringWriter;
-import java.security.Principal;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
-import static no.rutebanken.marduk.Constants.BLOBSTORE_PATH_INBOUND;
-import static no.rutebanken.marduk.Constants.FILE_HANDLE;
+import static no.rutebanken.marduk.Constants.GENERATE_MAP_MATCHING;
 import static no.rutebanken.marduk.Constants.PROVIDER_ID;
 import static no.rutebanken.marduk.Utils.Utils.parseProviderFromFileName;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.Assert.assertEquals;
 import static org.mockito.Mockito.when;
 
@@ -78,6 +66,9 @@ public class AdminRestMardukRouteBuilderIntegrationTest extends MardukRouteBuild
 
     @EndpointInject(uri = "mock:chouetteExportNetexQueue")
     protected MockEndpoint exportQueue;
+
+    @EndpointInject(uri = "mock:importLaunch")
+    protected MockEndpoint importLaunch;
 
     @Produce(uri = "http4:localhost:28080/services/timetable_admin/2/import")
     protected ProducerTemplate importTemplate;
@@ -104,6 +95,8 @@ public class AdminRestMardukRouteBuilderIntegrationTest extends MardukRouteBuild
 
     @Value("#{'${timetable.export.blob.prefixes:outbound/gtfs/,outbound/netex/}'.split(',')}")
     private List<String> exportFileStaticPrefixes;
+    @Autowired
+    private AdminRestRouteBuilder adminRestRouteBuilder;
 
 
     @Before
@@ -315,4 +308,21 @@ public class AdminRestMardukRouteBuilderIntegrationTest extends MardukRouteBuild
         }
     }
 
+    @Test
+    public void getGenerateMapMatchingHeadersNoHeaderValueFoundTest() {
+        Exchange build = ExchangeBuilder.anExchange(camelContext).withHeader("JOB_ID", "1").build();
+
+        String result = adminRestRouteBuilder.getGenerateMapMatchingHeaders(build);
+
+        assertThat(result).isEqualTo(ImportGenerateMapMatching.NONE.name());
+    }
+
+    @Test
+    public void getGenerateMapMatchingHeadersHeaderValueFoundTest() {
+        Exchange build = ExchangeBuilder.anExchange(camelContext).withHeader("JOB_ID", "1").withHeader(GENERATE_MAP_MATCHING, "CAR").build();
+
+        String result = adminRestRouteBuilder.getGenerateMapMatchingHeaders(build);
+
+        assertThat(result).isEqualTo(ImportGenerateMapMatching.CAR.name());
+    }
 }

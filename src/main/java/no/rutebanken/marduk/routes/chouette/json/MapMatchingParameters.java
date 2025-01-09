@@ -38,10 +38,13 @@ public class MapMatchingParameters {
         @JsonProperty("referential_name")
         public String referentialName;
 
+        @JsonProperty("generate_map_matching")
+        public String generateMapMatching;
 
-        public Mapmatching(String userName, String referentialName) {
+        public Mapmatching(String userName, String referentialName, String mapmatching) {
             this.referentialName = referentialName;
             this.userName = userName;
+            this.generateMapMatching = mapmatching;
         }
 
     }

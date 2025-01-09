@@ -18,6 +18,7 @@ package no.rutebanken.marduk.routes.chouette.json.importer;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import no.rutebanken.marduk.domain.ImportGenerateMapMatching;
 import no.rutebanken.marduk.routes.chouette.json.AbstractParameters;
 
 import java.util.Set;
@@ -82,7 +83,7 @@ public class AbstractImportParameters extends AbstractParameters {
 
     @JsonProperty("generate_map_matching")
     @JsonInclude(JsonInclude.Include.ALWAYS)
-    public Boolean generateMapMatching = false;
+    public ImportGenerateMapMatching generateMapMatching = ImportGenerateMapMatching.NONE;
 
     @JsonProperty("routes_reorganization")
     @JsonInclude(JsonInclude.Include.ALWAYS)
