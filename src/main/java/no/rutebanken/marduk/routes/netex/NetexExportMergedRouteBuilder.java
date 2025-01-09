@@ -23,7 +23,6 @@ import no.rutebanken.marduk.routes.chouette.ExportToConsumersProcessor;
 import no.rutebanken.marduk.routes.chouette.UpdateExportTemplateProcessor;
 import no.rutebanken.marduk.routes.file.ZipFileUtils;
 import no.rutebanken.marduk.routes.status.JobEvent;
-import org.apache.activemq.ScheduledMessage;
 import org.apache.activemq.command.ActiveMQMessage;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
@@ -176,9 +175,9 @@ public class NetexExportMergedRouteBuilder extends BaseRouteBuilder {
                      .log(LoggingLevel.ERROR, getClass().getName(), "Too many retries for merged netex. merged Netex stopped. Files still missing:${header.MISSING_EXPORTS}")
                     .stop()
                 .otherwise()
-                    .setHeader(ScheduledMessage.AMQ_SCHEDULED_DELAY, constant(delayBeforeChecks))
                     // Remove or ActiveMQ will think message is overdue and resend immediately
                     .removeHeader("scheduledJobId")
+                    .delay(delayBeforeChecks)
                     .log(LoggingLevel.INFO,"Scheduling next merged netex check in ${header."+ ActiveMQMessage.AMQ_SCHEDULED_DELAY+"}ms")
                     .to("jms:queue:MergedNetexPollStatusQueue")
                 .end()
