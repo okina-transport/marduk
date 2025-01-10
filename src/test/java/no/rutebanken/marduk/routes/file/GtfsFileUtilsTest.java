@@ -42,6 +42,7 @@ public class GtfsFileUtilsTest {
         // Assert.assertTrue(FileUtils.sizeOf(merged) <= FileUtils.sizeOf(input1));
 
         Assert.assertTrue(ZipFileUtils.listFilesInZip(merged).stream().anyMatch("feed_info.txt"::equals));
+        Assert.assertTrue(ZipFileUtils.listFilesInZip(merged).stream().anyMatch("attribution.txt"::equals));
     }
 
     @Test

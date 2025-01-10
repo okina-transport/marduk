@@ -5,7 +5,10 @@ import no.rutebanken.marduk.repository.CacheProviderRepository;
 import no.rutebanken.marduk.routes.chouette.json.Job;
 import no.rutebanken.marduk.routes.file.ZipFileUtils;
 import org.apache.camel.Exchange;
+import org.apache.commons.csv.CSVFormat;
+import org.apache.commons.csv.CSVRecord;
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.tomcat.util.http.fileupload.FileItem;
 import org.apache.tomcat.util.http.fileupload.FileItemFactory;
@@ -18,11 +21,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.stereotype.Service;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -172,6 +172,43 @@ public class FileSystemService {
             logger.error("Récupération fichiers localStorage impossible: " + e);
             throw new IllegalArgumentException("Fichier :" + fileName);
         }
+    }
+
+
+    public static Iterable<CSVRecord> getRecords(ByteArrayOutputStream baos) throws IOException {
+
+        InputStream is1 = new ByteArrayInputStream(baos.toByteArray());
+        InputStream is2 = new ByteArrayInputStream(baos.toByteArray());
+        String result = IOUtils.toString(is1, StandardCharsets.UTF_8);
+
+        String delimiter = guessDelimiter(result);
+
+        Reader reader = new InputStreamReader(is2);
+
+        return CSVFormat.DEFAULT
+                .builder()
+                .setHeader()
+                .setSkipHeaderRecord(false)
+                .setDelimiter(delimiter)
+                .build()
+                .parse(reader);
+    }
+
+    private static String guessDelimiter(String fileContent) {
+
+        String[] lines = fileContent.split("\n");
+        String firstLine = lines[0];
+        long nbOfSemiColon = firstLine.chars()
+                .filter(ch -> ch == ';')
+                .count();
+
+        long nbOfComma = firstLine.chars()
+                .filter(ch -> ch == ',')
+                .count();
+
+        return nbOfSemiColon > nbOfComma ? ";" : ",";
+
+
     }
 
     /**

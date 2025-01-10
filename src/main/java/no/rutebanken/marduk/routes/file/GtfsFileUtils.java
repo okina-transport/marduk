@@ -18,6 +18,10 @@ package no.rutebanken.marduk.routes.file;
 
 import no.rutebanken.marduk.exceptions.MardukException;
 import no.rutebanken.marduk.routes.file.beans.CustomGtfsFileTransformer;
+import no.rutebanken.marduk.services.FileSystemService;
+import org.apache.commons.csv.CSVFormat;
+import org.apache.commons.csv.CSVPrinter;
+import org.apache.commons.csv.CSVRecord;
 import org.apache.commons.io.FileUtils;
 import org.onebusaway.gtfs.model.AgencyAndId;
 import org.onebusaway.gtfs.model.IdentityBean;
@@ -40,19 +44,19 @@ import org.onebusaway.gtfs_transformer.services.TransformContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.Serializable;
+import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 
 public class GtfsFileUtils {
     private static final Logger logger = LoggerFactory.getLogger(GtfsFileUtils.class);
 
     public static final String FEED_INFO_FILE_NAME = "feed_info.txt";
+    public static final String ATTRIBUTION_FILE_NAME = "attribution.txt";
+
+    public static final String ATTRIBUTION_FIELD_NAME = "attribution_id";
 
     private static final CustomGtfsFileTransformer IDS_TOP_OTP_FORMAT_TRANSFORMER = new CustomGtfsFileTransformer() {
 
@@ -82,7 +86,7 @@ public class GtfsFileUtils {
             buildGtfsMerger(EDuplicateDetectionStrategy.IDENTITY).run(new ArrayList<>(files), outputFile);
 
             addFeedInfoFromFirstGtfsFile(files, outputFile);
-
+            addAttributionFile(files, outputFile);
             logger.debug("Merged GTFS-files - spent {} ms", (System.currentTimeMillis() - t1));
             return outputFile;
         } catch (IOException ioException) {
@@ -161,13 +165,75 @@ public class GtfsFileUtils {
 
     private static void addFeedInfoFromFirstGtfsFile(Collection<File> files, File outputFile) throws IOException {
         ByteArrayOutputStream feedInfoStream = extractFeedInfoFile(files);
-        addFeedInfoToArchive(outputFile, feedInfoStream);
+        addFileToArchive(outputFile, feedInfoStream,FEED_INFO_FILE_NAME);
     }
 
-    private static void addFeedInfoToArchive(File outputFile, ByteArrayOutputStream feedInfoStream) throws IOException {
-        if (feedInfoStream != null) {
-            File tmp = new File(FEED_INFO_FILE_NAME);
-            feedInfoStream.writeTo(new FileOutputStream(tmp));
+    private static void addAttributionFile(Collection<File> files, File outputFile) throws IOException {
+        ByteArrayOutputStream attributionStream = generateAttributionFile(files);
+        if (attributionStream != null){
+            addFileToArchive(outputFile, attributionStream,ATTRIBUTION_FILE_NAME);
+        }
+    }
+
+    private static ByteArrayOutputStream generateAttributionFile(Collection<File> files) throws IOException {
+        ByteArrayOutputStream result = null;
+        List<String[]> modifiedRecords = new ArrayList<>();
+        
+        int currentFileIndex = 1;
+        for (File file : files) {
+            if (ZipFileUtils.listFilesInZip(file).stream().anyMatch(f -> ATTRIBUTION_FILE_NAME.equals(f))) {
+                try(FileInputStream inputStream = new FileInputStream(file)) {
+                    ByteArrayOutputStream attributionStream = ZipFileUtils.extractFileFromZipFile(inputStream, ATTRIBUTION_FILE_NAME);
+                    Iterable<CSVRecord> records = FileSystemService.getRecords(attributionStream);
+                    for (CSVRecord record : records) {
+                        if(record.isSet(ATTRIBUTION_FIELD_NAME)){
+                            String modifiedAttributionId = currentFileIndex + "-" + record.get(ATTRIBUTION_FIELD_NAME);
+                            String agencyId = record.get("agency_id");
+                            String routeId = record.get("route_id");
+                            String tripId = record.get("trip_id");
+                            String organisationName = record.get("organization_name");
+                            String isProducer = record.get("is_producer");
+                            String isOperator = record.get("is_operator");
+                            String isAuthority = record.get("is_authority");
+                            String attributionUrl = record.get("attribution_url");
+                            String attributionEmail = record.get("attribution_email");
+                            String attributionPhone = record.get("attribution_phone");
+                            modifiedRecords.add(new String[]{modifiedAttributionId,agencyId,routeId,tripId,organisationName,isProducer,isOperator,isAuthority,attributionUrl,attributionEmail,attributionPhone});
+                        }
+                    }
+                }
+            }
+            currentFileIndex++;
+        }
+
+
+        if (!modifiedRecords.isEmpty()) {
+            result = new ByteArrayOutputStream();
+            String[] headers = {"attribution_id","agency_id","route_id","trip_id","organization_name","is_producer","is_operator","is_authority","attribution_url",
+                    "attribution_email","attribution_phone"};
+
+            try (OutputStreamWriter writer = new OutputStreamWriter(result, StandardCharsets.UTF_8);
+                 CSVPrinter printer = new CSVPrinter(writer, CSVFormat.DEFAULT.withHeader(headers))) {
+                for (String[] row : modifiedRecords) {
+                    printer.printRecord((Object[]) row);
+                }
+
+            } catch (Exception e) {
+                logger.error("Error while writing attributions", e);
+            }
+
+
+        }
+
+
+        return result;
+    }
+
+
+    private static void addFileToArchive(File outputFile, ByteArrayOutputStream stream, String fileName) throws IOException {
+        if (stream != null) {
+            File tmp = new File(fileName);
+            stream.writeTo(new FileOutputStream(tmp));
             try (FileInputStream source = new FileInputStream(outputFile)) {
                 FileUtils.copyInputStreamToFile(ZipFileUtils.addFilesToZip(source, tmp), outputFile);
             }
