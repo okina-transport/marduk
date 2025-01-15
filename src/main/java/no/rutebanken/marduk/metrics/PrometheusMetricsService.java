@@ -35,7 +35,7 @@ public class PrometheusMetricsService extends PrometheusMeterRegistry {
 
     public PrometheusMetricsService() {
         super(PrometheusConfig.DEFAULT);
-        counter(STARTUP_TIME).increment(System.currentTimeMillis() /1000);
+        counter(STARTUP_TIME).increment((double) System.currentTimeMillis() / 1000);
     }
 
     @PreDestroy
@@ -44,6 +44,7 @@ public class PrometheusMetricsService extends PrometheusMeterRegistry {
     }
 
     public void countConsumerCalls(ConsumerType consumerType, ExportType type, String result) {
+        log.info("Prometheus metrics service consumer calls: {} - {} - {}", consumerType.name(), type.name(), result);
 
         List<Tag> counterTags = new ArrayList<>();
         counterTags.add(new ImmutableTag(CONSUMER_TAG_NAME, consumerType.name()));
@@ -53,7 +54,8 @@ public class PrometheusMetricsService extends PrometheusMeterRegistry {
     }
 
     public void countExports(ExportType type, String result) {
-        log.info("Prometheus metrics service : {} - {}", type.name(), result);
+        log.info("Prometheus metrics service exports: {} - {}", type.name(), result);
+
         List<Tag> counterTags = new ArrayList<>();
         counterTags.add(new ImmutableTag(EXPORT_TYPE_TAG_NAME, type.name()));
         counterTags.add(new ImmutableTag(RESULT_TAG, result));
