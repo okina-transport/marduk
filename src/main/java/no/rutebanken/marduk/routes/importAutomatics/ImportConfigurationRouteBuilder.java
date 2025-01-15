@@ -73,7 +73,7 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
     public static final String ERROR_RETRIEVING_IMPORT_FILE = "Erreur lors de la récupération du fichier d'import";
     public static final String ERROR_ACCESSING_IMPORT_FOLDER_OR_FILE = "Erreur lors de l'accès au dossier/fichier d'import sur le serveur FTP, veuillez vérifier que le dossier/fichier d'import existent bien";
     public static final String ERROR_NO_FTP_OR_URL_CONFIGURATION = "L'import automatique n'a pas de configuration FTP ou URL définie, veuillez mettre à jour l'import en vous connectant sur Mobi-iti";
-    public static final String ERROR_NO_WORKFLOW_AND_NOT_NETEX_IMPORT = "La configuration de l'import est incorrect, il doit soit avoir un workflow, soit être un import de type Netex parking, Netex POI ou Netex arrêt";
+    public static final String ERROR_NO_WORKFLOW_AND_NOT_NETEX_IMPORT = "La configuration de l'import est incorrect, il doit soit avoir un workflow, soit être un import de type Netex parking, Netex POI, Netex arrêt ou Netex tarifaire";
     public static final String ERROR_INVALID_NETEX_POI_OR_PARKING_OR_STOP_PLACE_ZIP = "Le fichier ZIP NeTEx POI ou parking ou arrêts à importer est invalide, il doit contenir seulement un fichier XML";
     public static final String SIGNING = "<br><br>Cordialement,<br>L'équipe Mobi-iti";
 
@@ -142,15 +142,7 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
 
         if (importConfiguration.getWorkflow() == null && !Arrays.asList(FileType.NETEX_PARKING.name(), FileType.NETEX_POI.name(), FileType.NETEX_STOP_PLACE.name(), FileType.NETEX_FARES.name()).contains(importConfiguration.getImportParameters().get(0).getImportType())) {
             log.error("{} Import configuration is incorrect (id : {})", correlation(), importConfigurationId);
-            log.error("{} It should either have a workflow defined or be a NeTEx parking, POI or stop place import", correlation());
-            log.warn("{} Abort automatic import", correlation());
-            sendMailForImportFailure(importConfiguration, referential, ERROR_NO_WORKFLOW_AND_NOT_NETEX_IMPORT);
-            return;
-        }
-
-        if (importConfiguration.getWorkflow() == null && !Arrays.asList(FileType.NETEX_FARES.name()).contains(importConfiguration.getImportParameters().get(0).getImportType())) {
-            log.error("{} Import configuration is incorrect (id : {})", correlation(), importConfigurationId);
-            log.error("{} It should either have a workflow defined or be a NeTEx fares import", correlation());
+            log.error("{} It should either have a workflow defined or be a NeTEx parking, POI, stop place or fares import", correlation());
             log.warn("{} Abort automatic import", correlation());
             sendMailForImportFailure(importConfiguration, referential, ERROR_NO_WORKFLOW_AND_NOT_NETEX_IMPORT);
             return;
@@ -438,11 +430,8 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
     private boolean isValidImportFile(FileItem importFile) {
         // Implement validation logic to check if the downloaded file is valid
         // For example, check the file name, content type, size, etc.
-        if (importFile == null || importFile.getSize() == 0 || importFile.getString().contains("<html")) {
-            return false;
-        }
+        return importFile != null && importFile.getSize() != 0 && !importFile.getString().contains("<html");
         // Add other validation checks as necessary
-        return true;
     }
 
 
