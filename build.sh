@@ -1,12 +1,9 @@
 echo Building docker image
-# Back
-VERSION_BACK=$(mvn -q \
-    -Dexec.executable=echo \
-    -Dexec.args='${project.version}' \
-    --non-recursive \
-    exec:exec)
-BACK_IMAGE_NAME=registry.okina.fr/mobiiti/marduk:"${VERSION_BACK}"
-#mvn spring-boot:build-image -Dspring-boot.build-image.imageName="${BACK_IMAGE_NAME}" -DskipTests
+
 mvn clean package -DskipTests
-docker build -t "${BACK_IMAGE_NAME}" --build-arg JAR_FILE=target/marduk-${VERSION_BACK}.jar .
-docker push "${BACK_IMAGE_NAME}"
+
+MVN_VERSION=$(mvn help:evaluate -Dexpression=project.version -q -DforceStdout | sed -r "s/\x1B\[([0-9]{1,3}(;[0-9]{1,2};?)?)?[mGK]//g")
+IMAGE_NAME=registry.okina.fr/mobiiti/marduk:"${MVN_VERSION}"
+
+docker build -t "${IMAGE_NAME}" --build-arg JAR_FILE=target/marduk-"${VERSION_BACK}".jar .
+docker push "${IMAGE_NAME}"
