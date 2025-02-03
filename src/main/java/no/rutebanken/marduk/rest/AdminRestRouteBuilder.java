@@ -1004,7 +1004,6 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .route()
                 .setHeader(PROVIDER_ID, header("providerId"))
                 .setHeader(GTFS_EXPORT_GLOBAL, constant(false))
-                .setHeader(KEEP_ORIGINAL_ID, constant(false))
                 .to("direct:authorizeRequest")
                 .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
                 .log(LoggingLevel.INFO, correlation() + "Chouette start export GTFS")
@@ -1025,7 +1024,6 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .route()
                 .setHeader(PROVIDER_ID, header("providerId"))
                 .setHeader(GTFS_EXPORT_GLOBAL, constant(true))
-                .setHeader(KEEP_ORIGINAL_ID, constant(true))
                 .to("direct:authorizeRequest")
                 .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
                 .log(LoggingLevel.INFO, correlation() + "Chouette start export Gtfs global")
@@ -1448,6 +1446,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
             if (headers.get(USE_EXTENDED_GTFS_ROUTE_TYPES) != null) {
                 e.getIn().setHeader(USE_EXTENDED_GTFS_ROUTE_TYPES, headers.get(USE_EXTENDED_GTFS_ROUTE_TYPES));
             }
+            e.getIn().setHeader(KEEP_ORIGINAL_ID, true);
         }
     }
 
