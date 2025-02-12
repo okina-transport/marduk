@@ -22,6 +22,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import no.rutebanken.marduk.Constants;
 import no.rutebanken.marduk.domain.AttributionsExportModes;
 import no.rutebanken.marduk.domain.IdFormat;
+import no.rutebanken.marduk.routes.chouette.json.AgencyParameters;
 import no.rutebanken.marduk.routes.chouette.json.IdParameters;
 
 import java.util.Date;
@@ -97,7 +98,20 @@ public class GtfsExportParameters {
         @JsonProperty("attributions_export_mode")
         public AttributionsExportModes attributionsExportModes = AttributionsExportModes.NONE;
 
-        public GtfsExport(String name, String objectIdPrefix, String referentialName, String organisationName, String userName, boolean keepOriginalId, Date startDate, Date endDate, String exportedFilename, IdParameters idParams, boolean mappingLinesIds, Boolean commercialPointExport, AttributionsExportModes attributionsExportModes, Boolean googleMapsCompatibility, Boolean useExtendedGtfsRouteTypes) {
+        @JsonProperty("agency_id")
+        private String agencyId;
+
+        @JsonProperty("agency_name")
+        private String agencyName;
+
+        @JsonProperty("agency_timezone")
+        private String agencyTimezone;
+
+        @JsonProperty("agency_url")
+        private String agencyURL;
+
+        public GtfsExport(String name, String objectIdPrefix, String referentialName, String organisationName, String userName, boolean keepOriginalId, Date startDate, Date endDate, String exportedFilename,
+                          IdParameters idParams, boolean mappingLinesIds, Boolean commercialPointExport, AttributionsExportModes attributionsExportModes, Boolean googleMapsCompatibility, Boolean useExtendedGtfsRouteTypes, AgencyParameters agencyParameters) {
             this.name = name;
             this.objectIdPrefix = objectIdPrefix;
             this.referentialName = referentialName;
@@ -117,10 +131,14 @@ public class GtfsExportParameters {
             this.mappingLinesIds = mappingLinesIds;
             this.attributionsExportModes = attributionsExportModes;
             this.useExtendedGtfsRouteTypes = useExtendedGtfsRouteTypes;
+            this.agencyId = agencyParameters.getAgencyId();
+            this.agencyName = agencyParameters.getAgencyName();
+            this.agencyTimezone = agencyParameters.getAgencyTimezone();
+            this.agencyURL = agencyParameters.getAgencyURL();
         }
 
         public GtfsExport(String name, String objectIdPrefix, String referentialName, String organisationName, String userName, boolean keepOriginalId, String exportedFilename) {
-            this(name, objectIdPrefix, referentialName, organisationName, userName, keepOriginalId, null, null, exportedFilename, new IdParameters(), false, false, AttributionsExportModes.NONE, false, false);
+            this(name, objectIdPrefix, referentialName, organisationName, userName, keepOriginalId, null, null, exportedFilename, new IdParameters(), false, false, AttributionsExportModes.NONE, false, false, new AgencyParameters());
         }
 
     }

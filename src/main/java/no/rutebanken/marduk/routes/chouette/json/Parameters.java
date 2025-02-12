@@ -111,17 +111,21 @@ public class Parameters {
         }
     }
 
-    public static String getGtfsExportParameters(Provider provider, String exportName, String user, boolean keepOriginalId, List<Long> linesIds, Date startDate, Date endDate, String exportedFilename, IdParameters idParams, boolean mappingLinesIds, Boolean commercialPointExport, AttributionsExportModes attributionsExportModes, Boolean googleMapsCompatibility, boolean useExtendedGtfsRouteTypes) {
+    public static String getGtfsExportParameters(Provider provider, String exportName, String user, boolean keepOriginalId, List<Long> linesIds, Date startDate, Date endDate, String exportedFilename, IdParameters idParams,
+                                                 boolean mappingLinesIds, Boolean commercialPointExport, AttributionsExportModes attributionsExportModes,
+                                                 Boolean googleMapsCompatibility, boolean useExtendedGtfsRouteTypes, AgencyParameters agencyParams) {
         try {
             ChouetteInfo chouetteInfo = provider.chouetteInfo;
 
             GtfsExportParameters.GtfsExport gtfsExport = new GtfsExportParameters.GtfsExport(exportName == null ? "offre" : exportName,
                     StringUtils.isNotEmpty(chouetteInfo.gtfsPrefixExport) ? chouetteInfo.gtfsPrefixExport : chouetteInfo.xmlns,
-                    chouetteInfo.referential, chouetteInfo.organisation, user, keepOriginalId, startDate, endDate, exportedFilename, idParams, mappingLinesIds, commercialPointExport, attributionsExportModes, googleMapsCompatibility, useExtendedGtfsRouteTypes);
+                    chouetteInfo.referential, chouetteInfo.organisation, user, keepOriginalId, startDate, endDate, exportedFilename, idParams, mappingLinesIds,
+                    commercialPointExport, attributionsExportModes, googleMapsCompatibility, useExtendedGtfsRouteTypes, agencyParams);
             gtfsExport.ids = linesIds;
             if (linesIds != null && !linesIds.isEmpty()) {
                 gtfsExport.referencesType = "line";
             }
+
 
             GtfsExportParameters.Parameters parameters = new GtfsExportParameters.Parameters(gtfsExport);
             GtfsExportParameters importParameters = new GtfsExportParameters(parameters);
@@ -135,7 +139,7 @@ public class Parameters {
     }
 
     public static String getGtfsExportParameters(Provider provider, String user, boolean keepOriginalId, String exportedFilename, Boolean commercialPointExport, AttributionsExportModes attributionsExportModes, Boolean googleMapsCompatibility, Boolean useExtendedGtfsRouteTypes) {
-        return getGtfsExportParameters(provider, null, user, keepOriginalId, null, null, null, exportedFilename, new IdParameters(), false, commercialPointExport, attributionsExportModes, googleMapsCompatibility, useExtendedGtfsRouteTypes);
+        return getGtfsExportParameters(provider, null, user, keepOriginalId, null, null, null, exportedFilename, new IdParameters(), false, commercialPointExport, attributionsExportModes, googleMapsCompatibility, useExtendedGtfsRouteTypes, new AgencyParameters());
     }
 
 

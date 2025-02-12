@@ -155,6 +155,23 @@ public class MultipleExportProcessor implements Processor {
             exchange.getIn().getHeaders().put(POST_PROCESS, export.getPostProcess());
         }
 
+        if (export.getAgencyId() != null){
+            exchange.getIn().getHeaders().put(AGENCY_ID, export.getAgencyId());
+        }
+
+        if (export.getAgencyName() != null){
+            exchange.getIn().getHeaders().put(AGENCY_NAME, export.getAgencyName());
+        }
+
+        if (export.getAgencyTimezone() != null){
+            exchange.getIn().getHeaders().put(AGENCY_TIMEZONE, export.getAgencyTimezone());
+        }
+
+        if (export.getAgencyURL() != null){
+            exchange.getIn().getHeaders().put(AGENCY_URL, export.getAgencyURL());
+        }
+
+
         exchange.getIn().getHeaders().put(MAPPING_LINES_IDS, true);
 
         if("mobiiti_technique".equals(exchange.getIn().getHeader(CHOUETTE_REFERENTIAL, String.class))){

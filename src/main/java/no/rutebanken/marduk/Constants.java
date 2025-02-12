@@ -181,5 +181,10 @@ public class Constants {
 
     public static final String SUB_FOLDER = "subFolder";
 
+    public static final String AGENCY_ID = "agencyId";
+    public static final String AGENCY_NAME = "agencyName";
+    public static final String AGENCY_URL = "agencyURL";
+    public static final String AGENCY_TIMEZONE = "agencyTimezone";
+
 }
 

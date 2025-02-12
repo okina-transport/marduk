@@ -30,6 +30,12 @@ public class ExportTemplate implements Serializable {
     private String postProcess;
     private Long exportJobId;
     private Boolean useExtendedGtfsRouteTypes;
+    private String agencyId;
+    private String agencyName;
+    private String agencyURL;
+    private String agencyTimezone;
+
+
 
     public Long getId() {
         return id;
@@ -205,5 +211,41 @@ public class ExportTemplate implements Serializable {
 
     public void setUseExtendedGtfsRouteTypes(Boolean useExtendedGtfsRouteTypes) {
         this.useExtendedGtfsRouteTypes = useExtendedGtfsRouteTypes;
+    }
+
+    public String getAgencyId() {
+        return agencyId;
+    }
+
+    public void setAgencyId(String agencyId) {
+        this.agencyId = agencyId;
+    }
+
+    public String getAgencyName() {
+        return agencyName;
+    }
+
+    public void setAgencyName(String agencyName) {
+        this.agencyName = agencyName;
+    }
+
+    public String getAgencyURL() {
+        return agencyURL;
+    }
+
+    public void setAgencyURL(String agencyURL) {
+        this.agencyURL = agencyURL;
+    }
+
+    public void setAgencyUrl(String agencyUrl) {
+        this.agencyURL = agencyUrl;
+    }
+
+    public String getAgencyTimezone() {
+        return agencyTimezone;
+    }
+
+    public void setAgencyTimezone(String agencyTimezone) {
+        this.agencyTimezone = agencyTimezone;
     }
 }
