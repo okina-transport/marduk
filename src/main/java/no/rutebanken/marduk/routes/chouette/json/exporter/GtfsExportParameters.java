@@ -110,8 +110,12 @@ public class GtfsExportParameters {
         @JsonProperty("agency_url")
         private String agencyURL;
 
+        @JsonProperty("exported_referentials")
+        private String exportedReferentials;
+
         public GtfsExport(String name, String objectIdPrefix, String referentialName, String organisationName, String userName, boolean keepOriginalId, Date startDate, Date endDate, String exportedFilename,
-                          IdParameters idParams, boolean mappingLinesIds, Boolean commercialPointExport, AttributionsExportModes attributionsExportModes, Boolean googleMapsCompatibility, Boolean useExtendedGtfsRouteTypes, AgencyParameters agencyParameters) {
+                          IdParameters idParams, boolean mappingLinesIds, Boolean commercialPointExport, AttributionsExportModes attributionsExportModes, Boolean googleMapsCompatibility,
+                          Boolean useExtendedGtfsRouteTypes, AgencyParameters agencyParameters, String exportedReferentials) {
             this.name = name;
             this.objectIdPrefix = objectIdPrefix;
             this.referentialName = referentialName;
@@ -135,10 +139,11 @@ public class GtfsExportParameters {
             this.agencyName = agencyParameters.getAgencyName();
             this.agencyTimezone = agencyParameters.getAgencyTimezone();
             this.agencyURL = agencyParameters.getAgencyURL();
+            this.exportedReferentials = exportedReferentials;
         }
 
         public GtfsExport(String name, String objectIdPrefix, String referentialName, String organisationName, String userName, boolean keepOriginalId, String exportedFilename) {
-            this(name, objectIdPrefix, referentialName, organisationName, userName, keepOriginalId, null, null, exportedFilename, new IdParameters(), false, false, AttributionsExportModes.NONE, false, false, new AgencyParameters());
+            this(name, objectIdPrefix, referentialName, organisationName, userName, keepOriginalId, null, null, exportedFilename, new IdParameters(), false, false, AttributionsExportModes.NONE, false, false, new AgencyParameters(), null);
         }
 
     }

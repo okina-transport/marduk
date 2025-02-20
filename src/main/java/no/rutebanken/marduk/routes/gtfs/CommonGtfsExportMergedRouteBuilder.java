@@ -69,20 +69,10 @@ public class CommonGtfsExportMergedRouteBuilder extends BaseRouteBuilder {
         from("direct:exportMergedGtfs")
                 .log(LoggingLevel.INFO, getClass().getName(), "Start export of merged GTFS file for France")
                 .setProperty(FOLDER_NAME, simple(localWorkingDirectory))
-                .process(e -> JobEvent.systemJobBuilder(e).jobDomain(JobEvent.JobDomain.TIMETABLE_PUBLISH).action("EXPORT_GTFS_MERGED").state(JobEvent.State.STARTED).newCorrelationId().build())
-                .inOnly("direct:updateStatus")
-                .setHeader(Exchange.FILE_PARENT, simple(mergedGtfsTmpDirectory))
-                .doTry()
-                .to("direct:fetchLatestGtfs")
-                .to("direct:mergeGtfs")
                 .setHeader(GTFS_EXPORT_GLOBAL_OK, simple("true"))
-
-                // Use wire tap to avoid replacing body
-                .wireTap("direct:reportExportMergedGtfsOK")
-                .end()
-                .to("direct:cleanUpLocalDirectory")
+                .toD("${header.data_url}")
+                .toD("file:${exchangeProperty." + FOLDER_NAME + "}/gtfs/${header.ID_FORMAT}?fileName=" + EXPORT_GLOBAL_GTFS_ZIP)
                 .log(LoggingLevel.INFO, getClass().getName(), "Completed export of merged GTFS file for France")
-                .doFinally()
                 .end()
                 .routeId("gtfs-export-merged-route");
 

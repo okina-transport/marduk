@@ -31,6 +31,7 @@ import no.rutebanken.marduk.security.TokenService;
 import no.rutebanken.marduk.services.FileSystemService;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
+import org.apache.camel.component.http4.HttpMethods;
 import org.apache.commons.lang3.BooleanUtils;
 import org.codehaus.plexus.util.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -103,62 +104,7 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
                 .to("direct:updateStatus")
                 .process(e -> e.getIn().setHeader(CHOUETTE_REFERENTIAL, getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)).chouetteInfo.referential))
                 .process(e -> e.getIn().setHeader(OKINA_REFERENTIAL, getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)).chouetteInfo.referential))
-                .process(e -> {
-                    String user = e.getIn().getHeader(USER, String.class);
-                    String gtfsParams;
-
-                    Date startDate = null;
-                    Date endDate = null;
-                    String exportName = e.getIn().getHeader(EXPORT_NAME) != null ? (String) e.getIn().getHeader(EXPORT_NAME) : null;
-                    String stopIdPrefix = e.getIn().getHeader(STOP_ID_PREFIX) != null ? (String) e.getIn().getHeader(STOP_ID_PREFIX) : null;
-                    IdFormat idFormat = e.getIn().getHeader(ID_FORMAT) != null ? IdFormat.valueOf((String)e.getIn().getHeader(ID_FORMAT)) : null;
-                    String idSuffix = e.getIn().getHeader(ID_SUFFIX) != null ? (String) e.getIn().getHeader(ID_SUFFIX) : null;
-                    String linePrefix = e.getIn().getHeader(LINE_ID_PREFIX) != null ? (String) e.getIn().getHeader(LINE_ID_PREFIX) : null;
-                    String commercialPointIdPrefix = e.getIn().getHeader(COMMERCIAL_POINT_ID_PREFIX) != null ? (String) e.getIn().getHeader(COMMERCIAL_POINT_ID_PREFIX) : null;
-                    boolean commercialPointExport = BooleanUtils.isTrue((Boolean) e.getIn().getHeader(COMMERCIAL_POINT_EXPORT));
-                    boolean googleMapsCompatibility = BooleanUtils.isTrue((Boolean) e.getIn().getHeader(GOOGLE_MAPS_COMPATIBILITY));
-                    boolean useExtendedGtfsRouteTypes = BooleanUtils.isTrue((Boolean) e.getIn().getHeader(USE_EXTENDED_GTFS_ROUTE_TYPES));
-                    IdParameters idParams = new IdParameters(stopIdPrefix,idFormat,idSuffix,linePrefix,commercialPointIdPrefix);
-                    AttributionsExportModes attributionsExportModes = e.getIn().getHeader(EXPORT_ATTRIBUTIONS) != null ? AttributionsExportModes.valueOf((String) e.getIn().getHeader(EXPORT_ATTRIBUTIONS)) : AttributionsExportModes.NONE;
-                    String exportedFilename = "gtfs.zip";;
-                    if(!e.getIn().getHeader(GTFS_EXPORT_GLOBAL, Boolean.class)){
-                        exportedFilename = e.getIn().getHeader(EXPORTED_FILENAME) != null ? (String) e.getIn().getHeader(EXPORTED_FILENAME) : exportName.replace(" ","_") + ".zip";
-                    }
-
-
-                    if(e.getIn().getHeader(EXPORT_START_DATE) != null && e.getIn().getHeader(EXPORT_END_DATE) != null){
-                        Long start = e.getIn().getHeader(EXPORT_START_DATE) != null ? e.getIn().getHeader(EXPORT_START_DATE, Long.class) : null;
-                        Long end =  e.getIn().getHeader(EXPORT_END_DATE) != null ? e.getIn().getHeader(EXPORT_END_DATE, Long.class) : null;
-                        startDate = (start != null) ? new Date(start) : null;
-                        endDate = (end != null) ? new Date(end) : null;
-                    }
-
-                    String agencyName = e.getIn().getHeader(AGENCY_NAME) != null ? (String) e.getIn().getHeader(AGENCY_NAME) : null;
-                    String agencyId = e.getIn().getHeader(AGENCY_ID) != null ? (String) e.getIn().getHeader(AGENCY_ID) : null;
-                    String agencyURL = e.getIn().getHeader(AGENCY_URL) != null ? (String) e.getIn().getHeader(AGENCY_URL) : null;
-                    String agencyTimezone = e.getIn().getHeader(AGENCY_TIMEZONE) != null ? (String) e.getIn().getHeader(AGENCY_TIMEZONE) : null;
-
-                    AgencyParameters agencyParams = new AgencyParameters();
-                    agencyParams.setAgencyId(agencyId);
-                    agencyParams.setAgencyName(agencyName);
-                    agencyParams.setAgencyURL(agencyURL);
-                    agencyParams.setAgencyTimezone(agencyTimezone);
-
-                    boolean mappingLinesIds = BooleanUtils.isTrue((Boolean) e.getIn().getHeader(MAPPING_LINES_IDS));
-                    boolean keepOriginalId = BooleanUtils.isTrue((Boolean) e.getIn().getHeader(KEEP_ORIGINAL_ID));
-
-                    if (e.getIn().getHeader(EXPORT_LINES_IDS) == null && startDate != null && endDate != null) {
-                        gtfsParams = Parameters.getGtfsExportParameters(getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)), exportName, user, keepOriginalId, null, startDate, endDate, exportedFilename, idParams, mappingLinesIds, commercialPointExport, attributionsExportModes, googleMapsCompatibility, useExtendedGtfsRouteTypes, agencyParams);
-                    } else if (e.getIn().getHeader(EXPORT_LINES_IDS) != null) {
-                        String linesIdsS = e.getIn().getHeader(EXPORT_LINES_IDS, String.class);
-                        List<Long> linesIds = Arrays.stream(StringUtils.split(linesIdsS, ",")).map(Long::valueOf).collect(toList());
-                        gtfsParams = Parameters.getGtfsExportParameters(getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)), exportName, user, keepOriginalId, linesIds, startDate, endDate, exportedFilename, idParams, mappingLinesIds, commercialPointExport, attributionsExportModes, googleMapsCompatibility, useExtendedGtfsRouteTypes, agencyParams);
-                    } else {
-                        gtfsParams = Parameters.getGtfsExportParameters(getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)), user, keepOriginalId, exportedFilename, commercialPointExport, attributionsExportModes, googleMapsCompatibility, useExtendedGtfsRouteTypes);
-                    }
-
-                    e.getIn().setHeader(JSON_PART, gtfsParams);
-                }) //Using header to addToExchange json data
+                .process(e -> setJsonPartHeaderFromExchange(e)) //Reading exchange to create a json with all parameters
                 .log(LoggingLevel.INFO, correlation() + "Creating multipart request")
                 .to("log:" + getClass().getName() + "?level=DEBUG&showAll=true&multiline=true")
                 .process(this::toGenericChouetteMultipart)
@@ -180,6 +126,18 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
 
         from("direct:processExportResult")
                 .to("log:" + getClass().getName() + "?level=DEBUG&showAll=true&multiline=true")
+                .process(e->{
+                    TimetableAction action = null;
+                    if (e.getIn().getHeader(GTFS_EXPORT_GLOBAL, Boolean.class) != null &&
+                            e.getIn().getHeader(GTFS_EXPORT_GLOBAL, Boolean.class).equals(true)) {
+                        action = TimetableAction.EXPORT_GTFS_MERGED;
+                        // For global GTFS exports, result is forced to OK. A failure in one organization should not cause a global failure.
+                        e.getIn().setHeader("action_report_result", "OK");
+                    }else{
+                        action = TimetableAction.EXPORT;
+                    }
+                    e.getIn().setHeader(EXPORT_ACTION, action);
+                })
                 .choice()
                     .when(simple("${header.action_report_result} == 'OK'"))
                         .log(LoggingLevel.INFO,"Export GTFS terminé - Fichier : ${header." + FILE_NAME + "} - Espace de données : ${header." + CHOUETTE_REFERENTIAL + "}")
@@ -201,7 +159,8 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
                         .log(LoggingLevel.INFO,"Upload to consumers and blob store completed")
                         .process(updateExportTemplateProcessor)
                         .process(e -> {
-                            JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.EXPORT).state(JobEvent.State.OK).build();
+                            TimetableAction action =  (TimetableAction) e.getIn().getHeader(EXPORT_ACTION);
+                            JobEvent.providerJobBuilder(e).timetableAction(action).state(JobEvent.State.OK).build();
                             if (e.getIn().getHeader(WORKLOW, String.class) != null) {
                                 createMail.createMail(e, "GTFS", JobEvent.TimetableAction.EXPORT, true);
                             }
@@ -209,7 +168,8 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
                     .when(simple("${header.action_report_result} == 'NOK'"))
                         .log(LoggingLevel.WARN, correlation() + "Export failed")
                         .process(e -> {
-                            JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.EXPORT).state(JobEvent.State.FAILED).build();
+                            TimetableAction action =  (TimetableAction) e.getIn().getHeader(EXPORT_ACTION);
+                            JobEvent.providerJobBuilder(e).timetableAction(action).state(JobEvent.State.FAILED).build();
                             if (e.getIn().getHeader(WORKLOW, String.class) != null) {
                                 createMail.createMail(e, "GTFS", JobEvent.TimetableAction.EXPORT, false);
                             }
@@ -217,7 +177,8 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
                     .otherwise()
                         .log(LoggingLevel.ERROR, correlation() + "Something went wrong on export")
                         .process(e -> {
-                            JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.EXPORT).state(JobEvent.State.FAILED).build();
+                            TimetableAction action =  (TimetableAction) e.getIn().getHeader(EXPORT_ACTION);
+                            JobEvent.providerJobBuilder(e).timetableAction(action).state(JobEvent.State.FAILED).build();
                             if (e.getIn().getHeader(WORKLOW, String.class) != null) {
                                 createMail.createMail(e, "GTFS", JobEvent.TimetableAction.EXPORT, false);
                             }
@@ -260,23 +221,96 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
 
         from("direct:chouetteGtfsExportForAllProviders")
                 .process(e -> {
+                    setJsonPartHeaderFromExchange(e);
+                    String correlationId = UUID.randomUUID().toString();
+                    e.getIn().setHeader(Constants.CORRELATION_ID, correlationId);
+
                     if (e.getIn().getHeader(EXPORT_REFERENTIALS_NAMES) != null) {
                         String allReferentialsNames = e.getIn().getHeader(EXPORT_REFERENTIALS_NAMES, String.class);
                         List<String> referentialsNames = Arrays.stream(StringUtils.split(allReferentialsNames, ",")).map(s -> "mobiiti_" + s).collect(toList());
                         log.info("GTFS export global with mobi_iti providers => " + referentialsNames);
-                        Collection<Provider> mobiitiProviders =  getProviderRepository().getMobiitiProviders().stream().filter(provider -> referentialsNames.contains(provider.name)).collect(Collectors.toList());
-                        e.getIn().setBody(mobiitiProviders);
+
                     }
                     else {
                         log.info("GTFS export global with all mobi_iti providers");
                         e.getIn().setBody(getProviderRepository().getMobiitiProviders());
                     }
+
+                    JobEvent.systemJobBuilder(e).jobDomain(JobEvent.JobDomain.TIMETABLE_PUBLISH).action("EXPORT_GTFS_MERGED").state(JobEvent.State.PENDING).type("gtfs").correlationId(correlationId).build();
                 })
-                .split().body().parallelProcessing().executorService(allProvidersExecutorService)
-                .setHeader(PROVIDER_ID, simple("${body.id}"))
-                .setBody(constant(null))
-                .inOnly("jms:queue:ChouetteExportGtfsQueue")
+                .to("direct:updateStatus")
+                .process(this::toGenericChouetteMultipart)
+                .setHeader(Exchange.CONTENT_TYPE, simple("multipart/form-data"))
+                .setHeader(Exchange.HTTP_METHOD, constant(HttpMethods.POST))
+                .toD(chouetteUrl + "/chouette_iev/referentials/${header." + CHOUETTE_REFERENTIAL + "}/globalExport/gtfs")
+                .process(e -> {
+                    e.getIn().setHeader(JOB_STATUS_URL, e.getIn().getHeader("Location").toString().replaceFirst("http", "http4"));
+                    e.getIn().setHeader(JOB_ID, getLastPathElementOfUrl(e.getIn().getHeader("Location", String.class)));
+                })
+                .setHeader(JOB_STATUS_ROUTING_DESTINATION, constant("direct:processExportResult"))
+                .setHeader(JOB_STATUS_JOB_TYPE, constant("EXPORT_GTFS_MERGED"))
+                .removeHeader("loopCounter")
+                .to("jms:queue:ChouettePollStatusQueue")
                 .routeId("chouette-gtfs-export-all-providers");
+    }
+
+    private void setJsonPartHeaderFromExchange(Exchange e) {
+        String user = e.getIn().getHeader(USER, String.class);
+        String gtfsParams;
+
+        Date startDate = null;
+        Date endDate = null;
+        String exportName = e.getIn().getHeader(EXPORT_NAME) != null ? (String) e.getIn().getHeader(EXPORT_NAME) : null;
+        String stopIdPrefix = e.getIn().getHeader(STOP_ID_PREFIX) != null ? (String) e.getIn().getHeader(STOP_ID_PREFIX) : null;
+        IdFormat idFormat = e.getIn().getHeader(ID_FORMAT) != null ? IdFormat.valueOf((String)e.getIn().getHeader(ID_FORMAT)) : null;
+        String idSuffix = e.getIn().getHeader(ID_SUFFIX) != null ? (String) e.getIn().getHeader(ID_SUFFIX) : null;
+        String linePrefix = e.getIn().getHeader(LINE_ID_PREFIX) != null ? (String) e.getIn().getHeader(LINE_ID_PREFIX) : null;
+        String commercialPointIdPrefix = e.getIn().getHeader(COMMERCIAL_POINT_ID_PREFIX) != null ? (String) e.getIn().getHeader(COMMERCIAL_POINT_ID_PREFIX) : null;
+        boolean commercialPointExport = BooleanUtils.isTrue((Boolean) e.getIn().getHeader(COMMERCIAL_POINT_EXPORT));
+        boolean googleMapsCompatibility = BooleanUtils.isTrue((Boolean) e.getIn().getHeader(GOOGLE_MAPS_COMPATIBILITY));
+        boolean useExtendedGtfsRouteTypes = BooleanUtils.isTrue((Boolean) e.getIn().getHeader(USE_EXTENDED_GTFS_ROUTE_TYPES));
+        IdParameters idParams = new IdParameters(stopIdPrefix,idFormat,idSuffix,linePrefix,commercialPointIdPrefix);
+        AttributionsExportModes attributionsExportModes = e.getIn().getHeader(EXPORT_ATTRIBUTIONS) != null ? AttributionsExportModes.valueOf((String) e.getIn().getHeader(EXPORT_ATTRIBUTIONS)) : AttributionsExportModes.NONE;
+        String exportedFilename = "gtfs.zip";;
+        if(!e.getIn().getHeader(GTFS_EXPORT_GLOBAL, Boolean.class)){
+            exportedFilename = e.getIn().getHeader(EXPORTED_FILENAME) != null ? (String) e.getIn().getHeader(EXPORTED_FILENAME) : exportName.replace(" ","_") + ".zip";
+        }
+
+
+        if(e.getIn().getHeader(EXPORT_START_DATE) != null && e.getIn().getHeader(EXPORT_END_DATE) != null){
+            Long start = e.getIn().getHeader(EXPORT_START_DATE) != null ? e.getIn().getHeader(EXPORT_START_DATE, Long.class) : null;
+            Long end =  e.getIn().getHeader(EXPORT_END_DATE) != null ? e.getIn().getHeader(EXPORT_END_DATE, Long.class) : null;
+            startDate = (start != null) ? new Date(start) : null;
+            endDate = (end != null) ? new Date(end) : null;
+        }
+
+        String agencyName = e.getIn().getHeader(AGENCY_NAME) != null ? (String) e.getIn().getHeader(AGENCY_NAME) : null;
+        String agencyId = e.getIn().getHeader(AGENCY_ID) != null ? (String) e.getIn().getHeader(AGENCY_ID) : null;
+        String agencyURL = e.getIn().getHeader(AGENCY_URL) != null ? (String) e.getIn().getHeader(AGENCY_URL) : null;
+        String agencyTimezone = e.getIn().getHeader(AGENCY_TIMEZONE) != null ? (String) e.getIn().getHeader(AGENCY_TIMEZONE) : null;
+
+        AgencyParameters agencyParams = new AgencyParameters();
+        agencyParams.setAgencyId(agencyId);
+        agencyParams.setAgencyName(agencyName);
+        agencyParams.setAgencyURL(agencyURL);
+        agencyParams.setAgencyTimezone(agencyTimezone);
+
+        boolean mappingLinesIds = BooleanUtils.isTrue((Boolean) e.getIn().getHeader(MAPPING_LINES_IDS));
+        boolean keepOriginalId = BooleanUtils.isTrue((Boolean) e.getIn().getHeader(KEEP_ORIGINAL_ID));
+
+        String exportedReferentials = e.getIn().getHeader(EXPORT_REFERENTIALS_NAMES) != null ? (String) e.getIn().getHeader(EXPORT_REFERENTIALS_NAMES) : null;
+
+        if (e.getIn().getHeader(EXPORT_LINES_IDS) == null && startDate != null && endDate != null) {
+            gtfsParams = Parameters.getGtfsExportParameters(getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)), exportName, user, keepOriginalId, null, startDate, endDate, exportedFilename, idParams, mappingLinesIds, commercialPointExport, attributionsExportModes, googleMapsCompatibility, useExtendedGtfsRouteTypes, agencyParams, exportedReferentials);
+        } else if (e.getIn().getHeader(EXPORT_LINES_IDS) != null) {
+            String linesIdsS = e.getIn().getHeader(EXPORT_LINES_IDS, String.class);
+            List<Long> linesIds = Arrays.stream(StringUtils.split(linesIdsS, ",")).map(Long::valueOf).collect(toList());
+            gtfsParams = Parameters.getGtfsExportParameters(getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)), exportName, user, keepOriginalId, linesIds, startDate, endDate, exportedFilename, idParams, mappingLinesIds, commercialPointExport, attributionsExportModes, googleMapsCompatibility, useExtendedGtfsRouteTypes, agencyParams, exportedReferentials);
+        } else {
+            gtfsParams = Parameters.getGtfsExportParameters(getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)), user, keepOriginalId, exportedFilename, commercialPointExport, attributionsExportModes, googleMapsCompatibility, useExtendedGtfsRouteTypes);
+        }
+
+        e.getIn().setHeader(JSON_PART, gtfsParams);
     }
 
 }

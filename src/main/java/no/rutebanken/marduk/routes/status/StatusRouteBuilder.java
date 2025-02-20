@@ -81,9 +81,9 @@ public class StatusRouteBuilder extends RouteBuilder {
 
 
 
-            if ("EXPORT_NETEX_MERGED".equals(jobEvent.action) || "netex".equals(jobEvent.type.toLowerCase())  ){
+            if ("EXPORT_NETEX_MERGED".equals(jobEvent.action) || (jobEvent.type != null && "netex".equals(jobEvent.type.toLowerCase()))  ){
                 exportType = ExportType.NETEX;
-            }else if ("neptune".equals(jobEvent.type.toLowerCase())){
+            }else if (jobEvent.type != null && "neptune".equals(jobEvent.type.toLowerCase())){
                 exportType = ExportType.NEPTUNE;
             }else{
                 exportType = ExportType.GTFS;

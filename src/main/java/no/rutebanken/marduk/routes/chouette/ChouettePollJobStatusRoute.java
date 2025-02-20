@@ -36,6 +36,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import java.io.BufferedReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.Arrays;
@@ -200,34 +203,35 @@ public class ChouettePollJobStatusRoute extends AbstractChouetteRouteBuilder {
                 .process(e -> {
                     e.getIn().setHeader("loopCounter", (Integer) e.getIn().getHeader("loopCounter", 0) + 1);
                 })
-                .setProperty(Constants.CHOUETTE_REFERENTIAL, header(Constants.CHOUETTE_REFERENTIAL))
-                .setProperty("url", header(Constants.JOB_STATUS_URL))
+                .setProperty(CHOUETTE_REFERENTIAL, header(CHOUETTE_REFERENTIAL))
+                .setProperty("url", header(JOB_STATUS_URL))
                 .removeHeaders("Camel*")
                 .setBody(constant(""))
-                .setHeader(Exchange.HTTP_METHOD, constant(org.apache.camel.component.http4.HttpMethods.GET))
+                .setHeader(Exchange.HTTP_METHOD, constant(HttpMethods.GET))
                 .process(e -> {
                     URL url = new URL(e.getProperty("url").toString().replace("http4", "http"));
                     HttpURLConnection con = (HttpURLConnection) url.openConnection();
-                    e.getIn().setBody(con.getInputStream());
+                    String response = getResponseAsString(con);
+                    e.getIn().setBody(response);
                 })
                 .choice()
                     .when(simple("${header.TIAMAT_STOP_PLACES_EXPORT} != null || ${header.TIAMAT_POINTS_OF_INTEREST_EXPORT} != null || ${header.TIAMAT_PARKINGS_EXPORT} != null"))
                         .process(e -> {
 
-                            final Boolean isPOI = e.getIn().getHeader(Constants.TIAMAT_POINTS_OF_INTEREST_EXPORT) != null;
-                            final Boolean isParkings = e.getIn().getHeader(Constants.TIAMAT_PARKINGS_EXPORT) != null;
+                            final Boolean isPOI = e.getIn().getHeader(TIAMAT_POINTS_OF_INTEREST_EXPORT) != null;
+                            final Boolean isParkings = e.getIn().getHeader(TIAMAT_PARKINGS_EXPORT) != null;
 
                             String skipJobReportsJobId;
 
                             if (isPOI) {
-                                skipJobReportsJobId = e.getIn().getHeader(Constants.TIAMAT_POINTS_OF_INTEREST_EXPORT).toString();
+                                skipJobReportsJobId = e.getIn().getHeader(TIAMAT_POINTS_OF_INTEREST_EXPORT).toString();
                             } else if (isParkings) {
-                                skipJobReportsJobId = e.getIn().getHeader(Constants.TIAMAT_PARKINGS_EXPORT).toString();
+                                skipJobReportsJobId = e.getIn().getHeader(TIAMAT_PARKINGS_EXPORT).toString();
                             } else {
-                                skipJobReportsJobId = e.getIn().getHeader(Constants.TIAMAT_STOP_PLACES_EXPORT).toString();
+                                skipJobReportsJobId = e.getIn().getHeader(TIAMAT_STOP_PLACES_EXPORT).toString();
                             }
 
-                            String exportJobId = e.getIn().getHeader(Constants.JOB_ID) != null ? e.getIn().getHeader(Constants.JOB_ID).toString() : null;
+                            String exportJobId = e.getIn().getHeader(JOB_ID) != null ? e.getIn().getHeader(JOB_ID).toString() : null;
                             if (skipJobReportsJobId.equals(exportJobId)) {
                                 if (isPOI) {
                                     log.info("TIAMAT_POINTS_OF_INTEREST_EXPORT matching job ids : " + skipJobReportsJobId);
@@ -237,17 +241,17 @@ public class ChouettePollJobStatusRoute extends AbstractChouetteRouteBuilder {
                                     log.info("TIAMAT_STOP_PLACES_EXPORT matching job ids : " + skipJobReportsJobId);
                                 }
                                 boolean isExportDone = false;
-                                if(JobEvent.TimetableAction.EXPORT.name().equals(e.getIn().getHeader(JOB_STATUS_JOB_TYPE))) {
+                                if(TimetableAction.EXPORT.name().equals(e.getIn().getHeader(JOB_STATUS_JOB_TYPE))) {
                                     Job job = e.getIn().getBody(Job.class);
                                     e.getProperties().put("STATUS", job.getStatus().name());
                                     e.getIn().setBody(job);
                                     isExportDone = job.getStatus().isDone();
                                     pollJobStatusRoute.countEvent(isPOI, isParkings, job);
-                                } else if(JobEvent.TimetableAction.EXPORT_NETEX.name().equals(e.getIn().getHeader(JOB_STATUS_JOB_TYPE))) {
+                                } else if(TimetableAction.EXPORT_NETEX.name().equals(e.getIn().getHeader(JOB_STATUS_JOB_TYPE))) {
                                     String json = e.getIn().getBody(String.class);
                                     JobResponse jobResponse = new ObjectMapper().readValue(json, JobResponse.class);
                                     isExportDone = jobResponse.getStatus().isDone();
-                                    if(Status.TERMINATED == jobResponse.getStatus()) {
+                                    if(TERMINATED == jobResponse.getStatus()) {
                                         e.getProperties().put("STATUS", "FINISHED");
                                         e.getIn().setHeader("action_report_result", "OK");
                                         e.getIn().setBody(json);
@@ -261,20 +265,20 @@ public class ChouettePollJobStatusRoute extends AbstractChouetteRouteBuilder {
 
                                 // remove header to ensure we don't fall into a "reschedulejob infinite loop" on aborted/failed jobs
                                 if (isExportDone) {
-                                    e.getIn().removeHeader(Constants.TIAMAT_STOP_PLACES_EXPORT);
-                                    e.getIn().removeHeader(Constants.TIAMAT_POINTS_OF_INTEREST_EXPORT);
-                                    e.getIn().removeHeader(Constants.TIAMAT_PARKINGS_EXPORT);
+                                    e.getIn().removeHeader(TIAMAT_STOP_PLACES_EXPORT);
+                                    e.getIn().removeHeader(TIAMAT_POINTS_OF_INTEREST_EXPORT);
+                                    e.getIn().removeHeader(TIAMAT_PARKINGS_EXPORT);
                                 }
                             } else {
                                 log.warn("ERROR : a non tiamat job should not trigger this camel process. Non matching job ids => " + skipJobReportsJobId + " vs " + exportJobId + " XXXXXXXXXX SHOULD NOT HAPPEN !!");
-                                e.getIn().removeHeader(Constants.TIAMAT_STOP_PLACES_EXPORT);
-                                e.getIn().removeHeader(Constants.TIAMAT_POINTS_OF_INTEREST_EXPORT);
-                                e.getIn().removeHeader(Constants.TIAMAT_PARKINGS_EXPORT);
+                                e.getIn().removeHeader(TIAMAT_STOP_PLACES_EXPORT);
+                                e.getIn().removeHeader(TIAMAT_POINTS_OF_INTEREST_EXPORT);
+                                e.getIn().removeHeader(TIAMAT_PARKINGS_EXPORT);
                             }
                         })
                         .choice()
                             .when(simple("${exchangeProperty.STATUS} == 'FINISHED'"))
-                                .toD("${header." + Constants.JOB_STATUS_ROUTING_DESTINATION + "}")
+                                .toD("${header." + JOB_STATUS_ROUTING_DESTINATION + "}")
                             .otherwise()
                                 .to("direct:rescheduleJob")
                         .endChoice()
@@ -381,7 +385,7 @@ public class ChouettePollJobStatusRoute extends AbstractChouetteRouteBuilder {
                 .end()
 
                 .choice()
-                    .when(simple("${body.finalised} == false"))
+                    .when(simple("${body.finalised} == false and ${header.RutebankenGtfsExportGlobal} != true"))
                         .choice()
                             .when(simple("${header.loopCounter} > " + maxRetries))
                                 .log(LoggingLevel.WARN, correlation() + "Received non-finalised action report for terminated job. Giving up.")
@@ -430,6 +434,19 @@ public class ChouettePollJobStatusRoute extends AbstractChouetteRouteBuilder {
                         .inOnly("direct:updateMergedNetexStatus")
                 .end()
                 .routeId("handle-global-netex-export-case");
+    }
+
+    public static String getResponseAsString(HttpURLConnection con) throws Exception {
+        StringBuilder response = new StringBuilder();
+        try (InputStream inputStream = con.getInputStream();
+             BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream))) {
+
+            String line;
+            while ((line = reader.readLine()) != null) {
+                response.append(line).append("\n");
+            }
+        }
+        return response.toString().trim();
     }
 }
 
