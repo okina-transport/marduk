@@ -224,9 +224,10 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
                     setJsonPartHeaderFromExchange(e);
                     String correlationId = UUID.randomUUID().toString();
                     e.getIn().setHeader(Constants.CORRELATION_ID, correlationId);
+                    String allReferentialsNames = null;
 
-                    if (e.getIn().getHeader(EXPORT_REFERENTIALS_NAMES) != null) {
-                        String allReferentialsNames = e.getIn().getHeader(EXPORT_REFERENTIALS_NAMES, String.class);
+                    if (e.getIn().getHeader(EXPORT_REFERENTIALS_NAMES) != null && StringUtils.isNotEmpty((String) e.getIn().getHeader(EXPORT_REFERENTIALS_NAMES))) {
+                        allReferentialsNames = e.getIn().getHeader(EXPORT_REFERENTIALS_NAMES, String.class);
                         List<String> referentialsNames = Arrays.stream(StringUtils.split(allReferentialsNames, ",")).map(s -> "mobiiti_" + s).collect(toList());
                         log.info("GTFS export global with mobi_iti providers => " + referentialsNames);
 
@@ -234,6 +235,8 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
                     else {
                         log.info("GTFS export global with all mobi_iti providers");
                         e.getIn().setBody(getProviderRepository().getMobiitiProviders());
+                        allReferentialsNames = getProviderRepository().getMobiitiProviders().stream().map(prov-> prov.getName().replace("mobiiti_","")).collect(Collectors.joining(","));
+                        e.getIn().setHeader(EXPORT_REFERENTIALS_NAMES, allReferentialsNames);
                     }
 
                     JobEvent.systemJobBuilder(e).jobDomain(JobEvent.JobDomain.TIMETABLE_PUBLISH).action("EXPORT_GTFS_MERGED").state(JobEvent.State.PENDING).type("gtfs").correlationId(correlationId).build();

@@ -99,20 +99,6 @@ public class NetexExportMergedRouteBuilder extends BaseRouteBuilder {
                 })
                 .routeId("reset-export-lists");
 
-        from("direct:updateMergedNetexStatus")
-                .choice()
-                .when(PredicateBuilder.or(simple("${header.current_status} == '" + ABORTED + "'"),simple("${header.current_status} == '" + CANCELED + "'")))
-                    .process(e->{
-                        String referential = (String) e.getIn().getHeader(CHOUETTE_REFERENTIAL);
-                        failedExports.add(referential + "-" + CURRENT_AGGREGATED_NETEX_FILENAME);
-                    })
-                .otherwise()
-                    .process(e->{
-                        String referential = (String) e.getIn().getHeader(CHOUETTE_REFERENTIAL);
-                        completedExports.add(referential + "-" + CURRENT_AGGREGATED_NETEX_FILENAME);
-                    })
-                .end()
-                .routeId("update-merged-netex-status");
 
         from("direct:exportMergedNetex")
                 .log(LoggingLevel.INFO, getClass().getName(), "Start export of merged Netex file for France")

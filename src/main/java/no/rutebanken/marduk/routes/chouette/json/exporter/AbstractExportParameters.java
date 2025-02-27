@@ -47,4 +47,7 @@ public class AbstractExportParameters extends AbstractParameters {
     @JsonProperty("validate_after_export")
     public boolean validateAfterExport = true;
 
+    @JsonProperty("exported_referentials")
+    protected String exportedReferentials;
+
 }

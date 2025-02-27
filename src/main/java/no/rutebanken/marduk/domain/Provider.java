@@ -45,6 +45,10 @@ public class Provider {
 	}
 	public ChouetteInfo chouetteInfo;
 
+    public String getName() {
+        return name;
+    }
+
     @Override
     public String toString() {
         return "Provider{" +

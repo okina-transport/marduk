@@ -110,8 +110,7 @@ public class GtfsExportParameters {
         @JsonProperty("agency_url")
         private String agencyURL;
 
-        @JsonProperty("exported_referentials")
-        private String exportedReferentials;
+
 
         public GtfsExport(String name, String objectIdPrefix, String referentialName, String organisationName, String userName, boolean keepOriginalId, Date startDate, Date endDate, String exportedFilename,
                           IdParameters idParams, boolean mappingLinesIds, Boolean commercialPointExport, AttributionsExportModes attributionsExportModes, Boolean googleMapsCompatibility,

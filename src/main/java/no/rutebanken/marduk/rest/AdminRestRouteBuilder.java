@@ -1319,9 +1319,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .setHeader(Exchange.FILE_PARENT, simple(mergedNetexTmpDirectory))
                 .inOnly("direct:cleanUpLocalDirectory")
                 .process(e -> e.getIn().setHeader(USER, getHeaders(e, USER)))
-                .inOnly("direct:resetExportLists")
                 .inOnly("direct:chouetteNetexExportForAllProviders")
-                .inOnly("direct:exportMergedNetex")
                 .routeId("launch-global-netex-export");
 
     }

@@ -334,7 +334,6 @@ public class ChouettePollJobStatusRoute extends AbstractChouetteRouteBuilder {
         from("direct:jobStatusDone")
                 .log(LoggingLevel.DEBUG, correlation() + "Exited retry loop with status ${header.current_status}")
                 .to("log:" + getClass().getName() + "?level=DEBUG&showAll=true&multiline=true")
-                .inOnly("direct:handleGlobalNetexExportCase")
                 .choice()
                     .when(simple("${header.current_status} == '" + SCHEDULED + "' || ${header.current_status} == '" + STARTED + "' || ${header.current_status} == '" + RESCHEDULED + "'"))
                         .log(LoggingLevel.WARN, correlation() + "Job timed out with state ${header.current_status}. Config should probably be tweaked. Stopping route.")
@@ -379,11 +378,12 @@ public class ChouettePollJobStatusRoute extends AbstractChouetteRouteBuilder {
                 .unmarshal().json(JsonLibrary.Jackson, ActionReportWrapper.class).process(e -> { /** Dummy line to make doCatch available */})
                 .doCatch(JsonMappingException.class)
                 .log(LoggingLevel.WARN, correlation() + "Received invalid (empty?) action report for terminated job. Giving up.")
-                .process(e -> JobEvent.providerJobBuilder(e).timetableAction(TimetableAction.valueOf((String) e.getIn().getHeader(JOB_STATUS_JOB_TYPE))).state(State.FAILED).build())
+                .process(e ->{
+                    JobEvent.providerJobBuilder(e).timetableAction(TimetableAction.valueOf((String) e.getIn().getHeader(JOB_STATUS_JOB_TYPE))).state(State.FAILED).build();
+                } )
                 .to("direct:updateStatus")
                 .stop()
                 .end()
-
                 .choice()
                     .when(simple("${body.finalised} == false and ${header.RutebankenGtfsExportGlobal} != true"))
                         .choice()
@@ -428,12 +428,6 @@ public class ChouettePollJobStatusRoute extends AbstractChouetteRouteBuilder {
                 .routeId("chouette-process-validation-report");
 
 
-        from("direct:handleGlobalNetexExportCase")
-                .choice()
-                    .when(e-> BooleanUtils.isTrue((Boolean) e.getIn().getHeader(NETEX_EXPORT_GLOBAL)))
-                        .inOnly("direct:updateMergedNetexStatus")
-                .end()
-                .routeId("handle-global-netex-export-case");
     }
 
     public static String getResponseAsString(HttpURLConnection con) throws Exception {
