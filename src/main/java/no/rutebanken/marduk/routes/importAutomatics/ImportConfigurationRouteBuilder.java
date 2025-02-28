@@ -409,7 +409,7 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
 
         try {
             configurationUrl.setLastTimestamp(importLastTimeModified);
-            Optional<FileItem> importFile = Optional.of(downloadImportFileFromUrl(importFileUrl));
+            Optional<FileItem> importFile = Optional.of(downloadImportFileFromUrl(importFileUrl, importConfiguration.getImportParameters().get(0).getImportType()));
 
             // Verification after download to ensure file is valid
             if (!isValidImportFile(importFile.get())) {
@@ -543,9 +543,12 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
         }
     }
 
-    private FileItem downloadImportFileFromUrl(URL url) throws IOException {
+    private FileItem downloadImportFileFromUrl(URL url, String fileType) throws IOException {
         try (InputStream inputStream = url.openStream()) {
             String fileName = url.getPath().substring(url.getPath().lastIndexOf('/') + 1);
+            if(StringUtils.isEmpty(fileName)){
+                fileName = getDefaultFileName(fileType);
+            }
             return copyFileFromInputStream(inputStream, fileName);
         }
     }
@@ -677,6 +680,23 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
         Streams.copy(inputStream, fileItem.getOutputStream(), true);
 
         return fileItem;
+    }
+
+    public String getDefaultFileName(String optionValue) {
+        if (optionValue == null || optionValue.isEmpty()) {
+            return "default.zip";
+        }
+
+        Map<String, String> fileNames = new HashMap<>();
+        fileNames.put(FileType.GTFS.name(), "gtfs.zip");
+        fileNames.put(FileType.NEPTUNE.name(), "neptune.zip");
+        fileNames.put(FileType.NETEXPROFILE.name(), "netex.zip");
+        fileNames.put(FileType.NETEX_PARKING.name(), "parking.zip");
+        fileNames.put(FileType.NETEX_POI.name(), "poi.zip");
+        fileNames.put(FileType.NETEX_STOP_PLACE.name(), "arrets.zip");
+        fileNames.put(FileType.NETEX_FARES.name(), "tarifaire.zip");
+
+        return fileNames.getOrDefault(optionValue, "default.zip");
     }
 
     private void getCron(Exchange e) throws SchedulerException, JSONException {
