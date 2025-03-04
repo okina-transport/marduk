@@ -135,6 +135,14 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .setHeader(Exchange.CONTENT_TYPE, constant("text/plain"))
                 .transform(exceptionMessage());
 
+        // Remove "Authorization" header from all REST responses which make MARDUK crash sometimes
+        // (java.io.IOException: org.eclipse.jetty.http.BadMessageException: 500: Response header too large)
+        interceptFrom("rest:*")
+                .log(LoggingLevel.INFO, "Remove Authorization header")
+                .process(e -> {
+                    e.getMessage().removeHeader("Authorization");
+                });
+
         restConfiguration()
                 .component("jetty")
                 .bindingMode(RestBindingMode.json)
@@ -429,7 +437,6 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .to("direct:authorizeRequest")
                 .log(LoggingLevel.INFO, "Triggered GTFS basic export")
                 .removeHeaders("CamelHttp*")
-                .removeHeader("Authorization")
                 .inOnly("jms:queue:GtfsBasicExportMergedQueue")
                 .routeId("admin-timetable-gtfs-basic-export")
                 .endRest()
@@ -648,7 +655,6 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .process(e -> checkFileContent(e))
                     .to("direct:uploadFilesAndStartImport")
                 .doCatch(Exception.class)
-                .removeHeaders("Authorization")
                 .process(e -> {
                     Exception exception = e.getProperty(Exchange.EXCEPTION_CAUGHT, Exception.class);
                     e.getIn().setHeader(HTTP_RESPONSE_CODE, 500);
@@ -925,7 +931,6 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
                 .log(LoggingLevel.INFO, correlation() + "Chouette start export Netex")
                 .removeHeaders("CamelHttp*")
-                .removeHeader("Authorization")
                 .process(e -> e.getIn().setHeader(USER, getHeaders(e, USER)))
                 .setBody().simple(CAMEL_HEADERS)
                 .inOnly("jms:queue:ChouetteExportNetexQueue")
@@ -947,7 +952,6 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
                 .log(LoggingLevel.INFO, correlation() + "Chouette start export Neptune")
                 .removeHeaders("CamelHttp*")
-                .removeHeader("Authorization")
                 .process(e -> e.getIn().setHeader(USER, getHeaders(e, USER)))
                 .setBody().simple(CAMEL_HEADERS)
                 .inOnly("jms:queue:ChouetteExportNeptuneQueue")
@@ -1008,7 +1012,6 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
                 .log(LoggingLevel.INFO, correlation() + "Chouette start export GTFS")
                 .removeHeaders("CamelHttp*")
-                .removeHeader("Authorization")
                 .process(this::getFromHeadersForGTFS)
                 .setBody().simple(CAMEL_HEADERS)
                 .inOnly("jms:queue:ChouetteExportGtfsQueue")
@@ -1141,7 +1144,6 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .log(LoggingLevel.INFO, correlation() + "Tiamat start export POI")
                 .removeHeaders("CamelHttp*")
                 .process(e -> e.getIn().setHeader(USER, getHeaders(e, USER)))
-                .removeHeader("Authorization")
                 .setBody().simple(CAMEL_HEADERS)
                 .inOnly("jms:queue:TiamatPointOfInterestExport")
                 .routeId("admin-tiamat-export-poi")
@@ -1166,7 +1168,6 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .otherwise()
                 .setHeader(JOB_STATUS_JOB_VALIDATION_LEVEL, constant(JobEvent.TimetableAction.VALIDATION_LEVEL_1.name()))
                 .end()
-                .removeHeader("Authorization")
                 .setBody().simple(CAMEL_HEADERS)
                 .inOnly("jms:queue:ChouetteValidationQueue")
                 .routeId("admin-chouette-validate")
