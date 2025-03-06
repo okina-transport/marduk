@@ -52,6 +52,7 @@ public class Constants {
     public static final String USE_TARGET_NETWORK = "useTargetNetwork";
     public static final String TARGET_NETWORK = "targetNetwork";
     public static final String RENAME_ROUTES_AFTER_MERGE = "renameRoutesAfterMerge";
+    public static final String IMPORT_FARE_FILES = "importFareFiles";
 
     public static final String UPDATE_STOP_ACCESSIBILITY = "updateStopAccessibility";
 

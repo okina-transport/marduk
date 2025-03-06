@@ -240,6 +240,10 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
                     String targetNetwork = e.getIn().getHeader(TARGET_NETWORK, String.class);
 
                     boolean renameRoutesAfterMerge = BooleanUtils.isTrue(e.getIn().getHeader(RENAME_ROUTES_AFTER_MERGE, Boolean.class));
+
+                    String importFareFilesStr = e.getIn().getHeader(IMPORT_FARE_FILES, String.class);
+                    boolean importFareFiles = !StringUtils.isEmpty(importFareFilesStr) && Boolean.parseBoolean(importFareFilesStr);
+
                     rawImportParameters.setFileName(fileName);
                     rawImportParameters.setFileType(fileType);
                     rawImportParameters.setProviderId(providerId);
@@ -267,6 +271,7 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
                     rawImportParameters.setUseTargetNetwork(useTargetNetwork);
                     rawImportParameters.setTargetNetwork(targetNetwork);
                     rawImportParameters.setRenameRoutesAfterMerge(renameRoutesAfterMerge);
+                    rawImportParameters.setImportFareFiles(importFareFiles);
 
                     e.getIn().setHeader(JSON_PART, getStringImportParameters(rawImportParameters));
                 }) //Using header to addToExchange json data

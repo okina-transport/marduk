@@ -39,6 +39,7 @@ public class RawImportParameters {
     private boolean useTargetNetwork;
     private String targetNetwork;
     private boolean renameRoutesAfterMerge;
+    private boolean importFareFiles;
 
     public String getFileName() {
         return fileName;
@@ -222,6 +223,14 @@ public class RawImportParameters {
 
     public void setRouteSortOrder(boolean routeSortOrder) {
         this.routeSortOrder = routeSortOrder;
+    }
+
+    public boolean isImportFareFiles() {
+        return importFareFiles;
+    }
+
+    public void setImportFareFiles(boolean importFareFiles) {
+        this.importFareFiles = importFareFiles;
     }
 
     public boolean isNetexImportLayouts() {

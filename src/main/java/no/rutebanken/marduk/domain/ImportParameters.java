@@ -31,6 +31,7 @@ public class ImportParameters {
     private Boolean useTargetNetwork;
     private String targetNetwork;
     private Boolean renameRoutesAfterMerge;
+    private Boolean importFareFiles;
 
     public Long getId() {
         return id;
@@ -254,5 +255,13 @@ public class ImportParameters {
 
     public void setRenameRoutesAfterMerge(Boolean renameRoutesAfterMerge) {
         this.renameRoutesAfterMerge = renameRoutesAfterMerge;
+    }
+
+    public Boolean getImportFareFiles() {
+        return importFareFiles;
+    }
+
+    public void setImportFareFiles(Boolean importFareFiles) {
+        this.importFareFiles = importFareFiles;
     }
 }
