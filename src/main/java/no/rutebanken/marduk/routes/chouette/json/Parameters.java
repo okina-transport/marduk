@@ -113,14 +113,14 @@ public class Parameters {
 
     public static String getGtfsExportParameters(Provider provider, String exportName, String user, boolean keepOriginalId, List<Long> linesIds, Date startDate, Date endDate, String exportedFilename, IdParameters idParams,
                                                  boolean mappingLinesIds, Boolean commercialPointExport, AttributionsExportModes attributionsExportModes,
-                                                 Boolean googleMapsCompatibility, boolean useExtendedGtfsRouteTypes, AgencyParameters agencyParams, String exportedReferentials) {
+                                                 Boolean googleMapsCompatibility, boolean useExtendedGtfsRouteTypes, AgencyParameters agencyParams, String exportedReferentials,  Long exportConfigurationId) {
         try {
             ChouetteInfo chouetteInfo = provider.chouetteInfo;
 
             GtfsExportParameters.GtfsExport gtfsExport = new GtfsExportParameters.GtfsExport(exportName == null ? "offre" : exportName,
                     StringUtils.isNotEmpty(chouetteInfo.gtfsPrefixExport) ? chouetteInfo.gtfsPrefixExport : chouetteInfo.xmlns,
                     chouetteInfo.referential, chouetteInfo.organisation, user, keepOriginalId, startDate, endDate, exportedFilename, idParams, mappingLinesIds,
-                    commercialPointExport, attributionsExportModes, googleMapsCompatibility, useExtendedGtfsRouteTypes, agencyParams, exportedReferentials );
+                    commercialPointExport, attributionsExportModes, googleMapsCompatibility, useExtendedGtfsRouteTypes, agencyParams, exportedReferentials, exportConfigurationId );
             gtfsExport.ids = linesIds;
             if (linesIds != null && !linesIds.isEmpty()) {
                 gtfsExport.referencesType = "line";
@@ -138,12 +138,12 @@ public class Parameters {
         }
     }
 
-    public static String getGtfsExportParameters(Provider provider, String user, boolean keepOriginalId, String exportedFilename, Boolean commercialPointExport, AttributionsExportModes attributionsExportModes, Boolean googleMapsCompatibility, Boolean useExtendedGtfsRouteTypes) {
-        return getGtfsExportParameters(provider, null, user, keepOriginalId, null, null, null, exportedFilename, new IdParameters(), false, commercialPointExport, attributionsExportModes, googleMapsCompatibility, useExtendedGtfsRouteTypes, new AgencyParameters(), null);
+    public static String getGtfsExportParameters(Provider provider, String user, boolean keepOriginalId, String exportedFilename, Boolean commercialPointExport, AttributionsExportModes attributionsExportModes, Boolean googleMapsCompatibility, Boolean useExtendedGtfsRouteTypes, Long exportConfigurationId) {
+        return getGtfsExportParameters(provider, null, user, keepOriginalId, null, null, null, exportedFilename, new IdParameters(), false, commercialPointExport, attributionsExportModes, googleMapsCompatibility, useExtendedGtfsRouteTypes, new AgencyParameters(), null, exportConfigurationId);
     }
 
 
-    public static String getNetexExportProvider(Provider provider, boolean exportStops, String user, String exportedFilename, String exportedReferentials) {
+    public static String getNetexExportProvider(Provider provider, boolean exportStops, String user, String exportedFilename, String exportedReferentials, Long exportConfigurationId) {
         try {
             ChouetteInfo chouetteInfo = provider.chouetteInfo;
             String projectionType = null;
@@ -151,7 +151,7 @@ public class Parameters {
             if (StringUtils.isNotBlank(chouetteInfo.getNameNetexOffre())) {
                 defaultCodespacePrefix = chouetteInfo.getNameNetexOffre();
             }
-            NetexExportParameters.NetexExport netexExport = new NetexExportParameters.NetexExport("offre", chouetteInfo.referential, chouetteInfo.organisation, user, projectionType, exportStops, defaultCodespacePrefix, exportedFilename, exportedReferentials);
+            NetexExportParameters.NetexExport netexExport = new NetexExportParameters.NetexExport("offre", chouetteInfo.referential, chouetteInfo.organisation, user, projectionType, exportStops, defaultCodespacePrefix, exportedFilename, exportedReferentials, exportConfigurationId);
             NetexExportParameters.Parameters parameters = new NetexExportParameters.Parameters(netexExport);
             NetexExportParameters exportParameters = new NetexExportParameters(parameters);
             ObjectMapper mapper = new ObjectMapper();
