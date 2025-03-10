@@ -117,7 +117,7 @@ public class GtfsExportParameters {
 
         public GtfsExport(String name, String objectIdPrefix, String referentialName, String organisationName, String userName, boolean keepOriginalId, Date startDate, Date endDate, String exportedFilename,
                           IdParameters idParams, boolean mappingLinesIds, Boolean commercialPointExport, AttributionsExportModes attributionsExportModes, Boolean googleMapsCompatibility,
-                          Boolean useExtendedGtfsRouteTypes, AgencyParameters agencyParameters, String exportedReferentials) {
+                          boolean useExtendedGtfsRouteTypes, AgencyParameters agencyParameters, String exportedReferentials, Long exportConfigurationId) {
             this.name = name;
             this.objectIdPrefix = objectIdPrefix;
             this.referentialName = referentialName;
@@ -143,10 +143,11 @@ public class GtfsExportParameters {
             this.agencyLang = agencyParameters.getAgencyLang();
             this.agencyURL = agencyParameters.getAgencyURL();
             this.exportedReferentials = exportedReferentials;
+            this.exportConfigurationId = exportConfigurationId;
         }
 
-        public GtfsExport(String name, String objectIdPrefix, String referentialName, String organisationName, String userName, boolean keepOriginalId, String exportedFilename) {
-            this(name, objectIdPrefix, referentialName, organisationName, userName, keepOriginalId, null, null, exportedFilename, new IdParameters(), false, false, AttributionsExportModes.NONE, false, false, new AgencyParameters(), null);
+        public GtfsExport(String name, String objectIdPrefix, String referentialName, String organisationName, String userName, boolean keepOriginalId, String exportedFilename,  Long exportConfigurationId) {
+            this(name, objectIdPrefix, referentialName, organisationName, userName, keepOriginalId, null, null, exportedFilename, new IdParameters(), false, false, AttributionsExportModes.NONE, false, false, new AgencyParameters(), null, exportConfigurationId);
         }
 
     }

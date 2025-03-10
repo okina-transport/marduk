@@ -101,7 +101,7 @@ public class ChouetteExportNetexRouteBuilder extends AbstractChouetteRouteBuilde
                 .process(e -> {
                     String user = e.getIn().getHeader(USER, String.class);
                     String exportedFilename = e.getIn().getHeader(EXPORTED_FILENAME) != null && !e.getIn().getHeader(NETEX_EXPORT_GLOBAL, Boolean.class) ? (String) e.getIn().getHeader(EXPORTED_FILENAME) : null;
-                    e.getIn().setHeader(JSON_PART, Parameters.getNetexExportProvider(getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)), exportStops, user, exportedFilename, null));
+                    e.getIn().setHeader(JSON_PART, Parameters.getNetexExportProvider(getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)), exportStops, user, exportedFilename, null, null));
                 }) //Using header to addToExchange json data
                 .log(LoggingLevel.INFO, correlation() + "Creating multipart request")
                 .process(this::toGenericChouetteMultipart)
@@ -230,8 +230,9 @@ public class ChouetteExportNetexRouteBuilder extends AbstractChouetteRouteBuilde
                     e.getIn().setHeader(FILE_NAME, exportName);
                     e.getIn().setHeader(FILE_TYPE, "netex");
                     String user = e.getIn().getHeader(USER, String.class);
+                    Long exportConfigurationId = e.getIn().getHeader(EXPORT_CONFIGURATION_ID) != null ? Long.valueOf((String) e.getIn().getHeader(EXPORT_CONFIGURATION_ID)) : null;
                     String exportedFilename = e.getIn().getHeader(EXPORTED_FILENAME) != null ? (String) e.getIn().getHeader(EXPORTED_FILENAME) : null;
-                    e.getIn().setHeader(JSON_PART, Parameters.getNetexExportProvider(getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)), exportStops, user, exportedFilename, allReferentialsNames));
+                    e.getIn().setHeader(JSON_PART, Parameters.getNetexExportProvider(getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)), exportStops, user, exportedFilename, allReferentialsNames, exportConfigurationId));
                     JobEvent.systemJobBuilder(e).jobDomain(JobEvent.JobDomain.TIMETABLE_PUBLISH).action("EXPORT_NETEX_MERGED").fileName(exportedFilename).state(JobEvent.State.PENDING).type("netex").correlationId(correlationId).build();
                 })
                 .to("direct:updateStatus")

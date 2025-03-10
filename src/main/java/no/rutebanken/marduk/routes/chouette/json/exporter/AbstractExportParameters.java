@@ -50,4 +50,7 @@ public class AbstractExportParameters extends AbstractParameters {
     @JsonProperty("exported_referentials")
     protected String exportedReferentials;
 
+    @JsonProperty("export_configuration_id")
+    protected Long exportConfigurationId;
+
 }
