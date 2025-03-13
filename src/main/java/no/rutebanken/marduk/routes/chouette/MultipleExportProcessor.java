@@ -167,6 +167,10 @@ public class MultipleExportProcessor implements Processor {
             exchange.getIn().getHeaders().put(AGENCY_TIMEZONE, export.getAgencyTimezone());
         }
 
+        if (export.getAgencyLang() != null) {
+            exchange.getIn().getHeaders().put(AGENCY_LANG, export.getAgencyLang());
+        }
+
         if (export.getAgencyURL() != null){
             exchange.getIn().getHeaders().put(AGENCY_URL, export.getAgencyURL());
         }

@@ -34,6 +34,7 @@ public class ExportTemplate implements Serializable {
     private String agencyName;
     private String agencyURL;
     private String agencyTimezone;
+    private String agencyLang;
 
 
 
@@ -247,5 +248,13 @@ public class ExportTemplate implements Serializable {
 
     public void setAgencyTimezone(String agencyTimezone) {
         this.agencyTimezone = agencyTimezone;
+    }
+
+    public String getAgencyLang() {
+        return agencyLang;
+    }
+
+    public void setAgencyLang(String agencyLang) {
+        this.agencyLang = agencyLang;
     }
 }

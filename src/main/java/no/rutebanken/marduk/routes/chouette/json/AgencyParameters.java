@@ -6,6 +6,7 @@ public class AgencyParameters {
     private String agencyName;
     private String agencyURL;
     private String agencyTimezone;
+    private String agencyLang;
 
     public String getAgencyId() {
         return agencyId;
@@ -37,5 +38,13 @@ public class AgencyParameters {
 
     public void setAgencyTimezone(String agencyTimezone) {
         this.agencyTimezone = agencyTimezone;
+    }
+
+    public String getAgencyLang() {
+        return agencyLang;
+    }
+
+    public void setAgencyLang(String agencyLang) {
+        this.agencyLang = agencyLang;
     }
 }

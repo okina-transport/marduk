@@ -291,12 +291,14 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
         String agencyId = e.getIn().getHeader(AGENCY_ID) != null ? (String) e.getIn().getHeader(AGENCY_ID) : null;
         String agencyURL = e.getIn().getHeader(AGENCY_URL) != null ? (String) e.getIn().getHeader(AGENCY_URL) : null;
         String agencyTimezone = e.getIn().getHeader(AGENCY_TIMEZONE) != null ? (String) e.getIn().getHeader(AGENCY_TIMEZONE) : null;
+        String agencyLang = e.getIn().getHeader(AGENCY_LANG) != null ? (String) e.getIn().getHeader(AGENCY_LANG) : null;
 
         AgencyParameters agencyParams = new AgencyParameters();
         agencyParams.setAgencyId(agencyId);
         agencyParams.setAgencyName(agencyName);
         agencyParams.setAgencyURL(agencyURL);
         agencyParams.setAgencyTimezone(agencyTimezone);
+        agencyParams.setAgencyLang(agencyLang);
 
         boolean mappingLinesIds = BooleanUtils.isTrue((Boolean) e.getIn().getHeader(MAPPING_LINES_IDS));
         boolean keepOriginalId = BooleanUtils.isTrue((Boolean) e.getIn().getHeader(KEEP_ORIGINAL_ID));

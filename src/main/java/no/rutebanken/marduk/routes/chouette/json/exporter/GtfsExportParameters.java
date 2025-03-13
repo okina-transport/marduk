@@ -110,6 +110,9 @@ public class GtfsExportParameters {
         @JsonProperty("agency_url")
         private String agencyURL;
 
+        @JsonProperty("agency_lang")
+        private String agencyLang;
+
 
 
         public GtfsExport(String name, String objectIdPrefix, String referentialName, String organisationName, String userName, boolean keepOriginalId, Date startDate, Date endDate, String exportedFilename,
@@ -137,6 +140,7 @@ public class GtfsExportParameters {
             this.agencyId = agencyParameters.getAgencyId();
             this.agencyName = agencyParameters.getAgencyName();
             this.agencyTimezone = agencyParameters.getAgencyTimezone();
+            this.agencyLang = agencyParameters.getAgencyLang();
             this.agencyURL = agencyParameters.getAgencyURL();
             this.exportedReferentials = exportedReferentials;
         }
