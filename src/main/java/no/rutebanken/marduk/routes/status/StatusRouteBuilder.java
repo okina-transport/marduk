@@ -21,18 +21,19 @@ import no.rutebanken.marduk.metrics.PrometheusMetricsService;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import static no.rutebanken.marduk.Constants.EXPORT_TO_CONSUMER_DATA;
 import static no.rutebanken.marduk.Constants.EXPORT_TO_CONSUMER_STATUS;
 
 @Component
 public class StatusRouteBuilder extends RouteBuilder {
 
+    private final PrometheusMetricsService metrics;
 
-    @Autowired
-    private PrometheusMetricsService metrics;
-
+    public StatusRouteBuilder(PrometheusMetricsService metrics) {
+        this.metrics = metrics;
+    }
 
     @Override
     public void configure() throws Exception {
@@ -55,10 +56,19 @@ public class StatusRouteBuilder extends RouteBuilder {
                 .process(e -> {
                     String exportToConsumerStatus = (String) e.getIn().getHeader(EXPORT_TO_CONSUMER_STATUS);
                     if (exportToConsumerStatus != null) {
+                        String description = null;
+                        String exportToConsummerData = (String) e.getIn().getHeader(EXPORT_TO_CONSUMER_DATA);
+                        if (StringUtils.isNotBlank(exportToConsummerData) && exportToConsummerData.length() < 255) {
+                            description = exportToConsummerData;
+                        }
                         if (exportToConsumerStatus.equals("OK")) {
-                            JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.EXPORT_TO_CONSUMER).state(JobEvent.State.OK).build();
+                            JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.EXPORT_TO_CONSUMER).state(JobEvent.State.OK)
+                                    .description(description)
+                                    .build();
                         } else {
-                            JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.EXPORT_TO_CONSUMER).state(JobEvent.State.FAILED).build();
+                            JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.EXPORT_TO_CONSUMER).state(JobEvent.State.FAILED)
+                                    .description(description)
+                                    .build();
                         }
                     }
                 })
@@ -79,13 +89,11 @@ public class StatusRouteBuilder extends RouteBuilder {
         if ("EXPORT".equals(jobEvent.action) || "EXPORT_NETEX".equals(jobEvent.action) || "EXPORT_NETEX_MERGED".equals(jobEvent.action)) {
             ExportType exportType;
 
-
-
-            if ("EXPORT_NETEX_MERGED".equals(jobEvent.action) || (jobEvent.type != null && "netex".equals(jobEvent.type.toLowerCase()))  ){
+            if ("EXPORT_NETEX_MERGED".equals(jobEvent.action) || ("netex".equalsIgnoreCase(jobEvent.type))  ){
                 exportType = ExportType.NETEX;
-            }else if (jobEvent.type != null && "neptune".equals(jobEvent.type.toLowerCase())){
+            } else if ("neptune".equalsIgnoreCase(jobEvent.type)){
                 exportType = ExportType.NEPTUNE;
-            }else{
+            } else{
                 exportType = ExportType.GTFS;
             }
             metrics.countExports(exportType, jobEvent.state.toString());

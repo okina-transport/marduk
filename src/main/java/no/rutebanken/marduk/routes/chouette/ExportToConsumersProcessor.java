@@ -6,6 +6,8 @@ import no.rutebanken.marduk.domain.ConsumerType;
 import no.rutebanken.marduk.domain.ExportTemplate;
 import no.rutebanken.marduk.domain.OrganisationView;
 import no.rutebanken.marduk.metrics.PrometheusMetricsService;
+import no.rutebanken.marduk.routes.chouette.json.exporter.FileToConsumerInfo;
+import no.rutebanken.marduk.routes.status.JobEvent;
 import no.rutebanken.marduk.security.TokenService;
 import no.rutebanken.marduk.services.*;
 import org.apache.camel.Exchange;
@@ -15,7 +17,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -24,6 +25,8 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 import static no.rutebanken.marduk.Constants.*;
@@ -33,6 +36,8 @@ import static no.rutebanken.marduk.repository.RestDAO.HEADER_REFERENTIAL;
 public class ExportToConsumersProcessor implements Processor {
 
     Logger log = LoggerFactory.getLogger(this.getClass());
+
+    private static ExportJsonMapper exportJsonMapper = new ExportJsonMapper();
 
     @Value("${marduk.upload.public.path:/tmp}")
     private String publicUploadPath;
@@ -55,40 +60,38 @@ public class ExportToConsumersProcessor implements Processor {
     @Value("${simulation.export.type}")
     private String simulationExportType;
 
-    //    @Autowired
-    private static ExportJsonMapper exportJsonMapper = new ExportJsonMapper();
-
-    @Autowired
-    FtpService ftpService;
-
-    @Autowired
-    RestUploadService restUploadService;
-
-    @Autowired
-    CipherEncryption cipherEncryption;
-
-    @Autowired
-    BlobStoreService blobStoreService;
-
-    @Autowired
-    FileSystemService fileSystemService;
-
-    @Autowired
-    NotificationService notificationService;
-
-    @Autowired
-    OpendatasoftService opendatasoftService;
-
-
-    @Autowired
-    private PrometheusMetricsService metrics;
-
     @Value("${export-templates.api.url}")
     private String exportTemplatesUrl;
 
+    private final FtpService ftpService;
 
-    @Autowired
-    TokenService tokenService;
+    private final RestUploadService restUploadService;
+
+    private final CipherEncryption cipherEncryption;
+
+    private final BlobStoreService blobStoreService;
+
+    private final FileSystemService fileSystemService;
+
+    private final NotificationService notificationService;
+
+    private final OpendatasoftService opendatasoftService;
+
+    private final PrometheusMetricsService metrics;
+
+    private final TokenService tokenService;
+
+    public ExportToConsumersProcessor(FtpService ftpService, RestUploadService restUploadService, CipherEncryption cipherEncryption, BlobStoreService blobStoreService, FileSystemService fileSystemService, NotificationService notificationService, OpendatasoftService opendatasoftService, PrometheusMetricsService metrics, TokenService tokenService) {
+        this.ftpService = ftpService;
+        this.restUploadService = restUploadService;
+        this.cipherEncryption = cipherEncryption;
+        this.blobStoreService = blobStoreService;
+        this.fileSystemService = fileSystemService;
+        this.notificationService = notificationService;
+        this.opendatasoftService = opendatasoftService;
+        this.metrics = metrics;
+        this.tokenService = tokenService;
+    }
 
     /**
      * Gets the result stream of an export  and upload it towards consumers defined for this export
@@ -105,15 +108,15 @@ public class ExportToConsumersProcessor implements Processor {
         boolean exportSimulation = BooleanUtils.isTrue((Boolean) exchange.getIn().getHeaders().get(IS_SIMULATION_EXPORT));
         if (StringUtils.isNotBlank(jsonExport)) {
             ExportTemplate export = exportJsonMapper.fromJson(jsonExport);
-
-            log.info("Found " + export.getConsumers().size() + " for export " + export.getId() + "/" + export.getName());
+            List<String> uploadInfo = new ArrayList<>(export.getConsumers().size());
+            log.info("Found {} for export {}/{}", export.getConsumers().size(), export.getId(), export.getName());
             export.getConsumers().forEach(consumer -> {
                 try {
                     InputStream streamToUpload = getInputStream(exchange);
 
                     String filePath = StringUtils.isNotEmpty(export.getExportedFileName()) ? export.getExportedFileName() : (String) exchange.getIn().getHeaders().get(EXPORT_FILE_NAME);
 
-                    log.info("Envoi du fichier : " + filePath + " vers le consommateur : " + consumer.getName() + " - de type : " + consumer.getType().name() + " - Espace de données : " + referential);
+                    log.info("Envoi du fichier : {} vers le consommateur : {} - de type {} - Espace de données {}",filePath, consumer.getName(), consumer.getType().name(), referential);
 
                     try {
                         String passwordDecryptedConsumer = null;
@@ -151,21 +154,29 @@ public class ExportToConsumersProcessor implements Processor {
                                 opendatasoftService.sendToOpendatasoft(streamToUpload, consumer.getServiceUrl(), consumer.getDatasetId(), secretKeyDecryptedConsumer, consumer.getExportDate(), consumer.getDescription(), filePath, startDate, endDate, consumer.isAppendDescription());
 
                         }
-                        log.info("Envoi du fichier terminé : " + filePath + " vers le consommateur : " + consumer.getName() + " - de type : " + consumer.getType().name() + " - Espace de données : " + referential);
+                        FileToConsumerInfo fileToConsumerInfo = new FileToConsumerInfo(consumer.getType().name(), "OK", consumer.getName());
+                        uploadInfo.add(fileToConsumerInfo.toString());
+                        log.info("Envoi du fichier terminé : {} vers le consommateur : {} - de type {} - Espace de données {}", filePath, consumer.getName(), consumer.getType().name(), referential);
                         exchange.getIn().setHeader(EXPORT_TO_CONSUMER_STATUS, "OK");
                         metrics.countConsumerCalls(consumer.getType(), export.getType(), "OK");
 
                     } catch (IOException e) {
-                        log.error("Error while getting the file before to upload to consumer " + exchange.getIn().getHeader(FILE_HANDLE, String.class), e);
-                        exchange.getIn().setHeader(EXPORT_TO_CONSUMER_STATUS, "FAILED");
-                        metrics.countConsumerCalls(consumer.getType(), export.getType(), "FAILED");
+                        log.error("Error while getting the file before upload to consumer {}", exchange.getIn().getHeader(FILE_HANDLE, String.class), e);
+                        exchange.getIn().setHeader(EXPORT_TO_CONSUMER_STATUS, JobEvent.State.FAILED.name());
+                        metrics.countConsumerCalls(consumer.getType(), export.getType(), JobEvent.State.FAILED.name());
+                        FileToConsumerInfo fileToConsumerInfo = new FileToConsumerInfo(consumer.getType().name(), JobEvent.State.FAILED.name(), consumer.getName());
+                        uploadInfo.add(fileToConsumerInfo.toString());
                     }
                 } catch (Exception e) {
-                    log.error("Error while uploading to consumer " + consumer.toString(), e);
-                    exchange.getIn().setHeader(EXPORT_TO_CONSUMER_STATUS, "FAILED");
-                    metrics.countConsumerCalls(consumer.getType(), export.getType(), "FAILED");
+                    log.error("Error while uploading to consumer {}", consumer, e);
+                    exchange.getIn().setHeader(EXPORT_TO_CONSUMER_STATUS, JobEvent.State.FAILED.name());
+                    metrics.countConsumerCalls(consumer.getType(), export.getType(), JobEvent.State.FAILED.name());
+                    FileToConsumerInfo fileToConsumerInfo = new FileToConsumerInfo(consumer.getType().name(), JobEvent.State.FAILED.name(),consumer.getName());
+                    uploadInfo.add(fileToConsumerInfo.toString());
                 }
             });
+
+            exchange.getIn().setHeader(EXPORT_TO_CONSUMER_DATA, String.join(";", uploadInfo));
 
         } else if (exportSimulation) {
             log.info("Exporting simulation...");
@@ -186,11 +197,13 @@ public class ExportToConsumersProcessor implements Processor {
                     case URL:
                         blobStoreService.uploadBlob("/" + publicUploadPath + "/" + referential + "/" + filePath, true, streamToUpload);
                         break;
+                    default:
+                        break;
                 }
             } catch (IllegalArgumentException iae) {
-                log.error("Simulation export type unknown : " + simulationExportType + ".");
+                log.error("Simulation export type unknown : {}.", simulationExportType);
                 log.error("Please use one of this values : FTP, SFTP, REST or URL");
-                exchange.getIn().setHeader(EXPORT_TO_CONSUMER_STATUS, "FAILED");
+                exchange.getIn().setHeader(EXPORT_TO_CONSUMER_STATUS, JobEvent.State.FAILED.name());
             }
         }
     }
@@ -228,7 +241,7 @@ public class ExportToConsumersProcessor implements Processor {
 
             BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream()));
             String inputLine;
-            StringBuffer response = new StringBuffer();
+            StringBuilder response = new StringBuilder();
 
             while ((inputLine = in.readLine()) != null) {
                 response.append(inputLine);
