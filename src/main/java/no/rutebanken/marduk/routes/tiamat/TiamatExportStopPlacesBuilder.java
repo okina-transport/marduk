@@ -98,6 +98,7 @@ public class TiamatExportStopPlacesBuilder extends AbstractChouetteRouteBuilder 
                 .log(LoggingLevel.INFO, getClass().getName(), "Tiamat process export results for provider with id ${header.tiamatProviderId}")
                 .setHeader(EXPORT_FROM_TIAMAT, simple("true"))
                 .process(exportToConsumersProcessor)
+                .to("direct:updateExportToConsumerStatus")
                 .process(updateExportTemplateProcessor)
                 .choice()
                 .when(header(POST_PROCESS).isEqualTo(STOP_OPERATORS_POST_PROCESS_NAME))

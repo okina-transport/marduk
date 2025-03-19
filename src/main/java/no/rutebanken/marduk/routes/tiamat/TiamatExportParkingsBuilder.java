@@ -90,6 +90,7 @@ public class TiamatExportParkingsBuilder extends AbstractChouetteRouteBuilder {
                 .log(LoggingLevel.INFO, getClass().getName(), "Tiamat process export results for provider with id ${header.tiamatProviderId}")
                 .setHeader(EXPORT_FROM_TIAMAT, simple("true"))
                 .process(exportToConsumersProcessor)
+                .to("direct:updateExportToConsumerStatus")
                 .process(updateExportTemplateProcessor)
                 .choice()
                     .when(header(CHOUETTE_REFERENTIAL).isEqualTo("mobiiti_technique"))

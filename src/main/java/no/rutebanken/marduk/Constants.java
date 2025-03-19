@@ -176,6 +176,7 @@ public class Constants {
     public static final String POST_PROCESS = "postProcess";
 
     public static final String EXPORT_TO_CONSUMER_STATUS = "exportToConsumerStatus";
+    public static final String EXPORT_TO_CONSUMER_DATA = "exportToConsumerDATA";
     public static final String CONTINUE_IMPORT = "continueImport";
 
     public static final String STOP_OPERATORS_POST_PROCESS_NAME = "STOP_OPERATORS";
