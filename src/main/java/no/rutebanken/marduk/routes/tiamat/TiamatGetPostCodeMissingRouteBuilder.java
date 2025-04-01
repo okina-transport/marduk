@@ -39,7 +39,7 @@ public class TiamatGetPostCodeMissingRouteBuilder extends BaseRouteBuilder {
                 .removeHeaders("Camel*")
                 .setBody(constant(null))
                 .setHeader(Exchange.HTTP_METHOD, constant(HttpMethods.POST))
-                .setHeader("Authorization", constant("Bearer " + tokenService.getToken()))
+                .setHeader("Authorization", simple("Bearer " + tokenService.getToken()))
                 .process(e -> {
                     String url = tiamatUrl.replace("http://", "http4://") + "/get_missing_postcode";
                     e.setProperty("tiamat_url", url);
