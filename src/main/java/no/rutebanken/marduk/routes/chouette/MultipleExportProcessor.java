@@ -53,6 +53,8 @@ public class MultipleExportProcessor implements Processor {
                 return;
             }
 
+            exchange.getIn().getHeaders().put(EXPORT_CONFIGURATION_ID, String.valueOf(export.getId()));
+
             log.info("Multiple export : export => " + export.getId() + "/" + export.getName());
             try {
                 if (ExportType.NETEX.equals(export.getType())) {

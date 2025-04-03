@@ -58,8 +58,10 @@ public class FileSystemService {
         if (e.getIn().getBody() != null && e.getIn().getBody() instanceof Job){
             Job job = e.getIn().getBody(Job.class);
             filename = tiamatStoragePath + "/" + job.getSubFolder() + "/" + job.getFileName();
-        }else{
+        }else if (  e.getIn().getHeader(SUB_FOLDER) != null){
             filename = tiamatStoragePath + "/" +  e.getIn().getHeader(SUB_FOLDER) + "/" + e.getIn().getHeader(FILE_NAME);
+        }else{
+            filename = tiamatStoragePath + "/technique/" + e.getIn().getHeader(FILE_NAME);
         }
 
         File file = new File(filename);
