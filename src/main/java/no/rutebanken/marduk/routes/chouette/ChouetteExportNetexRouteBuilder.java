@@ -119,6 +119,13 @@ public class ChouetteExportNetexRouteBuilder extends AbstractChouetteRouteBuilde
 
 
         from("direct:processNetexExportResult")
+                .process(e->{
+                    if (e.getIn().getHeader(NETEX_EXPORT_GLOBAL, Boolean.class) != null &&
+                            e.getIn().getHeader(NETEX_EXPORT_GLOBAL, Boolean.class).equals(true)) {
+                        // For global Netex exports, result is forced to OK. A failure in one organization should not cause a global failure.
+                        e.getIn().setHeader("action_report_result", "OK");
+                    }
+                })
                 .log(LoggingLevel.INFO, "Export Netex terminé - Fichier : ${header." + FILE_NAME + "} - Espace de données : ${header." + CHOUETTE_REFERENTIAL + "}")
                 .log(LoggingLevel.INFO, correlation() + "Export ended with status '${header.action_report_result}'")
 
