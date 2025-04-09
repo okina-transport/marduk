@@ -17,7 +17,7 @@ public class ChouetteGenerateFirstOrLastVJCsvRouteBuilder extends BaseRouteBuild
     @Value("${chouette.url}")
     private String chouetteUrl;
 
-    @Value("${chouette.generateVjMappingCsv:false}")
+    @Value("${chouette.generateFirstOrLastCsv:false}")
     private boolean enabled;
 
     @Override
