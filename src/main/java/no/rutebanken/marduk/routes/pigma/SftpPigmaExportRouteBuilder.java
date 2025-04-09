@@ -21,9 +21,6 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 
-import static no.rutebanken.marduk.Constants.EXPORT_GLOBAL_GTFS_ZIP;
-import static no.rutebanken.marduk.Constants.EXPORT_GLOBAL_NETEX_ZIP;
-import static no.rutebanken.marduk.Constants.MERGED_NETEX_ROOT_DIR;
 import static no.rutebanken.marduk.Constants.MERGED_NETEX_STOPS_ROOT_DIR;
 
 
@@ -67,8 +64,8 @@ public class SftpPigmaExportRouteBuilder extends BaseRouteBuilder {
     @Autowired
     private SendMail sendMail;
 
-    @Value("${chouette.storage.path:/srv/docker-data/data/chouette}")
-    private String chouetteStoragePath;
+    @Value("${pigma.upload.path}")
+    private String pigmaUploadPath;
 
 
     @Override
@@ -85,35 +82,16 @@ public class SftpPigmaExportRouteBuilder extends BaseRouteBuilder {
         ArrayList<BlobStoreFiles.File> listBlobStoreFiles = new ArrayList<>();
         ArrayList<File> files = new ArrayList<>();
 
-        // Netex files
-        BlobStoreFiles netexBlobStoreFiles = blobStoreService.listBlobsInFolders(MERGED_NETEX_ROOT_DIR + "/");
-        if(netexBlobStoreFiles.getFiles().size() != 0){
-            List<BlobStoreFiles.File> netexFiles = netexBlobStoreFiles.getFiles();
-            listBlobStoreFiles.addAll(netexFiles);
-        }
-
-        // GTFS files
-        BlobStoreFiles gtfsBlobStoreFiles = blobStoreService.listBlobsInFolders("mobiiti_technique/gtfs/allFiles/TRIDENT/");
-        if(gtfsBlobStoreFiles.getFiles().size() != 0){
-            List<BlobStoreFiles.File> gtfsFiles = gtfsBlobStoreFiles.getFiles();
-            listBlobStoreFiles.addAll(gtfsFiles);
-        }
-
-        // Aggregated Netex file
-        BlobStoreFiles aggregatedNetexFileBlobStoreFiles = blobStoreService.listBlobsInFolders("mobiiti_technique/netex/" + EXPORT_GLOBAL_NETEX_ZIP);
-        if(aggregatedNetexFileBlobStoreFiles.getFiles().size() != 0){
-            listBlobStoreFiles.add(aggregatedNetexFileBlobStoreFiles.getFiles().get(0));
-        }
-
-        // Aggregated GTFS file
-        BlobStoreFiles aggregatedGtfsFileBlobStoreFiles = blobStoreService.listBlobsInFolders("mobiiti_technique/gtfs/TRIDENT/" + EXPORT_GLOBAL_GTFS_ZIP);
-        if(aggregatedGtfsFileBlobStoreFiles.getFiles().size() != 0){
-            listBlobStoreFiles.add(aggregatedGtfsFileBlobStoreFiles.getFiles().get(0));
+        // Netex and GTFS files
+        BlobStoreFiles blobStoreFiles = blobStoreService.listBlobsInFolders(pigmaUploadPath);
+        if(!blobStoreFiles.getFiles().isEmpty()){
+            List<BlobStoreFiles.File> netexAndGtfsfiles = blobStoreFiles.getFiles();
+            listBlobStoreFiles.addAll(netexAndGtfsfiles);
         }
 
         //Netex file stops
         BlobStoreFiles netexFileStops = blobStoreService.listBlobsInFolders(MERGED_NETEX_STOPS_ROOT_DIR + "/CurrentAndFuture_latest.zip");
-        if(netexFileStops.getFiles().size() != 0){
+        if(!netexFileStops.getFiles().isEmpty()){
             listBlobStoreFiles.add(netexFileStops.getFiles().get(0));
         }
 
@@ -122,17 +100,17 @@ public class SftpPigmaExportRouteBuilder extends BaseRouteBuilder {
         files.add(metadataFile.createMetadataFile("naq-metadonnes.csv", listBlobStoreFiles));
 
         for (BlobStoreFiles.File file : listBlobStoreFiles) {
-            try (InputStream inputStream = blobStoreService.getBlob(file.getName().replaceFirst(chouetteStoragePath + "/", ""))) {
+            try (InputStream inputStream = blobStoreService.getBlob(file.getName().replaceFirst(pigmaUploadPath + "/", ""))) {
 
                 File zipFile;
                 switch (file.getFileNameOnly()) {
                     case "CurrentAndFuture_latest.zip" :
                         zipFile = new File("naq-stops-netex.zip");
                         break;
-                    case EXPORT_GLOBAL_NETEX_ZIP :
+                    case "mobiiti_technique-aggregated-netex.zip" :
                         zipFile = new File("naq-aggregated-netex.zip");
                         break;
-                    case EXPORT_GLOBAL_GTFS_ZIP :
+                    case "mobiiti_technique-aggregated-gtfs.zip" :
                         zipFile = new File("naq-aggregated-gtfs.zip");
                         break;
                     default :
@@ -174,7 +152,7 @@ public class SftpPigmaExportRouteBuilder extends BaseRouteBuilder {
             for (File file : files) {
                 try (FileInputStream src = new FileInputStream(file.getName())) {
                     channelSftp.put(src, file.getName(), ChannelSftp.OVERWRITE);
-                    log.info("File transfered : " + file.getName() + " successfully to host.");
+                    log.info("File transfered : {} successfully to host.", file.getName());
                 }
             }
             log.info("All files transfered successfully to host.");
