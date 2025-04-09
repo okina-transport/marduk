@@ -63,6 +63,9 @@ public class ExportToConsumersProcessor implements Processor {
     @Value("${export-templates.api.url}")
     private String exportTemplatesUrl;
 
+    @Value("${pigma.upload.path}")
+    private String pigmaUploadPath;
+
     private final FtpService ftpService;
 
     private final RestUploadService restUploadService;
@@ -152,7 +155,11 @@ public class ExportToConsumersProcessor implements Processor {
                                 String startDate = workingDates.getLeft();
                                 String endDate = workingDates.getRight();
                                 opendatasoftService.sendToOpendatasoft(streamToUpload, consumer.getServiceUrl(), consumer.getDatasetId(), secretKeyDecryptedConsumer, consumer.getExportDate(), consumer.getDescription(), filePath, startDate, endDate, consumer.isAppendDescription());
-
+                                break;
+                            case PIGMA:
+                                String nameFilePigma = referential + "-aggregated-" + export.getType().toString().toLowerCase() + ".zip";
+                                blobStoreService.uploadBlob("/" + pigmaUploadPath + "/" + nameFilePigma, true, streamToUpload);
+                                break;
                         }
                         FileToConsumerInfo fileToConsumerInfo = new FileToConsumerInfo(consumer.getType().name(), "OK", consumer.getName());
                         uploadInfo.add(fileToConsumerInfo.toString());
