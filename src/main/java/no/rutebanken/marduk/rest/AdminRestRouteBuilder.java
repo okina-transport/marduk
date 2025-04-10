@@ -1445,7 +1445,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
             if (headers.get(USE_EXTENDED_GTFS_ROUTE_TYPES) != null) {
                 e.getIn().setHeader(USE_EXTENDED_GTFS_ROUTE_TYPES, headers.get(USE_EXTENDED_GTFS_ROUTE_TYPES));
             }
-            e.getIn().setHeader(KEEP_ORIGINAL_ID, true);
+
         }
     }
 
