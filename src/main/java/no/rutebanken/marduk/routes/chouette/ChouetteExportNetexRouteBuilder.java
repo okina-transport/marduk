@@ -233,7 +233,7 @@ public class ChouetteExportNetexRouteBuilder extends AbstractChouetteRouteBuilde
                     String correlationId = UUID.randomUUID().toString();
                     e.getIn().setHeader(CORRELATION_ID, correlationId);
                     e.getIn().removeHeader(JOB_ID);
-                    String exportName = org.springframework.util.StringUtils.hasText(e.getIn().getHeader(EXPORTED_FILENAME, String.class)) && !e.getIn().getHeader(NETEX_EXPORT_GLOBAL, Boolean.class) ? (String) e.getIn().getHeader(EXPORTED_FILENAME) : "offre";
+                    String exportName = org.springframework.util.StringUtils.hasText(e.getIn().getHeader(EXPORTED_FILENAME, String.class)) ? (String) e.getIn().getHeader(EXPORTED_FILENAME) : "offre";
                     e.getIn().setHeader(FILE_NAME, exportName);
                     e.getIn().setHeader(FILE_TYPE, "netex");
                     String user = e.getIn().getHeader(USER, String.class);
