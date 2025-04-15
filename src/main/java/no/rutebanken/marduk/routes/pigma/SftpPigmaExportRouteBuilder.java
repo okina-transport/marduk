@@ -67,6 +67,8 @@ public class SftpPigmaExportRouteBuilder extends BaseRouteBuilder {
     @Value("${pigma.upload.path}")
     private String pigmaUploadPath;
 
+    @Value("${chouette.storage.path:/srv/docker-data/data/chouette}")
+    private String chouetteStoragePath;
 
     @Override
     public void configure() throws Exception {
@@ -100,7 +102,7 @@ public class SftpPigmaExportRouteBuilder extends BaseRouteBuilder {
         files.add(metadataFile.createMetadataFile("naq-metadonnes.csv", listBlobStoreFiles));
 
         for (BlobStoreFiles.File file : listBlobStoreFiles) {
-            try (InputStream inputStream = blobStoreService.getBlob(file.getName().replaceFirst(pigmaUploadPath + "/", ""))) {
+            try (InputStream inputStream = blobStoreService.getBlob(file.getName().replaceFirst(chouetteStoragePath + "/", ""))) {
 
                 File zipFile;
                 switch (file.getFileNameOnly()) {
