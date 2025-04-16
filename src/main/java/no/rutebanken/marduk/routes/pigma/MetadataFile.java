@@ -10,6 +10,7 @@ import org.springframework.stereotype.Component;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Component
@@ -71,13 +72,13 @@ public class MetadataFile {
         List<String> listPrefix =
                 listBlobStoreFiles
                         .stream()
-                        .filter(file -> file.getReferential() != null)
-                        .map(BlobStoreFiles.File::getReferential)
+                        .map(BlobStoreFiles.File::getFileNameOnly)
+                        .filter(Objects::nonNull)
                         .distinct()
                         .collect(Collectors.toList());
 
         for (String prefix : listPrefix) {
-            prefix = prefix.replaceFirst("mobiiti_", "");
+            prefix = prefix.replaceAll("^mobiiti_|-aggregated-(gtfs|netex)\\.zip$", "");
             String producerName = producers.producersListName().get(prefix);
             String type = producers.producersTransportTypeList().get(prefix);
 
