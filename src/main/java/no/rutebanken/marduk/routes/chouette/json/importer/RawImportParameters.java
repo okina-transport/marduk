@@ -40,6 +40,7 @@ public class RawImportParameters {
     private String targetNetwork;
     private boolean renameRoutesAfterMerge;
     private boolean importFareFiles;
+    private boolean recomputeStopPlacesLocation;
 
     public String getFileName() {
         return fileName;
@@ -273,5 +274,13 @@ public class RawImportParameters {
 
     public void setRenameRoutesAfterMerge(boolean renameRoutesAfterMerge) {
         this.renameRoutesAfterMerge = renameRoutesAfterMerge;
+    }
+
+    public boolean isRecomputeStopPlacesLocation() {
+        return recomputeStopPlacesLocation;
+    }
+
+    public void setRecomputeStopPlacesLocation(boolean recomputeStopPlacesLocation) {
+        this.recomputeStopPlacesLocation = recomputeStopPlacesLocation;
     }
 }

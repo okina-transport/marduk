@@ -49,7 +49,8 @@ public class NeptuneImportParameters extends ChouetteJobParameters {
         @JsonProperty("ignore_commercial_points")
         public boolean ignoreCommercialPoints = true;
 
-
+        @JsonProperty("recompute_stop_places_location")
+        public Boolean recomputeStopPlacesLocation;
     }
 
     public static NeptuneImportParameters create(RawImportParameters rawImportParameters) {
@@ -78,6 +79,7 @@ public class NeptuneImportParameters extends ChouetteJobParameters {
         neptuneImport.keepBoardingAlighting = rawImportParameters.isKeepBoardingAlighting();
         neptuneImport.keepStopNames = rawImportParameters.isKeepStopNames();
         neptuneImport.generateMapMatching = rawImportParameters.getGenerateMapMatching();
+        neptuneImport.recomputeStopPlacesLocation = rawImportParameters.isRecomputeStopPlacesLocation();
 
 
         Parameters parameters = new Parameters();

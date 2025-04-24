@@ -89,5 +89,7 @@ public class AbstractImportParameters extends AbstractParameters {
     @JsonInclude(JsonInclude.Include.ALWAYS)
     public Boolean routesReorganization = false;
 
-
+    @JsonProperty("recompute_stop_places_location")
+    @JsonInclude(JsonInclude.Include.ALWAYS)
+    public Boolean recomputeStopPlacesLocation;
 }

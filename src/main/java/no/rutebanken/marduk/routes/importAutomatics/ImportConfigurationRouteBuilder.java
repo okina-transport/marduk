@@ -533,6 +533,7 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
             e.getIn().setHeader(TARGET_NETWORK, importParameters.getTargetNetwork());
             e.getIn().setHeader(RENAME_ROUTES_AFTER_MERGE, importParameters.getRenameRoutesAfterMerge());
             e.getIn().setHeader(IMPORT_FARE_FILES, importParameters.getImportFareFiles());
+            e.getIn().setHeader(RECOMPUTE_STOP_PLACES_LOCATION, importParameters.getRecomputeStopPlacesLocation());
             StringBuilder recipients = new StringBuilder();
             for (Recipient recipient : importConfiguration.getRecipients()) {
                 recipients.append(recipient.getEmail());

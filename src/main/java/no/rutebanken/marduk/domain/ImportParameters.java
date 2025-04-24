@@ -32,6 +32,7 @@ public class ImportParameters {
     private String targetNetwork;
     private Boolean renameRoutesAfterMerge;
     private Boolean importFareFiles;
+    private Boolean recomputeStopPlacesLocation;
 
     public Long getId() {
         return id;
@@ -263,5 +264,13 @@ public class ImportParameters {
 
     public void setImportFareFiles(Boolean importFareFiles) {
         this.importFareFiles = importFareFiles;
+    }
+
+    public Boolean getRecomputeStopPlacesLocation() {
+        return recomputeStopPlacesLocation;
+    }
+
+    public void setRecomputeStopPlacesLocation(Boolean recomputeStopPlacesLocation) {
+        this.recomputeStopPlacesLocation = recomputeStopPlacesLocation;
     }
 }

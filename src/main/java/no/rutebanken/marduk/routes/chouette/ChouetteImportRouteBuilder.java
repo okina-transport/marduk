@@ -244,6 +244,8 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
                     String importFareFilesStr = e.getIn().getHeader(IMPORT_FARE_FILES, String.class);
                     boolean importFareFiles = !StringUtils.isEmpty(importFareFilesStr) && Boolean.parseBoolean(importFareFilesStr);
 
+                    boolean recomputeStopPlacesLocation = BooleanUtils.isTrue(e.getIn().getHeader(RECOMPUTE_STOP_PLACES_LOCATION, Boolean.class));
+
                     rawImportParameters.setFileName(fileName);
                     rawImportParameters.setFileType(fileType);
                     rawImportParameters.setProviderId(providerId);
@@ -272,6 +274,7 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
                     rawImportParameters.setTargetNetwork(targetNetwork);
                     rawImportParameters.setRenameRoutesAfterMerge(renameRoutesAfterMerge);
                     rawImportParameters.setImportFareFiles(importFareFiles);
+                    rawImportParameters.setRecomputeStopPlacesLocation(recomputeStopPlacesLocation);
 
                     e.getIn().setHeader(JSON_PART, getStringImportParameters(rawImportParameters));
                 }) //Using header to addToExchange json data

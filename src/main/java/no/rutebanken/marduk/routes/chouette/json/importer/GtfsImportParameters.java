@@ -78,7 +78,6 @@ public class GtfsImportParameters extends ChouetteJobParameters {
         @JsonProperty("update_stop_accessibility")
         public Boolean updateStopAccess = false;
 
-
         @JsonProperty("rail_uic_processing")
         public Boolean railUICprocessing = false;
 
@@ -145,6 +144,7 @@ public class GtfsImportParameters extends ChouetteJobParameters {
         gtfsImport.targetNetwork = rawImportParameters.getTargetNetwork();
         gtfsImport.renameRoutesAfterMerge = rawImportParameters.isRenameRoutesAfterMerge();
         gtfsImport.importFareFiles = rawImportParameters.isImportFareFiles();
+        gtfsImport.recomputeStopPlacesLocation = rawImportParameters.isRecomputeStopPlacesLocation();
 
         return gtfsImportParameters;
     }

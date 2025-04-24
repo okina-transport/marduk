@@ -90,6 +90,7 @@ public class NetexImportParameters extends ChouetteJobParameters {
         }
         netexImport.useTargetNetwork = rawImportParameters.isUseTargetNetwork();
         netexImport.targetNetwork = rawImportParameters.getTargetNetwork();
+        netexImport.recomputeStopPlacesLocation = rawImportParameters.isRecomputeStopPlacesLocation();
         Parameters parameters = new Parameters();
         parameters.netexImport = netexImport;
         NetexImportParameters netexImportParameters = new NetexImportParameters();
