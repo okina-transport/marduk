@@ -202,7 +202,7 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
                     String stopAreaPrefixToRemove = e.getIn().getHeader(STOP_AREA_PREFIX_TO_REMOVE, String.class);
                     String areaCentroidPrefixToRemove = e.getIn().getHeader(AREA_CENTROID_PREFIX_TO_REMOVE, String.class);
                     String linePrefixToRemove = e.getIn().getHeader(LINE_PREFIX_TO_REMOVE, String.class);
-
+                    String importTargetRoutes = e.getIn().getHeader(IMPORT_TARGET_ROUTES, String.class);
 
                     String user = e.getIn().getHeader(USER, String.class);
                     String description = e.getIn().getHeader(DESCRIPTION, String.class);
@@ -275,6 +275,7 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
                     rawImportParameters.setRenameRoutesAfterMerge(renameRoutesAfterMerge);
                     rawImportParameters.setImportFareFiles(importFareFiles);
                     rawImportParameters.setRecomputeStopPlacesLocation(recomputeStopPlacesLocation);
+                    rawImportParameters.setImportTargetRoutes(importTargetRoutes);
 
                     e.getIn().setHeader(JSON_PART, getStringImportParameters(rawImportParameters));
                 }) //Using header to addToExchange json data

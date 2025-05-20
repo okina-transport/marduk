@@ -51,6 +51,7 @@ import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.util.Calendar;
 import java.util.*;
+import java.util.stream.Collectors;
 import java.util.zip.ZipException;
 
 import static no.rutebanken.marduk.Constants.*;
@@ -103,7 +104,7 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
                 .streamCaching()
                 .transacted()
                 .log(LoggingLevel.INFO, getClass().getName(), "Starting import configuration for provider with id ${header." + PROVIDER_ID + "}")
-                .process(e -> handleImportConfigurationQueueMessage(e))
+                .process(this::handleImportConfigurationQueueMessage)
                 .choice()
                     .when(header(CONTINUE_IMPORT).isEqualTo(Boolean.TRUE))
                         .to("direct:importLaunch")
@@ -534,6 +535,14 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
             e.getIn().setHeader(RENAME_ROUTES_AFTER_MERGE, importParameters.getRenameRoutesAfterMerge());
             e.getIn().setHeader(IMPORT_FARE_FILES, importParameters.getImportFareFiles());
             e.getIn().setHeader(RECOMPUTE_STOP_PLACES_LOCATION, importParameters.getRecomputeStopPlacesLocation());
+            if (importParameters.getImportTargetRoutes() != null) {
+                e.getIn().setHeader(IMPORT_TARGET_ROUTES, importParameters.getImportTargetRoutes()
+                        .stream()
+                        .map(ImportRouteIdentifier::getRouteIdentifier)
+                        .collect(Collectors.joining(",")));
+            } else {
+                e.getIn().setHeader(IMPORT_TARGET_ROUTES, "");
+            }
             StringBuilder recipients = new StringBuilder();
             for (Recipient recipient : importConfiguration.getRecipients()) {
                 recipients.append(recipient.getEmail());

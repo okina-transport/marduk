@@ -1,5 +1,7 @@
 package no.rutebanken.marduk.domain;
 
+import java.util.Set;
+
 public class ImportParameters {
     private Long id;
     private String importMode;
@@ -33,6 +35,7 @@ public class ImportParameters {
     private Boolean renameRoutesAfterMerge;
     private Boolean importFareFiles;
     private Boolean recomputeStopPlacesLocation;
+    private Set<ImportRouteIdentifier> importTargetRoutes;
 
     public Long getId() {
         return id;
@@ -272,5 +275,13 @@ public class ImportParameters {
 
     public void setRecomputeStopPlacesLocation(Boolean recomputeStopPlacesLocation) {
         this.recomputeStopPlacesLocation = recomputeStopPlacesLocation;
+    }
+
+    public Set<ImportRouteIdentifier> getImportTargetRoutes() {
+        return importTargetRoutes;
+    }
+
+    public void setImportTargetRoutes(Set<ImportRouteIdentifier> importTargetRoutes) {
+        this.importTargetRoutes = importTargetRoutes;
     }
 }

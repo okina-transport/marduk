@@ -98,6 +98,9 @@ public class GtfsImportParameters extends ChouetteJobParameters {
 
         @JsonProperty("import_fare_files")
         public Boolean importFareFiles;
+
+        @JsonProperty("import_target_routes")
+        public String importTargetRoutes;
     }
 
     public static GtfsImportParameters create(RawImportParameters rawImportParameters) {
@@ -145,6 +148,7 @@ public class GtfsImportParameters extends ChouetteJobParameters {
         gtfsImport.renameRoutesAfterMerge = rawImportParameters.isRenameRoutesAfterMerge();
         gtfsImport.importFareFiles = rawImportParameters.isImportFareFiles();
         gtfsImport.recomputeStopPlacesLocation = rawImportParameters.isRecomputeStopPlacesLocation();
+        gtfsImport.importTargetRoutes = rawImportParameters.getImportTargetRoutes();
 
         return gtfsImportParameters;
     }
