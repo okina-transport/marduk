@@ -16,8 +16,6 @@
 
 package no.rutebanken.marduk.routes.fares;
 
-import com.gargoylesoftware.htmlunit.javascript.host.xml.FormData;
-import com.google.common.base.Strings;
 import no.rutebanken.marduk.Constants;
 import no.rutebanken.marduk.Utils.ImportRouteBuilder;
 import no.rutebanken.marduk.domain.Provider;
