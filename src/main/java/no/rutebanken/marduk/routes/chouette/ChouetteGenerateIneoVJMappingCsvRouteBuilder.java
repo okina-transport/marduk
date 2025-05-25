@@ -11,7 +11,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class ChouetteGenerateIneoVJMappingCsvRouteBuilder extends BaseRouteBuilder {
 
-    @Value("${chouette.generateVjMappingCsv.schedule:0+00+04+?+*+MON-FRI}")
+    @Value("${chouette.generateVjMappingCsv.schedule:0+0+1+?+*+*}")
     private String cronSchedule;
 
     @Value("${chouette.url}")
