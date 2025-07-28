@@ -112,7 +112,12 @@ public class TiamatExportStopPlacesBuilder extends AbstractChouetteRouteBuilder 
         from("direct:sendStopPlaceExportToLug")
                 .log(LoggingLevel.INFO, "Launching post process.")
                 .process(e ->{
-                    Job job = e.getIn().getBody(Job.class);
+                    Job job = null;
+                    if (e.getIn().getHeader(ORIGINAL_JOB) != null){
+                        job = e.getIn().getHeader(ORIGINAL_JOB, Job.class);
+                    }else{
+                        job = e.getIn().getBody(Job.class);
+                    }
                     e.getIn().setHeader(SUB_FOLDER, job.getSubFolder());
                 })
                 .setBody().constant(null)

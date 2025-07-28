@@ -192,5 +192,8 @@ public class Constants {
     public static final String AGENCY_LANG = "agencyLang";
     public static final String EXPORT_ACTION = "exportAction";
 
+    public static final String ORIGINAL_JOB = "originalJob";
+
+
 }
 

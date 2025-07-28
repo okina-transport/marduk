@@ -18,13 +18,13 @@ package no.rutebanken.marduk.routes.status;
 
 import no.rutebanken.marduk.domain.ExportType;
 import no.rutebanken.marduk.metrics.PrometheusMetricsService;
+import no.rutebanken.marduk.routes.chouette.json.Job;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Component;
 
-import static no.rutebanken.marduk.Constants.EXPORT_TO_CONSUMER_DATA;
-import static no.rutebanken.marduk.Constants.EXPORT_TO_CONSUMER_STATUS;
+import static no.rutebanken.marduk.Constants.*;
 
 @Component
 public class StatusRouteBuilder extends RouteBuilder {
@@ -54,6 +54,11 @@ public class StatusRouteBuilder extends RouteBuilder {
 
         from("direct:updateExportToConsumerStatus")
                 .process(e -> {
+                    Object body = e.getIn().getBody();
+                    if (body instanceof Job) {
+                        e.getIn().setHeader(ORIGINAL_JOB, body);
+                    }
+
                     String exportToConsumerStatus = (String) e.getIn().getHeader(EXPORT_TO_CONSUMER_STATUS);
                     if (exportToConsumerStatus != null) {
                         String description = null;
