@@ -18,12 +18,12 @@ package no.rutebanken.marduk.routes.file;
 
 import no.rutebanken.marduk.exceptions.MardukException;
 import no.rutebanken.marduk.routes.file.beans.FileTypeClassifierBean;
+import org.apache.camel.Exchange;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.onebusaway.gtfs_transformer.GtfsTransformer;
 import org.onebusaway.gtfs_transformer.updates.EnsureStopTimesIncreaseUpdateStrategy;
 import org.onebusaway.gtfs_transformer.updates.LocalVsExpressUpdateStrategy;
-import org.onebusaway.gtfs_transformer.updates.RemoveDuplicateTripsStrategy;
 import org.onebusaway.gtfs_transformer.updates.RemoveStopDescStrategy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -43,8 +43,13 @@ public class ZipFileUtils {
 
     public static Set<String> listFilesInZip(File file) {
         try (ZipFile zipFile = new ZipFile(file)) {
-            return zipFile.stream().filter(ze -> !ze.isDirectory()).map(ZipEntry::getName).collect(Collectors.toSet());
+            return zipFile.stream()
+                    .filter(ze -> !ze.isDirectory())
+                    // Extrait seulement le nom du fichier du chemin complet
+                    .map(ze -> new File(ze.getName()).getName())
+                    .collect(Collectors.toSet());
         } catch (IOException e) {
+            logger.error("Unable to list files in ZIP", e);
             return Collections.emptySet();
         }
     }
@@ -69,26 +74,13 @@ public class ZipFileUtils {
     }
 
     private static File transformGtfsFiles(File inputFile) throws Exception {
-
         logger.info("Transforming GTFS-file");
-        long t1 = System.currentTimeMillis();
-
+        long time = System.currentTimeMillis();
         GtfsTransformer transformer = new GtfsTransformer();
         File outputFile = File.createTempFile("marduk-cleanup", ".zip");
-
-        transformer.setGtfsInputDirectories(Arrays.asList(inputFile));
-
+        transformer.setGtfsInputDirectories(Collections.singletonList(inputFile));
         transformer.setOutputDirectory(outputFile);
-//        transformer.addTransform(new RemoveRepeatedStopTimesStrategy());
-//        transformer.addTransform(new RemoveDuplicateTripsStrategy());
-        transformer.addTransform(new EnsureStopTimesIncreaseUpdateStrategy());
-        transformer.addTransform(new LocalVsExpressUpdateStrategy());
-        transformer.addTransform(new RemoveStopDescStrategy());
-        transformer.getReader().setOverwriteDuplicates(true);
-
-        transformer.run();
-
-        logger.info("Transformed GTFS-file - spent {} ms", (System.currentTimeMillis() - t1));
+        executeTransformations(transformer, time);
         return outputFile;
     }
 
@@ -217,7 +209,7 @@ public class ZipFileUtils {
     }
 
     public static void replaceFileInZipFile(File zipFile, String replaceFileName, ByteArrayOutputStream replaceFileContent) {
-        try (FileSystem fs = FileSystems.newFileSystem(Paths.get(zipFile.getPath()), null)) {
+        try (FileSystem fs = FileSystems.newFileSystem(Paths.get(zipFile.getPath()), (ClassLoader) null)) {
             Path fileInsideZipPath = fs.getPath(replaceFileName);
             File tmp = File.createTempFile(replaceFileName, ".tmp");
             replaceFileContent.writeTo(new FileOutputStream(tmp));
@@ -272,21 +264,92 @@ public class ZipFileUtils {
         return inputFile;
     }
 
-    public static File transformGtfsFile(byte[] data) throws IOException {
+    public static File transformGtfsFile(byte[] data, Exchange exchange) throws IOException {
         File file = getFile(data);
+
+        try {
+            file = repackZipToFlatStructureIfNeeded(file);
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to recompress ZIP file", e);
+        }
+
+        Object header = exchange.getIn().getHeader("importtargetroutes");
+        Set<String> routeIds = Arrays.stream(header.toString().split(","))
+                .map(String::trim).filter(s -> !s.isEmpty()).collect(Collectors.toSet());
+
         if (file.exists() && file.length() > 0) {
-            try (FileInputStream input = new FileInputStream(file)) {
-                Set<String> filenames = new ZipFileUtils().listFilesInZip(IOUtils.toByteArray(input));
-                if (FileTypeClassifierBean.isGtfsZip(filenames)) {
-                    try {
+            Set<String> filenamesInZip = listFilesInZip(file);
+            if (FileTypeClassifierBean.isGtfsZip(filenamesInZip)) {
+                try {
+                    if (!routeIds.isEmpty()) {
+                        file = filterGtfsByRouteIds(file, routeIds);
+                    } else {
                         file = transformGtfsFiles(file);
-                    } catch (Exception e) {
-                        e.printStackTrace();
                     }
+                } catch (Exception e) {
+                    throw new RuntimeException("GTFS conversion failed", e);
                 }
+            } else {
+                logger.warn("The ZIP file does not appear to be a valid GTFS file. Files found : {}", filenamesInZip);
             }
         }
         return file;
+    }
+
+    private static File repackZipToFlatStructureIfNeeded(File inputFile) throws IOException {
+        String commonPathPrefix = null;
+        try (ZipFile zipFile = new ZipFile(inputFile)) {
+            Enumeration<? extends ZipEntry> entries = zipFile.entries();
+            while(entries.hasMoreElements()){
+                ZipEntry entry = entries.nextElement();
+                if (entry.isDirectory()) continue;
+
+                String path = new File(entry.getName()).getParent();
+                if (path == null) {
+                    logger.debug("File found at the root, the ZIP file is already flat.");
+                    return inputFile;
+                }
+
+                String currentPrefix = path + File.separator;
+                if(commonPathPrefix == null){
+                    commonPathPrefix = currentPrefix;
+                } else if(!commonPathPrefix.equals(currentPrefix)){
+                    logger.debug("Several paths found, ZIP is already flat.");
+                    return inputFile;
+                }
+            }
+        }
+
+        if (commonPathPrefix == null) {
+            logger.debug("The ZIP file is empty or contains only empty folders.");
+            return inputFile;
+        }
+
+        File flatZip = File.createTempFile("marduk-repacked", ".zip");
+
+        try (ZipOutputStream zos = new ZipOutputStream(new FileOutputStream(flatZip));
+             ZipInputStream zis = new ZipInputStream(new FileInputStream(inputFile))) {
+
+            ZipEntry entry;
+            while ((entry = zis.getNextEntry()) != null) {
+                if (entry.isDirectory()) continue;
+
+                String newName = entry.getName().substring(commonPathPrefix.length());
+                if(newName.isEmpty()) continue; // Eviter les entrées vides
+
+                zos.putNextEntry(new ZipEntry(newName));
+
+                byte[] buffer = new byte[1024];
+                int len;
+                while ((len = zis.read(buffer)) > 0) {
+                    zos.write(buffer, 0, len);
+                }
+                zos.closeEntry();
+            }
+        }
+
+        logger.info("Recompression complete : {}", flatZip.getAbsolutePath());
+        return flatZip;
     }
 
     private static ZipFile getZipFileIfSingleFolder(File inputFile) throws IOException {
@@ -332,7 +395,7 @@ public class ZipFileUtils {
                 try (FileInputStream fileInputStream = new FileInputStream(file)) {
 
                     out.putNextEntry(new ZipEntry(file.getName()));
-                    for (int read = fileInputStream.read(buffer); read > -1; read = ((InputStream) fileInputStream).read(buffer)) {
+                    for (int read = fileInputStream.read(buffer); read > -1; read = (fileInputStream).read(buffer)) {
                         out.write(buffer, 0, read);
                     }
                     out.closeEntry();
@@ -366,4 +429,29 @@ public class ZipFileUtils {
         return directoryToBeDeleted.delete();
     }
 
+    private static File filterGtfsByRouteIds(File inputFile, Set<String> routeIds) throws Exception {
+        logger.info("Filtrage du GTFS pour les route IDs: {}", routeIds);
+        long time = System.currentTimeMillis();
+        GtfsTransformer transformer = new GtfsTransformer();
+        File outputFile = File.createTempFile("marduk-filtered", ".zip");
+        transformer.setGtfsInputDirectories(Collections.singletonList(inputFile));
+        transformer.setOutputDirectory(outputFile);
+
+        transformer.addTransform(new FilterByRouteIdsStrategy(routeIds));
+        executeTransformations(transformer, time);
+
+        return outputFile;
+    }
+
+    private static void executeTransformations(GtfsTransformer transformer, long time) {
+        transformer.getReader().setOverwriteDuplicates(true);
+
+        try {
+            transformer.run();
+        } catch (Exception e) {
+            logger.error("Erreur durant l'exécution de GtfsTransformer", e);
+            throw new RuntimeException("Échec de l'exécution de GtfsTransformer", e);
+        }
+        logger.info("Filtrage GTFS par route IDs terminé en {} ms", (System.currentTimeMillis() - time));
+    }
 }
