@@ -274,8 +274,9 @@ public class ZipFileUtils {
         }
 
         Object header = exchange.getIn().getHeader("importtargetroutes");
-        Set<String> routeIds = Arrays.stream(header.toString().split(","))
-                .map(String::trim).filter(s -> !s.isEmpty()).collect(Collectors.toSet());
+        Set<String> routeIds = header != null ?
+                Arrays.stream(header.toString().split(","))
+                .map(String::trim).filter(s -> !s.isEmpty()).collect(Collectors.toSet()) : new HashSet<>();
 
         if (file.exists() && file.length() > 0) {
             Set<String> filenamesInZip = listFilesInZip(file);
