@@ -10,6 +10,7 @@ import org.slf4j.LoggerFactory;
 import java.io.Serializable;
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -34,6 +35,8 @@ public class FilterByRouteIdsStrategy implements GtfsTransformStrategy {
 
         Set<AgencyAndId> keptTrips = removeUnwantedRoutesAndTrips(dao);
         removeUnwantedStopTimes(dao, keptTrips);
+        removeUnwantedFrequencies(dao, keptTrips);
+        removeUnwantedFareRules(dao);
 
         collectGarbage(dao);
 
@@ -75,6 +78,16 @@ public class FilterByRouteIdsStrategy implements GtfsTransformStrategy {
         logger.info("{} saved stop_times.", dao.getAllStopTimes().size());
     }
 
+    private void removeUnwantedFrequencies(GtfsMutableRelationalDao dao, Set<AgencyAndId> keptTripIds) {
+        removeEntities(dao, dao.getAllFrequencies(), freq -> !keptTripIds.contains(freq.getTrip().getId()));
+        logger.info("{} frequencies saved.", dao.getAllFrequencies().size());
+    }
+
+    private void removeUnwantedFareRules(GtfsMutableRelationalDao dao) {
+        removeEntities(dao, dao.getAllFareRules(), rule -> rule.getRoute() != null && !routeIdsToKeep.contains(rule.getRoute().getId().getId()));
+        logger.info("{} fare_rules saved.", dao.getAllFareRules().size());
+    }
+
     private void collectGarbage(GtfsMutableRelationalDao dao) {
         // Collecter les IDs de toutes les entités encore référencées
         Set<AgencyAndId> referencedStops = dao.getAllStopTimes().stream()
@@ -89,15 +102,40 @@ public class FilterByRouteIdsStrategy implements GtfsTransformStrategy {
                 .map(route -> route.getAgency().getId())
                 .collect(Collectors.toSet());
 
+        Set<AgencyAndId> referencedShapes = dao.getAllTrips().stream()
+                .map(Trip::getShapeId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        Set<AgencyAndId> referencedFares = dao.getAllFareRules().stream()
+                .map(fr -> fr.getFare().getId())
+                .collect(Collectors.toSet());
+
         // Supprimer les entités qui ne sont plus référencées
         removeEntities(dao, dao.getAllStops(), stop -> !referencedStops.contains(stop.getId()));
         logger.info("{} stops retained after cleaning.", dao.getAllStops().size());
+
+        removeEntities(dao, dao.getAllShapePoints(), shapePoint -> !referencedShapes.contains(shapePoint.getShapeId()));
+        logger.info("{} shapes retained after cleaning.", dao.getAllShapePoints().size());
 
         removeEntities(dao, dao.getAllCalendars(), cal -> !referencedServices.contains(cal.getServiceId()));
         logger.info("{} calendars retained after cleaning.", dao.getAllCalendars().size());
 
         removeEntities(dao, dao.getAllCalendarDates(), cd -> !referencedServices.contains(cd.getServiceId()));
         logger.info("{} calendar dates retained after cleaning.", dao.getAllCalendarDates().size());
+
+        removeEntities(dao, dao.getAllFareAttributes(), fa -> !referencedFares.contains(fa.getId()));
+        logger.info("{} fare_atttributes retained after cleaning.", dao.getAllFareAttributes().size());
+
+        removeEntities(dao, dao.getAllTransfers(), t ->
+                !referencedStops.contains(t.getFromStop().getId()) || !referencedStops.contains(t.getToStop().getId())
+        );
+        logger.info("{} transfers retained after cleaning.", dao.getAllTransfers().size());
+
+        removeEntities(dao, dao.getAllPathways(), p ->
+                !referencedStops.contains(p.getFromStop().getId()) || !referencedStops.contains(p.getToStop().getId())
+        );
+        logger.info("{} pathways retained after cleaning.", dao.getAllPathways().size());
 
         removeEntities(dao, dao.getAllAgencies(), agency -> !referencedAgencies.contains(agency.getId()));
         logger.info("{} agencies retained after cleaning.", dao.getAllAgencies().size());
