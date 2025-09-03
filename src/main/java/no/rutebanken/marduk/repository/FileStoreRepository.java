@@ -7,6 +7,7 @@ import org.apache.commons.net.io.Util;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Repository;
 
@@ -36,6 +37,9 @@ public class FileStoreRepository implements BlobStoreRepository{
 
     @Autowired
     private ProviderRepository providerRepository;
+
+    @Value("${chouette.remove.old.jobs.keep.days:100}")
+    private int keepDays;
 
     private Logger logger = LoggerFactory.getLogger(this.getClass());
 
@@ -149,6 +153,21 @@ public class FileStoreRepository implements BlobStoreRepository{
     @Override
     public boolean deleteAllFilesInFolder(String folder){
         listBlobs(folder).getFiles().forEach(file -> deleteFile(file.getName()));
+        return true;
+    }
+
+    @Override
+    public boolean cleanOldFiles() {
+        try {
+            List<Path> mardukDirectory = fileSystemService.getMardukDirectories();
+            for (Path path : mardukDirectory) {
+                logger.info("Cleaning directory: " + path.getFileName());
+                fileSystemService.cleanUpMardukDirectory(path,keepDays);
+            }
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
         return true;
     }
 

@@ -43,4 +43,6 @@ public interface BlobStoreRepository {
 
     boolean deleteAllFilesInFolder(String folder);
 
+    boolean cleanOldFiles() ;
+
 }

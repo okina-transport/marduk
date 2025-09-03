@@ -98,6 +98,10 @@ public class BlobStoreService {
         repository.uploadBlob(name, inputStream, makePublic);
     }
 
+    public boolean cleanOldFiles(){
+        return repository.cleanOldFiles();
+    }
+
     public BlobStoreFiles listBlobsInFolders(String path) {
         return repository.listBlobs(path);
     }

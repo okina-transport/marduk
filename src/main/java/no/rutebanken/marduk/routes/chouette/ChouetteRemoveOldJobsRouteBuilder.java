@@ -18,9 +18,11 @@ package no.rutebanken.marduk.routes.chouette;
 
 import no.rutebanken.marduk.Constants;
 import no.rutebanken.marduk.routes.BaseRouteBuilder;
+import no.rutebanken.marduk.services.BlobStoreService;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.component.http4.HttpMethods;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -45,6 +47,9 @@ public class ChouetteRemoveOldJobsRouteBuilder extends BaseRouteBuilder {
     @Value("${nabu.url}")
     private String nabuUrl;
 
+    @Autowired
+    private BlobStoreService blobStoreService;
+
 
     @Override
     public void configure() throws Exception {
@@ -54,6 +59,7 @@ public class ChouetteRemoveOldJobsRouteBuilder extends BaseRouteBuilder {
                 .autoStartup("{{chouette.remove.old.jobs.autoStartup:true}}")
                 .filter(e -> shouldQuartzRouteTrigger(e, cronSchedule))
                 .log(LoggingLevel.INFO, "Quartz triggers deletion of old jobs in Chouette and Nabu.")
+                .bean(blobStoreService, "cleanOldFiles")
                 .to("direct:chouetteRemoveOldJobs")
                 .routeId("chouette-remove-old-jobs-quartz");
 

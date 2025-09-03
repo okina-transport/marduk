@@ -118,6 +118,12 @@ public class InMemoryBlobStoreRepository implements BlobStoreRepository {
         return true;
     }
 
+    @Override
+    public boolean cleanOldFiles() {
+        logger.info("Nothing is cleaned in memory blob store");
+        return true;
+    }
+
     public Provider parseProviderFromFileName(CacheProviderRepository providerRepository, String fileName) {
         if (fileName == null) {
             return null;

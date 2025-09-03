@@ -26,8 +26,12 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.attribute.BasicFileAttributes;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import java.util.zip.ZipException;
 
 import static no.rutebanken.marduk.Constants.*;
@@ -248,6 +252,45 @@ public class FileSystemService {
         return chouetteStoragePath + "/" + filename.substring(0, filename.lastIndexOf("/"));
 
     }
+
+    public List<Path> getMardukDirectories() throws IOException {
+        Path basePath = Paths.get(chouetteStoragePath);
+
+
+        try (var stream = Files.list(basePath)) {
+            return stream
+                    .filter(Files::isDirectory)
+                    .filter(p -> p.getFileName().toString().matches("\\d+"))
+                    .collect(Collectors.toList());
+        }
+    }
+
+    public void cleanUpMardukDirectory(Path organisationPath, int nbOdDays) throws IOException {
+
+        if (!Files.isDirectory(organisationPath)) {
+            throw new IllegalArgumentException("Invalid path.");
+        }
+
+        Instant thresholdDate = Instant.now().minus(nbOdDays, ChronoUnit.DAYS);
+
+        try (Stream<Path> stream = Files.walk(organisationPath)) {
+            stream.filter(path -> Files.isRegularFile(path) && path.toString().endsWith(".zip"))
+                    .forEach(path -> {
+                        try {
+                            BasicFileAttributes attrs = Files.readAttributes(path, BasicFileAttributes.class);
+                            Instant fileTime = attrs.lastModifiedTime().toInstant();
+
+                            if (fileTime.isBefore(thresholdDate)) {
+                                Files.delete(path);
+                                logger.info("Deleted : " + path);
+                            }
+                        } catch (IOException e) {
+                            logger.error("Error while deleting: " + path + " -> " + e.getMessage());
+                        }
+                    });
+        }
+    }
+
 
     public Path getOrCreateFilePath(String fileName) {
         try {
