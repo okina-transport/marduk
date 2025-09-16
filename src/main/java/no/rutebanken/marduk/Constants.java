@@ -32,6 +32,7 @@ public class Constants {
     public static final String EXPORT_NAME = "EXPORT_NAME";
     public static final String EXPORT_ATTRIBUTIONS = "EXPORT_ATTRIBUTIONS";
     public static final String EXPORTED_FILENAME = "EXPORTED_FILENAME";
+    public static final String EXPORT_ALL_LINES = "EXPORT_ALL_LINES";
     public static final String CURRENT_EXPORT = "CURRENT_EXPORT";
     public static final String STOP_ID_PREFIX = "STOP_ID_PREFIX";
     public static final String LINE_ID_PREFIX = "LINE_ID_PREFIX";

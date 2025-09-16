@@ -35,6 +35,7 @@ public class ExportTemplate implements Serializable {
     private String agencyURL;
     private String agencyTimezone;
     private String agencyLang;
+    private Boolean exportAllLines;
 
 
 
@@ -257,4 +258,8 @@ public class ExportTemplate implements Serializable {
     public void setAgencyLang(String agencyLang) {
         this.agencyLang = agencyLang;
     }
+
+    public boolean isExportAllLines() { return exportAllLines; }
+
+    public void setExportAllLines(boolean exportAllLines) { this.exportAllLines = exportAllLines; }
 }

@@ -95,6 +95,9 @@ public class GtfsExportParameters {
         @JsonProperty("mapping_lines_ids")
         public boolean mappingLinesIds = false;
 
+        @JsonProperty("export_all_lines")
+        public boolean exportAllLines = false;
+
         @JsonProperty("attributions_export_mode")
         public AttributionsExportModes attributionsExportModes = AttributionsExportModes.NONE;
 
@@ -117,7 +120,8 @@ public class GtfsExportParameters {
 
         public GtfsExport(String name, String objectIdPrefix, String referentialName, String organisationName, String userName, boolean keepOriginalId, Date startDate, Date endDate, String exportedFilename,
                           IdParameters idParams, boolean mappingLinesIds, Boolean commercialPointExport, AttributionsExportModes attributionsExportModes, Boolean googleMapsCompatibility,
-                          boolean useExtendedGtfsRouteTypes, AgencyParameters agencyParameters, String exportedReferentials, Long exportConfigurationId) {
+                          boolean useExtendedGtfsRouteTypes, AgencyParameters agencyParameters, String exportedReferentials, Long exportConfigurationId,
+                          boolean exportAllLines) {
             this.name = name;
             this.objectIdPrefix = objectIdPrefix;
             this.referentialName = referentialName;
@@ -144,10 +148,11 @@ public class GtfsExportParameters {
             this.agencyURL = agencyParameters.getAgencyURL();
             this.exportedReferentials = exportedReferentials;
             this.exportConfigurationId = exportConfigurationId;
+            this.exportAllLines = exportAllLines;
         }
 
-        public GtfsExport(String name, String objectIdPrefix, String referentialName, String organisationName, String userName, boolean keepOriginalId, String exportedFilename,  Long exportConfigurationId) {
-            this(name, objectIdPrefix, referentialName, organisationName, userName, keepOriginalId, null, null, exportedFilename, new IdParameters(), false, false, AttributionsExportModes.NONE, false, false, new AgencyParameters(), null, exportConfigurationId);
+        public GtfsExport(String name, String objectIdPrefix, String referentialName, String organisationName, String userName, boolean keepOriginalId, String exportedFilename,  Long exportConfigurationId, boolean exportAllLines) {
+            this(name, objectIdPrefix, referentialName, organisationName, userName, keepOriginalId, null, null, exportedFilename, new IdParameters(), false, false, AttributionsExportModes.NONE, false, false, new AgencyParameters(), null, exportConfigurationId, false);
         }
 
     }
