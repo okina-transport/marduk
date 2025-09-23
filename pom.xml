@@ -45,7 +45,7 @@
         <keycloak.version>4.1.0.Final</keycloak.version>
         <spring.security.version>5.0.7.RELEASE</spring.security.version>
         <!-- Docker & Fabric8 Configs -->
-        <docker.from>registry.okina.fr/okina/java-base-image:1.0</docker.from>
+        <docker.from>registry.okina.fr/okina/java-base-image:1.1</docker.from>
         <docker.image>registry.okina.fr/mobiiti/${project.artifactId}:${project.version}</docker.image>
         <docker.cleanup>none</docker.cleanup>
 
