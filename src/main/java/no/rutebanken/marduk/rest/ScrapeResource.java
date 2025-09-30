@@ -16,7 +16,6 @@
 
 package no.rutebanken.marduk.rest;
 
-import no.rutebanken.marduk.domain.ConsumerType;
 import no.rutebanken.marduk.metrics.PrometheusMetricsService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;

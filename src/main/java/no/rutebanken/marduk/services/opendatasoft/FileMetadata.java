@@ -1,8 +1,5 @@
 package no.rutebanken.marduk.services.opendatasoft;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
-import java.time.LocalDateTime;
-
 public class FileMetadata {
     private String uid;
     private String filename;

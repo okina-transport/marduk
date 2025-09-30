@@ -18,25 +18,27 @@ package no.rutebanken.marduk.routes.file;
 
 import no.rutebanken.marduk.exceptions.MardukException;
 import no.rutebanken.marduk.routes.file.beans.FileTypeClassifierBean;
+import no.rutebanken.marduk.routes.file.beans.GtfsFileInputWithParameters;
+import no.rutebanken.marduk.routes.file.onebusaway.NonStandardStopTransformer;
 import org.apache.camel.Exchange;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.BooleanUtils;
 import org.onebusaway.gtfs_transformer.GtfsTransformer;
-import org.onebusaway.gtfs_transformer.updates.EnsureStopTimesIncreaseUpdateStrategy;
-import org.onebusaway.gtfs_transformer.updates.LocalVsExpressUpdateStrategy;
-import org.onebusaway.gtfs_transformer.updates.RemoveStopDescStrategy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.*;
-import java.nio.file.FileSystem;
 import java.nio.file.*;
+import java.nio.file.FileSystem;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
+
+import static no.rutebanken.marduk.Constants.*;
 
 public class ZipFileUtils {
     private static final Logger logger = LoggerFactory.getLogger(ZipFileUtils.class);
@@ -68,19 +70,29 @@ public class ZipFileUtils {
             }
             return fileNames;
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.error("Unable to list files in ZIP", e);
             return Collections.emptySet();
         }
     }
 
-    private static File transformGtfsFiles(File inputFile) throws Exception {
+    private static File transformGtfsFiles(GtfsFileInputWithParameters gtfsFileInputWithParameter) throws Exception {
         logger.info("Transforming GTFS-file");
         long time = System.currentTimeMillis();
         GtfsTransformer transformer = new GtfsTransformer();
         File outputFile = File.createTempFile("marduk-cleanup", ".zip");
-        transformer.setGtfsInputDirectories(Collections.singletonList(inputFile));
+        transformer.setGtfsInputDirectories(Collections.singletonList(gtfsFileInputWithParameter.getInputFile()));
         transformer.setOutputDirectory(outputFile);
+        if (gtfsFileInputWithParameter.isAllowNonStandardGtfs()) {
+            transformer.getReader()
+                    .addEntityHandler(new NonStandardStopTransformer(
+                            gtfsFileInputWithParameter.getFillMissingStopName(),
+                            gtfsFileInputWithParameter.getDefaultLatitude(),
+                            gtfsFileInputWithParameter.getDefaultLongitude()
+                            )
+                    );
+        }
         executeTransformations(transformer, time);
+
         return outputFile;
     }
 
@@ -89,7 +101,7 @@ public class ZipFileUtils {
         try {
             return zipFileContainsSingleFolder(getFile(data));
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.error(e.getMessage());
             return false;
         }
     }
@@ -98,7 +110,7 @@ public class ZipFileUtils {
         try {
             return getZipFileIfSingleFolder(inputFile) != null;
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.error(e.getMessage());
             return false;
         }
     }
@@ -138,7 +150,7 @@ public class ZipFileUtils {
         }
         out.close();
 
-        logger.info("File written to : " + tmpFile.getAbsolutePath());
+        logger.info("File written to : {}", tmpFile.getAbsolutePath());
 
         return tmpFile;
     }
@@ -278,14 +290,22 @@ public class ZipFileUtils {
                 Arrays.stream(header.toString().split(","))
                 .map(String::trim).filter(s -> !s.isEmpty()).collect(Collectors.toSet()) : new HashSet<>();
 
+        String allowNonStandardGtfsRawStr = exchange.getIn().getHeader(ALLOW_NON_STANDARD_GTFS, String.class);
+        boolean allowNonStandardGtfs = BooleanUtils.toBoolean(allowNonStandardGtfsRawStr);
+
+        String fillMissingStopName = exchange.getIn().getHeader(FILL_MISSING_STOP_NAME, String.class);
+        String fillMissingCoordinates = exchange.getIn().getHeader(FILL_MISSING_COORDINATES, String.class);
+
         if (file.exists() && file.length() > 0) {
             Set<String> filenamesInZip = listFilesInZip(file);
             if (FileTypeClassifierBean.isGtfsZip(filenamesInZip)) {
                 try {
+                    GtfsFileInputWithParameters gtfsFileInputWithParameter =
+                            new GtfsFileInputWithParameters(file, routeIds, allowNonStandardGtfs, fillMissingStopName, fillMissingCoordinates);
                     if (!routeIds.isEmpty()) {
-                        file = filterGtfsByRouteIds(file, routeIds);
+                        file = filterGtfsByRouteIds(gtfsFileInputWithParameter);
                     } else {
-                        file = transformGtfsFiles(file);
+                        file = transformGtfsFiles(gtfsFileInputWithParameter);
                     }
                 } catch (Exception e) {
                     throw new RuntimeException("GTFS conversion failed", e);
@@ -430,15 +450,23 @@ public class ZipFileUtils {
         return directoryToBeDeleted.delete();
     }
 
-    private static File filterGtfsByRouteIds(File inputFile, Set<String> routeIds) throws Exception {
-        logger.info("Filtrage du GTFS pour les route IDs: {}", routeIds);
+    private static File filterGtfsByRouteIds(GtfsFileInputWithParameters gtfsFileInputWithParameters) throws Exception {
+        logger.info("Filtrage du GTFS pour les route IDs: {}", gtfsFileInputWithParameters.getRouteIds());
         long time = System.currentTimeMillis();
         GtfsTransformer transformer = new GtfsTransformer();
         File outputFile = File.createTempFile("marduk-filtered", ".zip");
-        transformer.setGtfsInputDirectories(Collections.singletonList(inputFile));
+        transformer.setGtfsInputDirectories(Collections.singletonList(gtfsFileInputWithParameters.getInputFile()));
         transformer.setOutputDirectory(outputFile);
-
-        transformer.addTransform(new FilterByRouteIdsStrategy(routeIds));
+        transformer.addTransform(new FilterByRouteIdsStrategy(gtfsFileInputWithParameters.getRouteIds()));
+        if (gtfsFileInputWithParameters.isAllowNonStandardGtfs()) {
+            transformer.getReader()
+                    .addEntityHandler(new NonStandardStopTransformer(
+                            gtfsFileInputWithParameters.getFillMissingStopName(),
+                            gtfsFileInputWithParameters.getDefaultLatitude(),
+                            gtfsFileInputWithParameters.getDefaultLongitude()
+                        )
+                    );
+        }
         executeTransformations(transformer, time);
 
         return outputFile;
@@ -446,7 +474,6 @@ public class ZipFileUtils {
 
     private static void executeTransformations(GtfsTransformer transformer, long time) {
         transformer.getReader().setOverwriteDuplicates(true);
-
         try {
             transformer.run();
         } catch (Exception e) {

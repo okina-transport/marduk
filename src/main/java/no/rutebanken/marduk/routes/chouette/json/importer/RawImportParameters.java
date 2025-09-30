@@ -42,6 +42,9 @@ public class RawImportParameters {
     private boolean importFareFiles;
     private boolean recomputeStopPlacesLocation;
     private String importTargetRoutes;
+    private boolean allowNonStandardGtfs;
+    private String fillMissingStopName;
+    private String fillMissingCoordinates;
 
     public String getFileName() {
         return fileName;
@@ -291,5 +294,29 @@ public class RawImportParameters {
 
     public void setImportTargetRoutes(String importTargetRoutes) {
         this.importTargetRoutes = importTargetRoutes;
+    }
+
+    public boolean isNonStandardGtfsAllowed() {
+        return allowNonStandardGtfs;
+    }
+
+    public void setAllowNonStandardGtfs(boolean allowNonStandardGtfs) {
+        this.allowNonStandardGtfs = allowNonStandardGtfs;
+    }
+
+    public String getFillMissingStopName() {
+        return fillMissingStopName;
+    }
+
+    public void setFillMissingStopName(String fillMissingStopName) {
+        this.fillMissingStopName = fillMissingStopName;
+    }
+
+    public String getFillMissingCoordinates() {
+        return fillMissingCoordinates;
+    }
+
+    public void setFillMissingCoordinates(String fillMissingCoordinates) {
+        this.fillMissingCoordinates = fillMissingCoordinates;
     }
 }

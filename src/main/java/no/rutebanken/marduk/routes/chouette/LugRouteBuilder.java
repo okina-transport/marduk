@@ -1,17 +1,12 @@
 package no.rutebanken.marduk.routes.chouette;
 
-import no.rutebanken.marduk.Constants;
 import no.rutebanken.marduk.Utils.PollJobStatusRoute;
 import no.rutebanken.marduk.routes.BaseRouteBuilder;
-import no.rutebanken.marduk.routes.status.JobEvent;
 import org.apache.camel.LoggingLevel;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import static no.rutebanken.marduk.Constants.*;
-import static no.rutebanken.marduk.Constants.STOP_OPERATORS_POST_PROCESS_NAME;
 
 @Component
 public class LugRouteBuilder extends BaseRouteBuilder {

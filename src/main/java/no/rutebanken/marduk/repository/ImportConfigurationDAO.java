@@ -5,8 +5,6 @@ import no.rutebanken.marduk.domain.ImportConfiguration;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import java.util.List;
-
 @Component
 public class ImportConfigurationDAO extends RestDAO<ImportConfiguration> {
 

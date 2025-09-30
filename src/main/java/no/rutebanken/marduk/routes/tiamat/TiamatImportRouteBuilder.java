@@ -17,7 +17,6 @@
 package no.rutebanken.marduk.routes.tiamat;
 
 import com.google.common.base.Strings;
-
 import no.rutebanken.marduk.Constants;
 import no.rutebanken.marduk.Utils.ImportRouteBuilder;
 import no.rutebanken.marduk.domain.Provider;
@@ -30,22 +29,19 @@ import no.rutebanken.marduk.routes.file.FileType;
 import no.rutebanken.marduk.routes.status.JobEvent;
 import no.rutebanken.marduk.routes.status.JobEvent.State;
 import no.rutebanken.marduk.routes.status.JobEvent.TimetableAction;
-import static no.rutebanken.marduk.Constants.*;
-
 import no.rutebanken.marduk.security.TokenService;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
-import org.apache.camel.builder.PredicateBuilder;
 import org.apache.camel.component.http4.HttpMethods;
 import org.apache.http.entity.ContentType;
 import org.apache.http.entity.mime.MultipartEntityBuilder;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import java.io.InputStream;
 
+import static no.rutebanken.marduk.Constants.*;
 import static no.rutebanken.marduk.Utils.Utils.getHttp4;
 import static no.rutebanken.marduk.Utils.Utils.getLastPathElementOfUrl;
 

@@ -21,7 +21,6 @@ import no.rutebanken.marduk.routes.BaseRouteBuilder;
 import no.rutebanken.marduk.routes.file.GtfsFileUtils;
 import no.rutebanken.marduk.routes.status.JobEvent;
 import no.rutebanken.marduk.services.FileSystemService;
-import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -33,14 +32,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.toList;
-import static no.rutebanken.marduk.Constants.BLOBSTORE_MAKE_BLOB_PUBLIC;
-import static no.rutebanken.marduk.Constants.CURRENT_AGGREGATED_GTFS_FILENAME;
-import static no.rutebanken.marduk.Constants.EXPORT_GLOBAL_GTFS_ZIP;
-import static no.rutebanken.marduk.Constants.EXPORT_REFERENTIALS_NAMES;
-import static no.rutebanken.marduk.Constants.FILE_HANDLE;
-import static no.rutebanken.marduk.Constants.FILE_NAME;
-import static no.rutebanken.marduk.Constants.FOLDER_NAME;
-import static no.rutebanken.marduk.Constants.GTFS_EXPORT_GLOBAL_OK;
+import static no.rutebanken.marduk.Constants.*;
 import static org.apache.camel.Exchange.FILE_PARENT;
 
 /**

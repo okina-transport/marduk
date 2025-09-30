@@ -14,6 +14,7 @@ import org.springframework.stereotype.Component;
 import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.net.URLConnection;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -24,11 +25,14 @@ import java.util.Comparator;
 import java.util.Date;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Component
 public class OpendatasoftService {
 
-    private static Logger logger = LoggerFactory.getLogger(OpendatasoftService.class);
+    public static final String ROOT_TMP_DIRECTORY = "/tmp/";
+    public static final String OPEN_DATASOFT_AUTOMATION_RESOURCE_PATH = "automation/v1.0/datasets/";
+    private static final Logger logger = LoggerFactory.getLogger(OpendatasoftService.class);
 
     /**
      * Main method to upload file to opendatasoft and update metadata
@@ -45,13 +49,13 @@ public class OpendatasoftService {
     public void sendToOpendatasoft(InputStream fileToSend, String opendatasoftURL, String datasetId, String secretKey, String exportDate, String description, String fileName, String startDate, String endDate, boolean appendDescription) throws IOException {
 
 
-        InputStream archiveToSend = buildArchiveTosend(fileToSend, datasetId, fileName, description, startDate, endDate);
+        InputStream archiveToSend = buildArchiveTosend(fileToSend, datasetId, fileName, startDate, endDate);
 
 
         // GET DATASET UID
         Optional<String> datasetInfosOpt = getDatasetInfos(opendatasoftURL, datasetId, secretKey);
 
-        if (!datasetInfosOpt.isPresent()) {
+        if (datasetInfosOpt.isEmpty()) {
             logger.error("unable to get dataset infos");
             return;
         }
@@ -67,7 +71,7 @@ public class OpendatasoftService {
             return;
         }
 
-        logger.info("Opendatasoft export - found dataset UID  : " + datasetUID);
+        logger.info("Opendatasoft export - found dataset UID  : {}", datasetUID);
 
         fileName = fileName.replace(".zip", "-ZIP.zip");
         String newFileUID = uploadFileToOpendataSoft(opendatasoftURL, datasetUID, fileName, secretKey, archiveToSend);
@@ -98,8 +102,6 @@ public class OpendatasoftService {
      *  id of the dataset
      * @param fileName
      *  name of the export
-     * @param description
-     *  description of the export
      * @param startDate
      *  start date of exploitation
      * @param endDate
@@ -109,10 +111,10 @@ public class OpendatasoftService {
      * @throws IOException
      *
      */
-    private InputStream buildArchiveTosend(InputStream dataFile, String datasetId, String fileName, String description, String startDate, String endDate) throws IOException {
+    private InputStream buildArchiveTosend(InputStream dataFile, String datasetId, String fileName, String startDate, String endDate) throws IOException {
 
         prepareDirectory(datasetId);
-        generateDescriptionFile(datasetId, fileName, startDate, endDate, description);
+        generateDescriptionFile(datasetId, fileName, startDate, endDate);
         writeDataFileInWorkingDir(dataFile, datasetId, fileName);
         return zipWorkingDir(datasetId, fileName);
     }
@@ -128,8 +130,8 @@ public class OpendatasoftService {
      * @throws IOException
      */
     private InputStream zipWorkingDir(String datasetId, String fileName) throws IOException {
-        String workingDirectory = "/tmp/" + datasetId;
-        String zipFilePath = "/tmp/" + fileName.replace(".zip", "-ZIP.zip");
+        String workingDirectory = ROOT_TMP_DIRECTORY + datasetId;
+        String zipFilePath = ROOT_TMP_DIRECTORY + fileName.replace(".zip", "-ZIP.zip");
         Path targetArchive = Paths.get(zipFilePath);
         if (Files.exists(targetArchive)){
             Files.delete(Paths.get(zipFilePath));
@@ -148,7 +150,7 @@ public class OpendatasoftService {
      *  name of the export file
      */
     private void writeDataFileInWorkingDir(InputStream dataFile, String datasetId, String fileName) {
-        String workingDirectory = "/tmp/" + datasetId;
+        String workingDirectory = ROOT_TMP_DIRECTORY + datasetId;
 
         try (OutputStream outputStream = Files.newOutputStream(Paths.get(workingDirectory + "/" + fileName))) {
 
@@ -176,15 +178,12 @@ public class OpendatasoftService {
      *  start date of exploitation
      * @param endDate
      *  end date of exploitation
-     * @param description
-     *  a description of the export
      */
-    private void generateDescriptionFile(String datasetId, String fileName, String startDate, String endDate, String description) {
-        String workingDirectory = "/tmp/" + datasetId;
-        String descriptionFileName = workingDirectory + "/" + fileName.replace(".zip" , "-TABLEAU.csv");
+    private void generateDescriptionFile(String datasetId, String fileName, String startDate, String endDate) {
+        String workingDirectory = ROOT_TMP_DIRECTORY + datasetId;
+        File descriptionFile = new File(workingDirectory, fileName.replace(".zip" , "-TABLEAU.csv"));
 
-
-        try (BufferedWriter writer = new BufferedWriter(new FileWriter(descriptionFileName))) {
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(descriptionFile.getAbsolutePath()))) {
             startDate =  startDate != null ? formatDate(startDate) : "";
             endDate =  endDate != null ? formatDate(endDate) : "";
 
@@ -220,21 +219,22 @@ public class OpendatasoftService {
      */
     private void prepareDirectory(String datasetId) throws IOException {
 
-        String workingDirectory = "/tmp/" + datasetId;
+        String workingDirectory = ROOT_TMP_DIRECTORY + datasetId;
         Path directory = Paths.get(workingDirectory);
         if (Files.exists(directory) && Files.isDirectory(directory)) {
-            Files.walk(directory)
-                    .sorted(Comparator.reverseOrder())
-                    .forEach(path -> {
-                        try {
-                            Files.delete(path);
-                        } catch (IOException e) {
-                           logger.error("Error while deleting " + path.toString() + " : " + e.getMessage());
-                        }
-                    });
+            try (Stream<Path> walk = Files.walk(directory)) {
+                walk.sorted(Comparator.reverseOrder())
+                        .forEach(path -> {
+                            try {
+                                Files.delete(path);
+                            } catch (IOException e) {
+                                logger.error("Error while deleting {} : {}", path, e.getMessage());
+                            }
+                        });
 
-            logger.info("working directory deleted : " + workingDirectory);
+                logger.info("working directory deleted : {}", workingDirectory);
 
+            }
         }
 
         Files.createDirectories(directory);
@@ -361,7 +361,7 @@ public class OpendatasoftService {
         String uploadURL = buildUploadURL(opendatasoftURL, datasetUID);
         Optional<String> createdUIDOpt = postFileOnURL(uploadURL, secretKey, fileName, fileToSend);
         String newFileUID = createdUIDOpt.get();
-        logger.info("New file uploaded. UID : " + newFileUID);
+        logger.info("New file uploaded. UID : {}", newFileUID);
         return newFileUID;
     }
 
@@ -377,7 +377,7 @@ public class OpendatasoftService {
         if (!opendatasoftURL.endsWith("/")) {
             opendatasoftURL = opendatasoftURL + "/";
         }
-        return opendatasoftURL + "automation/v1.0/datasets/" + datasetUID + "/resources/files/";
+        return opendatasoftURL + OPEN_DATASOFT_AUTOMATION_RESOURCE_PATH + datasetUID + "/resources/files/";
     }
 
     /**
@@ -481,9 +481,9 @@ public class OpendatasoftService {
             OutputStream output = connection.getOutputStream();
             PrintWriter writer = new PrintWriter(new OutputStreamWriter(output, StandardCharsets.UTF_8), true);
 
-            writer.append("--" + boundary).append("\r\n");
-            writer.append("Content-Disposition: form-data; name=\"file\"; filename=\"" + fileName + "\"").append("\r\n");
-            writer.append("Content-Type: " + HttpURLConnection.guessContentTypeFromName(fileName)).append("\r\n");
+            writer.append("--").append(boundary).append("\r\n");
+            writer.append("Content-Disposition: form-data; name=\"file\"; filename=\"").append(fileName).append("\"").append("\r\n");
+            writer.append("Content-Type: ").append(URLConnection.guessContentTypeFromName(fileName)).append("\r\n");
             writer.append("\r\n");
             writer.flush();
 
@@ -495,12 +495,12 @@ public class OpendatasoftService {
             }
             output.flush();
 
-            writer.append("\r\n").append("--" + boundary + "--").append("\r\n");
+            writer.append("\r\n").append("--").append(boundary).append("--").append("\r\n");
             writer.flush();
 
 
             Optional<String> response = getResponse(connection);
-            if (!response.isPresent()) {
+            if (response.isEmpty()) {
                 logger.error("No response from server. Stopping export");
                 return Optional.empty();
             }
@@ -513,7 +513,7 @@ public class OpendatasoftService {
 
             return Optional.of(fileMetadata.getUid());
         } catch (IOException e) {
-            logger.error("Error while launching POST command for URL : " + opendatasoftURL);
+            logger.error("Error while launching POST command for URL : {}", opendatasoftURL);
             logger.error(e.getMessage());
         }
         return Optional.empty();
@@ -550,7 +550,7 @@ public class OpendatasoftService {
      * @return the built url
      */
     private String buildResourcesURL(String opendatasoftURL, String datasetUID) {
-        return buildDatasetBaseURL(opendatasoftURL) + "automation/v1.0/datasets/" + datasetUID + "/resources/";
+        return buildDatasetBaseURL(opendatasoftURL) + OPEN_DATASOFT_AUTOMATION_RESOURCE_PATH + datasetUID + "/resources/";
     }
 
     /**
@@ -561,7 +561,7 @@ public class OpendatasoftService {
      * @return the url
      */
     private String buildDescriptionMetaDataURL(String opendatasoftURL, String datasetUID) {
-        return buildDatasetBaseURL(opendatasoftURL) + "automation/v1.0/datasets/" + datasetUID + "/metadata/default/description";
+        return buildDatasetBaseURL(opendatasoftURL) + OPEN_DATASOFT_AUTOMATION_RESOURCE_PATH + datasetUID + "/metadata/default/description";
     }
 
     /**
@@ -572,7 +572,7 @@ public class OpendatasoftService {
      * @return the url
      */
     private String buildTempPeriodMetaDataURL(String opendatasoftURL, String datasetUID) {
-        return buildDatasetBaseURL(opendatasoftURL) + "automation/v1.0/datasets/" + datasetUID + "/metadata/dcat/temporal";
+        return buildDatasetBaseURL(opendatasoftURL) + OPEN_DATASOFT_AUTOMATION_RESOURCE_PATH + datasetUID + "/metadata/dcat/temporal";
     }
 
 
@@ -583,7 +583,7 @@ public class OpendatasoftService {
      * @return the url
      */
     private String buildPublishURL(String opendatasoftURL, String datasetUID) {
-        return buildDatasetBaseURL(opendatasoftURL) + "automation/v1.0/datasets/" + datasetUID + "/publish";
+        return buildDatasetBaseURL(opendatasoftURL) + OPEN_DATASOFT_AUTOMATION_RESOURCE_PATH + datasetUID + "/publish";
     }
 
 
