@@ -101,6 +101,15 @@ public class GtfsImportParameters extends ChouetteJobParameters {
 
         @JsonProperty("import_target_routes")
         public String importTargetRoutes;
+
+        @JsonProperty("allow_non_standard_gtfs")
+        private boolean allowNonStandardGtfs = false;
+
+        @JsonProperty("fill_missing_stop_name")
+        private String fillMissingStopName = "";
+
+        @JsonProperty("fill_missing_coordinates")
+        private String fillMissingCoordinates = "";
     }
 
     public static GtfsImportParameters create(RawImportParameters rawImportParameters) {
@@ -149,6 +158,9 @@ public class GtfsImportParameters extends ChouetteJobParameters {
         gtfsImport.importFareFiles = rawImportParameters.isImportFareFiles();
         gtfsImport.recomputeStopPlacesLocation = rawImportParameters.isRecomputeStopPlacesLocation();
         gtfsImport.importTargetRoutes = rawImportParameters.getImportTargetRoutes();
+        gtfsImport.allowNonStandardGtfs = rawImportParameters.isNonStandardGtfsAllowed();
+        gtfsImport.fillMissingStopName = rawImportParameters.getFillMissingStopName();
+        gtfsImport.fillMissingCoordinates = rawImportParameters.getFillMissingCoordinates();
 
         return gtfsImportParameters;
     }

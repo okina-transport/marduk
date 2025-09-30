@@ -195,6 +195,8 @@ public class Constants {
 
     public static final String ORIGINAL_JOB = "originalJob";
 
-
+    public static final String ALLOW_NON_STANDARD_GTFS = "allowNonStandardGtfs";
+    public static final String FILL_MISSING_STOP_NAME = "fillMissingStopName";
+    public static final String FILL_MISSING_COORDINATES = "fillMissingCoordinates";
 }
 

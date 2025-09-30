@@ -533,6 +533,9 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
             e.getIn().setHeader(USE_TARGET_NETWORK, importParameters.getUseTargetNetwork());
             e.getIn().setHeader(TARGET_NETWORK, importParameters.getTargetNetwork());
             e.getIn().setHeader(RENAME_ROUTES_AFTER_MERGE, importParameters.getRenameRoutesAfterMerge());
+            e.getIn().setHeader(ALLOW_NON_STANDARD_GTFS, importParameters.getAllowNonStandardGtfs());
+            e.getIn().setHeader(FILL_MISSING_STOP_NAME, importParameters.getFillMissingStopName());
+            e.getIn().setHeader(FILL_MISSING_COORDINATES, importParameters.getFillMissingCoordinates());
             e.getIn().setHeader(IMPORT_FARE_FILES, importParameters.getImportFareFiles());
             e.getIn().setHeader(RECOMPUTE_STOP_PLACES_LOCATION, importParameters.getRecomputeStopPlacesLocation());
             if (importParameters.getImportTargetRoutes() != null) {

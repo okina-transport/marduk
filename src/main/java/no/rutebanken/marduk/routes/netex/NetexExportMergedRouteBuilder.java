@@ -25,7 +25,6 @@ import no.rutebanken.marduk.routes.file.ZipFileUtils;
 import no.rutebanken.marduk.routes.status.JobEvent;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
-import org.apache.camel.builder.PredicateBuilder;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -42,11 +41,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-
-import static java.util.stream.Collectors.toList;
 import static no.rutebanken.marduk.Constants.*;
-import static no.rutebanken.marduk.routes.chouette.json.Status.ABORTED;
-import static no.rutebanken.marduk.routes.chouette.json.Status.CANCELED;
 
 /**
  * Route combining netex exports per provider with stop place export for a common netex export for Norway.

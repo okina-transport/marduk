@@ -85,7 +85,6 @@ public class GtfsFileUtils {
             File outputFile = File.createTempFile("marduk-merge", ".zip");
             buildGtfsMerger(EDuplicateDetectionStrategy.IDENTITY).run(new ArrayList<>(files), outputFile);
 
-            addFeedInfoFromFirstGtfsFile(files, outputFile);
             addAttributionFile(files, outputFile);
             logger.debug("Merged GTFS-files - spent {} ms", (System.currentTimeMillis() - t1));
             return outputFile;

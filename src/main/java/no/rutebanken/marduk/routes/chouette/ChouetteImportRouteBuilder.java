@@ -228,6 +228,12 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
                         idParams.setAreaCentroidPrefixToRemove(areaCentroidPrefixToRemove);
                     }
 
+                    String allowNonStandardGtfsRawStr = e.getIn().getHeader(ALLOW_NON_STANDARD_GTFS, String.class);
+                    boolean allowNonStandardGtfs = BooleanUtils.toBoolean(allowNonStandardGtfsRawStr);
+
+                    String fillMissingStopName = e.getIn().getHeader(FILL_MISSING_STOP_NAME, String.class);
+                    String fillMissingCoordinates = e.getIn().getHeader(FILL_MISSING_COORDINATES, String.class);
+
                     RawImportParameters rawImportParameters = new RawImportParameters();
                     String importModeStr = e.getIn().getHeader(IMPORT_MODE, String.class);
 
@@ -276,6 +282,9 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
                     rawImportParameters.setImportFareFiles(importFareFiles);
                     rawImportParameters.setRecomputeStopPlacesLocation(recomputeStopPlacesLocation);
                     rawImportParameters.setImportTargetRoutes(importTargetRoutes);
+                    rawImportParameters.setAllowNonStandardGtfs(allowNonStandardGtfs);
+                    rawImportParameters.setFillMissingStopName(fillMissingStopName);
+                    rawImportParameters.setFillMissingCoordinates(fillMissingCoordinates);
 
                     e.getIn().setHeader(JSON_PART, getStringImportParameters(rawImportParameters));
                 }) //Using header to addToExchange json data
