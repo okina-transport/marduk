@@ -247,8 +247,9 @@ public class MultipleExportProcessor implements Processor {
         headers.put(GTFS_EXPORT_GLOBAL, exportGlobal);
         headers.put(IS_SIMULATION_EXPORT, false);
         headers.put(KEEP_ORIGINAL_ID, keepOriginalId);
-        headers.put(Constants.FILE_NAME, "export-" + export.getId() + "-" + export.getName());
-        headers.put(Constants.CURRENT_EXPORT, exportJsonMapper.toJson(export));
+        headers.put(FILE_NAME, "export-" + export.getId() + "-" + export.getName());
+        headers.put(CURRENT_EXPORT, exportJsonMapper.toJson(export));
+        headers.put(EXPORT_GENERATED_MISSING_QUAYS, export.isExportGeneratedMissingQuays());
         headers.put(EXPORTED_FILENAME, export.getExportedFileName());
         if (export.getPostProcess() != null){
             headers.put(POST_PROCESS, export.getPostProcess());
