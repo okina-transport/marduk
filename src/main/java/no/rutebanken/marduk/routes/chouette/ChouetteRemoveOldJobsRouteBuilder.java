@@ -91,18 +91,15 @@ public class ChouetteRemoveOldJobsRouteBuilder extends BaseRouteBuilder {
                 .removeHeaders("Camel*")
                 .setBody(constant(null))
                 .setHeader(Exchange.HTTP_METHOD, constant(HttpMethods.DELETE))
-
                 .choice()
-                .when(header("keepJobs").isNull())
-                .setHeader("keepJobs", constant(keepJobs))
+                    .when(header("keepJobs").isNull())
+                    .setHeader("keepJobs", constant(keepJobs))
                 .end()
-
                 .choice()
-                .when(header("keepDays").isNull())
-                .setHeader("keepDays", constant(keepDays))
+                    .when(header("keepDays").isNull())
+                    .setHeader("keepDays", constant(keepDays))
                 .end()
-
-                .toD(nabuUrl + "timetable/clear-events?keepJobs=${header.keepJobs}&keepDays=${header.keepDays}")
+                .toD(nabuUrl + "/services/events/timetable/clear-events?keepJobs=${header.keepJobs}&keepDays=${header.keepDays}")
                 .log(LoggingLevel.INFO, correlation() + "Completed Nabu remove old events")
 
                 .routeId("nabu-remove-old-events");
