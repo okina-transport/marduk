@@ -158,6 +158,9 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
                     String routeMergeStr = e.getIn().getHeader(ROUTE_MERGE, String.class);
                     boolean routeMerge = !StringUtils.isEmpty(routeMergeStr) && Boolean.parseBoolean(routeMergeStr);
 
+                    String overwriteLineInformationStr = e.getIn().getHeader(OVERWRITE_LINE_INFORMATION, String.class);
+                    boolean overwriteLineInformation = !StringUtils.isEmpty(overwriteLineInformationStr) && Boolean.parseBoolean(overwriteLineInformationStr);
+
                     String cleanMode = e.getIn().getHeader(CLEAN_MODE, String.class);
 
                     String generateMapMatchingStr = e.getIn().getHeader(GENERATE_MAP_MATCHING, String.class);
@@ -285,6 +288,7 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
                     rawImportParameters.setAllowNonStandardGtfs(allowNonStandardGtfs);
                     rawImportParameters.setFillMissingStopName(fillMissingStopName);
                     rawImportParameters.setFillMissingCoordinates(fillMissingCoordinates);
+                    rawImportParameters.setOverwriteLineInformation(overwriteLineInformation);
 
                     e.getIn().setHeader(JSON_PART, getStringImportParameters(rawImportParameters));
                 }) //Using header to addToExchange json data

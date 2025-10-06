@@ -45,6 +45,7 @@ public class RawImportParameters {
     private boolean allowNonStandardGtfs;
     private String fillMissingStopName;
     private String fillMissingCoordinates;
+    private boolean overwriteLineInformation;
 
     public String getFileName() {
         return fileName;
@@ -318,5 +319,13 @@ public class RawImportParameters {
 
     public void setFillMissingCoordinates(String fillMissingCoordinates) {
         this.fillMissingCoordinates = fillMissingCoordinates;
+    }
+
+    public Boolean isOverwriteLineInformation() {
+        return overwriteLineInformation;
+    }
+
+    public void setOverwriteLineInformation(Boolean overwriteLineInformation) {
+        this.overwriteLineInformation = overwriteLineInformation;
     }
 }

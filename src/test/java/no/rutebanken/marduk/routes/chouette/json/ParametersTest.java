@@ -57,6 +57,7 @@ public class ParametersTest {
         rawInputParameters.setDescription("testdescription");
         rawInputParameters.setRouteMerge(false);
         rawInputParameters.setAnalyzeJob(false);
+        rawInputParameters.setOverwriteLineInformation(false);
 
         Provider prov = new Provider();
         prov.name = "testDS";

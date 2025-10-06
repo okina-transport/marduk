@@ -39,6 +39,7 @@ public class ImportParameters {
     private Boolean allowNonStandardGtfs;
     private String fillMissingStopName;
     private String fillMissingCoordinates;
+    private Boolean overwriteLineInformation;
 
     public Long getId() {
         return id;
@@ -310,5 +311,13 @@ public class ImportParameters {
 
     public void setFillMissingCoordinates(String fillMissingCoordinates) {
         this.fillMissingCoordinates = fillMissingCoordinates;
+    }
+
+    public Boolean getOverwriteLineInformation() {
+        return overwriteLineInformation;
+    }
+
+    public void setOverwriteLineInformation(Boolean overwriteLineInformation) {
+        this.overwriteLineInformation = overwriteLineInformation;
     }
 }

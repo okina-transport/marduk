@@ -56,6 +56,7 @@ public class Constants {
     public static final String IMPORT_FARE_FILES = "importFareFiles";
     public static final String RECOMPUTE_STOP_PLACES_LOCATION = "recomputeStopPlacesLocation";
     public static final String IMPORT_TARGET_ROUTES = "importTargetRoutes";
+    public static final String OVERWRITE_LINE_INFORMATION = "overwriteLineInformation";
 
     public static final String UPDATE_STOP_ACCESSIBILITY = "updateStopAccessibility";
 

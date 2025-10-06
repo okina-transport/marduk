@@ -110,6 +110,9 @@ public class GtfsImportParameters extends ChouetteJobParameters {
 
         @JsonProperty("fill_missing_coordinates")
         private String fillMissingCoordinates = "";
+
+        @JsonProperty("overwrite_line_information")
+        private Boolean overwriteLineInformation = false;
     }
 
     public static GtfsImportParameters create(RawImportParameters rawImportParameters) {
@@ -143,6 +146,7 @@ public class GtfsImportParameters extends ChouetteJobParameters {
         gtfsImport.keepStopGeolocalisation = rawImportParameters.isKeepStopGeolocalisation();
         gtfsImport.keepStopNames = rawImportParameters.isKeepStopNames();
         gtfsImport.importShapesFile = rawImportParameters.isImportShapesFile();
+        gtfsImport.overwriteLineInformation = rawImportParameters.isOverwriteLineInformation();
         Parameters parameters = new Parameters();
         parameters.gtfsImport = gtfsImport;
         GtfsImportParameters gtfsImportParameters = new GtfsImportParameters();
