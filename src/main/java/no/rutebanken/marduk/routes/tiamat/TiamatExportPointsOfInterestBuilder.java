@@ -71,6 +71,7 @@ public class TiamatExportPointsOfInterestBuilder extends AbstractChouetteRouteBu
                     URL url = new URL(stopPlacesExportUrl.replace("http4", "http") + "/poi?providerId=" + tiamatProviderId.toString());
                     log.info("URL : " + url.toString());
                     HttpURLConnection con = (HttpURLConnection) url.openConnection();
+                    con.setRequestProperty(USER, e.getIn().getHeader(USER) != null ? String.valueOf(e.getIn().getHeader(USER)) : "MOBIITI");
                     e.getIn().setBody(con.getInputStream());
 
                     Job job = e.getIn().getBody(Job.class);

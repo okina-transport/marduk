@@ -66,6 +66,7 @@ public class TiamatExportParkingsBuilder extends AbstractChouetteRouteBuilder {
                     log.info("Tiamat Parkings Export : launching export for provider " + tiamatProviderId.toString());
                     URL url = new URL(parkingsExportUrl.replace("http4", "http") + "/parkings?providerId=" + tiamatProviderId.toString());
                     HttpURLConnection con = (HttpURLConnection) url.openConnection();
+                    con.setRequestProperty(USER, e.getIn().getHeader(USER) != null ? String.valueOf(e.getIn().getHeader(USER)) : "MOBIITI");
                     e.getIn().setBody(con.getInputStream());
 
                     Job job = e.getIn().getBody(Job.class);
