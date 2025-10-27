@@ -4,7 +4,7 @@ import no.rutebanken.marduk.Constants;
 import no.rutebanken.marduk.routes.BaseRouteBuilder;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
-import org.apache.camel.component.http4.HttpMethods;
+import org.apache.camel.component.http.HttpMethods;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -28,7 +28,7 @@ public class ChouetteGenerateFirstOrLastVJCsvRouteBuilder extends BaseRouteBuild
 
         super.configure();
 
-        singletonFrom("quartz2://marduk/chouetteGenerateFirstOrLastVJCsvQuartz?cron=" + cronSchedule + "&trigger" +
+        singletonFrom("quartz://marduk/chouetteGenerateFirstOrLastVJCsvQuartz?cron=" + cronSchedule + "&trigger" +
                 ".timeZone=" + Constants.TIME_ZONE)
                 .filter(e -> shouldQuartzRouteTrigger(e, cronSchedule))
                 .log(LoggingLevel.INFO, "Quartz triggers Chouette GenerateFirstOrLastVJCsv")
@@ -38,7 +38,7 @@ public class ChouetteGenerateFirstOrLastVJCsvRouteBuilder extends BaseRouteBuild
         from("direct:chouetteGenerateFirstOrLastVJCsv")
                 .log(LoggingLevel.INFO, correlation() + "Starting Chouette GenerateFirstOrLastVJCsv")
                 .removeHeaders("Camel*")
-                .setBody(constant(null))
+                .setBody(constant((Object) null))
                 .setHeader(Exchange.HTTP_METHOD, constant(HttpMethods.GET))
                 .toD(chouetteUrl + "/chouette_iev/admin/generate_first_or_last_journey_info")
                 .log(LoggingLevel.INFO, correlation() + "Completed Chouette GenerateFirstOrLastVJCsv")

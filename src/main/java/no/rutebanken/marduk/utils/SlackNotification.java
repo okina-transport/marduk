@@ -1,4 +1,4 @@
-package no.rutebanken.marduk.Utils;
+package no.rutebanken.marduk.utils;
 
 /**
  * Created by tgonzalez on 22/04/16.

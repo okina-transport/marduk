@@ -1,12 +1,12 @@
 package no.rutebanken.marduk.routes.file.onebusaway;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 import org.onebusaway.gtfs.model.Route;
 import org.onebusaway.gtfs.model.Stop;
 
 import static org.junit.Assert.*;
 
-public class NonStandardStopTransformerTest {
+class NonStandardStopTransformerTest {
 
     private static final String DEFAULT_NAME = "DEFAULT_NAME";
     private static final double DEFAULT_LATITUDE = 43.481402;
@@ -17,7 +17,7 @@ public class NonStandardStopTransformerTest {
             new NonStandardStopTransformer(DEFAULT_NAME, DEFAULT_LATITUDE, DEFAULT_LONGITUDE);
 
     @Test
-    public void shouldSetDefaultValueForStopIfNotSetTest() {
+    void shouldSetDefaultValueForStopIfNotSetTest() {
         Stop stop = new Stop();
 
         service.handleEntity(stop);
@@ -28,7 +28,7 @@ public class NonStandardStopTransformerTest {
     }
 
     @Test
-    public void shouldNotSetDefaultValueForStopIfValueExistsTest() {
+    void shouldNotSetDefaultValueForStopIfValueExistsTest() {
         Stop stop = new Stop();
         stop.setName("NAME");
         stop.setLat(48);
@@ -42,7 +42,7 @@ public class NonStandardStopTransformerTest {
     }
 
     @Test
-    public void shouldNotMakeAnyTransformationForOtherTypesTest() {
+    void shouldNotMakeAnyTransformationForOtherTypesTest() {
         Route route = new Route();
 
         service.handleEntity(route);

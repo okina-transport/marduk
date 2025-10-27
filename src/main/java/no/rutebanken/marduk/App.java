@@ -23,7 +23,6 @@ import com.jayway.jsonpath.spi.json.JsonProvider;
 import com.jayway.jsonpath.spi.mapper.JacksonMappingProvider;
 import com.jayway.jsonpath.spi.mapper.MappingProvider;
 import no.rutebanken.marduk.config.IdempotentRepositoryConfig;
-import no.rutebanken.marduk.config.TransactionManagerConfig;
 import no.rutebanken.marduk.repository.CacheProviderRepository;
 import org.apache.camel.builder.RouteBuilder;
 import org.slf4j.Logger;
@@ -43,67 +42,68 @@ import java.util.Set;
  */
 @SpringBootApplication
 @EnableScheduling
-@Import({TransactionManagerConfig.class, IdempotentRepositoryConfig.class})
+@Import({IdempotentRepositoryConfig.class})
 public class App extends RouteBuilder {
 
-	@Value("${marduk.shutdown.timeout:300}")
-	private Long shutdownTimeout;
+    @Value("${marduk.shutdown.timeout:300}")
+    private Long shutdownTimeout;
 
-	@Value("${marduk.provider.service.retry.interval:5000}")
-	private Integer providerRetryInterval;
+    @Value("${marduk.provider.service.retry.interval:5000}")
+    private Integer providerRetryInterval;
 
-    private static Logger logger = LoggerFactory.getLogger(App.class);
+    private static final Logger logger = LoggerFactory.getLogger(App.class);
 
     @Autowired
-	CacheProviderRepository providerRepository;
+    CacheProviderRepository providerRepository;
 
     // must have a main method spring-boot can run
     public static void main(String... args) {
         logger.info("Starting Marduk...");
-        
+
         configureJsonPath();
 
-	    SpringApplication.run(App.class,args);
+        SpringApplication.run(App.class, args);
     }
 
-	@Override
-	public void configure() throws Exception {
-		waitForProviderRepository();
+    @Override
+    public void configure() throws Exception {
+        waitForProviderRepository();
 
-		getContext().getShutdownStrategy().setTimeout(shutdownTimeout);
-		getContext().setUseMDCLogging(true);
-	}
+        getContext().getShutdownStrategy().setTimeout(shutdownTimeout);
+        getContext().setUseMDCLogging(true);
+    }
 
-	protected void waitForProviderRepository() throws InterruptedException {
-		providerRepository.populate();
-		while (!providerRepository.isReady()){
-			logger.warn("Provider Repository not available. Waiting " + providerRetryInterval/1000 + " secs before retrying...");
-			Thread.sleep(providerRetryInterval);
+    protected void waitForProviderRepository() throws InterruptedException {
+        providerRepository.populate();
+        while (!providerRepository.isReady()) {
+            logger.warn("Provider Repository not available. Waiting {} secs before retrying...", providerRetryInterval / 1000);
+            Thread.sleep(providerRetryInterval);
             providerRepository.populate();
         }
-		logger.info("Provider Repository available. Starting camel routes...");
-	}
+        logger.info("Provider Repository available. Starting camel routes...");
+    }
 
-	private static void configureJsonPath() {
-		Configuration.setDefaults(new Configuration.Defaults() {
+    private static void configureJsonPath() {
+        Configuration.setDefaults(new Configuration.Defaults() {
 
-		    private final JsonProvider jsonProvider = new JacksonJsonProvider();
-		    private final MappingProvider mappingProvider = new JacksonMappingProvider();
+            private final JsonProvider jsonProvider = new JacksonJsonProvider();
+            private final MappingProvider mappingProvider = new JacksonMappingProvider();
 
-		    @Override
-		    public JsonProvider jsonProvider() {
-		        return jsonProvider;
-		    }
+            @Override
+            public JsonProvider jsonProvider() {
+                return jsonProvider;
+            }
 
-		    @Override
-		    public MappingProvider mappingProvider() {
-		        return mappingProvider;
-		    }
+            @Override
+            public MappingProvider mappingProvider() {
+                return mappingProvider;
+            }
 
-		    @Override
-		    public Set<Option> options() {
-		        return EnumSet.noneOf(Option.class);
-		    }
-		});	}
+            @Override
+            public Set<Option> options() {
+                return EnumSet.noneOf(Option.class);
+            }
+        });
+    }
 
 }

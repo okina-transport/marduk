@@ -19,7 +19,7 @@ package no.rutebanken.marduk.routes.chouette;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import no.rutebanken.marduk.Constants;
-import no.rutebanken.marduk.Utils.PollJobStatusRoute;
+import no.rutebanken.marduk.utils.PollJobStatusRoute;
 import no.rutebanken.marduk.routes.chouette.json.ActionReportWrapper;
 import no.rutebanken.marduk.routes.chouette.json.Job;
 import no.rutebanken.marduk.routes.chouette.json.JobResponse;
@@ -32,7 +32,7 @@ import no.rutebanken.marduk.security.TokenService;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.builder.PredicateBuilder;
-import org.apache.camel.component.http4.HttpMethods;
+import org.apache.camel.component.http.HttpMethods;
 import org.apache.camel.model.dataformat.JsonLibrary;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.client.utils.URIBuilder;
@@ -105,7 +105,7 @@ public class ChouettePollJobStatusRoute extends AbstractChouetteRouteBuilder {
         from("direct:chouetteGetJobs")
                 .removeHeaders("Camel*")
                 .setBody(constant(""))
-                .setHeader(Exchange.HTTP_METHOD, constant(org.apache.camel.component.http4.HttpMethods.GET))
+                .setHeader(Exchange.HTTP_METHOD, constant(org.apache.camel.component.http.HttpMethods.GET))
                 .process(e -> {
                     String url = (String) e.getProperty("chouette_url");
 
@@ -142,11 +142,11 @@ public class ChouettePollJobStatusRoute extends AbstractChouetteRouteBuilder {
         from("direct:chouetteCancelJob")
                 .process(e -> e.getIn().setHeader(CHOUETTE_REFERENTIAL, getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)).chouetteInfo.referential))
                 .removeHeaders("Camel*")
-                .setBody(constant(null))
-                .setHeader(Exchange.HTTP_METHOD, constant(org.apache.camel.component.http4.HttpMethods.DELETE))
+                .setBody(constant((Object) null))
+                .setHeader(Exchange.HTTP_METHOD, constant(org.apache.camel.component.http.HttpMethods.DELETE))
                 .setProperty("chouette_url", simple(chouetteUrl + "/chouette_iev/referentials/${header." + CHOUETTE_REFERENTIAL + "}/scheduled_jobs/${header." + Constants.JOB_ID + "}"))
                 .toD("${exchangeProperty.chouette_url}")
-                .setBody(constant(null))
+                .setBody(constant((Object) null))
                 .routeId("chouette-cancel-job");
 
         from("direct:chouetteCancelAllJobsForProvider")
@@ -156,7 +156,7 @@ public class ChouettePollJobStatusRoute extends AbstractChouetteRouteBuilder {
                 .removeHeaders("Camel*")
                 .split().body().parallelProcessing().executorService(allProvidersExecutorService)
                 .setHeader(Constants.JOB_ID, simple("${body.id}"))
-                .setBody(constant(null))
+                .setBody(constant((Object) null))
                 .to("direct:chouetteCancelJob")
                 .routeId("chouette-cancel-all-jobs-for-provider");
 
@@ -164,7 +164,7 @@ public class ChouettePollJobStatusRoute extends AbstractChouetteRouteBuilder {
                 .process(e -> e.getIn().setBody(getProviderRepository().getProviders()))
                 .split().body().parallelProcessing().executorService(allProvidersExecutorService)
                 .setHeader(Constants.PROVIDER_ID, simple("${body.id}"))
-                .setBody(constant(null))
+                .setBody(constant((Object) null))
                 .removeHeaders("Camel*")
                 .to("direct:chouetteCancelAllJobsForProvider")
                 .routeId("chouette-cancel-all-jobs-for-all-providers");
@@ -290,10 +290,13 @@ public class ChouettePollJobStatusRoute extends AbstractChouetteRouteBuilder {
                         .choice()
                             .when(simple("${exchangeProperty.STATUS} == 'FINISHED'"))
                                 .toD("${header." + JOB_STATUS_ROUTING_DESTINATION + "}")
+                            .endChoice()
                             .otherwise()
                                 .to("direct:rescheduleJob")
+                            .end()
                         .endChoice()
                         .stop()
+                    .endChoice()
                     .otherwise()
                         .unmarshal().json(JsonLibrary.Jackson, JobResponseWithLinks.class)
                         .choice()
@@ -303,14 +306,17 @@ public class ChouettePollJobStatusRoute extends AbstractChouetteRouteBuilder {
                                             PredicateBuilder.isEqualTo(simple("${body.action}"), simple("importer")),
                                             PredicateBuilder.isEqualTo(simple("${body.type}"), simple("gtfs")))
                             ).to("direct:archiveGtfsData")
-                        .end()
+                        .endChoice()
+                    .end()
                 .setProperty("current_status", simple("${body.status}"))
                 .choice()
                     .when(PredicateBuilder.and(simple("${body.status} == ${type:no.rutebanken.marduk.routes.chouette.json.Status.TERMINATED}"),  simple("${header." + POST_PROCESS + "} != null")))
                         .to("direct:sendToLUG")
+                    .endChoice()
                     .when(PredicateBuilder.or(simple("${body.status} != ${type:no.rutebanken.marduk.routes.chouette.json.Status.SCHEDULED} && ${body.status} != ${type:no.rutebanken.marduk.routes.chouette.json.Status.STARTED} && ${body.status} != ${type:no.rutebanken.marduk.routes.chouette.json.Status.RESCHEDULED}"),
                             simple("${header.loopCounter} > " + maxRetries)))
                         .to("direct:jobStatusDone")
+                    .endChoice()
                 .otherwise()
                      // Update status
                     .to("direct:rescheduleJob")
@@ -369,11 +375,11 @@ public class ChouettePollJobStatusRoute extends AbstractChouetteRouteBuilder {
                 .end()
                 .process(e -> {
                     JobResponseWithLinks response = e.getIn().getBody(JobResponseWithLinks.class);
-                    Optional<String> actionReportUrlOptional = response.links.stream().filter(li -> "action_report".equals(li.rel)).findFirst().map(li -> li.href.replaceFirst("http", "http4"));
+                    Optional<String> actionReportUrlOptional = response.links.stream().filter(li -> "action_report".equals(li.rel)).findFirst().map(li -> li.href);
                     e.getIn().setHeader("action_report_url", actionReportUrlOptional.orElseThrow(() -> new IllegalArgumentException("No URL found for action report.")));
-                    Optional<String> validationReportUrlOptional = response.links.stream().filter(li -> "validation_report".equals(li.rel)).findFirst().map(li -> li.href.replaceFirst("http", "http4"));
+                    Optional<String> validationReportUrlOptional = response.links.stream().filter(li -> "validation_report".equals(li.rel)).findFirst().map(li -> li.href);
                     e.getIn().setHeader("validation_report_url", validationReportUrlOptional.orElse(null));
-                    Optional<String> dataUrlOptional = response.links.stream().filter(li -> "data".equals(li.rel)).findFirst().map(li -> li.href.replaceFirst("http", "http4"));
+                    Optional<String> dataUrlOptional = response.links.stream().filter(li -> "data".equals(li.rel)).findFirst().map(li -> li.href);
                     e.getIn().setHeader("data_url", dataUrlOptional.orElse(null));
                 })
                 // Fetch and parse action report
@@ -396,7 +402,7 @@ public class ChouettePollJobStatusRoute extends AbstractChouetteRouteBuilder {
                 .stop()
                 .end()
                 .choice()
-                    .when(simple("${body.finalised} == false and ${header.RutebankenGtfsExportGlobal} != true"))
+                    .when(simple("${body.finalised} == false && ${header.RutebankenGtfsExportGlobal} != true"))
                         .choice()
                             .when(simple("${header.loopCounter} > " + maxRetries))
                                 .log(LoggingLevel.WARN, correlation() + "Received non-finalised action report for terminated job. Giving up.")

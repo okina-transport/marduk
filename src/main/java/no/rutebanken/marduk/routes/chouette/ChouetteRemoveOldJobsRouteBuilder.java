@@ -22,7 +22,7 @@ import no.rutebanken.marduk.security.TokenService;
 import no.rutebanken.marduk.services.BlobStoreService;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
-import org.apache.camel.component.http4.HttpMethods;
+import org.apache.camel.component.http.HttpMethods;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -60,7 +60,7 @@ public class ChouetteRemoveOldJobsRouteBuilder extends BaseRouteBuilder {
     public void configure() throws Exception {
         super.configure();
 
-        singletonFrom("quartz2://marduk/chouetteRemoveOldJobsQuartz?cron=" + cronSchedule + "&trigger.timeZone=" + Constants.TIME_ZONE)
+        singletonFrom("quartz://marduk/chouetteRemoveOldJobsQuartz?cron=" + cronSchedule + "&trigger.timeZone=" + Constants.TIME_ZONE)
                 .autoStartup("{{chouette.remove.old.jobs.autoStartup:true}}")
                 .filter(e -> shouldQuartzRouteTrigger(e, cronSchedule))
                 .log(LoggingLevel.INFO, "Quartz triggers deletion of old jobs in Chouette and Nabu.")
@@ -72,7 +72,7 @@ public class ChouetteRemoveOldJobsRouteBuilder extends BaseRouteBuilder {
         from("direct:chouetteRemoveOldJobs")
                 .log(LoggingLevel.INFO, correlation() + "Starting Chouette remove old jobs")
                 .removeHeaders("Camel*")
-                .setBody(constant(null))
+                .setBody(constant((Object) null))
                 .setHeader(Exchange.HTTP_METHOD, constant(HttpMethods.DELETE))
 
                 .choice()
@@ -94,7 +94,7 @@ public class ChouetteRemoveOldJobsRouteBuilder extends BaseRouteBuilder {
         from("direct:nabuRemoveOldJobs")
                 .log(LoggingLevel.INFO, correlation() + "Starting Nabu remove old events")
                 .removeHeaders("Camel*")
-                .setBody(constant(null))
+                .setBody(constant((Object) null))
                 .setHeader(Exchange.HTTP_METHOD, constant(HttpMethods.DELETE))
                 .choice()
                     .when(header("keepJobs").isNull())

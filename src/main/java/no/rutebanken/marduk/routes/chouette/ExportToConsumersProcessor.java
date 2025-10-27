@@ -1,7 +1,7 @@
 package no.rutebanken.marduk.routes.chouette;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import no.rutebanken.marduk.Utils.CipherEncryption;
+import no.rutebanken.marduk.utils.CipherEncryption;
 import no.rutebanken.marduk.domain.ConsumerType;
 import no.rutebanken.marduk.domain.ExportTemplate;
 import no.rutebanken.marduk.domain.OrganisationView;

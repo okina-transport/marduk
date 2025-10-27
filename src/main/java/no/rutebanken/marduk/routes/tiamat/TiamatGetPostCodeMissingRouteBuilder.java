@@ -5,7 +5,7 @@ import no.rutebanken.marduk.routes.BaseRouteBuilder;
 import no.rutebanken.marduk.security.TokenService;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
-import org.apache.camel.component.http4.HttpMethods;
+import org.apache.camel.component.http.HttpMethods;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -26,7 +26,7 @@ public class TiamatGetPostCodeMissingRouteBuilder extends BaseRouteBuilder {
     public void configure() throws Exception {
         super.configure();
 
-        singletonFrom("quartz2://marduk/tiamatGetMissingPostCodeQuartz?cron=" + cronSchedule + "&trigger.timeZone=" + Constants.TIME_ZONE)
+        singletonFrom("quartz://marduk/tiamatGetMissingPostCodeQuartz?cron=" + cronSchedule + "&trigger.timeZone=" + Constants.TIME_ZONE)
                 .autoStartup("{{tiamat.get.missing.post.code.autoStartup:true}}")
                 .filter(e -> shouldQuartzRouteTrigger(e, cronSchedule))
                 .log(LoggingLevel.INFO, "Quartz triggers get missing post code in Tiamat.")
@@ -37,10 +37,10 @@ public class TiamatGetPostCodeMissingRouteBuilder extends BaseRouteBuilder {
         from("direct:tiamatGetMissingPostCode")
                 .log(LoggingLevel.INFO, correlation() + "Starting get missing post code in Tiamat")
                 .removeHeaders("Camel*")
-                .setBody(constant(null))
+                .setBody(constant((Object) null))
                 .setHeader(Exchange.HTTP_METHOD, constant(HttpMethods.POST))
                 .process(e -> {
-                    String url = tiamatUrl.replace("http://", "http4://") + "/get_missing_postcode";
+                    String url = tiamatUrl.replace("http4://", "http://") + "/get_missing_postcode";
                     e.setProperty("tiamat_url", url);
                     e.getIn().setHeader("Authorization", "Bearer " + tokenService.getToken());
                 })

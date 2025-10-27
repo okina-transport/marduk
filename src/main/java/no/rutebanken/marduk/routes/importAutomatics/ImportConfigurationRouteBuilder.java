@@ -2,8 +2,8 @@ package no.rutebanken.marduk.routes.importAutomatics;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.jcraft.jsch.*;
-import no.rutebanken.marduk.Utils.CipherEncryption;
-import no.rutebanken.marduk.Utils.SendMail;
+import no.rutebanken.marduk.utils.CipherEncryption;
+import no.rutebanken.marduk.utils.SendMail;
 import no.rutebanken.marduk.config.SchedulerImportConfiguration;
 import no.rutebanken.marduk.domain.*;
 import no.rutebanken.marduk.exceptions.AutomaticImportException;
@@ -15,16 +15,14 @@ import no.rutebanken.marduk.routes.file.FileType;
 import no.rutebanken.marduk.services.FileSystemService;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.Strings;
 import org.apache.commons.net.ftp.FTPClient;
 import org.apache.commons.net.ftp.FTPClientConfig;
 import org.apache.commons.net.ftp.FTPFile;
-import org.apache.tomcat.util.http.fileupload.FileItem;
-import org.apache.tomcat.util.http.fileupload.FileItemFactory;
-import org.apache.tomcat.util.http.fileupload.disk.DiskFileItemFactory;
-import org.apache.tomcat.util.http.fileupload.util.Streams;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.json.simple.parser.JSONParser;
@@ -33,7 +31,6 @@ import org.quartz.*;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.quartz.SchedulerFactoryBean;
 import org.springframework.stereotype.Component;
-import org.springframework.util.CollectionUtils;
 
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLContext;
@@ -45,6 +42,9 @@ import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -55,6 +55,7 @@ import java.util.stream.Collectors;
 import java.util.zip.ZipException;
 
 import static no.rutebanken.marduk.Constants.*;
+import static no.rutebanken.marduk.utils.constants.RouteDeclarationConstants.ROUTE_IMPORT_LAUNCH;
 
 @Component
 public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilder {
@@ -101,13 +102,13 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
         super.configure();
 
         from("jms:queue:ImportConfigurationQueue?transacted=true")
-                .streamCaching()
+                .streamCache(Boolean.TRUE)
                 .transacted()
                 .log(LoggingLevel.INFO, getClass().getName(), "Starting import configuration for provider with id ${header." + PROVIDER_ID + "}")
                 .process(this::handleImportConfigurationQueueMessage)
                 .choice()
                     .when(header(CONTINUE_IMPORT).isEqualTo(Boolean.TRUE))
-                        .to("direct:importLaunch")
+                        .to(ROUTE_IMPORT_LAUNCH)
                 .endChoice()
                 .routeId("import-configuration-job");
 
@@ -153,16 +154,16 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
         e.getIn().setHeader(IS_ACTIVE, importConfiguration.isActivated());
         parseImportParameters(e, importConfiguration);
         e.getIn().setHeader(CONTINUE_IMPORT, Boolean.FALSE);
-        if (!CollectionUtils.isEmpty(importConfiguration.getImportParameters()) && importConfiguration.getImportParameters().get(0) != null) {
-            e.getIn().setHeader(GENERATE_MAP_MATCHING, importConfiguration.getImportParameters().get(0).getGenerateMapMatching().name());
+        if (CollectionUtils.isNotEmpty(importConfiguration.getImportParameters()) && importConfiguration.getImportParameters().getFirst() != null) {
+            e.getIn().setHeader(GENERATE_MAP_MATCHING, importConfiguration.getImportParameters().getFirst().getGenerateMapMatching().name());
         }
 
-        Optional<FileItem> importFile = Optional.empty();
+        Optional<Path> importFile = Optional.empty();
         try {
-            if (!CollectionUtils.isEmpty(importConfiguration.getConfigurationFtpList())) {
-                importFile = retrieveImportFromFtp(referential, importConfiguration, importConfiguration.getConfigurationFtpList().get(0));
-            } else if (!CollectionUtils.isEmpty(importConfiguration.getConfigurationUrlList())) {
-                importFile = retrieveImportFromUrl(referential, importConfiguration, importConfiguration.getConfigurationUrlList().get(0));
+            if (CollectionUtils.isNotEmpty(importConfiguration.getConfigurationFtpList())) {
+                importFile = retrieveImportFromFtp(referential, importConfiguration, importConfiguration.getConfigurationFtpList().getFirst());
+            } else if (CollectionUtils.isNotEmpty(importConfiguration.getConfigurationUrlList())) {
+                importFile = retrieveImportFromUrl(referential, importConfiguration, importConfiguration.getConfigurationUrlList().getFirst());
             } else {
                 log.error("{} No FTP or URL configuration set for import", correlation());
                 log.warn("{} Abort automatic import", correlation());
@@ -182,10 +183,10 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
         }
 
         if (importFile.isPresent()) {
-            FileItem importFileItem = importFile.get();
+            Path importFileItem = importFile.get();
             if (Arrays.asList(FileType.NETEX_POI.name(), FileType.NETEX_STOP_PLACE.name(), FileType.NETEX_PARKING.name())
-                    .contains(importConfiguration.getImportParameters().get(0).getImportType())
-            && importFileItem.getName().endsWith(".zip")) {
+                    .contains(importConfiguration.getImportParameters().getFirst().getImportType())
+            && Strings.CI.endsWith(importFileItem.getFileName().toString(),".zip")) {
                 try {
                     importFileItem = fileSystemService.unzipNetexZip(importFileItem);
                 } catch (ZipException ex) {
@@ -208,13 +209,13 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
                 log.warn("{} Import configuration last timestamp will not be updated", correlation());
                 log.info("{} Continue automatic import", correlation());
             }
-            e.getIn().setBody(importFileItem);
+            e.getIn().setBody(importFileItem.toFile());
             e.getIn().setHeader(CONTINUE_IMPORT, Boolean.TRUE);
             e.getIn().setHeader(FOLDER_NAME, referential);
         }
     }
 
-    private Optional<FileItem> retrieveImportFromFtp(String referential, ImportConfiguration importConfiguration, ConfigurationFtp configurationFtp) throws AutomaticImportException {
+    private Optional<Path> retrieveImportFromFtp(String referential, ImportConfiguration importConfiguration, ConfigurationFtp configurationFtp) throws AutomaticImportException {
         if (configurationFtp.getType().equals("FTP")) {
             return getFileFromFTP(referential, importConfiguration, configurationFtp);
         } else if (configurationFtp.getType().equals("SFTP")) {
@@ -225,7 +226,7 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
         }
     }
 
-    private Optional<FileItem> getFileFromSFTP(String referential, ImportConfiguration importConfiguration, ConfigurationFtp configurationFtp) throws AutomaticImportException {
+    private Optional<Path> getFileFromSFTP(String referential, ImportConfiguration importConfiguration, ConfigurationFtp configurationFtp) throws AutomaticImportException {
         log.info("Retrieve import file from SFTP (url: {})", configurationFtp.getUrl());
 
         Session session = null;
@@ -297,15 +298,15 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
         }
     }
 
-    private Optional<FileItem> getFileFromFTP(String referential, ImportConfiguration importConfiguration, ConfigurationFtp configurationFtp) throws AutomaticImportException {
+    private Optional<Path> getFileFromFTP(String referential, ImportConfiguration importConfiguration, ConfigurationFtp configurationFtp) throws AutomaticImportException {
         log.info("Retrieve import file from FTP (url: {})", configurationFtp.getUrl());
 
-        FTPClient client = new FTPClient();
-        client.configure(new FTPClientConfig());
+        FTPClient ftpClient = new FTPClient();
+        ftpClient.configure(new FTPClientConfig());
         try {
             // connection
             try {
-                client.connect(configurationFtp.getUrl(), Math.toIntExact(configurationFtp.getPort()));
+                ftpClient.connect(configurationFtp.getUrl(), Math.toIntExact(configurationFtp.getPort()));
             } catch (ArithmeticException e) {
                 throw new AutomaticImportException(ERROR_FTP_PORT_INVALID, e);
             } catch (IOException e) {
@@ -315,7 +316,7 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
             // authentication
             if (StringUtils.isNotEmpty(configurationFtp.getLogin()) && ArrayUtils.isNotEmpty(configurationFtp.getPassword())) {
                 try {
-                    if (!client.login(configurationFtp.getLogin(), decryptPassword(configurationFtp.getPassword()))) {
+                    if (!ftpClient.login(configurationFtp.getLogin(), decryptPassword(configurationFtp.getPassword()))) {
                         throw new AutomaticImportException(ERROR_FTP_AUTHENTICATION);
                     }
                 } catch (IOException e) {
@@ -323,10 +324,10 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
                 }
             }
             log.info("Connected to FTP server");
-            client.enterLocalPassiveMode();
+            ftpClient.enterLocalPassiveMode();
             FTPFile[] files;
             try {
-                files = client.listFiles(configurationFtp.getFolder());
+                files = ftpClient.listFiles(configurationFtp.getFolder());
             } catch (IOException e) {
                 log.error("{} Error listing files from FTP server", correlation());
                 throw new AutomaticImportException(ERROR_ACCESSING_IMPORT_FOLDER_OR_FILE, e);
@@ -337,7 +338,7 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
                 LocalDateTime localDateTime = LocalDateTime.ofInstant(file.getTimestamp().toInstant(), file.getTimestamp().getTimeZone().toZoneId());
                 if (configurationFtp.getLastTimestamp() == null || localDateTime.isAfter(configurationFtp.getLastTimestamp())) {
                     configurationFtp.setLastTimestamp(localDateTime);
-                    try (InputStream importFile = client.retrieveFileStream(configurationFtp.getFolder() + "/" + file.getName())){
+                    try (InputStream importFile = ftpClient.retrieveFileStream(configurationFtp.getFolder() + "/" + file.getName())){
                         return Optional.of(copyFileFromInputStream(importFile, file.getName()));
                     } catch (IOException e) {
                         log.error("{} Error retrieving file from FTP server", correlation());
@@ -355,14 +356,14 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
             }
         } finally {
             try {
-                client.disconnect();
+                ftpClient.disconnect();
             } catch (IOException e) {
                 log.error(String.format("%s Error disconnecting from FTP client", correlation()), e);
             }
         }
     }
 
-    private Optional<FileItem> retrieveImportFromUrl(String referential, ImportConfiguration importConfiguration, ConfigurationUrl configurationUrl) throws AutomaticImportException {
+    private Optional<Path> retrieveImportFromUrl(String referential, ImportConfiguration importConfiguration, ConfigurationUrl configurationUrl) throws AutomaticImportException {
         log.info("{} Retrieve import file from URL: {}", correlation(), configurationUrl.getUrl());
 
         // handle authentication
@@ -410,7 +411,7 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
 
         try {
             configurationUrl.setLastTimestamp(importLastTimeModified);
-            Optional<FileItem> importFile = Optional.of(downloadImportFileFromUrl(importFileUrl, importConfiguration.getImportParameters().get(0).getImportType()));
+            Optional<Path> importFile = Optional.of(downloadImportFileFromUrl(importFileUrl, importConfiguration.getImportParameters().getFirst().getImportType()));
 
             // Verification after download to ensure file is valid
             if (!isValidImportFile(importFile.get())) {
@@ -428,11 +429,11 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
         }
     }
 
-    private boolean isValidImportFile(FileItem importFile) {
-        // Implement validation logic to check if the downloaded file is valid
-        // For example, check the file name, content type, size, etc.
-        return importFile != null && importFile.getSize() != 0 && !importFile.getString().contains("<html");
-        // Add other validation checks as necessary
+    private boolean isValidImportFile(Path importFile) throws IOException {
+        return importFile != null
+                && Files.exists(importFile)
+                && Files.size(importFile) > 0
+                && Files.isRegularFile(importFile);
     }
 
 
@@ -500,7 +501,7 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
     }
 
     private void parseImportParameters(Exchange e, ImportConfiguration importConfiguration) {
-        ImportParameters importParameters = !importConfiguration.getImportParameters().isEmpty() ? importConfiguration.getImportParameters().get(0) : null;
+        ImportParameters importParameters = CollectionUtils.isNotEmpty(importConfiguration.getImportParameters()) ? importConfiguration.getImportParameters().getFirst() : null;
         if (importParameters != null) {
             e.getIn().setHeader(ANALYZE_ACTION, true);
             e.getIn().setHeader(FILE_TYPE, importParameters.getImportType());
@@ -558,7 +559,7 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
         }
     }
 
-    private FileItem downloadImportFileFromUrl(URL url, String fileType) throws IOException {
+    private Path downloadImportFileFromUrl(URL url, String fileType) throws IOException {
         try (InputStream inputStream = url.openStream()) {
             String fileName = url.getPath().substring(url.getPath().lastIndexOf('/') + 1);
             if(StringUtils.isEmpty(fileName)){
@@ -682,19 +683,14 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
         }
     }
 
-    private FileItem copyFileFromInputStream(InputStream inputStream, String outputFilename) throws IOException {
-        String contentType = "text/xml";
+    private Path copyFileFromInputStream(InputStream inputStream, String outputFilename) throws IOException {
         if (!outputFilename.endsWith(".xml")) {
-            contentType = "application/zip";
-            outputFilename = StringUtils.appendIfMissing(outputFilename, ".zip");
+            outputFilename = Strings.CI.appendIfMissing(outputFilename, ".zip");
         }
+        Path targetPath = Path.of(outputFilename);
+        Files.copy(inputStream, targetPath, StandardCopyOption.REPLACE_EXISTING);
 
-        java.io.File file = new File(outputFilename);
-        FileItemFactory fac = new DiskFileItemFactory();
-        FileItem fileItem = fac.createItem("file", contentType, false, file.getName());
-        Streams.copy(inputStream, fileItem.getOutputStream(), true);
-
-        return fileItem;
+        return targetPath;
     }
 
     public String getDefaultFileName(String optionValue) {

@@ -18,47 +18,54 @@ package no.rutebanken.marduk.security;
 
 import no.rutebanken.marduk.domain.Provider;
 import no.rutebanken.marduk.repository.ProviderRepository;
-import org.keycloak.adapters.springsecurity.account.SimpleKeycloakAccount;
-import org.rutebanken.helper.organisation.RoleAssignment;
-import org.rutebanken.helper.organisation.RoleAssignmentExtractor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
+import java.util.ArrayList;
+import java.util.Collection;
 
 @Service
 public class AuthorizationService {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(AuthorizationService.class);
+
     @Autowired
     private ProviderRepository providerRepository;
-
-    @Autowired
-    private RoleAssignmentExtractor roleAssignmentExtractor;
-
 
     @Value("${authorization.enabled:true}")
     protected boolean authorizationEnabled;
 
     public void verifyAtLeastOne(AuthorizationClaim... claims) {
         if (!authorizationEnabled){
+            LOGGER.debug("Authorization check disabled");
             return;
         }
 
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        List<RoleAssignment> roleAssignments = roleAssignmentExtractor.getRoleAssignmentsForUser(authentication);
+        Collection<? extends GrantedAuthority> authorities = new ArrayList<>(0);
+        if (authentication != null) {
+            LOGGER.debug("SecurityContextHolder : authentication found");
+            authorities = authentication.getAuthorities();
+            if (LOGGER.isTraceEnabled()) {
+                authorities.stream().map(GrantedAuthority::getAuthority).forEach(LOGGER::trace);
+            }
+        }
 
 
         boolean authorized = false;
         for (AuthorizationClaim claim : claims) {
+            LOGGER.trace("trying to match claim {}", claim.getRequiredRole());
             if (claim.getProviderId() == null) {
-                authorized |= roleAssignments.stream().anyMatch(ra -> claim.getRequiredRole().equals(ra.getRole()));
-                authorized |= isRoleExistingInUserAcount(authentication,claim.getRequiredRole());
+                authorized |= authorities.stream().anyMatch(ra -> claim.getRequiredRole().equals(ra.getAuthority()));
             } else {
-                authorized |= hasRoleForProvider(roleAssignments, claim);
+                authorized |= hasRoleForProvider(authorities, claim);
             }
         }
 
@@ -69,27 +76,16 @@ public class AuthorizationService {
 
     }
 
-    private boolean isRoleExistingInUserAcount( Authentication authentication, String requiredRole){
-
-        if (authentication == null){
-            return false;
-        }
-
-        SimpleKeycloakAccount userAccount = (SimpleKeycloakAccount) authentication.getDetails();
-        return userAccount.getRoles().contains(requiredRole);
-    }
-
-
-
-    private boolean hasRoleForProvider(List<RoleAssignment> roleAssignments, AuthorizationClaim claim) {
-
+    private boolean hasRoleForProvider(Collection<? extends GrantedAuthority> roleAssignments, AuthorizationClaim claim) {
+        LOGGER.debug("hasRoleForProvider try to match claim with id {}", claim.getProviderId());
         Provider provider = providerRepository.getProvider(claim.getProviderId());
         if (provider == null) {
+            LOGGER.debug("provider not found");
             return false;
         }
 
         return roleAssignments.stream()
-                       .filter(ra -> claim.getRequiredRole().equals(ra.r)).anyMatch(ra -> provider.chouetteInfo.xmlns.equals(ra.o));
+                       .anyMatch(ra -> claim.getRequiredRole().equals(ra.getAuthority()));
 
     }
 }

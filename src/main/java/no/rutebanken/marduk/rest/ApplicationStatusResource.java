@@ -16,27 +16,23 @@
 
 package no.rutebanken.marduk.rest;
 
-import org.springframework.stereotype.Component;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
-import javax.ws.rs.GET;
-import javax.ws.rs.Path;
-import javax.ws.rs.core.Response;
-
-@Component
-//@Produces("application/json")
-@Path("/health")
+@RestController
+@RequestMapping
 public class ApplicationStatusResource {
 
-    @GET
-    @Path("/ready")
-    public Response isReady() {
-       return Response.ok().build();
+    @GetMapping("/ready")
+    public ResponseEntity<Void> isReady() {
+       return ResponseEntity.ok().build();
     }
 
-    @GET
-    @Path("/live")
-    public Response isLive() {
-        return Response.ok().build();
+    @GetMapping("/live")
+    public ResponseEntity<Void>  isLive() {
+        return ResponseEntity.ok().build();
     }
 
 }

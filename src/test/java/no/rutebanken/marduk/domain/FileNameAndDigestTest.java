@@ -17,20 +17,20 @@
 package no.rutebanken.marduk.domain;
 
 
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
-public class FileNameAndDigestTest {
+class FileNameAndDigestTest {
 
 
 	@Test
-	public void testStringEncoding() {
+	void testStringEncoding() {
 		FileNameAndDigest org = new FileNameAndDigest("fileName", "digest");
 
 		FileNameAndDigest converted = FileNameAndDigest.fromString(org.toString());
 
-		Assert.assertEquals(org, converted);
-		Assert.assertEquals(org.getFileName(), converted.getFileName());
-		Assert.assertEquals(org.getDigest(), converted.getDigest());
+		Assertions.assertEquals(org, converted);
+        Assertions.assertEquals(org.getFileName(), converted.getFileName());
+        Assertions.assertEquals(org.getDigest(), converted.getDigest());
 	}
 }

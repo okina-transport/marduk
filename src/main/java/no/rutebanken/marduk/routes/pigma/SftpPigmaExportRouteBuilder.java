@@ -4,8 +4,8 @@ import com.jcraft.jsch.Channel;
 import com.jcraft.jsch.ChannelSftp;
 import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.Session;
-import no.rutebanken.marduk.Utils.SendMail;
-import no.rutebanken.marduk.Utils.SlackNotification;
+import no.rutebanken.marduk.utils.SendMail;
+import no.rutebanken.marduk.utils.SlackNotification;
 import no.rutebanken.marduk.domain.BlobStoreFiles;
 import no.rutebanken.marduk.routes.BaseRouteBuilder;
 import no.rutebanken.marduk.services.BlobStoreService;
@@ -74,7 +74,7 @@ public class SftpPigmaExportRouteBuilder extends BaseRouteBuilder {
     public void configure() throws Exception {
         super.configure();
 
-        singletonFrom("quartz2://marduk/uploadPigma?cron=" + uploadPigmaCron)
+        singletonFrom("quartz://marduk/uploadPigma?cron=" + uploadPigmaCron)
                 .process(e -> sendFilesToPigmaPlatform())
                 .routeId("uploadPigma");
 
@@ -94,7 +94,7 @@ public class SftpPigmaExportRouteBuilder extends BaseRouteBuilder {
         //Netex file stops
         BlobStoreFiles netexFileStops = blobStoreService.listBlobsInFolders(MERGED_NETEX_STOPS_ROOT_DIR + "/CurrentAndFuture_latest.zip");
         if(!netexFileStops.getFiles().isEmpty()){
-            listBlobStoreFiles.add(netexFileStops.getFiles().get(0));
+            listBlobStoreFiles.add(netexFileStops.getFiles().getFirst());
         }
 
 
@@ -123,7 +123,7 @@ public class SftpPigmaExportRouteBuilder extends BaseRouteBuilder {
                 FileUtils.copyInputStreamToFile(inputStream, zipFile);
                 files.add(zipFile);
             } catch (IOException e) {
-                e.printStackTrace();
+                log.error("Error reading file before pigma upload : {}", e.getMessage());
             }
         }
 
@@ -132,7 +132,7 @@ public class SftpPigmaExportRouteBuilder extends BaseRouteBuilder {
 
 
 
-    public void uploadFiles(ArrayList<File> files){
+    public void uploadFiles(List<File> files){
         Session session = null;
         Channel channel = null;
         ChannelSftp channelSftp = null;
@@ -159,18 +159,19 @@ public class SftpPigmaExportRouteBuilder extends BaseRouteBuilder {
             }
             log.info("All files transfered successfully to host.");
         } catch (Exception ex) {
-            ex.printStackTrace();
             log.error("Exception found while transfer the response. {}", ex.getMessage());
             slackNotification.sendSlackNotificationTitleAndMessage(SlackNotification.NOTIFICATION_CHANNEL, "Erreur upload des fichiers sur la plateforme Pigma", "Les fichiers n'ont pas pu être exportés sur la plateforme Pigma.");
             sendMail.sendEmail("Erreur upload des fichiers sur la plateforme Pigma", "developer@okina.fr", "Les fichiers n'ont pas pu être exportés sur la plateforme Pigma.", null);
 
         } finally {
-            channelSftp.exit();
-            log.info("SFTP Channel exited.");
-            channel.disconnect();
-            log.info("Channel disconnected.");
-            session.disconnect();
-            log.info("Host Session disconnected.");
+            if (channelSftp != null) {
+                channelSftp.exit();
+                log.info("SFTP Channel exited.");
+                channel.disconnect();
+                log.info("Channel disconnected.");
+                session.disconnect();
+                log.info("Host Session disconnected.");
+            }
         }
     }
 }

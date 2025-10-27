@@ -17,29 +17,26 @@
 package no.rutebanken.marduk.rest;
 
 import no.rutebanken.marduk.metrics.PrometheusMetricsService;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RestController;
 
-import javax.ws.rs.GET;
-import javax.ws.rs.Path;
-import javax.ws.rs.core.Response;
-
-@Component
-@Path("/scrape")
+@RestController
 public class ScrapeResource {
 
 
-    @Autowired
-    private PrometheusMetricsService prometheusRegistry;
+    private final PrometheusMetricsService prometheusRegistry;
+
+    public ScrapeResource(PrometheusMetricsService prometheusRegistry) {
+        this.prometheusRegistry = prometheusRegistry;
+    }
 
 
-    @GET
-    public Response scrape() {
-
-        return Response.ok()
-                .type("text/plain")
-                .entity(prometheusRegistry.scrape())
-                .build();
+    @GetMapping(value ="/scrape", produces = MediaType.TEXT_PLAIN_VALUE)
+    public ResponseEntity<String> scrape() {
+        return ResponseEntity.ok()
+                .body(prometheusRegistry.scrape());
     }
 
 }

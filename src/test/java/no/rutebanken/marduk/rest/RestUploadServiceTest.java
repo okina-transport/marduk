@@ -1,12 +1,13 @@
 package no.rutebanken.marduk.rest;
 
-import com.github.tomakehurst.wiremock.junit.WireMockRule;
+import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
+import com.github.tomakehurst.wiremock.junit5.WireMockRuntimeInfo;
 import no.rutebanken.marduk.services.RestUploadService;
 import org.assertj.core.api.Assertions;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.http.*;
 import org.springframework.util.LinkedMultiValueMap;
@@ -19,9 +20,15 @@ import java.nio.file.Paths;
 import java.util.Map;
 
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
+import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static org.junit.Assert.assertNotNull;
 
-public class RestUploadServiceTest {
+class RestUploadServiceTest {
+
+    @RegisterExtension
+    static WireMockExtension wm1 = WireMockExtension.newInstance()
+            .options(wireMockConfig().dynamicPort().dynamicHttpsPort())
+            .build();
 
     private static final String REST_IMPORT_URL = "http://127.0.0.1:%d/upload";
 
@@ -29,24 +36,21 @@ public class RestUploadServiceTest {
 
     private final RestUploadService restUploadService = new RestUploadService();
 
-    @Rule
-    public WireMockRule wireMockRuleUploadRandomPort = new WireMockRule(0);
-
     private Path workingDir;
 
-    @Before
-    public void init() {
+    @BeforeEach
+    void init() {
         this.workingDir = Paths.get("src/test/resources");
     }
 
     @Test
-    @Ignore("No marduk application code under test ?")
-    public void restExportUpload() {
+    @Disabled("No marduk application code under test ?")
+    void restExportUpload() {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.MULTIPART_FORM_DATA);
         headers.add("Authorization", "Bearer 2c6f2c6b7aeba7f6f4d9dc667f0c58aa");
 
-        LinkedMultiValueMap<String, Object> body =  new LinkedMultiValueMap();
+        LinkedMultiValueMap<String, Object> body =  new LinkedMultiValueMap<>();
         body.add("workbench_import[name]", "Testupload-export-file");
         body.add("workbench_import[file]", new FileSystemResource(new File("/tmp/export_gtfs_371.zip")));
 
@@ -58,16 +62,18 @@ public class RestUploadServiceTest {
     }
 
     @Test
-    public void restStreamUpload() throws Exception {
-        String uploadUrl = String.format(REST_IMPORT_URL, wireMockRuleUploadRandomPort.port());
-        stubFor(post(urlEqualTo("/upload"))
+    void restStreamUpload() throws Exception {
+        WireMockRuntimeInfo wm1RuntimeInfo = wm1.getRuntimeInfo();
+        String baseUrl = wm1RuntimeInfo.getHttpBaseUrl();
+        String resourceUrl = String.format("%s/upload", baseUrl);
+        wm1.stubFor(post(urlEqualTo("/upload"))
                 .withHeader("Content-Type", containing("multipart/form-data"))
                 .withHeader("Authorization", equalTo("Bearer secret"))
                 .willReturn(aResponse()
                         .withStatus(200)
                         .withHeader("Content-Type", "application/json")
                         .withBody("{\"status\":\"ok\"}")));
-        HttpStatus httpStatus = restUploadService.uploadStream(new FileInputStream(this.workingDir.resolve("NRI 20160219.rar").toFile()), uploadUrl, "Testupload-export-file.zip", null, SECRET);
+        HttpStatusCode httpStatus = restUploadService.uploadStream(new FileInputStream(this.workingDir.resolve("NRI 20160219.rar").toFile()), resourceUrl, "Testupload-export-file.zip", null, SECRET);
         Assertions.assertThat(httpStatus.is2xxSuccessful()).isTrue();
     }
 }

@@ -47,7 +47,7 @@ public class CacheProviderRepository implements ProviderRepository {
 
     private Cache<Long, Provider> cache;
 
-    private Logger logger = LoggerFactory.getLogger(this.getClass());
+    private static final Logger logger = LoggerFactory.getLogger(CacheProviderRepository.class);
 
     @Value("${superspace.name}")
     private String superspaceName;
@@ -55,7 +55,7 @@ public class CacheProviderRepository implements ProviderRepository {
     @PostConstruct
     void init() {
         cache = CacheBuilder.newBuilder().maximumSize(cacheMaxSize).build();
-        logger.info("Provider cacheMaxSize:" + cacheMaxSize);
+        logger.info("Provider cacheMaxSize: {}", cacheMaxSize);
 
     }
 
@@ -66,7 +66,7 @@ public class CacheProviderRepository implements ProviderRepository {
             Map<Long, Provider> providerMap = newProviders.stream().collect(Collectors.toMap(p -> p.getId(), p -> p));
 
             if (providerMap.isEmpty()) {
-                logger.warn("Result from REST Provider Service is empty. Skipping provider cache update. Keeping " + cache.size() + " existing elements.");
+                logger.warn("Result from REST Provider Service is empty. Skipping provider cache update. Keeping {} existing elements.", cache.size());
                 return;
             }
 
@@ -75,7 +75,7 @@ public class CacheProviderRepository implements ProviderRepository {
             newCache.putAll(providerMap);
             cache = newCache;
 
-            logger.debug("Updated provider cache with result from REST Provider Service. Cache now has " + cache.size() + " elements");
+            logger.debug("Updated provider cache with result from REST Provider Service. Cache now has {} elements", cache.size());
         } catch (ResourceAccessException re) {
             if (re.getCause() instanceof ConnectException) {
 
@@ -83,7 +83,7 @@ public class CacheProviderRepository implements ProviderRepository {
                     logger.warn("REST Provider Service is unavailable and provider cache is empty. Trying to populate from file.");
                     throw re;
                 } else {
-                    logger.warn("REST Provider Service is unavailable. Could not update provider cache, but keeping " + cache.size() + " existing elements.");
+                    logger.warn("REST Provider Service is unavailable. Could not update provider cache, but keeping {} existing elements.", cache.size());
                 }
             } else {
                 throw re;

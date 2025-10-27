@@ -5,6 +5,7 @@ import no.rutebanken.marduk.domain.ExportTemplate;
 import no.rutebanken.marduk.domain.Provider;
 import no.rutebanken.marduk.repository.ExportTemplateDAO;
 import no.rutebanken.marduk.repository.ProviderRepository;
+import org.apache.camel.ExchangePattern;
 import no.rutebanken.marduk.routes.chouette.json.Status;
 import org.apache.camel.LoggingLevel;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -42,14 +43,15 @@ public class PredefinedExportsRouteBuilder extends AbstractChouetteRouteBuilder 
     public void configure() throws Exception {
         super.configure();
 
-        from("jms:queue:predefinedExports?transacted=true").streamCaching()
+        from("jms:queue:predefinedExports?transacted=true")
+                .streamCache(Boolean.TRUE)
                 .transacted()
                 .log(LoggingLevel.INFO, getClass().getName(), "Starting Chouette all export for provider with id ${header." + PROVIDER_ID + "}")
                 .process(e -> {
                     log.info("predefinedExports : starting predefined exports");
                     Provider provider;
                     if(e.getIn().getHeader(PROVIDER_ID, Long.class) == null){
-                        provider = providerRepository.findByName("mobiiti_technique");
+                        provider = providerRepository.findByName(MOBIITI_TECHNIQUE);
                     }
                     else{
                         provider = providerRepository.getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class));
@@ -68,26 +70,26 @@ public class PredefinedExportsRouteBuilder extends AbstractChouetteRouteBuilder 
                     // get the matching migration mobiiti provider to target export
                     List<ExportTemplate> exports = exportTemplateDAO.getAll(provider.getChouetteInfo().getReferential());
 
-                    log.info("Found export templates " + exports.size());
-                    e.getOut().setBody(exports);
-                    e.getOut().setHeaders(e.getIn().getHeaders());
-                    e.getOut().getHeaders().put(CHOUETTE_REFERENTIAL, mobiitiProvider.chouetteInfo.getReferential());
-                    e.getOut().getHeaders().put(PROVIDER_ID, mobiitiProvider.getId());
-                    e.getOut().getHeaders().put("providerId", mobiitiProvider.getId());
+                    log.info("Found export templates {}", exports.size());
+                    e.getMessage().setBody(exports);
+                    e.getMessage().setHeaders(e.getIn().getHeaders());
+                    e.getMessage().getHeaders().put(CHOUETTE_REFERENTIAL, mobiitiProvider.chouetteInfo.getReferential());
+                    e.getMessage().getHeaders().put(PROVIDER_ID, mobiitiProvider.getId());
+                    e.getMessage().getHeaders().put("providerId", mobiitiProvider.getId());
 
-                    e.getOut().getHeaders().put(ORIGINAL_PROVIDER_ID, provider.getId());
+                    e.getMessage().getHeaders().put(ORIGINAL_PROVIDER_ID, provider.getId());
                 })
                 .process(multipleExportProcessor)
                 .routeId("chouette-send-export-all-job");
 
-        from("jms:queue:predefinedExport?transacted=true").streamCaching()
+        from("jms:queue:predefinedExport?transacted=true").streamCache(Boolean.TRUE)
                 .transacted()
                 .log(LoggingLevel.INFO, getClass().getName(), "Starting Chouette export for provider with id ${header." + PROVIDER_ID + "} and export template with id ${header." + EXPORT_CONFIGURATION_ID + "}")
                 .process(e -> {
                     log.info("predefinedExport : starting predefined export");
                     Provider provider;
                     if(e.getIn().getHeader(PROVIDER_ID, Long.class) == null){
-                        provider = providerRepository.findByName("mobiiti_technique");
+                        provider = providerRepository.findByName(MOBIITI_TECHNIQUE);
                     }
                     else{
                         provider = providerRepository.getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class));
@@ -104,12 +106,12 @@ public class PredefinedExportsRouteBuilder extends AbstractChouetteRouteBuilder 
                     List<ExportTemplate> exports = new ArrayList<>();
                     exports.add(export);
 
-                    e.getOut().setBody(exports);
-                    e.getOut().setHeaders(e.getIn().getHeaders());
-                    e.getOut().getHeaders().put(CHOUETTE_REFERENTIAL, mobiitiProvider.chouetteInfo.getReferential());
-                    e.getOut().getHeaders().put(PROVIDER_ID, mobiitiProvider.getId());
-                    e.getOut().getHeaders().put("providerId", mobiitiProvider.getId());
-                    e.getOut().getHeaders().put(ORIGINAL_PROVIDER_ID, provider.getId());
+                    e.getMessage().setBody(exports);
+                    e.getMessage().setHeaders(e.getIn().getHeaders());
+                    e.getMessage().getHeaders().put(CHOUETTE_REFERENTIAL, mobiitiProvider.chouetteInfo.getReferential());
+                    e.getMessage().getHeaders().put(PROVIDER_ID, mobiitiProvider.getId());
+                    e.getMessage().getHeaders().put("providerId", mobiitiProvider.getId());
+                    e.getMessage().getHeaders().put(ORIGINAL_PROVIDER_ID, provider.getId());
                     export.setStatus(Status.PROCESSING.name());
                     exportTemplateDAO.saveExportTemplate(providerName,export);
                 })
@@ -117,25 +119,25 @@ public class PredefinedExportsRouteBuilder extends AbstractChouetteRouteBuilder 
                 .routeId("chouette-send-export-by-id-job");
 
 
-        singletonFrom("quartz2://marduk/chouettePredefinedExportsMobiitiTechniqueProviderCronSchedule?cron=" + chouettePredefinedExportsMobiitiTechniqueProviderCronSchedule + "&trigger.timeZone=" + Constants.TIME_ZONE)
+        singletonFrom("quartz://marduk/chouettePredefinedExportsMobiitiTechniqueProviderCronSchedule?cron=" + chouettePredefinedExportsMobiitiTechniqueProviderCronSchedule + "&trigger.timeZone=" + Constants.TIME_ZONE)
                 .autoStartup("{{chouette.predefined.exports.mobiiti.technique.provider.autoStartup:true}}")
                 .transacted()
                 .filter(e -> shouldQuartzRouteTrigger(e, chouettePredefinedExportsMobiitiTechniqueProviderCronSchedule))
                 .log(LoggingLevel.INFO, "Quartz triggers predefined exports mobiiti technique provider in Chouette.")
-                .inOnly("jms:queue:predefinedExports")
+                .setExchangePattern(ExchangePattern.InOnly).to("jms:queue:predefinedExports")
                 .routeId("chouette-predefined-export-mobiiti_technique-quartz");
 
 
-        singletonFrom("quartz2://marduk/parkingPredefinedExportsMobiitiTechniqueCronSchedule?cron=" + parkingPredefinedExportsMobiitiTechniqueCronSchedule + "&trigger.timeZone=" + Constants.TIME_ZONE)
+        singletonFrom("quartz://marduk/parkingPredefinedExportsMobiitiTechniqueCronSchedule?cron=" + parkingPredefinedExportsMobiitiTechniqueCronSchedule + "&trigger.timeZone=" + Constants.TIME_ZONE)
                 .autoStartup("{{parking.predefined.exports.mobiiti.technique.autoStartup:true}}")
                 .transacted()
                 .filter(e -> shouldQuartzRouteTrigger(e, parkingPredefinedExportsMobiitiTechniqueCronSchedule))
                 .log(LoggingLevel.INFO, "Quartz triggers predefined export for parkings.")
                 .process(e -> {
-                    Provider provider = providerRepository.findByName("mobiiti_technique");
-                    e.getOut().getHeaders().put(PROVIDER_ID, provider.getId());
+                    Provider provider = providerRepository.findByName(MOBIITI_TECHNIQUE);
+                    e.getMessage().getHeaders().put(PROVIDER_ID, provider.getId());
                 })
-                .inOnly("jms:queue:TiamatParkingsExport")
+                .setExchangePattern(ExchangePattern.InOnly).to("jms:queue:TiamatParkingsExport")
                 .routeId("parkings-predefined-export-mobiiti_technique-quartz");
 
     }

@@ -14,12 +14,16 @@
  *
  */
 
-package no.rutebanken.marduk.Utils;
+package no.rutebanken.marduk.utils;
 
 import no.rutebanken.marduk.domain.Provider;
 import no.rutebanken.marduk.repository.CacheProviderRepository;
 
 public class Utils {
+
+    private Utils() {
+        throw new IllegalStateException("Utility class");
+    }
 
     public static String getHttp4(String url) {
         if (url == null) {
@@ -27,9 +31,9 @@ public class Utils {
         }
 
         if (url.contains("https")) {
-            return url.replaceFirst("https", "https4");
+            return url.replaceFirst("https4", "https");
         }
-        return url.replaceFirst("http", "http4");
+        return url.replaceFirst("http4", "http");
     }
 
     public static Long getLastPathElementOfUrl(String url) {

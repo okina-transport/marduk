@@ -1,31 +1,34 @@
-package no.rutebanken.marduk.Utils;
+package no.rutebanken.marduk.utils;
 
 import no.rutebanken.marduk.domain.ExportType;
 import no.rutebanken.marduk.metrics.PrometheusMetricsService;
 import no.rutebanken.marduk.routes.chouette.json.Job;
 import no.rutebanken.marduk.routes.chouette.json.JobStatus;
+import org.apache.commons.lang3.BooleanUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 @Component
 public class PollJobStatusRoute {
 
-    private Logger logger = LoggerFactory.getLogger(this.getClass());
+    private static final Logger logger = LoggerFactory.getLogger(PollJobStatusRoute.class);
 
-    @Autowired
-    private PrometheusMetricsService metrics;
+    private final PrometheusMetricsService metrics;
+
+    public PollJobStatusRoute(PrometheusMetricsService metrics) {
+        this.metrics = metrics;
+    }
 
     public Boolean convertToBoolean(Object rawProperty){
-        if (rawProperty instanceof Boolean){
-            return (Boolean) rawProperty;
+        if (rawProperty instanceof Boolean b){
+            return b;
         }
 
-        if (rawProperty instanceof String){
-            return Boolean.parseBoolean((String)rawProperty);
+        if (rawProperty instanceof String s){
+            return Boolean.parseBoolean(s);
         }
-        logger.error("Unable to cast object to boolean:" + rawProperty);
+        logger.error("Unable to cast object to boolean: {}", rawProperty);
         return null;
     }
 
@@ -35,9 +38,9 @@ public class PollJobStatusRoute {
         }
 
         ExportType exportType;
-        if (isPOI) {
+        if (BooleanUtils.toBoolean(isPOI)) {
             exportType = ExportType.POI;
-        } else if (isParkings) {
+        } else if (BooleanUtils.toBoolean(isParkings)) {
             exportType = ExportType.PARKING;
         } else {
             exportType = ExportType.ARRET;

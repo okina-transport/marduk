@@ -16,19 +16,26 @@
 
 package no.rutebanken.marduk.config;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import jakarta.jms.ConnectionFactory;
+import org.apache.camel.component.jms.JmsComponent;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.jms.connection.JmsTransactionManager;
 
-import javax.jms.ConnectionFactory;
 
 @Configuration
 public class TransactionManagerConfig {
 
     @Bean
-    JmsTransactionManager transactionManager(@Autowired ConnectionFactory connectionFactory){
-        return new JmsTransactionManager(connectionFactory);
+    public JmsTransactionManager jmsTransactionManager(final ConnectionFactory connectionFactory) {
+        JmsTransactionManager jmsTransactionManager = new JmsTransactionManager();
+        jmsTransactionManager.setConnectionFactory(connectionFactory);
+        return jmsTransactionManager;
+    }
+
+    @Bean
+    public JmsComponent jmsComponent(final ConnectionFactory connectionFactory, final JmsTransactionManager jmsTransactionManager) {
+        return JmsComponent.jmsComponentTransacted(connectionFactory, jmsTransactionManager);
     }
 
 }

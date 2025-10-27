@@ -18,9 +18,7 @@ package no.rutebanken.marduk.routes.tiamat;
 
 import com.google.common.base.Strings;
 import no.rutebanken.marduk.Constants;
-import no.rutebanken.marduk.Utils.ImportRouteBuilder;
 import no.rutebanken.marduk.domain.Provider;
-import no.rutebanken.marduk.repository.ImportConfigurationDAO;
 import no.rutebanken.marduk.routes.chouette.AbstractChouetteRouteBuilder;
 import no.rutebanken.marduk.routes.chouette.CreateMail;
 import no.rutebanken.marduk.routes.chouette.json.Parameters;
@@ -30,11 +28,13 @@ import no.rutebanken.marduk.routes.status.JobEvent;
 import no.rutebanken.marduk.routes.status.JobEvent.State;
 import no.rutebanken.marduk.routes.status.JobEvent.TimetableAction;
 import no.rutebanken.marduk.security.TokenService;
+import no.rutebanken.marduk.utils.ImportRouteBuilder;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
-import org.apache.camel.component.http4.HttpMethods;
-import org.apache.http.entity.ContentType;
-import org.apache.http.entity.mime.MultipartEntityBuilder;
+import org.apache.camel.Message;
+import org.apache.camel.component.http.HttpMethods;
+import org.apache.hc.client5.http.entity.mime.MultipartEntityBuilder;
+import org.apache.hc.core5.http.ContentType;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -42,8 +42,8 @@ import org.springframework.stereotype.Component;
 import java.io.InputStream;
 
 import static no.rutebanken.marduk.Constants.*;
-import static no.rutebanken.marduk.Utils.Utils.getHttp4;
-import static no.rutebanken.marduk.Utils.Utils.getLastPathElementOfUrl;
+import static no.rutebanken.marduk.utils.Utils.getHttp4;
+import static no.rutebanken.marduk.utils.Utils.getLastPathElementOfUrl;
 
 
 @Component
@@ -56,9 +56,6 @@ public class TiamatImportRouteBuilder extends AbstractChouetteRouteBuilder {
     CreateMail createMail;
 
     @Autowired
-    ImportConfigurationDAO importConfigurationDAO;
-
-    @Autowired
     TokenService tokenService;
 
     // @formatter:off
@@ -66,7 +63,7 @@ public class TiamatImportRouteBuilder extends AbstractChouetteRouteBuilder {
     public void configure() throws Exception {
         super.configure();
 
-        from("jms:queue:TiamatImportQueue?transacted=true").streamCaching()
+        from("jms:queue:TiamatImportQueue?transacted=true").streamCache(Boolean.TRUE)
                 .transacted()
                 .log(LoggingLevel.INFO, correlation() + "Starting Tiamat import")
                 .removeHeader(JOB_ID)
@@ -164,16 +161,17 @@ public class TiamatImportRouteBuilder extends AbstractChouetteRouteBuilder {
                         entityBuilder.addTextBody("containsMobiitiIds", String.valueOf(true));
                     }
 
-                    exchange.getOut().setBody(entityBuilder.build());
-                    exchange.getOut().setHeaders(exchange.getIn().getHeaders());
+                    Message message = exchange.getMessage();
+                    message.setBody(entityBuilder.build());
+                    message.setHeaders(exchange.getIn().getHeaders());
 
                     if (exchange.getIn().getHeader("Authorization") == null) {
-                        exchange.getOut().setHeader("Authorization", "Bearer " + tokenService.getToken());
+                        message.setHeader("Authorization", "Bearer " + tokenService.getToken());
                     }
                 })
                 .process(e -> {
                     String url = e.getProperty("tiamat_url", String.class);
-                    url = url.replace("http://", "http4://");
+                    url = url.replace("http4://", "http://");
                     e.setProperty("tiamat_url", url);
                 })
                 .toD("${exchangeProperty.tiamat_url}")

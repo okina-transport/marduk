@@ -21,14 +21,14 @@ import no.rutebanken.marduk.routes.BaseRouteBuilder;
 import no.rutebanken.marduk.routes.etcd.json.EtcdResponse;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
-import org.apache.camel.component.http4.HttpMethods;
-import org.apache.camel.http.common.HttpOperationFailedException;
+import org.apache.camel.component.http.HttpMethods;
+import org.apache.camel.http.base.HttpOperationFailedException;
 import org.apache.camel.model.dataformat.JsonLibrary;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
-import static no.rutebanken.marduk.Utils.Utils.getHttp4;
+import static no.rutebanken.marduk.utils.Utils.getHttp4;
 
 
 /**
@@ -57,7 +57,7 @@ public class EtcdRouteBuilder extends BaseRouteBuilder {
             return (ex.getStatusCode() == 404);
         })
                 .log(LoggingLevel.INFO, "No value found in etcd for key: ${header." + Constants.ETCD_KEY + "}. Returning null")
-                .setBody(constant(null))
+                .setBody(constant((Object) null))
                 .end()
 
                 .routeId("etcd-get-value");
@@ -65,7 +65,7 @@ public class EtcdRouteBuilder extends BaseRouteBuilder {
         from("direct:setEtcdValue")
                 .setHeader(Exchange.HTTP_METHOD, constant(HttpMethods.PUT))
                 .setProperty("etcdUrl", simple(getHttp4(etcdUrl) + "${header." + Constants.ETCD_KEY + "}?value=${body}"))
-                .setBody(constant(null))
+                .setBody(constant((Object) null))
                 .toD("${exchangeProperty.etcdUrl}")
                 .routeId("set-sync-status-until");
     }

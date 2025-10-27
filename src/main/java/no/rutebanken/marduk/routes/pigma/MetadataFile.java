@@ -1,6 +1,6 @@
 package no.rutebanken.marduk.routes.pigma;
 
-import no.rutebanken.marduk.Utils.ExportCsv;
+import no.rutebanken.marduk.utils.ExportCsv;
 import no.rutebanken.marduk.domain.BlobStoreFiles;
 import no.rutebanken.marduk.routes.Producers;
 import org.springframework.beans.factory.annotation.Autowired;

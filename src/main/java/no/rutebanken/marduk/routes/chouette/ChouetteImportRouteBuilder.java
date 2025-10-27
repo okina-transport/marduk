@@ -17,10 +17,8 @@
 package no.rutebanken.marduk.routes.chouette;
 
 import no.rutebanken.marduk.Constants;
-import no.rutebanken.marduk.Utils.ImportRouteBuilder;
 import no.rutebanken.marduk.domain.ImportGenerateMapMatching;
 import no.rutebanken.marduk.domain.Provider;
-import no.rutebanken.marduk.repository.ImportConfigurationDAO;
 import no.rutebanken.marduk.routes.chouette.json.IdParameters;
 import no.rutebanken.marduk.routes.chouette.json.Parameters;
 import no.rutebanken.marduk.routes.chouette.json.importer.ImportMode;
@@ -28,10 +26,10 @@ import no.rutebanken.marduk.routes.chouette.json.importer.RawImportParameters;
 import no.rutebanken.marduk.routes.status.JobEvent;
 import no.rutebanken.marduk.routes.status.JobEvent.State;
 import no.rutebanken.marduk.routes.status.JobEvent.TimetableAction;
+import no.rutebanken.marduk.utils.ImportRouteBuilder;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
-import org.apache.camel.builder.PredicateBuilder;
-import org.apache.camel.component.http4.HttpMethods;
+import org.apache.camel.component.http.HttpMethods;
 import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.json.simple.JSONObject;
@@ -46,8 +44,12 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 
 import static no.rutebanken.marduk.Constants.*;
-import static no.rutebanken.marduk.Utils.Utils.getHttp4;
-import static no.rutebanken.marduk.Utils.Utils.getLastPathElementOfUrl;
+import static no.rutebanken.marduk.utils.Utils.getHttp4;
+import static no.rutebanken.marduk.utils.Utils.getLastPathElementOfUrl;
+import static no.rutebanken.marduk.utils.constants.RouteDeclarationConstants.*;
+import static no.rutebanken.marduk.utils.constants.RouteParamsConstants.CamelProperty.CHOUETTE_URL;
+import static no.rutebanken.marduk.utils.constants.RouteParamsConstants.Headers.ALL_CAMEL_HEADERS;
+import static no.rutebanken.marduk.utils.constants.RouteParamsConstants.Headers.FILTER;
 
 /**
  * Submits files to Chouette
@@ -62,9 +64,6 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
     @Autowired
     CreateMail createMail;
 
-    @Autowired
-    ImportConfigurationDAO importConfigurationDAO;
-
     // @formatter:off
     @Override
     public void configure() throws Exception {
@@ -72,55 +71,55 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
 
         from("direct:chouetteCleanStopPlaces")
                 .log(LoggingLevel.INFO, correlation() + "Starting Chouette stop place clean")
-                .removeHeaders("Camel*")
-                .setBody(constant(null))
+                .removeHeaders(ALL_CAMEL_HEADERS)
+                .setBody(constant((Object) null))
                 .setHeader(Exchange.HTTP_METHOD, constant(HttpMethods.POST))
-                .setProperty("chouette_url", simple(chouetteUrl + "/chouette_iev/referentials/clean/stop_areas"))
-                .toD("${property.chouette_url}")
+                .setProperty(CHOUETTE_URL, simple(chouetteUrl + "/chouette_iev/referentials/clean/stop_areas"))
+                .toD("${exchangeProperty.chouette_url}")
                 .routeId("chouette-clean-stop-places");
 
         from("direct:chouetteCleanAllReferentials")
                 .process(e -> e.getIn().setBody(getProviderRepository().getProviders()))
                 .split().body().parallelProcessing().executorService(allProvidersExecutorService)
-                .removeHeaders("Camel*")
+                .removeHeaders(ALL_CAMEL_HEADERS)
                 .setHeader(Constants.PROVIDER_ID, simple("${body.id}"))
-                .validate(header("filter").in("all", "level1", "level2"))
+                .validate(header(FILTER).in("all", "level1", "level2"))
                 .choice()
-                    .when(header("filter").isEqualTo("level1"))
+                    .when(header(FILTER).isEqualTo("level1"))
                         .filter(simple("${body.chouetteInfo.migrateDataToProvider} != null"))
-                        .setBody(constant(null))
-                        .to("direct:chouetteCleanReferential")
+                        .setBody(constant((Object) null))
+                        .to(ROUTE_CHOUETTE_CLEAN_REFERENTIAL)
                     .endChoice()
-                    .when(header("filter").isEqualTo("level2"))
+                    .when(header(FILTER).isEqualTo("level2"))
                         .filter(simple("${body.chouetteInfo.migrateDataToProvider} == null"))
-                        .setBody(constant(null))
-                        .to("direct:chouetteCleanReferential")
+                        .setBody(constant((Object) null))
+                        .to(ROUTE_CHOUETTE_CLEAN_REFERENTIAL)
                     .endChoice()
                     .otherwise()
-                        .setBody(constant(null))
-                        .to("direct:chouetteCleanReferential")
+                        .setBody(constant((Object) null))
+                        .to(ROUTE_CHOUETTE_CLEAN_REFERENTIAL)
                 .end()
                 .routeId("chouette-clean-referentials-for-all-providers");
 
-        from("direct:chouetteCleanReferential")
+        from(ROUTE_CHOUETTE_CLEAN_REFERENTIAL)
                 .log(LoggingLevel.INFO, correlation() + "Starting Chouette dataspace clean")
                 .process(e -> {
                     Provider provider = getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class));
                     e.getIn().setHeader(CHOUETTE_REFERENTIAL, provider.chouetteInfo.referential);
                 })
-                .removeHeaders("Camel*")
+                .removeHeaders(ALL_CAMEL_HEADERS)
                 .setHeader(Exchange.HTTP_METHOD, constant(HttpMethods.POST))
-                .setProperty("chouette_url", simple(chouetteUrl + "/chouette_iev/referentials/${header." + CHOUETTE_REFERENTIAL + "}/clean"))
-                .toD("${property.chouette_url}")
+                .setProperty(CHOUETTE_URL, simple(chouetteUrl + "/chouette_iev/referentials/${header." + CHOUETTE_REFERENTIAL + "}/clean"))
+                .toD("${exchangeProperty.chouette_url}")
                 .routeId("chouette-clean-dataspace");
 
-        from("jms:queue:ChouetteImportQueue?transacted=true").streamCaching()
+        from("jms:queue:ChouetteImportQueue?transacted=true").streamCache(Boolean.TRUE)
                 .transacted()
                 .log(LoggingLevel.INFO, correlation() + "Starting Chouette import")
                 .removeHeader(JOB_ID)
                 .process(e -> {
-                    Boolean analyze = e.getIn().getHeader(ANALYZE_ACTION, Boolean.class) != null ? e.getIn().getHeader(ANALYZE_ACTION, Boolean.class) : false;
-                    TimetableAction action = analyze ? TimetableAction.FILE_ANALYZE : TimetableAction.IMPORT;
+                    Boolean analyze = e.getIn().getHeader(ANALYZE_ACTION, Boolean.class) != null && e.getIn().getHeader(ANALYZE_ACTION, Boolean.class);
+                    TimetableAction action = BooleanUtils.toBoolean(analyze) ? TimetableAction.FILE_ANALYZE : TimetableAction.IMPORT;
                     JobEvent.providerJobBuilder(e).timetableAction(action).state(State.PENDING).type(e.getIn().getHeader(FILE_TYPE, String.class)).build();
                 })
                 .to("direct:updateStatus")
@@ -213,7 +212,7 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
                     idParams.setQuayIdPrefixToRemove(quayPrefixToRemove);
                     idParams.setLinePrefixToRemove(linePrefixToRemove);
 
-                    Boolean isAnalyzeJob = e.getIn().getHeader(ANALYZE_ACTION, Boolean.class) != null ? e.getIn().getHeader(ANALYZE_ACTION, Boolean.class) : false;
+                    boolean isAnalyzeJob = e.getIn().getHeader(ANALYZE_ACTION, Boolean.class) != null && e.getIn().getHeader(ANALYZE_ACTION, Boolean.class);
 
                     String ignoreCommercialPointsStr = e.getIn().getHeader(IGNORE_COMMERCIAL_POINTS, String.class);
                     boolean ignoreCommercialPoints = !StringUtils.isEmpty(ignoreCommercialPointsStr) && Boolean.parseBoolean(ignoreCommercialPointsStr);
@@ -299,17 +298,17 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
         from("direct:sendImportJobRequest")
                 .log(LoggingLevel.DEBUG, correlation() + "Creating multipart request")
                 .process(this::toImportMultipart)
-                .setHeader(Exchange.CONTENT_TYPE, simple("multipart/form-data"))
+                .setHeader(Exchange.CONTENT_TYPE, constant("multipart/form-data"))
                 .to("log:" + getClass().getName() + "?level=DEBUG&showAll=true&multiline=true")
                 .log(LoggingLevel.INFO, "chouetteUrl: " + chouetteUrl)
                 .choice()
                     .when(simple("${header." + ANALYZE_ACTION + "}"))
-                        .setProperty("chouette_url", simple(chouetteUrl + "/chouette_iev/referentials/${header." + CHOUETTE_REFERENTIAL + "}/analyzeFile/${header." + FILE_TYPE + ".toLowerCase()}"))
+                        .setProperty(CHOUETTE_URL, simple(chouetteUrl + "/chouette_iev/referentials/${header." + CHOUETTE_REFERENTIAL + "}/analyzeFile/${header." + FILE_TYPE + ".toLowerCase()}"))
                     .otherwise()
-                        .setProperty("chouette_url", simple(chouetteUrl + "/chouette_iev/referentials/${header." + CHOUETTE_REFERENTIAL + "}/importer/${header." + FILE_TYPE + ".toLowerCase()}"))
+                        .setProperty(CHOUETTE_URL, simple(chouetteUrl + "/chouette_iev/referentials/${header." + CHOUETTE_REFERENTIAL + "}/importer/${header." + FILE_TYPE + ".toLowerCase()}"))
                     .end()
                 .log(LoggingLevel.DEBUG, correlation() + "Calling Chouette with URL: ${exchangeProperty.chouette_url}")
-                .setHeader(Exchange.HTTP_METHOD, constant(org.apache.camel.component.http4.HttpMethods.POST))
+                .setHeader(Exchange.HTTP_METHOD, constant(org.apache.camel.component.http.HttpMethods.POST))
                 // Attempt to retrigger delivery in case of errors
                 .toD("${exchangeProperty.chouette_url}")
                 .to("log:" + getClass().getName() + "?level=DEBUG&showAll=true&multiline=true")
@@ -333,48 +332,92 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
                 .to("log:" + getClass().getName() + "?level=DEBUG&showAll=true&multiline=true")
                 .setBody(constant(""))
                 .choice()
-                    .when(PredicateBuilder.and(constant("true").isEqualTo(header(ANALYZE_ACTION)), simple("${header.action_report_result} == 'OK' and ${header.validation_report_result} == 'OK'")))
-                        .process(this::addAnalysisResultToExchange)
-                            .choice()
-                            .when(header("isLaunchable").isEqualTo(true))
-                                .log(LoggingLevel.INFO, correlation() + "File analysis completed successfully")
-                                .process(e-> {
-                                    JobEvent.providerJobBuilder(e).timetableAction(ImportRouteBuilder.getTimeTableAction(e)).state(State.OK).build();
-                                    if(e.getIn().getHeader(WORKLOW, String.class) != null && e.getIn().getHeader(WORKLOW, String.class).equals("ANALYZE")) {
-                                        createMail.createMail(e, null, ImportRouteBuilder.getTimeTableAction(e), true);
-                                    }
-                                })
-                                .choice()
-                                    .when(e -> e.getIn().getHeader(WORKLOW, String.class) != null &&
-                                            (e.getIn().getHeader(WORKLOW, String.class).equals("IMPORT") ||
-                                                    e.getIn().getHeader(WORKLOW, String.class).equals("VALIDATION") ||
-                                                    e.getIn().getHeader(WORKLOW, String.class).equals("EXPORT")))
-                                    .process(e -> e.getIn().setHeader(ANALYZE_ACTION, false))
-                                    .to("jms:queue:ChouetteImportQueue")
-                                .endChoice()
-                            .otherwise()
-                                .log(LoggingLevel.ERROR, correlation() + "File analysis found a major issue.Cannot launch import")
-                                .process(e -> {
-                                    JobEvent.providerJobBuilder(e).timetableAction(ImportRouteBuilder.getTimeTableAction(e)).state(State.FAILED).build();
-                                    if (e.getIn().getHeader(WORKLOW, String.class) != null) {
-                                        createMail.createMail(e, null, ImportRouteBuilder.getTimeTableAction(e), false);
-                                    }
-                                })
-                            .endChoice()
+                    .when(org.apache.camel.support.builder.PredicateBuilder.and(constant("true").isEqualTo(header(ANALYZE_ACTION)), simple("${header.action_report_result} == 'OK' && ${header.validation_report_result} == 'OK'")))
+                    .to("direct:proceedAnalyseResult")
+                .otherwise()
+                    .to("direct:proceedResult")
+                .end()
+                .to("direct:updateStatus")
+                .routeId("chouette-process-import-status");
+
+        // Check that no other import jobs in status SCHEDULED exists for this referential. If so, do not trigger export
+        from(ROUTE_CHECK_SCHEDULED_JOBS_BEFORE_TRIGGERING_NEXT_ACTION)
+                .setProperty("job_status_url", simple(chouetteUrl + "/chouette_iev/referentials/${header." + CHOUETTE_REFERENTIAL + "}/jobs?timetableAction=importer&status=SCHEDULED&status=STARTED"))
+                .toD("${exchangeProperty.job_status_url}")
+                .choice()
+                    .when().jsonpath("$.*[?(@.status == 'SCHEDULED')].status")
+                        .log(LoggingLevel.INFO, correlation() + "Import and validation ok, skipping next step as there are more import jobs active")
+                    .otherwise()
+                        .log(LoggingLevel.INFO, correlation() + "Import and validation ok, triggering next step.")
+                        .setBody(constant(""))
+                        .to("log:" + getClass().getName() + "?level=DEBUG&showAll=true&multiline=true")
+                        .choice()
+                            .when(constant("true").isEqualTo(header(Constants.ENABLE_VALIDATION)))
+                                .log(LoggingLevel.INFO, correlation() + "Import ok, triggering validation")
+                                .setHeader(JOB_STATUS_JOB_VALIDATION_LEVEL, constant(JobEvent.TimetableAction.VALIDATION_LEVEL_1.name()))
+                                .to("jms:queue:ChouetteValidationQueue")
+                            .when(method(getClass(), "shouldTransferData").isEqualTo(true))
+                                .log(LoggingLevel.INFO, correlation() + "Import ok, transfering data to next dataspace")
+                                .to("jms:queue:ChouetteTransferExportQueue")
+                            .when(method(getClass(), "isAutoTransferData").isEqualTo(true))
+                                .log(LoggingLevel.INFO, correlation() + "Import ok, triggering export")
+                                .to(ROUTE_CHOUETTE_EXPORT_NETEX_QUEUE)
+                        .end()
+                .end()
+                .routeId("chouette-process-job-list-after-import");
+
+        from("direct:proceedAnalyseResult")
+                .routeId("proceedAnalyseResult")
+                .process(this::addAnalysisResultToExchange)
+                .choice()
+                    .when(header("isLaunchable").isEqualTo(true))
+                        .to(ROUTE_ANALYSIS_OK)
+                    .otherwise()
+                        .to(ROUTE_ANALYSIS_ERROR)
+                .endChoice()
+                .end();
+
+        from(ROUTE_ANALYSIS_OK)
+            .log(LoggingLevel.INFO, correlation() + "File analysis completed successfully")
+            .process(e-> {
+                JobEvent.providerJobBuilder(e).timetableAction(ImportRouteBuilder.getTimeTableAction(e)).state(State.OK).build();
+                if(e.getIn().getHeader(WORKLOW, String.class) != null && e.getIn().getHeader(WORKLOW, String.class).equals("ANALYZE")) {
+                    createMail.createMail(e, null, ImportRouteBuilder.getTimeTableAction(e), true);
+                }
+            })
+            .choice()
+                .when(e -> e.getIn().getHeader(WORKLOW, String.class) != null &&
+                        (e.getIn().getHeader(WORKLOW, String.class).equals("IMPORT") ||
+                                e.getIn().getHeader(WORKLOW, String.class).equals("VALIDATION") ||
+                                e.getIn().getHeader(WORKLOW, String.class).equals("EXPORT")))
+                .to(ROUTE_ANALYS_RUNNING);
+
+        from(ROUTE_ANALYS_RUNNING)
+            .process(e -> e.getIn().setHeader(ANALYZE_ACTION, false))
+            .to("jms:queue:ChouetteImportQueue");
+
+        from(ROUTE_ANALYSIS_ERROR)
+            .log(LoggingLevel.ERROR, correlation() + "File analysis found a major issue. Cannot launch import")
+            .process(e -> {
+                JobEvent.providerJobBuilder(e).timetableAction(ImportRouteBuilder.getTimeTableAction(e)).state(State.FAILED).build();
+                if (e.getIn().getHeader(WORKLOW, String.class) != null) {
+                    createMail.createMail(e, null, ImportRouteBuilder.getTimeTableAction(e), false);
+                }
+            });
+
+        from("direct:proceedResult")
+                .routeId("proceedResult")
+                //import ok
+                .choice()
+                    .when(org.apache.camel.support.builder.PredicateBuilder.and(constant("false").isEqualTo(header(ENABLE_VALIDATION)), simple("${header.action_report_result} == 'OK'")))
+                        .to(ROUTE_CHECK_SCHEDULED_JOBS_BEFORE_TRIGGERING_NEXT_ACTION)
+                        .process(e -> JobEvent.providerJobBuilder(e).timetableAction(ImportRouteBuilder.getTimeTableAction(e)).state(State.OK).build())
                     //import ok
-                    .when(PredicateBuilder.and(constant("false").isEqualTo(header(ENABLE_VALIDATION)), simple("${header.action_report_result} == 'OK'")))
-                        .to("direct:checkScheduledJobsBeforeTriggeringNextAction")
-                        .process(e -> {
-                            JobEvent.providerJobBuilder(e).timetableAction(ImportRouteBuilder.getTimeTableAction(e)).state(State.OK).build();
-                        })
-                    //import ok
-                    .when(simple("${header.action_report_result} == 'OK' and ${header.validation_report_result} == 'OK'"))
-                        .to("direct:checkScheduledJobsBeforeTriggeringNextAction")
-                        .process(e -> {
-                            JobEvent.providerJobBuilder(e).timetableAction(ImportRouteBuilder.getTimeTableAction(e)).state(State.OK).build();
-                        })
+                    .when(simple("${header.action_report_result} == 'OK' && ${header.validation_report_result} == 'OK'"))
+                        .to(ROUTE_CHECK_SCHEDULED_JOBS_BEFORE_TRIGGERING_NEXT_ACTION)
+                        .process(e -> JobEvent.providerJobBuilder(e).timetableAction(ImportRouteBuilder.getTimeTableAction(e)).state(State.OK).build())
                     //import ko
-                    .when(simple("${header.action_report_result} == 'OK' and ${header.validation_report_result} == 'NOK'"))
+                    .when(simple("${header.action_report_result} == 'OK' && ${header.validation_report_result} == 'NOK'"))
                         .log(LoggingLevel.INFO, correlation() + "Import ok but validation failed")
                         .process(e -> {
                             if(TimetableAction.IMPORT.equals(ImportRouteBuilder.getTimeTableAction(e)) && e.getIn().getHeader(IMPORT_CONFIGURATION_ID) != null){
@@ -410,35 +453,7 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
                                 createMail.createMail(e, null, ImportRouteBuilder.getTimeTableAction(e), false);
                             }
                         })
-                .end()
-                .to("direct:updateStatus")
-                .routeId("chouette-process-import-status");
-
-        // Check that no other import jobs in status SCHEDULED exists for this referential. If so, do not trigger export
-        from("direct:checkScheduledJobsBeforeTriggeringNextAction")
-                .setProperty("job_status_url", simple("{{chouette.url}}/chouette_iev/referentials/${header." + CHOUETTE_REFERENTIAL + "}/jobs?timetableAction=importer&status=SCHEDULED&status=STARTED"))
-                .toD("${exchangeProperty.job_status_url}")
-                .choice()
-                    .when().jsonpath("$.*[?(@.status == 'SCHEDULED')].status")
-                        .log(LoggingLevel.INFO, correlation() + "Import and validation ok, skipping next step as there are more import jobs active")
-                    .otherwise()
-                        .log(LoggingLevel.INFO, correlation() + "Import and validation ok, triggering next step.")
-                        .setBody(constant(""))
-                        .to("log:" + getClass().getName() + "?level=DEBUG&showAll=true&multiline=true")
-                        .choice()
-                            .when(constant("true").isEqualTo(header(Constants.ENABLE_VALIDATION)))
-                                .log(LoggingLevel.INFO, correlation() + "Import ok, triggering validation")
-                                .setHeader(JOB_STATUS_JOB_VALIDATION_LEVEL, constant(JobEvent.TimetableAction.VALIDATION_LEVEL_1.name()))
-                                .to("jms:queue:ChouetteValidationQueue")
-                            .when(method(getClass(), "shouldTransferData").isEqualTo(true))
-                                .log(LoggingLevel.INFO, correlation() + "Import ok, transfering data to next dataspace")
-                                .to("jms:queue:ChouetteTransferExportQueue")
-                            .when(method(getClass(), "isAutoTransferData").isEqualTo(true))
-                                .log(LoggingLevel.INFO, correlation() + "Import ok, triggering export")
-                                .to("jms:queue:ChouetteExportNetexQueue")
-                        .end()
-                .end()
-                .routeId("chouette-process-job-list-after-import");
+                .end();
     }
 
     private void addAnalysisResultToExchange(Exchange e) {
@@ -447,19 +462,20 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
             String validationReportUrl = e.getIn().getHeader(VALIDATION_REPORT_URL, String.class);
             String analysisReportUrl = validationReportUrl.replace("validation_report.json", "analysis_report.json").replace("http4://", "http://");
             URL urlAnalysisReport = new URL(analysisReportUrl);
-            InputStream inputStreamUrlInfo = urlAnalysisReport.openStream();
+            try (InputStream inputStreamUrlInfo = urlAnalysisReport.openStream()) {
             JSONParser jsonParser = new JSONParser();
             JSONObject jsonObject = (JSONObject) jsonParser.parse(new InputStreamReader(inputStreamUrlInfo, StandardCharsets.UTF_8));
             JSONObject report = (JSONObject) jsonObject.get("analyze_report");
 
             if (report != null) {
                 Boolean canLaunchimport = (Boolean) report.get("canLaunchImport");
-                if (canLaunchimport) {
+                if (BooleanUtils.toBoolean(canLaunchimport)) {
                     e.getIn().setHeader(IS_LAUNCHABLE, true);
                 }
             }
+            }
         } catch (Exception ex) {
-            log.error("Unable to recover analysis report" + ex.getMessage());
+            log.error("Unable to recover analysis report {}", ex.getMessage());
         }
     }
 

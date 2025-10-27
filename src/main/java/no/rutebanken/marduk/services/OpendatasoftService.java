@@ -64,7 +64,7 @@ public class OpendatasoftService {
         Optional<DataSet> datasetOpt = convertToObjectType(rawDatasetInfos, DataSet.class);
 
         DataSet dataset = datasetOpt.get();
-        String datasetUID = dataset.getResults().get(0).getUid();
+        String datasetUID = dataset.getResults().getFirst().getUid();
 
         if (StringUtils.isEmpty(datasetUID)) {
             logger.error("cannot find UID");

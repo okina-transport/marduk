@@ -16,37 +16,22 @@
 
 package no.rutebanken.marduk.routes.gtfs;
 
-import no.rutebanken.marduk.Constants;
 import no.rutebanken.marduk.MardukRouteBuilderIntegrationTestBase;
 import no.rutebanken.marduk.repository.BlobStoreRepository;
 import org.apache.camel.Produce;
 import org.apache.camel.ProducerTemplate;
-import org.apache.commons.io.FileUtils;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.test.context.SpringBootTest;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.InputStream;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
-
-import static no.rutebanken.marduk.Constants.*;
-import static org.mockito.Mockito.when;
-
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, classes = GtfsBasicMergedExportRouteBuilder.class, properties = "spring.main.sources=no.rutebanken.marduk.test")
-public class GtfsBasicExportRouteIntegrationTest extends MardukRouteBuilderIntegrationTestBase {
-
+@Disabled
+class GtfsBasicExportRouteIntegrationTest extends MardukRouteBuilderIntegrationTestBase {
 
     @Autowired
     private BlobStoreRepository blobStoreRepository;
 
-    @Produce(uri = "direct:exportGtfsBasicMerged")
+    @Produce("direct:exportGtfsBasicMerged")
     protected ProducerTemplate startRoute;
 
 
@@ -54,14 +39,8 @@ public class GtfsBasicExportRouteIntegrationTest extends MardukRouteBuilderInteg
     private String exportFileName;
 
 
-    @Before
-    public void prepare() throws Exception {
-        when(providerRepository.getProviders()).thenReturn(Arrays.asList(provider("rb_avi", 1, null), provider("rb_rut", 2, null), provider("opp", 3, 4l)));
-    }
-
-
     @Test
-    public void testUploadBasicGtfsMergedFile() throws Exception {
+    void testUploadBasicGtfsMergedFile() {
         //TODO To rewrite after huge modifications on merged GTFS export
 //        context.start();
 //

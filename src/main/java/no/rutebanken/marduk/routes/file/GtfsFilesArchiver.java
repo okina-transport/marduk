@@ -17,7 +17,7 @@ import java.util.UUID;
 @Component
 public class GtfsFilesArchiver {
 
-    private static Logger logger = LoggerFactory.getLogger(GtfsFilesArchiver.class);
+    private static final Logger logger = LoggerFactory.getLogger(GtfsFilesArchiver.class);
 
     @Value("${chouette.storage.path:/srv/docker-data/data/chouette}")
     private String chouetteStoragePath;
@@ -32,8 +32,7 @@ public class GtfsFilesArchiver {
      */
     public void archiveGtfsData(File gtfsZipFile, String organisation)  {
 
-        try{
-            InputStream targetStream = new FileInputStream(gtfsZipFile);
+        try (InputStream targetStream = new FileInputStream(gtfsZipFile)) {
             File tmpDir = new File("/tmp", String.valueOf(UUID.randomUUID()));
             tmpDir.mkdirs();
 

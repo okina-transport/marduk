@@ -4,8 +4,8 @@ import no.rutebanken.marduk.Constants;
 import no.rutebanken.marduk.routes.BaseRouteBuilder;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
-import org.apache.camel.component.http4.HttpMethods;
-import org.codehaus.plexus.util.StringUtils;
+import org.apache.camel.component.http.HttpMethods;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -39,7 +39,7 @@ public class ChouetteGenerateThSmCsvRouteBuilder extends BaseRouteBuilder {
 
         super.configure();
 
-        singletonFrom("quartz2://marduk/chouetteGenerateTheoreticalSiriSmCsvQuartz?cron=" + cronSchedule + "&trigger" +
+        singletonFrom("quartz://marduk/chouetteGenerateTheoreticalSiriSmCsvQuartz?cron=" + cronSchedule + "&trigger" +
                 ".timeZone=" + Constants.TIME_ZONE)
                 .filter(e -> shouldQuartzRouteTrigger(e, cronSchedule))
                 .log(LoggingLevel.INFO, "Quartz triggers Chouette GenerateTheoreticalSiriSmCsv")
@@ -49,7 +49,7 @@ public class ChouetteGenerateThSmCsvRouteBuilder extends BaseRouteBuilder {
         from("direct:chouetteGenerateTheoreticalSiriSmCsv")
                 .log(LoggingLevel.INFO, correlation() + "Starting Chouette GenerateTheoreticalSiriSmCsv")
                 .removeHeaders("Camel*")
-                .setBody(constant(null))
+                .setBody(constant((Object) null))
                 .setHeader(Exchange.HTTP_METHOD, constant(HttpMethods.GET))
                 .toD(chouetteUrl + "/chouette_iev/admin/generate_theoretical_stop_monitoring")
                 .log(LoggingLevel.INFO, correlation() + "Completed Chouette GenerateTheoreticalSiriSmCsv")

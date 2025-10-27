@@ -21,10 +21,9 @@ import no.rutebanken.marduk.routes.chouette.json.Parameters;
 import no.rutebanken.marduk.routes.status.JobEvent;
 import no.rutebanken.marduk.routes.status.JobEvent.State;
 import no.rutebanken.marduk.routes.status.JobEvent.TimetableAction;
-import no.rutebanken.marduk.services.FileSystemService;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
-import org.codehaus.plexus.util.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -35,20 +34,8 @@ import java.util.List;
 import java.util.UUID;
 
 import static java.util.stream.Collectors.toList;
-import static no.rutebanken.marduk.Constants.JOB_STATUS_URL;
-import static no.rutebanken.marduk.Constants.CHOUETTE_REFERENTIAL;
-import static no.rutebanken.marduk.Constants.EXPORTED_FILENAME;
-import static no.rutebanken.marduk.Constants.EXPORT_END_DATE;
-import static no.rutebanken.marduk.Constants.EXPORT_LINES_IDS;
-import static no.rutebanken.marduk.Constants.EXPORT_NAME;
-import static no.rutebanken.marduk.Constants.EXPORT_START_DATE;
-import static no.rutebanken.marduk.Constants.FILE_NAME;
-import static no.rutebanken.marduk.Constants.FILE_TYPE;
-import static no.rutebanken.marduk.Constants.JSON_PART;
-import static no.rutebanken.marduk.Constants.PROVIDER_ID;
-import static no.rutebanken.marduk.Constants.USER;
-import static no.rutebanken.marduk.Constants.WORKLOW;
-import static no.rutebanken.marduk.Utils.Utils.getLastPathElementOfUrl;
+import static no.rutebanken.marduk.Constants.*;
+import static no.rutebanken.marduk.utils.Utils.getLastPathElementOfUrl;
 
 /**
  * Exports neptune files from Chouette
@@ -66,16 +53,13 @@ public class ChouetteExportNeptuneRouteBuilder extends AbstractChouetteRouteBuil
     UpdateExportTemplateProcessor updateExportTemplateProcessor;
 
     @Autowired
-    FileSystemService fileSystemService;
-
-    @Autowired
     CreateMail createMail;
 
     @Override
     public void configure() throws Exception {
         super.configure();
 
-        from("jms:queue:ChouetteExportNeptuneQueue?transacted=true").streamCaching()
+        from("jms:queue:ChouetteExportNeptuneQueue?transacted=true").streamCache(Boolean.TRUE)
                 .transacted()
                 .log(LoggingLevel.INFO, getClass().getName(), "Starting Chouette NEPTUNE export for provider with id ${header." + PROVIDER_ID + "}")
                 .process(e -> {
@@ -128,7 +112,7 @@ public class ChouetteExportNeptuneRouteBuilder extends AbstractChouetteRouteBuil
                 .toD(chouetteUrl + "/chouette_iev/referentials/${header." + CHOUETTE_REFERENTIAL + "}/exporter/neptune")
                 .to("log:" + getClass().getName() + "?level=DEBUG&showAll=true&multiline=true")
                 .process(e -> {
-                    e.getIn().setHeader(JOB_STATUS_URL, e.getIn().getHeader("Location").toString().replaceFirst("http", "http4"));
+                    e.getIn().setHeader(JOB_STATUS_URL, e.getIn().getHeader("Location").toString());
                     e.getIn().setHeader(Constants.JOB_ID, getLastPathElementOfUrl(e.getIn().getHeader("Location", String.class)));
                 })
                 .setHeader(Constants.JOB_STATUS_ROUTING_DESTINATION, constant("direct:processNeptuneExportResult"))
@@ -147,7 +131,7 @@ public class ChouetteExportNeptuneRouteBuilder extends AbstractChouetteRouteBuil
                         .log(LoggingLevel.INFO, correlation() + "Calling url ${header.data_url}")
                         .removeHeaders("Camel*")
                         .setBody(simple(""))
-                        .setHeader(Exchange.HTTP_METHOD, constant(org.apache.camel.component.http4.HttpMethods.GET))
+                        .setHeader(Exchange.HTTP_METHOD, constant(org.apache.camel.component.http.HttpMethods.GET))
                         .process(exportToConsumersProcessor)
                         .to("direct:updateExportToConsumerStatus")
                         .process(updateExportTemplateProcessor)

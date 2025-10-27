@@ -22,9 +22,10 @@ import no.rutebanken.marduk.domain.Provider;
 import no.rutebanken.marduk.routes.BaseRouteBuilder;
 import no.rutebanken.marduk.routes.status.JobEvent;
 import org.apache.camel.Exchange;
+import org.apache.camel.Message;
 import org.apache.camel.builder.ThreadPoolBuilder;
-import org.apache.http.entity.ContentType;
-import org.apache.http.entity.mime.MultipartEntityBuilder;
+import org.apache.hc.client5.http.entity.mime.MultipartEntityBuilder;
+import org.apache.hc.core5.http.ContentType;
 import org.springframework.beans.factory.annotation.Value;
 
 import java.io.InputStream;
@@ -65,10 +66,11 @@ public abstract class AbstractChouetteRouteBuilder extends BaseRouteBuilder {
 	
 	    MultipartEntityBuilder entityBuilder = MultipartEntityBuilder.create();
 	    entityBuilder.addBinaryBody("parameters", exchange.getIn().getHeader(JSON_PART, String.class).getBytes(), ContentType.DEFAULT_BINARY, "parameters.json");
-	
-	    exchange.getOut().setBody(entityBuilder.build());
-	    exchange.getOut().setHeaders(exchange.getIn().getHeaders());
-	    exchange.getOut().setHeader(Exchange.CONTENT_TYPE, simple("multipart/form-data"));
+
+        Message message = exchange.getMessage();
+        message.setBody(entityBuilder.build());
+	    message.setHeaders(exchange.getIn().getHeaders());
+	    message.setHeader(Exchange.CONTENT_TYPE, simple("multipart/form-data"));
 	}
 
 	protected void toImportMultipart(Exchange exchange) {

@@ -19,14 +19,12 @@ package no.rutebanken.marduk.routes.file;
 
 import no.rutebanken.marduk.Constants;
 import no.rutebanken.marduk.domain.WorkflowEnum;
-import no.rutebanken.marduk.repository.ImportConfigurationDAO;
 import no.rutebanken.marduk.routes.BaseRouteBuilder;
 import no.rutebanken.marduk.routes.file.beans.FileTypeClassifierBean;
 import no.rutebanken.marduk.routes.status.JobEvent;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.ValidationException;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
@@ -34,15 +32,14 @@ import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
 import static no.rutebanken.marduk.Constants.*;
+import static no.rutebanken.marduk.utils.constants.RouteDeclarationConstants.ROUTE_PROCESS_FILE_QUEUE;
+import static no.rutebanken.marduk.utils.constants.RouteDeclarationConstants.ROUTE_UPDATE_STATUS;
 
 /**
  * Receives file handle, pulls file from blob store, classifies files and performs initial validation.
  */
 @Component
 public class FileClassificationRouteBuilder extends BaseRouteBuilder {
-
-    @Autowired
-    ImportConfigurationDAO importConfigurationDAO;
 
     // @formatter:off
     @Override
@@ -53,15 +50,15 @@ public class FileClassificationRouteBuilder extends BaseRouteBuilder {
                 .handled(true)
                 .log(LoggingLevel.INFO, correlation() + "Could not process file ${header." + FILE_HANDLE + "}")
                 .process(e -> JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.FILE_CLASSIFICATION).state(JobEvent.State.FAILED).build())
-                .to("direct:updateStatus")
+                .to(ROUTE_UPDATE_STATUS)
                 .setBody(simple(""))      //remove file data from body
                 .to("jms:queue:DeadLetterQueue");
 
-        from("jms:queue:ProcessFileQueue?transacted=true")
+        from(ROUTE_PROCESS_FILE_QUEUE + "?transacted=true")
                 .transacted()
                 .process(e -> JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.FILE_TRANSFER).state(JobEvent.State.OK).build())
-                .to("direct:updateStatus")
-                .process(e -> JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.FILE_CLASSIFICATION).state(JobEvent.State.STARTED).build()).to("direct:updateStatus")
+                .to(ROUTE_UPDATE_STATUS)
+                .process(e -> JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.FILE_CLASSIFICATION).state(JobEvent.State.STARTED).build()).to(ROUTE_UPDATE_STATUS)
                 .to("direct:getBlob")
                 .convertBodyTo(byte[].class)
                 .validate().method(FileTypeClassifierBean.class, "validateFile")
@@ -81,7 +78,7 @@ public class FileClassificationRouteBuilder extends BaseRouteBuilder {
                 .end()
                 .log(LoggingLevel.INFO, correlation() + "Posting " + FILE_HANDLE + " ${header." + FILE_HANDLE + "} and " + FILE_TYPE + " ${header." + FILE_TYPE + "} on fares import queue.")
                 .setBody(simple(""))   //remove file data from body since this is in blobstore
-                .process(e -> JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.FILE_CLASSIFICATION).state(JobEvent.State.OK).build()).to("direct:updateStatus")
+                .process(e -> JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.FILE_CLASSIFICATION).state(JobEvent.State.OK).build()).to(ROUTE_UPDATE_STATUS)
                 .choice()
                     .when(header(FILE_TYPE).in(FileType.NETEX_PARKING.name(), FileType.NETEX_POI.name(), FileType.NETEX_STOP_PLACE.name()))
                         .process(e -> e.getIn().setHeader(WORKLOW, WorkflowEnum.IMPORT.toString()))
@@ -97,7 +94,7 @@ public class FileClassificationRouteBuilder extends BaseRouteBuilder {
                 .bean(method(ZipFileUtils.class, "rePackZipFile"))
                 .log(LoggingLevel.INFO, correlation() + "ZIP-file repacked ${header." + FILE_HANDLE + "}")
                 .to("direct:uploadBlob")
-                .to("jms:queue:ProcessFileQueue")
+                .to(ROUTE_PROCESS_FILE_QUEUE)
                 .routeId("file-repack-zip");
 
         from("direct:transformGtfsFile")
@@ -122,7 +119,7 @@ public class FileClassificationRouteBuilder extends BaseRouteBuilder {
                 })
                 .log(LoggingLevel.INFO, correlation() + "New fragment from RAR file ${header." + FILE_HANDLE + "}")
                 .to("direct:uploadBlob")
-                .to("jms:queue:ProcessFileQueue")
+                .to(ROUTE_PROCESS_FILE_QUEUE)
                 .routeId("file-split-rar");
 
 
@@ -137,7 +134,7 @@ public class FileClassificationRouteBuilder extends BaseRouteBuilder {
                 })
                 .log(LoggingLevel.INFO, correlation() + "Uploading file with new file name ${header." + FILE_HANDLE + "}")
                 .to("direct:uploadBlob")
-                .to("jms:queue:ProcessFileQueue")
+                .to(ROUTE_PROCESS_FILE_QUEUE)
                 .routeId("file-sanitize-filename");
     }
 

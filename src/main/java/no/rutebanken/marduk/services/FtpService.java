@@ -4,8 +4,8 @@ import com.jcraft.jsch.Channel;
 import com.jcraft.jsch.ChannelSftp;
 import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.Session;
-import no.rutebanken.marduk.Utils.SendMail;
-import no.rutebanken.marduk.Utils.SlackNotification;
+import no.rutebanken.marduk.utils.SendMail;
+import no.rutebanken.marduk.utils.SlackNotification;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.net.ftp.FTP;
 import org.apache.commons.net.ftp.FTPClient;
@@ -32,7 +32,7 @@ public class FtpService {
     @Autowired
     private SendMail sendMail;
 
-    private Logger logger = LoggerFactory.getLogger(this.getClass());
+    private static final Logger logger = LoggerFactory.getLogger(FtpService.class);
 
     /**
      * Uploads a file to a ftp server location
@@ -118,6 +118,7 @@ public class FtpService {
 
     public void uploadStreamSFTP(InputStream streamToUpload, String ftpUrl, String login, String password, Integer port, String destinationPath, String sftpFileName) throws Exception {
         String ftpFilePath = parseFilePathFromFtpUrl(ftpUrl);
+        String ftpHost = parseHostFromFtpUrl(ftpUrl);
 
         Session session = null;
         Channel channel = null;
@@ -125,8 +126,7 @@ public class FtpService {
 
         try {
             JSch jsch = new JSch();
-//            jsch.addIdentity(sftpPrivateKey, sftpPassphrase);
-            session = jsch.getSession(login, ftpFilePath, port);
+            session = jsch.getSession(login, ftpHost, port);
             session.setPassword(password);
             java.util.Properties config = new java.util.Properties();
             config.put("StrictHostKeyChecking", "no");
@@ -136,7 +136,13 @@ public class FtpService {
             channel.connect();
             logger.info("SFTP channel opened and connected.");
             channelSftp = (ChannelSftp) channel;
+            logger.info("SFTP current working directory : {}", channelSftp.getHome());
+            if (StringUtils.isNotEmpty(ftpFilePath)) {
+                logger.info("Run 'cd {}'", ftpFilePath);
+                channelSftp.cd(ftpFilePath);
+            }
             if (StringUtils.isNotEmpty(destinationPath)) {
+                logger.info("Run 'cd {}'", destinationPath);
                 channelSftp.cd(destinationPath);
             }
 
@@ -144,18 +150,20 @@ public class FtpService {
 
             logger.info("File transfered successfully to host.");
         } catch (Exception ex) {
-            ex.printStackTrace();
-            logger.error("Exception found while transfer the response.", ex.getMessage());
+            logger.error("Exception found while transfering the response : {}", ex.getMessage());
             slackNotification.sendSlackNotificationTitleAndMessage(SlackNotification.NOTIFICATION_CHANNEL, "Erreur upload du fichier: " + sftpFileName + " sur: " + ftpFilePath, "Le fichier n'a pas pu être exporté.");
             sendMail.sendEmail("Erreur upload du fichier: " + sftpFileName + " sur: " + ftpFilePath, null, "Le fichier n'a pas pu être exporté.", null);
 
         } finally {
-            channelSftp.exit();
-            logger.info("SFTP Channel exited.");
-            channel.disconnect();
-            logger.info("Channel disconnected.");
-            session.disconnect();
-            logger.info("Host Session disconnected.");
+            if (channelSftp != null) {
+                channelSftp.exit();
+                logger.info("SFTP Channel exited.");
+                channel.disconnect();
+                logger.info("Channel disconnected.");
+                session.disconnect();
+                logger.info("Host Session disconnected.");
+            }
+
         }
     }
 }

@@ -48,7 +48,7 @@ public class TiamatExportParkingsBuilder extends AbstractChouetteRouteBuilder {
     public void configure() throws Exception {
         super.configure();
 
-        from("jms:queue:TiamatParkingsExport").streamCaching()
+        from("jms:queue:TiamatParkingsExport").streamCache(Boolean.TRUE)
                 .transacted()
                 .log(LoggingLevel.INFO, getClass().getName(), "Starting Tiamat export parkings")
                 .choice()
@@ -91,7 +91,7 @@ public class TiamatExportParkingsBuilder extends AbstractChouetteRouteBuilder {
                 .routeId("tiamat-parkings-export-job");
 
         // called after a tiamat stop places export has been terminated (see CHOUETTE_JOB_STATUS_ROUTING_DESTINATION above and route direct:checkJobStatus)
-        from(TIAMAT_EXPORT_ROUTING_DESTINATION).streamCaching()
+        from(TIAMAT_EXPORT_ROUTING_DESTINATION).streamCache(Boolean.TRUE)
                 .log(LoggingLevel.INFO,"Export Parkings terminé - Fichier : ${header." + FILE_NAME + "} - Espace de données : ${header." + CHOUETTE_REFERENTIAL + "}")
                 .log(LoggingLevel.INFO, getClass().getName(), "Tiamat process export results for provider with id ${header.tiamatProviderId}")
                 .setHeader(EXPORT_FROM_TIAMAT, simple("true"))

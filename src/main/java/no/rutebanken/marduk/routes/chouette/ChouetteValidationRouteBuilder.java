@@ -24,8 +24,10 @@ import no.rutebanken.marduk.routes.chouette.json.Parameters;
 import no.rutebanken.marduk.routes.status.JobEvent;
 import no.rutebanken.marduk.routes.status.JobEvent.State;
 import org.apache.camel.Exchange;
+import org.apache.camel.ExchangePattern;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.builder.PredicateBuilder;
+import org.apache.commons.collections4.CollectionUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -34,9 +36,12 @@ import java.util.List;
 import java.util.UUID;
 
 import static no.rutebanken.marduk.Constants.*;
-import static no.rutebanken.marduk.Utils.Utils.getLastPathElementOfUrl;
+import static no.rutebanken.marduk.utils.Utils.getLastPathElementOfUrl;
 import static no.rutebanken.marduk.routes.status.JobEvent.TimetableAction.VALIDATION_LEVEL_1;
 import static no.rutebanken.marduk.routes.status.JobEvent.TimetableAction.VALIDATION_LEVEL_2;
+import static no.rutebanken.marduk.utils.constants.RouteDeclarationConstants.*;
+import static org.apache.camel.support.builder.PredicateBuilder.and;
+import static org.apache.camel.support.builder.PredicateBuilder.or;
 
 /**
  * Runs validation in Chouette
@@ -69,20 +74,20 @@ public class ChouetteValidationRouteBuilder extends AbstractChouetteRouteBuilder
         super.configure();
 
 
-        singletonFrom("quartz2://marduk/chouetteValidateLevel1?cron=" + level1CronSchedule + "&trigger.timeZone=" + Constants.TIME_ZONE)
+        singletonFrom("quartz://marduk/chouetteValidateLevel1?cron=" + level1CronSchedule + "&trigger.timeZone=" + Constants.TIME_ZONE)
                 .autoStartup("{{chouette.validate.level1.autoStartup:true}}")
                 .transacted()
                 .filter(e -> shouldQuartzRouteTrigger(e, level1CronSchedule))
                 .log(LoggingLevel.INFO, "Quartz triggers validation of Level1 for all providers in Chouette.")
-                .inOnly("direct:chouetteValidateLevel1ForAllProviders")
+                .setExchangePattern(ExchangePattern.InOnly).to("direct:chouetteValidateLevel1ForAllProviders")
                 .routeId("chouette-validate-level1-quartz");
 
-        singletonFrom("quartz2://marduk/chouetteValidateLevel2?cron=" + level2CronSchedule + "&trigger.timeZone=" + Constants.TIME_ZONE)
+        singletonFrom("quartz://marduk/chouetteValidateLevel2?cron=" + level2CronSchedule + "&trigger.timeZone=" + Constants.TIME_ZONE)
                 .autoStartup("{{chouette.validate.level2.autoStartup:false}}")
                 .transacted()
                 .filter(e -> shouldQuartzRouteTrigger(e, level2CronSchedule))
                 .log(LoggingLevel.INFO, "Quartz triggers validation of Level2 for all providers in Chouette.")
-                .inOnly("direct:chouetteValidateLevel2ForAllProviders")
+                .setExchangePattern(ExchangePattern.InOnly).to("direct:chouetteValidateLevel2ForAllProviders")
                 .routeId("chouette-validate-level2-quartz");
 
         // Trigger validation level1 for all level1 providers (ie migrateDateToProvider and referential set)
@@ -94,8 +99,8 @@ public class ChouetteValidationRouteBuilder extends AbstractChouetteRouteBuilder
                 .setHeader(PROVIDER_ID, simple("${body.id}"))
                 .setHeader(CHOUETTE_REFERENTIAL, simple("${body.chouetteInfo.referential}"))
                 .setHeader(JOB_STATUS_JOB_VALIDATION_LEVEL, constant(VALIDATION_LEVEL_1.name()))
-                .setBody(constant(null))
-                .inOnly("jms:queue:ChouetteValidationQueue")
+                .setBody(constant((Object) null))
+                .setExchangePattern(ExchangePattern.InOnly).to("jms:queue:ChouetteValidationQueue")
                 .routeId("chouette-validate-level1-all-providers");
 
 
@@ -108,11 +113,11 @@ public class ChouetteValidationRouteBuilder extends AbstractChouetteRouteBuilder
                 .setHeader(PROVIDER_ID, simple("${body.id}"))
                 .setHeader(CHOUETTE_REFERENTIAL, simple("${body.chouetteInfo.referential}"))
                 .setHeader(JOB_STATUS_JOB_VALIDATION_LEVEL, constant(JobEvent.TimetableAction.VALIDATION_LEVEL_2.name()))
-                .setBody(constant(null))
-                .inOnly("jms:queue:ChouetteValidationQueue")
+                .setBody(constant((Object) null))
+                .setExchangePattern(ExchangePattern.InOnly).to("jms:queue:ChouetteValidationQueue")
                 .routeId("chouette-validate-level2-all-providers");
 
-        from("jms:queue:ChouetteValidationQueue?transacted=true&maxConcurrentConsumers=3").streamCaching()
+        from("jms:queue:ChouetteValidationQueue?transacted=true&maxConcurrentConsumers=3").streamCache(Boolean.TRUE)
                 .transacted()
                 .log(LoggingLevel.INFO, correlation() + "Starting Chouette validation")
                 .process(e -> {
@@ -121,7 +126,7 @@ public class ChouetteValidationRouteBuilder extends AbstractChouetteRouteBuilder
                     e.getIn().removeHeader(Constants.JOB_ID);
                     JobEvent.providerJobBuilder(e).timetableAction(e.getIn().getHeader(JOB_STATUS_JOB_VALIDATION_LEVEL, JobEvent.TimetableAction.class)).state(State.PENDING).build();
                 })
-                .to("direct:updateStatus")
+                .to(ROUTE_UPDATE_STATUS)
                 .process(e -> e.getIn().setHeader(CHOUETTE_REFERENTIAL, getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)).chouetteInfo.referential))
                 .process(e -> {
                     String user = e.getIn().getHeader(USER, String.class);
@@ -133,7 +138,7 @@ public class ChouetteValidationRouteBuilder extends AbstractChouetteRouteBuilder
                 .setHeader(Exchange.CONTENT_TYPE, simple("multipart/form-data"))
                 .toD(chouetteUrl + "/chouette_iev/referentials/${header." + CHOUETTE_REFERENTIAL + "}/validator")
                 .process(e -> {
-                    e.getIn().setHeader(Constants.JOB_STATUS_URL, e.getIn().getHeader("Location").toString().replaceFirst("http", "http4"));
+                    e.getIn().setHeader(Constants.JOB_STATUS_URL, e.getIn().getHeader("Location").toString());
                     e.getIn().setHeader(Constants.JOB_ID, getLastPathElementOfUrl(e.getIn().getHeader("Location", String.class)));
                 })
                 .setHeader(Constants.JOB_STATUS_ROUTING_DESTINATION, constant("direct:processValidationResult"))
@@ -144,10 +149,10 @@ public class ChouetteValidationRouteBuilder extends AbstractChouetteRouteBuilder
 
         from("direct:assertHeadersForChouetteValidation")
                 .choice()
-                    .when(simple("${header." + CHOUETTE_REFERENTIAL + "} == null or ${header." + PROVIDER_ID + "} == null "))
+                    .when(simple("${header." + CHOUETTE_REFERENTIAL + "} == null || ${header." + PROVIDER_ID + "} == null "))
                         .log(LoggingLevel.WARN, correlation() + "Unable to start Chouette validation for missing referential or providerId")
                         .process(e -> JobEvent.providerJobBuilder(e).timetableAction(e.getIn().getHeader(JOB_STATUS_JOB_VALIDATION_LEVEL, JobEvent.TimetableAction.class)).state(State.FAILED).build())
-                        .to("direct:updateStatus")
+                        .to(ROUTE_UPDATE_STATUS)
                         .stop()
                     .end()
                 .routeId("chouette-send-validation-job-validate-headers");
@@ -157,76 +162,86 @@ public class ChouetteValidationRouteBuilder extends AbstractChouetteRouteBuilder
                 .to("log:" + getClass().getName() + "?level=DEBUG&showAll=true&multiline=true")
                 .setBody(constant(""))
                 .choice()
-                .when(simple("${header.action_report_result} == 'OK' and ${header.validation_report_result} == 'OK'"))
-                    .to("direct:checkScheduledJobsBeforeTriggeringExport")
-                    .process(e -> {
-                        JobEvent.providerJobBuilder(e).timetableAction(e.getIn().getHeader(JOB_STATUS_JOB_VALIDATION_LEVEL, JobEvent.TimetableAction.class)).state(JobEvent.State.OK).build();
-                        if (e.getIn().getHeader(WORKLOW, String.class) != null) {
-                            if ("VALIDATION".equals(e.getIn().getHeader(WORKLOW, String.class))
-                                    && VALIDATION_LEVEL_2.name().equals(e.getIn().getHeader(JOB_STATUS_JOB_VALIDATION_LEVEL, String.class))
-                                    || "IMPORT".equals(e.getIn().getHeader(WORKLOW, String.class))
-                                    && VALIDATION_LEVEL_1.name().equals(e.getIn().getHeader(JOB_STATUS_JOB_VALIDATION_LEVEL, String.class))
-                                    && ImportGenerateMapMatching.NONE.name().equals(e.getIn().getHeader(GENERATE_MAP_MATCHING, String.class)))
-                            {
-                                JobEvent.TimetableAction timetableAction = e.getIn().getHeader(JOB_STATUS_JOB_VALIDATION_LEVEL, String.class).equals(VALIDATION_LEVEL_2.name()) ? VALIDATION_LEVEL_2 : VALIDATION_LEVEL_1;
-                                createMail.createMail(e, null, timetableAction, true);
-                            }
-                        }
-                    })
-                    .to("direct:updateStatus")
-                    .choice()
-                        .when(PredicateBuilder.and(
-                                PredicateBuilder.constant(autoExportsOnValidate),
-                                PredicateBuilder.and(constant(VALIDATION_LEVEL_2).isEqualTo(header(JOB_STATUS_JOB_VALIDATION_LEVEL))),
-                                PredicateBuilder.or(header(WORKLOW).isNull(), header(WORKLOW).isEqualTo("EXPORT"))))
-                            .process(e -> {
-                                e.getIn().setHeader(OKINA_REFERENTIAL, getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)).chouetteInfo.referential);
-                                List<ExportTemplate> exports = exportTemplateDAO.getAll(e.getIn().getHeader(OKINA_REFERENTIAL, String.class));
-                                if(exports.size() > 0){
-                                    e.getIn().setHeader(MULTIPLE_EXPORT, true);
-                                    e.getIn().setBody(exports);
-                                } else {
-                                    log.info("Workflow configure to export but none is configure for provider with id ${header." + PROVIDER_ID + "}");
-                                    createMail.createMail(e, "", JobEvent.TimetableAction.EXPORT, false);
-                                }
-                            })
-                            .choice()
-                                .when(header(MULTIPLE_EXPORT))
-                                    .to("direct:multipleExports")
-                            .endChoice()
-                    .endChoice()
-                .when(simple("${header.action_report_result} == 'OK' and ${header.validation_report_result} == 'NOK'"))
-                    .log(LoggingLevel.INFO, correlation() + "Validation failed (processed ok, but timetable data is faulty)")
-                    .process(e -> {
-                        JobEvent.providerJobBuilder(e).timetableAction(e.getIn().getHeader(JOB_STATUS_JOB_VALIDATION_LEVEL, JobEvent.TimetableAction.class)).state(State.FAILED).build();
-                        if (e.getIn().getHeader(WORKLOW, String.class) != null) {
-                            JobEvent.TimetableAction timetableAction = e.getIn().getHeader(JOB_STATUS_JOB_VALIDATION_LEVEL, String.class).equals(VALIDATION_LEVEL_2.name()) ? VALIDATION_LEVEL_2 : VALIDATION_LEVEL_1;
-                            createMail.createMail(e, null, timetableAction, false);
-                        }
-                    })
-                    .to("direct:updateStatus")
-                .otherwise()
-                    .log(LoggingLevel.ERROR, correlation() + "Validation went wrong")
-                    .process(e -> {
-                        JobEvent.providerJobBuilder(e).timetableAction(e.getIn().getHeader(JOB_STATUS_JOB_VALIDATION_LEVEL, JobEvent.TimetableAction.class)).state(State.FAILED).build();
-                        if (e.getIn().getHeader(WORKLOW, String.class) != null) {
-                            JobEvent.TimetableAction timetableAction = e.getIn().getHeader(JOB_STATUS_JOB_VALIDATION_LEVEL, String.class).equals(VALIDATION_LEVEL_2.name()) ?  VALIDATION_LEVEL_2 : VALIDATION_LEVEL_1;
-                            createMail.createMail(e, null, timetableAction, false);
-                        }
-                    })
-                    .to("direct:updateStatus")
+                    .when(simple("${header.action_report_result} == 'OK' && ${header.validation_report_result} == 'OK'"))
+                        .to(ROUTE_HANDLE_VALIDATION_SUCCESS)
+                    .when(simple("${header.action_report_result} == 'OK' && ${header.validation_report_result} == 'NOK'"))
+                        .to(ROUTE_VALIDATION_FAILED)
+                    .otherwise()
+                        .to(ROUTE_VALIDATION_GENERAL_ERROR)
+                .endChoice()
                 .end()
                 .routeId("chouette-process-validation-status");
 
+        from(ROUTE_HANDLE_VALIDATION_SUCCESS)
+                .to("direct:checkScheduledJobsBeforeTriggeringExport")
+                .process(e -> {
+                    JobEvent.providerJobBuilder(e).timetableAction(e.getIn().getHeader(JOB_STATUS_JOB_VALIDATION_LEVEL, JobEvent.TimetableAction.class)).state(JobEvent.State.OK).build();
+                    if (e.getIn().getHeader(WORKLOW, String.class) != null) {
+                        if ("VALIDATION".equals(e.getIn().getHeader(WORKLOW, String.class))
+                                && VALIDATION_LEVEL_2.name().equals(e.getIn().getHeader(JOB_STATUS_JOB_VALIDATION_LEVEL, String.class))
+                                || "IMPORT".equals(e.getIn().getHeader(WORKLOW, String.class))
+                                && VALIDATION_LEVEL_1.name().equals(e.getIn().getHeader(JOB_STATUS_JOB_VALIDATION_LEVEL, String.class))
+                                && ImportGenerateMapMatching.NONE.name().equals(e.getIn().getHeader(GENERATE_MAP_MATCHING, String.class)))
+                        {
+                            JobEvent.TimetableAction timetableAction = e.getIn().getHeader(JOB_STATUS_JOB_VALIDATION_LEVEL, String.class).equals(VALIDATION_LEVEL_2.name()) ? VALIDATION_LEVEL_2 : VALIDATION_LEVEL_1;
+                            createMail.createMail(e, null, timetableAction, true);
+                        }
+                    }
+                })
+                .to(ROUTE_UPDATE_STATUS)
+                .choice()
+                    .when(and(
+                            org.apache.camel.support.builder.PredicateBuilder.constant(autoExportsOnValidate),
+                            and(constant(VALIDATION_LEVEL_2).isEqualTo(header(JOB_STATUS_JOB_VALIDATION_LEVEL))),
+                            or(header(WORKLOW).isNull(), header(WORKLOW).isEqualTo("EXPORT"))))
+                    .process(e -> {
+                        e.getIn().setHeader(OKINA_REFERENTIAL, getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)).chouetteInfo.referential);
+                        List<ExportTemplate> exports = exportTemplateDAO.getAll(e.getIn().getHeader(OKINA_REFERENTIAL, String.class));
+                        if (CollectionUtils.isNotEmpty(exports)) {
+                            e.getIn().setHeader(MULTIPLE_EXPORT, true);
+                            e.getIn().setBody(exports);
+                        } else {
+                            log.info("Workflow configure to export but none is configure for provider with id ${header." + PROVIDER_ID + "}");
+                            createMail.createMail(e, "", JobEvent.TimetableAction.EXPORT, false);
+                        }
+                    })
+                    .choice()
+                        .when(header(MULTIPLE_EXPORT))
+                        .to("direct:multipleExports")
+                    .endChoice()
+                .endChoice();
+
+        from(ROUTE_VALIDATION_FAILED)
+                .log(LoggingLevel.INFO, correlation() + "Validation failed (processed ok, but timetable data is faulty)")
+                .process(e -> {
+                    JobEvent.providerJobBuilder(e).timetableAction(e.getIn().getHeader(JOB_STATUS_JOB_VALIDATION_LEVEL, JobEvent.TimetableAction.class)).state(State.FAILED).build();
+                    if (e.getIn().getHeader(WORKLOW, String.class) != null) {
+                        JobEvent.TimetableAction timetableAction = e.getIn().getHeader(JOB_STATUS_JOB_VALIDATION_LEVEL, String.class).equals(VALIDATION_LEVEL_2.name()) ? VALIDATION_LEVEL_2 : VALIDATION_LEVEL_1;
+                        createMail.createMail(e, null, timetableAction, false);
+                    }
+                })
+                .to(ROUTE_UPDATE_STATUS);
+
+        from(ROUTE_VALIDATION_GENERAL_ERROR)
+                .log(LoggingLevel.ERROR, correlation() + "Validation went wrong")
+                .process(e -> {
+                    JobEvent.providerJobBuilder(e).timetableAction(e.getIn().getHeader(JOB_STATUS_JOB_VALIDATION_LEVEL, JobEvent.TimetableAction.class)).state(State.FAILED).build();
+                    if (e.getIn().getHeader(WORKLOW, String.class) != null) {
+                        JobEvent.TimetableAction timetableAction = e.getIn().getHeader(JOB_STATUS_JOB_VALIDATION_LEVEL, String.class).equals(VALIDATION_LEVEL_2.name()) ? VALIDATION_LEVEL_2 : VALIDATION_LEVEL_1;
+                        createMail.createMail(e, null, timetableAction, false);
+                    }
+                })
+                .to(ROUTE_UPDATE_STATUS);
+
         // Check that no other import jobs in status SCHEDULED exists for this referential. If so, do not trigger export
         from("direct:checkScheduledJobsBeforeTriggeringExport")
-                .setProperty("job_status_url", simple("{{chouette.url}}/chouette_iev/referentials/${header." + CHOUETTE_REFERENTIAL + "}/jobs?timetableAction=importer&status=SCHEDULED&status=STARTED"))
+                .setProperty("job_status_url", simple(chouetteUrl + "/chouette_iev/referentials/${header." + CHOUETTE_REFERENTIAL + "}/jobs?timetableAction=importer&status=SCHEDULED&status=STARTED"))
                 .log(LoggingLevel.INFO, "Triggering export of data from one space to another or generating map matching")
                 .toD("${exchangeProperty.job_status_url}")
                 .choice()
                     .when().jsonpath("$.*[?(@.status == 'SCHEDULED')].status")
-                                        .when(PredicateBuilder.and(constant(VALIDATION_LEVEL_1).isEqualTo(header(JOB_STATUS_JOB_VALIDATION_LEVEL)),
-                                                PredicateBuilder.or(header(GENERATE_MAP_MATCHING).isEqualTo(ImportGenerateMapMatching.CAR),
+                                        .when(and(constant(VALIDATION_LEVEL_1).isEqualTo(header(JOB_STATUS_JOB_VALIDATION_LEVEL)),
+                                                or(header(GENERATE_MAP_MATCHING).isEqualTo(ImportGenerateMapMatching.CAR),
                                                         header(GENERATE_MAP_MATCHING).isEqualTo(ImportGenerateMapMatching.AIR))))
                                             .log(LoggingLevel.INFO, correlation() + "Validation ok, generating map matching")
                                             .to("jms:queue:ChouetteGenerateMapMatchingQueue")

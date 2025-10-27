@@ -49,14 +49,14 @@ public class GtfsBasicMergedExportRouteBuilder extends BaseRouteBuilder {
     public void configure() throws Exception {
         super.configure();
 
-        singletonFrom("jms:queue:GtfsBasicExportMergedQueue?transacted=true&maxConcurrentConsumers=1&messageListenerContainerFactoryRef=batchListenerContainerFactory").autoStartup("{{gtfs.export.basic.autoStartup:false}}")
+        singletonFrom("jms:queue:GtfsBasicExportMergedQueue?transacted=true&maxConcurrentConsumers=1").autoStartup("{{gtfs.export.basic.autoStartup:false}}")
                 .transacted()
                 .to("direct:exportGtfsBasicMerged")
-                .inOnly("jms:queue:GoogleExportQueue")
+                .to("jms:queue:GoogleExportQueue")
                 .routeId("gtfs-basic-export-merged-jms-route");
 
         from("direct:exportGtfsBasicMerged")
-                .setBody(constant(null))
+                .setBody(constant((Object) null))
                 .setProperty(Constants.TRANSFORMATION_ROUTING_DESTINATION, constant("direct:transformToBasicGTFS"))
                 .setProperty(Constants.PROVIDER_BLACK_LIST, constant(createProviderBlackList()))
                 .setHeader(Constants.FILE_NAME, constant(gtfsBasicMergedFileName))

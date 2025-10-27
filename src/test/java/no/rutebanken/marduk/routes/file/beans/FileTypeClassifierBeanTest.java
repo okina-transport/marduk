@@ -24,9 +24,9 @@ import org.apache.camel.Exchange;
 import org.apache.camel.builder.ExchangeBuilder;
 import org.apache.camel.impl.DefaultCamelContext;
 import org.apache.commons.io.IOUtils;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -34,100 +34,103 @@ import java.io.IOException;
 
 import static no.rutebanken.marduk.Constants.FILE_HANDLE;
 import static no.rutebanken.marduk.Constants.IMPORT_TYPE;
-import static no.rutebanken.marduk.routes.file.FileType.GTFS;
-import static no.rutebanken.marduk.routes.file.FileType.INVALID_FILE_NAME;
-import static no.rutebanken.marduk.routes.file.FileType.NEPTUNE;
-import static no.rutebanken.marduk.routes.file.FileType.NETEXPROFILE;
+import static no.rutebanken.marduk.routes.file.FileType.*;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThrows;
 
-public class FileTypeClassifierBeanTest {
+class FileTypeClassifierBeanTest {
 
     private FileTypeClassifierBean bean;
 
-    @Before
-    public void before() {
+    @BeforeEach
+    void before() {
         bean = new FileTypeClassifierBean();
     }
 
     @Test
-    public void classifyGtfsFile() throws Exception {
+    void classifyGtfsFile() throws Exception {
         assertFileType("gtfs.zip", GTFS, "gtfs");
     }
 
     @Test
-    public void classifyGtfsFileContainingFolder() throws Exception {
+    void classifyGtfsFileContainingFolder() throws Exception {
         // The file is known to be invalid - repack zip
         File rePackedZipFile = ZipFileUtils.rePackZipFile(IOUtils.toByteArray(this.getClass().getResourceAsStream("gtfs-folder.zip")));
-        assertFileType(rePackedZipFile, GTFS,"gtfs");
+        assertFileType(rePackedZipFile, GTFS, "gtfs");
     }
 
     @Test
-    public void classifyNetexFile() throws Exception {
-        assertFileType("netex.zip", NETEXPROFILE,null);
+    void classifyNetexFile() throws Exception {
+        assertFileType("netex.zip", NETEXPROFILE, null);
     }
 
-    @Test(expected = RuntimeException.class)
-    public void classifyNetexFileFromRuter() throws Exception {
-        assertFileType("AOR.zip", NETEXPROFILE,null);
-    }
+    @Test()
+    void classifyNetexFileFromRuter() {
+        assertThrows(RuntimeException.class, () -> {
+            assertFileType("AOR.zip", NETEXPROFILE, null);
+        });
 
-    @Test
-    public void classifyNetexWithNeptuneFileNameInside() throws Exception {
-        assertFileType("netex_with_neptune_file_name_inside.zip", NETEXPROFILE,null);
-    }
-
-    @Test
-    public void classifyNetexWithTwoFiles() throws Exception {
-        assertFileType("netex_with_two_files.zip", NETEXPROFILE,null);
-    }
-
-    @Test(expected = FileValidationException.class)
-    public void classifyNetexWithTwoFilesOneInvalid() throws Exception {
-        assertFileType("netex_with_two_files_one_invalid.zip", NETEXPROFILE,null);
     }
 
     @Test
-    public void classifyFileNameWithNonISO_8859_1CharacterAsInvalid() throws Exception {
+    void classifyNetexWithNeptuneFileNameInside() throws Exception {
+        assertFileType("netex_with_neptune_file_name_inside.zip", NETEXPROFILE, null);
+    }
+
+    @Test
+    void classifyNetexWithTwoFiles() throws Exception {
+        assertFileType("netex_with_two_files.zip", NETEXPROFILE, null);
+    }
+
+    @Test()
+    void classifyNetexWithTwoFilesOneInvalid() {
+        assertThrows(FileValidationException.class, () -> {
+            assertFileType("netex_with_two_files_one_invalid.zip", NETEXPROFILE, null);
+        });
+    }
+
+    @Test
+    void classifyFileNameWithNonISO_8859_1CharacterAsInvalid() throws Exception {
         // The å in ekspressbåt below is encoded as 97 ('a') + 778 (ring above)
         byte[] data = IOUtils.toByteArray(this.getClass().getResourceAsStream("netex.zip"));
-        assertFileType("sof-20170904121616-2907_20170904_Buss_og_ekspressbåt_til_rutesøk_19.06.2017-28.02.2018 (1).zip", data, INVALID_FILE_NAME,null);
+        assertFileType("sof-20170904121616-2907_20170904_Buss_og_ekspressbåt_til_rutesøk_19.06.2017-28.02.2018 (1).zip", data, INVALID_FILE_NAME, null);
     }
 
     @Test
-    public void classifyFileNameWithOnlyISO_8859_1CharacterAsValid() throws Exception {
+    void classifyFileNameWithOnlyISO_8859_1CharacterAsValid() throws Exception {
         // The å in ekspressbåt below is encoded as a regular 229 ('å')
         byte[] data = IOUtils.toByteArray(this.getClass().getResourceAsStream("netex.zip"));
-        assertFileType("sof-20170904121616-2907_20170904_Buss_og_ekspressbåt_til_rutesøk_19.06.2017-28.02.2018 (1).zip", data, NETEXPROFILE,null);
+        assertFileType("sof-20170904121616-2907_20170904_Buss_og_ekspressbåt_til_rutesøk_19.06.2017-28.02.2018 (1).zip", data, NETEXPROFILE, null);
     }
 
     @Test
-    public void nonXMLFilePatternShouldMatchOtherFileTypes() {
-        Assert.assertTrue("test.log".matches(FileTypeClassifierBean.NON_XML_FILE_XML));
-        Assert.assertTrue("test.xml.log".matches(FileTypeClassifierBean.NON_XML_FILE_XML));
-        Assert.assertTrue("test.xml2".matches(FileTypeClassifierBean.NON_XML_FILE_XML));
-        Assert.assertTrue("test.txml".matches(FileTypeClassifierBean.NON_XML_FILE_XML));
+    void nonXMLFilePatternShouldMatchOtherFileTypes() {
+        Assertions.assertTrue("test.log".matches(FileTypeClassifierBean.NON_XML_FILE_XML));
+        Assertions.assertTrue("test.xml.log".matches(FileTypeClassifierBean.NON_XML_FILE_XML));
+        Assertions.assertTrue("test.xml2".matches(FileTypeClassifierBean.NON_XML_FILE_XML));
+        Assertions.assertTrue("test.txml".matches(FileTypeClassifierBean.NON_XML_FILE_XML));
     }
 
     @Test
-    public void nonXMLFilePatternShouldNotMatchXMLFiles() {
-        Assert.assertFalse("test.xml".matches(FileTypeClassifierBean.NON_XML_FILE_XML));
-        Assert.assertFalse("test.XML".matches(FileTypeClassifierBean.NON_XML_FILE_XML));
-        Assert.assertFalse("test.test.xml".matches(FileTypeClassifierBean.NON_XML_FILE_XML));
+    void nonXMLFilePatternShouldNotMatchXMLFiles() {
+        Assertions.assertFalse("test.xml".matches(FileTypeClassifierBean.NON_XML_FILE_XML));
+        Assertions.assertFalse("test.XML".matches(FileTypeClassifierBean.NON_XML_FILE_XML));
+        Assertions.assertFalse("test.test.xml".matches(FileTypeClassifierBean.NON_XML_FILE_XML));
     }
 
-   //missing test file
-   // @Test
-    public void classifyFileNameNeptune() throws Exception {
+    //missing test file
+    // @Test
+    void classifyFileNameNeptune() throws Exception {
         byte[] data = IOUtils.toByteArray(this.getClass().getResourceAsStream("inputFile.zip"));
-        assertFileType("someFileName.zip", data, NEPTUNE,"neptune");
+        assertFileType("someFileName.zip", data, NEPTUNE, "neptune");
     }
 
     private void assertFileType(String fileName, FileType expectedFileType, String importType) throws IOException {
         byte[] data = IOUtils.toByteArray(this.getClass().getResourceAsStream(fileName));
-        assertFileType(fileName, data, expectedFileType,importType);
+        assertFileType(fileName, data, expectedFileType, importType);
     }
 
-    private void assertFileType(File file, FileType expectedFileType,String importType) throws IOException {
+    private void assertFileType(File file, FileType expectedFileType, String importType) throws IOException {
         byte[] data = IOUtils.toByteArray(new FileInputStream(file));
         assertFileType(file.getName(), data, expectedFileType, importType);
     }

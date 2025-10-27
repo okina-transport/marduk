@@ -26,13 +26,11 @@ import no.rutebanken.marduk.routes.file.ZipFileUtils;
 import no.rutebanken.marduk.routes.status.JobEvent;
 import no.rutebanken.marduk.routes.status.JobEvent.State;
 import no.rutebanken.marduk.routes.status.JobEvent.TimetableAction;
-import no.rutebanken.marduk.security.TokenService;
-import no.rutebanken.marduk.services.FileSystemService;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
-import org.apache.camel.component.http4.HttpMethods;
+import org.apache.camel.component.http.HttpMethods;
 import org.apache.commons.lang3.BooleanUtils;
-import org.codehaus.plexus.util.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -40,12 +38,19 @@ import org.springframework.stereotype.Component;
 import java.io.File;
 import java.io.InputStream;
 import java.io.PrintWriter;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.toList;
 import static no.rutebanken.marduk.Constants.*;
-import static no.rutebanken.marduk.Utils.Utils.getLastPathElementOfUrl;
+import static no.rutebanken.marduk.utils.Utils.getLastPathElementOfUrl;
+import static no.rutebanken.marduk.utils.constants.RouteDeclarationConstants.ROUTE_PROCESS_EXPORT_RESULT;
+import static no.rutebanken.marduk.utils.constants.RouteDeclarationConstants.ROUTE_UPDATE_STATUS;
+import static no.rutebanken.marduk.utils.constants.RouteParamsConstants.Headers.ALL_CAMEL_HEADERS;
+import static no.rutebanken.marduk.utils.constants.RouteParamsConstants.Headers.LOCATION;
 
 /**
  * Exports gtfs files from Chouette
@@ -66,23 +71,13 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
     UpdateExportTemplateProcessor updateExportTemplateProcessor;
 
     @Autowired
-    FileSystemService fileSystemService;
-
-    @Autowired
     CreateMail createMail;
-
-    @Value("${export-templates.api.url}")
-    private String exportTemplatesUrl;
-
-    @Autowired
-    TokenService tokenService;
-
 
     @Override
     public void configure() throws Exception {
         super.configure();
 
-        from("jms:queue:ChouetteExportGtfsQueue?transacted=true").streamCaching()
+        from("jms:queue:ChouetteExportGtfsQueue?transacted=true").streamCache(Boolean.TRUE)
                 .transacted()
                 .log(LoggingLevel.INFO, getClass().getName(), "Starting Chouette GTFS export for provider with id ${header." + PROVIDER_ID + "}")
                 .process(e -> {
@@ -100,7 +95,7 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
                     log.info("Lancement export GTFS - Fichier : " + exportName + " - Espace de données : " + getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)).chouetteInfo.referential);
                 })
                 .process(e -> JobEvent.providerJobBuilder(e).timetableAction(TimetableAction.EXPORT).state(State.PENDING).build())
-                .to("direct:updateStatus")
+                .to(ROUTE_UPDATE_STATUS)
                 .process(e -> e.getIn().setHeader(CHOUETTE_REFERENTIAL, getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)).chouetteInfo.referential))
                 .process(e -> e.getIn().setHeader(OKINA_REFERENTIAL, getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)).chouetteInfo.referential))
                 .process(e -> setJsonPartHeaderFromExchange(e)) //Reading exchange to create a json with all parameters
@@ -113,17 +108,17 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
                 .toD(chouetteUrl + "/chouette_iev/referentials/${header." + CHOUETTE_REFERENTIAL + "}/exporter/gtfs")
                 .to("log:" + getClass().getName() + "?level=DEBUG&showAll=true&multiline=true")
                 .process(e -> {
-                    e.getIn().setHeader(JOB_STATUS_URL, e.getIn().getHeader("Location").toString().replaceFirst("http", "http4"));
-                    e.getIn().setHeader(JOB_ID, getLastPathElementOfUrl(e.getIn().getHeader("Location", String.class)));
+                    e.getIn().setHeader(JOB_STATUS_URL, e.getIn().getHeader(LOCATION).toString());
+                    e.getIn().setHeader(JOB_ID, getLastPathElementOfUrl(e.getIn().getHeader(LOCATION, String.class)));
                 })
-                .setHeader(JOB_STATUS_ROUTING_DESTINATION, constant("direct:processExportResult"))
+                .setHeader(JOB_STATUS_ROUTING_DESTINATION, constant(ROUTE_PROCESS_EXPORT_RESULT))
                 .setHeader(JOB_STATUS_JOB_TYPE, constant(TimetableAction.EXPORT.name()))
                 .removeHeader("loopCounter")
                 .to("jms:queue:ChouettePollStatusQueue")
                 .routeId("chouette-send-export-job");
 
 
-        from("direct:processExportResult")
+        from(ROUTE_PROCESS_EXPORT_RESULT)
                 .to("log:" + getClass().getName() + "?level=DEBUG&showAll=true&multiline=true")
                 .process(e->{
                     TimetableAction action = null;
@@ -142,16 +137,17 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
                         .log(LoggingLevel.INFO,"Export GTFS terminé - Fichier : ${header." + FILE_NAME + "} - Espace de données : ${header." + CHOUETTE_REFERENTIAL + "}")
                         .log(LoggingLevel.INFO, correlation() + "Export ended with status '${header.action_report_result}'")
                         .log(LoggingLevel.INFO, correlation() + "Calling url ${header.data_url}")
-                        .removeHeaders("Camel*")
+                        .removeHeaders(ALL_CAMEL_HEADERS)
                         .setBody(simple(""))
-                        .setHeader(Exchange.HTTP_METHOD, constant(org.apache.camel.component.http4.HttpMethods.GET))
+                        .setHeader(Exchange.HTTP_METHOD, constant(org.apache.camel.component.http.HttpMethods.GET))
                         .choice()
                             .when(e -> e.getIn().getHeader(GTFS_EXPORT_GLOBAL, Boolean.class))
                                 .toD("${header.data_url}")
                                 .setHeader(FILE_HANDLE, simple("mobiiti_technique/gtfs/allFiles/${header.ID_FORMAT}/${header." + CHOUETTE_REFERENTIAL + "}-" + Constants.CURRENT_AGGREGATED_GTFS_FILENAME))
                                 .to("direct:uploadBlob")
                                 .to("direct:exportMergedGtfs")
-                        .endChoice()
+                            .endChoice()
+                        .end()
                         .process(exportToConsumersProcessor)
                         .to("direct:updateExportToConsumerStatus")
                         .setHeader(BLOBSTORE_MAKE_BLOB_PUBLIC, constant(publicPublication))
@@ -164,6 +160,7 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
                                 createMail.createMail(e, "GTFS", JobEvent.TimetableAction.EXPORT, true);
                             }
                         })
+                    .endChoice()
                     .when(simple("${header.action_report_result} == 'NOK'"))
                         .log(LoggingLevel.WARN, correlation() + "Export failed")
                         .process(e -> {
@@ -173,6 +170,7 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
                                 createMail.createMail(e, "GTFS", JobEvent.TimetableAction.EXPORT, false);
                             }
                         })
+                    .endChoice()
                     .otherwise()
                         .log(LoggingLevel.ERROR, correlation() + "Something went wrong on export")
                         .process(e -> {
@@ -182,8 +180,9 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
                                 createMail.createMail(e, "GTFS", JobEvent.TimetableAction.EXPORT, false);
                             }
                         })
+                .endChoice()
                 .end()
-                .to("direct:updateStatus")
+                .to(ROUTE_UPDATE_STATUS)
                 .routeId("chouette-process-export-status");
 
         from("direct:addGtfsFeedInfo")
@@ -240,16 +239,16 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
 
                     JobEvent.systemJobBuilder(e).jobDomain(JobEvent.JobDomain.TIMETABLE_PUBLISH).action("EXPORT_GTFS_MERGED").state(JobEvent.State.PENDING).type("gtfs").correlationId(correlationId).build();
                 })
-                .to("direct:updateStatus")
+                .to(ROUTE_UPDATE_STATUS)
                 .process(this::toGenericChouetteMultipart)
                 .setHeader(Exchange.CONTENT_TYPE, simple("multipart/form-data"))
                 .setHeader(Exchange.HTTP_METHOD, constant(HttpMethods.POST))
                 .toD(chouetteUrl + "/chouette_iev/referentials/${header." + CHOUETTE_REFERENTIAL + "}/globalExport/gtfs")
                 .process(e -> {
-                    e.getIn().setHeader(JOB_STATUS_URL, e.getIn().getHeader("Location").toString().replaceFirst("http", "http4"));
-                    e.getIn().setHeader(JOB_ID, getLastPathElementOfUrl(e.getIn().getHeader("Location", String.class)));
+                    e.getIn().setHeader(JOB_STATUS_URL, e.getIn().getHeader(LOCATION).toString());
+                    e.getIn().setHeader(JOB_ID, getLastPathElementOfUrl(e.getIn().getHeader(LOCATION, String.class)));
                 })
-                .setHeader(JOB_STATUS_ROUTING_DESTINATION, constant("direct:processExportResult"))
+                .setHeader(JOB_STATUS_ROUTING_DESTINATION, constant(ROUTE_PROCESS_EXPORT_RESULT))
                 .setHeader(JOB_STATUS_JOB_TYPE, constant("EXPORT_GTFS_MERGED"))
                 .removeHeader("loopCounter")
                 .to("jms:queue:ChouettePollStatusQueue")
