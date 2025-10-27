@@ -22,15 +22,12 @@ import no.rutebanken.marduk.domain.Provider;
 import no.rutebanken.marduk.services.IdempotentRepositoryService;
 import org.apache.camel.EndpointInject;
 import org.apache.camel.Exchange;
-import org.apache.camel.builder.AdviceWithRouteBuilder;
+import org.apache.camel.builder.AdviceWith;
 import org.apache.camel.component.mock.MockEndpoint;
-import org.apache.camel.model.ModelCamelContext;
-import org.apache.camel.test.spring.CamelSpringRunner;
-import org.apache.camel.test.spring.UseAdviceWith;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.time.DateUtils;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockftpserver.fake.FakeFtpServer;
 import org.mockftpserver.fake.UserAccount;
 import org.mockftpserver.fake.filesystem.DirectoryEntry;
@@ -39,44 +36,47 @@ import org.mockftpserver.fake.filesystem.FileSystem;
 import org.mockftpserver.fake.filesystem.UnixFakeFileSystem;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.annotation.DirtiesContext;
-import org.springframework.test.context.ActiveProfiles;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.jdbc.datasource.init.ScriptUtils;
 
+import javax.sql.DataSource;
 import java.io.FileReader;
 import java.io.IOException;
+import java.sql.SQLException;
 import java.util.Date;
 import java.util.List;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static no.rutebanken.marduk.utils.constants.RouteDeclarationConstants.ROUTE_IMPORT_LAUNCH;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
-@RunWith(CamelSpringRunner.class)
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, classes = NRIFtpReceiverRouteBuilder.class, properties = "spring.main.sources=no.rutebanken.marduk.test")
-@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
-@ActiveProfiles({"default", "in-memory-blobstore"})
-@UseAdviceWith
-public class NRIFtpReceiverRouteTest extends MardukRouteBuilderIntegrationTestBase {
+class NRIFtpReceiverRouteTest extends MardukRouteBuilderIntegrationTestBase {
 
     @Value("${nri.ftp.file.age.filter.months:3}")
     private int fileAgeFilterMonths;
 
     @Autowired
-    private ModelCamelContext context;
+    private DataSource dataSource;
 
     @Autowired
     IdempotentRepositoryService idempotentRepositoryService;
 
-    @EndpointInject(uri = "mock:processFileMock")
+    @EndpointInject("mock:processFileMock")
     protected MockEndpoint processFileMock;
 
+    @BeforeEach()
+    void beforeEach() throws SQLException {
+        when(providerRepository.getProviders()).thenReturn(providers);
+        when(providerRepository.getProvider(2L)).thenReturn(providers.get(0));
+        when(providerRepository.getProvider(3L)).thenReturn(providers.get(1));
+        ScriptUtils.executeSqlScript(dataSource.getConnection(), new ClassPathResource("schema.sql"));
+    }
 
-    public void setUp(boolean autoImport, long id) throws IOException {
+    void setUp(boolean autoImport, long id) throws IOException {
         //wipe idempotent stores
         idempotentRepositoryService.cleanUniqueFileNameAndDigestRepo();
-        Provider provider = Provider.create(IOUtils.toString(new FileReader(
-                                                                                   "src/test/resources/no/rutebanken/marduk/providerRepository/provider2.json")));
+        Provider provider = Provider.create(IOUtils.toString(
+                new FileReader("src/test/resources/no/rutebanken/marduk/providerRepository/provider2.json")));
         provider.chouetteInfo.enableAutoImport = autoImport;
         when(providerRepository.getProvider(id)).thenReturn(provider);
 
@@ -84,13 +84,13 @@ public class NRIFtpReceiverRouteTest extends MardukRouteBuilderIntegrationTestBa
     }
 
     @Test
-    public void testFetchFilesFromFTPWithAutoImport() throws Exception {
+    void testFetchFilesFromFTPWithAutoImport() throws Exception {
         setUp(true,4);
         testFetchFilesFromFTP(true,"Jotunheimen og Valdresruten Bilselskap");
     }
 
     @Test
-    public void testFetchFilesFromFTPWithoutAutoImport() throws Exception {
+    void testFetchFilesFromFTPWithoutAutoImport() throws Exception {
         setUp(false,5);
         testFetchFilesFromFTP(false,"Brakar (Buskerud fylke)");
     }
@@ -105,7 +105,7 @@ public class NRIFtpReceiverRouteTest extends MardukRouteBuilderIntegrationTestBa
 
         FileSystem fileSystem = new UnixFakeFileSystem();
         fileSystem.add(new DirectoryEntry("/rutedata"));
-        fileSystem.add(new DirectoryEntry("/rutedata/" + providerFolder + ""));
+        fileSystem.add(new DirectoryEntry("/rutedata/" + providerFolder));
 
         fileSystem.add(new DirectoryEntry("/rutedata/" + providerFolder + "/1585"));
         fileSystem.add(new DirectoryEntry("/rutedata/" + providerFolder + "/1585/Hovedsett 2016_unzipped"));
@@ -138,16 +138,11 @@ public class NRIFtpReceiverRouteTest extends MardukRouteBuilderIntegrationTestBa
 
         fakeFtpServer.start();
 
-        context.getRouteDefinitions().get(0).adviceWith(context, new AdviceWithRouteBuilder() {
-            @Override
-            public void configure() throws Exception {
-                interceptSendToEndpoint("jms:queue:ProcessFileQueue").skipSendToOriginalEndpoint()
-                        .to("mock:processFileMock");
-            }
+        AdviceWith.adviceWith(context, "nri-ftp-activemq", a -> {
+            a.interceptSendToEndpoint(ROUTE_IMPORT_LAUNCH).skipSendToOriginalEndpoint()
+                .to("mock:processFileMock");
         });
 
-        // we must manually start when we are done with all the advice with
-        context.startRoute("nri-ftp-activemq");
         context.start();
 
 
@@ -159,11 +154,11 @@ public class NRIFtpReceiverRouteTest extends MardukRouteBuilderIntegrationTestBa
 
         if (autoImport) {
             List<Exchange> exchanges = processFileMock.getExchanges();
-            assertEquals(2L, exchanges.get(0).getIn().getHeader(Constants.PROVIDER_ID));
-            assertNotNull(exchanges.get(0).getIn().getHeader(Constants.CORRELATION_ID));
-            assertEquals("984_Hovedsett_2016.zip", exchanges.get(0).getIn().getHeader(Constants.FILE_NAME));
-            assertEquals("985_Hovedsett_2016_v2.zip", exchanges.get(1).getIn().getHeader(Constants.FILE_NAME));
-            assertEquals("1585_Hovedsett_2017.zip", exchanges.get(2).getIn().getHeader(Constants.FILE_NAME));
+            assertThat(exchanges.getFirst().getIn().getHeader(Constants.PROVIDER_ID)).isEqualTo(2L);
+            assertThat(exchanges.getFirst().getIn().getHeader(Constants.CORRELATION_ID)).isNotNull();
+            assertThat(exchanges.getFirst().getIn().getHeader(Constants.FILE_NAME)).isEqualTo("984_Hovedsett_2016.zip");
+            assertThat(exchanges.get(1).getIn().getHeader(Constants.FILE_NAME)).isEqualTo("985_Hovedsett_2016_v2.zip");
+            assertThat(exchanges.get(2).getIn().getHeader(Constants.FILE_NAME)).isEqualTo("1585_Hovedsett_2017.zip");
         }
 
         fakeFtpServer.stop();

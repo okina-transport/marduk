@@ -18,8 +18,8 @@ package no.rutebanken.marduk.routes.tiamat;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import no.rutebanken.marduk.Constants;
-import no.rutebanken.marduk.Utils.ImportRouteBuilder;
-import no.rutebanken.marduk.Utils.PollJobStatusRoute;
+import no.rutebanken.marduk.utils.ImportRouteBuilder;
+import no.rutebanken.marduk.utils.PollJobStatusRoute;
 import no.rutebanken.marduk.routes.chouette.*;
 import no.rutebanken.marduk.routes.chouette.json.JobResponse;
 import no.rutebanken.marduk.routes.chouette.json.JobResponseWithLinks;
@@ -27,9 +27,10 @@ import no.rutebanken.marduk.routes.status.JobEvent;
 import no.rutebanken.marduk.routes.status.JobEvent.State;
 import no.rutebanken.marduk.routes.status.JobEvent.TimetableAction;
 import org.apache.camel.Exchange;
+import org.apache.camel.ExchangePattern;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.builder.PredicateBuilder;
-import org.apache.camel.component.http4.HttpMethods;
+import org.apache.camel.component.http.HttpMethods;
 import org.apache.camel.model.dataformat.JsonLibrary;
 import org.apache.commons.lang3.BooleanUtils;
 import org.apache.http.client.utils.URIBuilder;
@@ -131,11 +132,11 @@ public class TiamatPollJobStatusRoute extends AbstractChouetteRouteBuilder {
         from("direct:tiamatCancelJob")
                 .process(e -> e.getIn().setHeader(CHOUETTE_REFERENTIAL, getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)).chouetteInfo.referential))
                 .removeHeaders("Camel*")
-                .setBody(constant(null))
+                .setBody(constant((Object) null))
                 .setHeader(Exchange.HTTP_METHOD, constant(HttpMethods.DELETE))
                 .setProperty("tiamat_url", simple(tiamatUrl + "/jobs/${header." + CHOUETTE_REFERENTIAL + "}/scheduled_jobs/${header." + Constants.JOB_ID + "}"))
                 .toD("${exchangeProperty.tiamat_url}")
-                .setBody(constant(null))
+                .setBody(constant((Object) null))
                 .process(e -> JobEvent.providerJobBuilder(e).timetableAction(TimetableAction.IMPORT).state(State.CANCELLED).type(e.getIn().getHeader(FILE_TYPE, String.class)).build())
                 .to("direct:updateStatus")
                 .routeId("tiamat-cancel-job");
@@ -147,7 +148,7 @@ public class TiamatPollJobStatusRoute extends AbstractChouetteRouteBuilder {
                 .removeHeaders("Camel*")
                 .split().body().parallelProcessing().executorService(allProvidersExecutorService)
                 .setHeader(Constants.JOB_ID, simple("${body.id}"))
-                .setBody(constant(null))
+                .setBody(constant((Object) null))
                 .to("direct:tiamatCancelJob")
                 .routeId("tiamat-cancel-all-jobs-for-provider");
 
@@ -155,7 +156,7 @@ public class TiamatPollJobStatusRoute extends AbstractChouetteRouteBuilder {
                 .process(e -> e.getIn().setBody(getProviderRepository().getProviders()))
                 .split().body().parallelProcessing().executorService(allProvidersExecutorService)
                 .setHeader(Constants.PROVIDER_ID, simple("${body.id}"))
-                .setBody(constant(null))
+                .setBody(constant((Object) null))
                 .removeHeaders("Camel*")
                 .to("direct:tiamatCancelAllJobsForProvider")
                 .routeId("tiamat-cancel-all-jobs-for-all-providers");
@@ -201,10 +202,13 @@ public class TiamatPollJobStatusRoute extends AbstractChouetteRouteBuilder {
                         .choice()
                             .when(simple("${exchangeProperty.STATUS} == 'FINISHED' || ${exchangeProperty.STATUS} == 'FAILED'"))
                                 .toD("${header." + Constants.JOB_STATUS_ROUTING_DESTINATION + "}")
+                            .endChoice()
                             .otherwise()
                                 .to("direct:tiamatRescheduleJob")
+                            .end()
                         .endChoice()
                         .stop()
+                    .endChoice()
                     .otherwise()
                         .unmarshal().json(JsonLibrary.Jackson, JobResponseWithLinks.class)
                 .end()
@@ -236,7 +240,7 @@ public class TiamatPollJobStatusRoute extends AbstractChouetteRouteBuilder {
         from("direct:tiamatJobStatusDone")
                 .log(LoggingLevel.DEBUG, correlation() + "Exited retry loop with status ${header.current_status}")
                 .to("log:" + getClass().getName() + "?level=DEBUG&showAll=true&multiline=true")
-                .inOnly("direct:tiamatHandleGlobalNetexExportCase")
+                .setExchangePattern(ExchangePattern.InOnly).to("direct:tiamatHandleGlobalNetexExportCase")
                 .choice()
                     .when(simple("${header.current_status} == '" + SCHEDULED + "' || ${header.current_status} == '" + STARTED + "' || ${header.current_status} == '" + PROCESSING + "' || ${header.current_status} == '" + RESCHEDULED + "'"))
                         .log(LoggingLevel.WARN, correlation() + "Job timed out with state ${header.current_status}. Config should probably be tweaked. Stopping route.")
@@ -269,7 +273,7 @@ public class TiamatPollJobStatusRoute extends AbstractChouetteRouteBuilder {
         from("direct:tiamatHandleGlobalNetexExportCase")
                 .choice()
                     .when(e-> BooleanUtils.isTrue((Boolean) e.getIn().getHeader(NETEX_EXPORT_GLOBAL)))
-                        .inOnly("direct:updateMergedNetexStatus")
+                        .setExchangePattern(ExchangePattern.InOnly).to("direct:updateMergedNetexStatus")
                 .end()
                 .routeId("tiamat-handle-global-netex-export-case");
     }

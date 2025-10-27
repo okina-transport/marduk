@@ -24,6 +24,7 @@ import no.rutebanken.marduk.routes.chouette.UpdateExportTemplateProcessor;
 import no.rutebanken.marduk.routes.file.ZipFileUtils;
 import no.rutebanken.marduk.routes.status.JobEvent;
 import org.apache.camel.Exchange;
+import org.apache.camel.ExchangePattern;
 import org.apache.camel.LoggingLevel;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -104,12 +105,14 @@ public class NetexExportMergedRouteBuilder extends BaseRouteBuilder {
                     JobEvent.systemJobBuilder(e).jobDomain(JobEvent.JobDomain.TIMETABLE_PUBLISH).action("EXPORT_NETEX_MERGED").fileName(netexExportStopsFilePrefix).correlationId(correlationId).state(JobEvent.State.STARTED).build();
                         })
                 .setHeader(Exchange.FILE_PARENT, simple(mergedNetexTmpDirectory))
-                .inOnly("direct:checkMergedNetex")
+                .setExchangePattern(ExchangePattern.InOnly)
+                .to("direct:checkMergedNetex")
                 .routeId("netex-export-merged-route");
 
         from("direct:reportExportMergedNetexOK")
                 .process(e -> JobEvent.systemJobBuilder(e).state(JobEvent.State.OK).build())
-                .inOnly("direct:updateStatus")
+                .setExchangePattern(ExchangePattern.InOnly)
+                .to("direct:updateStatus")
                 .routeId("netex-export-merged-report-ok");
 
 
@@ -177,13 +180,13 @@ public class NetexExportMergedRouteBuilder extends BaseRouteBuilder {
         from("direct:fetchProviderNetexExport")
                 .log(LoggingLevel.INFO, getClass().getName(), "Fetching mobiiti_technique/merged/${body}")
                 .setProperty("fileName", body())
-                .setHeader(FILE_HANDLE, simple(MERGED_NETEX_ROOT_DIR + "/${property.fileName}"))
+                .setHeader(FILE_HANDLE, simple(MERGED_NETEX_ROOT_DIR + "/${exchangeProperty.fileName}"))
                 .to("direct:getBlob")
                 .choice()
                 .when(body().isNotEqualTo(null))
                 .process(e -> ZipFileUtils.unzipFile(e.getIn().getBody(InputStream.class), mergedNetexTmpDirectory))
                 .otherwise()
-                .log(LoggingLevel.INFO, getClass().getName(), "${property.fileName} was empty when trying to fetch it from blobstore.")
+                .log(LoggingLevel.INFO, getClass().getName(), "${exchangeProperty.fileName} was empty when trying to fetch it from blobstore.")
                 .routeId("netex-export-fetch-latest-for-provider");
 
 
@@ -202,7 +205,7 @@ public class NetexExportMergedRouteBuilder extends BaseRouteBuilder {
                 .stop()
                 .routeId("netex-export-fetch-latest-for-stops");
 
-        from("direct:mergeNetex").streamCaching()
+        from("direct:mergeNetex").streamCache(Boolean.TRUE)
                 .log(LoggingLevel.DEBUG, getClass().getName(), "Merging Netex files for all providers and stop place registry.")
                 .process(e -> e.getIn().setBody(new FileInputStream(ZipFileUtils.zipFilesInFolder( mergedNetexTmpDirectory,  e.getProperty(FOLDER_NAME, String.class) + "/netex/" + EXPORT_GLOBAL_NETEX_ZIP))))
                 .setHeader(BLOBSTORE_MAKE_BLOB_PUBLIC, constant(publicPublication))

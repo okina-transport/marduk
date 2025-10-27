@@ -1,4 +1,4 @@
-package no.rutebanken.marduk.Utils;
+package no.rutebanken.marduk.utils;
 
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVPrinter;

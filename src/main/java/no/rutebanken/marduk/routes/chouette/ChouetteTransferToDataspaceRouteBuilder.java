@@ -17,7 +17,7 @@
 package no.rutebanken.marduk.routes.chouette;
 
 import no.rutebanken.marduk.Constants;
-import no.rutebanken.marduk.Utils.SendMail;
+import no.rutebanken.marduk.utils.SendMail;
 import no.rutebanken.marduk.domain.Provider;
 import no.rutebanken.marduk.routes.chouette.json.Parameters;
 import no.rutebanken.marduk.routes.status.JobEvent;
@@ -39,7 +39,7 @@ import static no.rutebanken.marduk.Constants.JSON_PART;
 import static no.rutebanken.marduk.Constants.PROVIDER_ID;
 import static no.rutebanken.marduk.Constants.RECIPIENTS;
 import static no.rutebanken.marduk.Constants.WORKLOW;
-import static no.rutebanken.marduk.Utils.Utils.getLastPathElementOfUrl;
+import static no.rutebanken.marduk.utils.Utils.getLastPathElementOfUrl;
 
 /**
  * Transfers data from one space to another in Chouette
@@ -63,7 +63,7 @@ public class ChouetteTransferToDataspaceRouteBuilder extends AbstractChouetteRou
     public void configure() throws Exception {
         super.configure();
 
-        from("jms:queue:ChouetteTransferExportQueue?transacted=true").streamCaching()
+        from("jms:queue:ChouetteTransferExportQueue?transacted=true").streamCache(Boolean.TRUE)
 				.transacted()
         		.log(LoggingLevel.INFO, getClass().getName(), "Starting Chouette transfer for provider with id ${header." + PROVIDER_ID + "}")
                 .process(e -> { 
@@ -82,7 +82,7 @@ public class ChouetteTransferToDataspaceRouteBuilder extends AbstractChouetteRou
                 .process(this::toGenericChouetteMultipart)
                 .toD(chouetteUrl + "/chouette_iev/referentials/${header." + CHOUETTE_REFERENTIAL + "}/exporter/transfer")
                 .process(e -> {
-                    e.getIn().setHeader(Constants.JOB_STATUS_URL, e.getIn().getHeader("Location").toString().replaceFirst("http", "http4"));
+                    e.getIn().setHeader(Constants.JOB_STATUS_URL, e.getIn().getHeader("Location").toString());
 	                e.getIn().setHeader(Constants.JOB_ID, getLastPathElementOfUrl(e.getIn().getHeader("Location", String.class)));
                     e.getIn().setHeader(Constants.JOB_STATUS_ROUTING_DESTINATION,"direct:processTransferExportResult");
                     e.getIn().setHeader(Constants.JOB_STATUS_JOB_TYPE, JobEvent.TimetableAction.DATASPACE_TRANSFER.name());
@@ -120,7 +120,7 @@ public class ChouetteTransferToDataspaceRouteBuilder extends AbstractChouetteRou
  	
  		 // Check that no other import jobs in status SCHEDULED exists for this referential. If so, do not trigger export
  		from("direct:checkScheduledJobsBeforeTriggeringRBSpaceValidation")
- 			.setProperty("job_status_url",simple("{{chouette.url}}/chouette_iev/referentials/${header." + CHOUETTE_REFERENTIAL + "}/jobs?timetableAction=importer&status=SCHEDULED&status=STARTED")) // TODO: check on validator as well?
+ 			.setProperty("job_status_url",simple(chouetteUrl + "/chouette_iev/referentials/${header." + CHOUETTE_REFERENTIAL + "}/jobs?timetableAction=importer&status=SCHEDULED&status=STARTED")) // TODO: check on validator as well?
  			.toD("${exchangeProperty.job_status_url}")
  			.choice()
  			.when().jsonpath("$.*[?(@.status == 'SCHEDULED')].status")

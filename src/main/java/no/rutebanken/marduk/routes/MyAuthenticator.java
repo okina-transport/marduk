@@ -11,6 +11,7 @@ public class MyAuthenticator extends Authenticator {
         authentication = new PasswordAuthentication(login, password.toCharArray());
     }
 
+    @Override
     protected PasswordAuthentication getPasswordAuthentication() {
         return authentication;
     }

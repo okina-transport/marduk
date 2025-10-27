@@ -18,6 +18,7 @@ package no.rutebanken.marduk.routes.gtfs;
 
 import no.rutebanken.marduk.Constants;
 import no.rutebanken.marduk.routes.BaseRouteBuilder;
+import org.apache.camel.ExchangePattern;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -40,15 +41,15 @@ public class GtfsExtendedMergedExportRouteBuilder extends BaseRouteBuilder {
     public void configure() throws Exception {
         super.configure();
 
-        singletonFrom("jms:queue:GtfsExportMergedQueue?transacted=true&maxConcurrentConsumers=1&messageListenerContainerFactoryRef=batchListenerContainerFactory").autoStartup("{{gtfs.export.autoStartup:false}}")
+        singletonFrom("jms:queue:GtfsExportMergedQueue?transacted=true&maxConcurrentConsumers=1").autoStartup("{{gtfs.export.autoStartup:false}}")
                 .transacted()
                 .to("direct:exportGtfsExtendedMerged")
-                .inOnly("jms:queue:GtfsBasicExportMergedQueue")
+                .setExchangePattern(ExchangePattern.InOnly).to("jms:queue:GtfsBasicExportMergedQueue")
                 .routeId("gtfs-extended-export-merged-jms-route");
 
 
         from("direct:exportGtfsExtendedMerged")
-                .setBody(constant(null))
+                .setBody(constant((Object) null))
                 .setHeader(Constants.FILE_NAME, constant(gtfsNorwayMergedFileName))
                 .setHeader(Constants.JOB_ACTION, constant("EXPORT_GTFS_MERGED"))
                 .to("direct:exportMergedGtfs")

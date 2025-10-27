@@ -26,10 +26,8 @@ import org.apache.camel.LoggingLevel;
 import org.apache.camel.ValidationException;
 import org.springframework.stereotype.Component;
 
-import static no.rutebanken.marduk.Constants.CHOUETTE_REFERENTIAL;
-import static no.rutebanken.marduk.Constants.FILE_HANDLE;
-import static no.rutebanken.marduk.Constants.FILE_TYPE;
-import static no.rutebanken.marduk.Constants.PROVIDER_ID;
+import static no.rutebanken.marduk.Constants.*;
+import static no.rutebanken.marduk.utils.constants.RouteDeclarationConstants.ROUTE_PROCESS_FILE_QUEUE;
 
 /**
  * Receives file notification from "external" queue and uses this to download the file from blob store.
@@ -50,7 +48,7 @@ public class JmsReceiverRouteBuilder extends BaseRouteBuilder {
                 .to("jms:queue:DeadLetterQueue");
 
 
-        from("jms:queue:MardukInboundQueue?transacted=true").streamCaching()
+        from("jms:queue:MardukInboundQueue?transacted=true").streamCache(Boolean.TRUE)
                 .transacted()
                 .setHeader(Exchange.FILE_NAME, header(Constants.FILE_NAME))
                 .log(LoggingLevel.INFO, correlation() + "Received notification about file '${header." + Constants.FILE_NAME + "}' on jms. Fetching file ...")
@@ -76,7 +74,7 @@ public class JmsReceiverRouteBuilder extends BaseRouteBuilder {
                 .when(simple("{{blobstore.delete.external.blobs:true}}"))
                 .to("direct:deleteExternalBlob")
                 .end()
-                .to("jms:queue:ProcessFileQueue");
+                .to(ROUTE_PROCESS_FILE_QUEUE);
 
     }
 

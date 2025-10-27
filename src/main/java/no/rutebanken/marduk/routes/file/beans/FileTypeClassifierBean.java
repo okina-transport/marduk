@@ -51,7 +51,7 @@ public class FileTypeClassifierBean {
     public boolean validateFile(byte[] data, Exchange exchange) {
         try {
             FileType fileType = classifyFile(exchange, data);
-            logger.debug("File is classified as " + fileType);
+            logger.debug("File is classified as {}", fileType);
             exchange.getIn().setHeader(FILE_TYPE, fileType.name());
             return true;
         } catch (RuntimeException e) {
@@ -66,11 +66,11 @@ public class FileTypeClassifierBean {
 
     public FileType classifyFile(Exchange exchange, byte[] data) {
         String relativePath = exchange.getIn().getHeader(FILE_HANDLE, String.class);
-        logger.debug("Validating file with path '" + relativePath + "'.");
+        logger.debug("Validating file with path '{}'.", relativePath);
 
-            if (relativePath == null || relativePath.trim().isEmpty()) {
-                throw new IllegalArgumentException("Could not get file path from " + FILE_HANDLE + " header.");
-            }
+        if (relativePath == null || relativePath.trim().isEmpty()) {
+            throw new IllegalArgumentException("Could not get file path from " + FILE_HANDLE + " header.");
+        }
 
         String importType = exchange.getIn().getHeader(IMPORT_TYPE, String.class);
 

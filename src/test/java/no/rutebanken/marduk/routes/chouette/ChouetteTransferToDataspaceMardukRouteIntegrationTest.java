@@ -21,76 +21,74 @@ import no.rutebanken.marduk.MardukRouteBuilderIntegrationTestBase;
 import org.apache.camel.EndpointInject;
 import org.apache.camel.Produce;
 import org.apache.camel.ProducerTemplate;
-import org.apache.camel.builder.AdviceWithRouteBuilder;
+import org.apache.camel.builder.AdviceWith;
 import org.apache.camel.component.mock.MockEndpoint;
-import org.apache.camel.model.ModelCamelContext;
 import org.apache.camel.model.language.SimpleExpression;
-import org.junit.Test;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.test.context.SpringBootTest;
 
 import java.util.HashMap;
 import java.util.Map;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,classes = ChouetteTransferToDataspaceRouteBuilder.class, properties = "spring.main.sources=no.rutebanken.marduk.test")
-public class ChouetteTransferToDataspaceMardukRouteIntegrationTest extends MardukRouteBuilderIntegrationTestBase {
+import static no.rutebanken.marduk.Constants.CHOUETTE_REFERENTIAL;
+import static org.mockito.Mockito.when;
 
-	@Autowired
-	private ModelCamelContext context;
+class ChouetteTransferToDataspaceMardukRouteIntegrationTest extends MardukRouteBuilderIntegrationTestBase {
 
-	@EndpointInject(uri = "mock:chouetteCreateExport")
+	@EndpointInject("mock:chouetteCreateExport")
 	protected MockEndpoint chouetteCreateExport;
 
-	@EndpointInject(uri = "mock:pollJobStatus")
+	@EndpointInject("mock:pollJobStatus")
 	protected MockEndpoint pollJobStatus;
 
-	@EndpointInject(uri = "mock:checkScheduledJobsBeforeTriggeringNextAction")
+	@EndpointInject("mock:checkScheduledJobsBeforeTriggeringNextAction")
 	protected MockEndpoint checkScheduledJobsBeforeTriggeringNextAction;
 
-	@EndpointInject(uri = "mock:updateStatus")
+	@EndpointInject("mock:updateStatus")
 	protected MockEndpoint updateStatus;
 
-	@Produce(uri = "jms:queue:ChouetteTransferExportQueue")
+	@Produce("jms:queue:ChouetteTransferExportQueue")
 	protected ProducerTemplate transferTemplate;
 
-	@Produce(uri = "direct:processTransferExportResult")
+	@Produce("direct:processTransferExportResult")
 	protected ProducerTemplate processTransferExportResultTemplate;
-
 	
 	@Value("${chouette.url}")
 	private String chouetteUrl;
 
+    @BeforeEach
+    void beforeEach() {
+        when(providerRepository.getProviders()).thenReturn(providers);
+        when(providerRepository.getProvider(2L)).thenReturn(providers.get(0));
+        when(providerRepository.getProvider(3L)).thenReturn(providers.get(1));
+    }
+
 	@Test
-	public void testTransferDataToDataspaceDataspace() throws Exception {
+	void testTransferDataToDataspaceDataspace() throws Exception {
 
 		// Mock initial call to Chouette to export job
-		context.getRouteDefinition("chouette-send-transfer-job").adviceWith(context, new AdviceWithRouteBuilder() {
-			@Override
-			public void configure() throws Exception {
-				interceptSendToEndpoint(chouetteUrl + "/chouette_iev/referentials/rut/exporter/transfer")
-					.skipSendToOriginalEndpoint().to("mock:chouetteCreateExport");
-				
-				interceptSendToEndpoint("jms:queue:ChouettePollStatusQueue")
-					.skipSendToOriginalEndpoint().to("mock:pollJobStatus");
+        AdviceWith.adviceWith(context, "chouette-send-transfer-job", adviceWithRouteBuilder -> {
+            adviceWithRouteBuilder.weaveByToUri(chouetteUrl + "/chouette_iev/referentials/${header." + CHOUETTE_REFERENTIAL + "}/exporter/transfer")
+                    .replace().to("mock:chouetteCreateExport");
 
-				interceptSendToEndpoint("direct:updateStatus").skipSendToOriginalEndpoint()
-				.to("mock:updateStatus");
-}
-		});
+            adviceWithRouteBuilder.interceptSendToEndpoint("jms:queue:ChouettePollStatusQueue")
+                    .skipSendToOriginalEndpoint().to("mock:pollJobStatus");
+
+            adviceWithRouteBuilder.interceptSendToEndpoint("direct:updateStatus").skipSendToOriginalEndpoint()
+                    .to("mock:updateStatus");
+        });
 
 	
 
 		// Mock update status calls
-		context.getRouteDefinition("chouette-process-transfer-status").adviceWith(context, new AdviceWithRouteBuilder() {
-			@Override
-			public void configure() throws Exception {
-				interceptSendToEndpoint("direct:updateStatus").skipSendToOriginalEndpoint()
-				.to("mock:updateStatus");
-				interceptSendToEndpoint("direct:checkScheduledJobsBeforeTriggeringRBSpaceValidation").skipSendToOriginalEndpoint()
-				.to("mock:checkScheduledJobsBeforeTriggeringNextAction");
-			}
-		});
+        AdviceWith.adviceWith(context, "chouette-process-transfer-status", adviceWithRouteBuilder -> {
+            adviceWithRouteBuilder.interceptSendToEndpoint("direct:updateStatus").skipSendToOriginalEndpoint()
+                    .to("mock:updateStatus");
+
+            adviceWithRouteBuilder.interceptSendToEndpoint("direct:checkScheduledJobsBeforeTriggeringRBSpaceValidation").skipSendToOriginalEndpoint()
+                    .to("mock:checkScheduledJobsBeforeTriggeringNextAction");
+        });
 
 	
 
@@ -109,12 +107,12 @@ public class ChouetteTransferToDataspaceMardukRouteIntegrationTest extends Mardu
 		checkScheduledJobsBeforeTriggeringNextAction.expectedMessageCount(1);
 		
 		
-		Map<String, Object> headers = new HashMap<String, Object>();
+		Map<String, Object> headers = new HashMap<>();
 		headers.put(Constants.PROVIDER_ID, "2");
 		transferTemplate.sendBodyAndHeaders(null, headers);
 		
 
-		Map<String, Object> importJobCompletedHeaders = new HashMap<String, Object>();
+		Map<String, Object> importJobCompletedHeaders = new HashMap<>();
 		importJobCompletedHeaders.put(Constants.PROVIDER_ID, "2");
 		importJobCompletedHeaders.put("action_report_result", "OK");
 		importJobCompletedHeaders.put("validation_report_result", "OK");
@@ -127,9 +125,10 @@ public class ChouetteTransferToDataspaceMardukRouteIntegrationTest extends Mardu
 		
 		checkScheduledJobsBeforeTriggeringNextAction.assertIsSatisfied();
 		updateStatus.assertIsSatisfied();
-		
-		
+
 	}
+
+  
 
 
 

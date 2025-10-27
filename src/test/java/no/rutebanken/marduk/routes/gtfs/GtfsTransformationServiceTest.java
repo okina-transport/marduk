@@ -21,7 +21,7 @@ import no.rutebanken.marduk.routes.google.GoogleRouteTypeCode;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -36,7 +36,7 @@ public class GtfsTransformationServiceTest {
     private static final String GTFS_FILE_EXTENDED_ROUTE_TYPES = "src/test/resources/no/rutebanken/marduk/routes/gtfs/extended_gtfs.zip";
 
     @Test
-    public void transformToGoogleFormat() throws Exception {
+    void transformToGoogleFormat() throws Exception {
         File out = new GtfsTransformationService().transformToGoogleFormat(new File(GTFS_FILE_EXTENDED_ROUTE_TYPES));
 
         FileUtils.copyFile(out, new File("target/test.zip"));
@@ -48,7 +48,7 @@ public class GtfsTransformationServiceTest {
     }
 
     @Test
-    public void transformToBasicGTFSFormat() throws Exception {
+    void transformToBasicGTFSFormat() throws Exception {
         File out = new GtfsTransformationService().transformToBasicGTFSFormat(new File(GTFS_FILE_EXTENDED_ROUTE_TYPES));
 
         FileUtils.copyFile(out, new File("target/test.zip"));
@@ -61,7 +61,7 @@ public class GtfsTransformationServiceTest {
 
     public static void assertRouteRouteTypesAreConvertedToGoogleSupportedValues(File out) throws IOException {
         List<String> routeLines = IOUtils.readLines(new ByteArrayInputStream(ZipFileUtils.extractFileFromZipFile(new FileInputStream(out), "routes.txt").toByteArray()));
-        routeLines.remove(0); // remove header
+        routeLines.removeFirst(); // remove header
         Assert.assertEquals(10, routeLines.size());
 
         List<String> transformedRouteTypes = routeLines.stream().map(routeLine -> routeLine.split(",")[4]).collect(Collectors.toList());
@@ -74,7 +74,7 @@ public class GtfsTransformationServiceTest {
 
     public static void assertStopVehicleTypesAreConvertedToGoogleSupportedValues(File out) throws IOException {
         List<String> stopLines = IOUtils.readLines(new ByteArrayInputStream(ZipFileUtils.extractFileFromZipFile(new FileInputStream(out), "stops.txt").toByteArray()));
-        stopLines.remove(0); // remove header
+        stopLines.removeFirst(); // remove header
         Assert.assertTrue("Line without vehicle type should not be changed", stopLines.get(0).endsWith(","));
         Assert.assertTrue("Line with valid value 701 should be kept", stopLines.get(1).endsWith(",701"));
         Assert.assertTrue("Line with extended value 1012 should be converted to 1000", stopLines.get(2).endsWith(",1000"));
@@ -85,7 +85,7 @@ public class GtfsTransformationServiceTest {
 
     public static void assertRouteRouteTypesAreConvertedToBasicGtfsValues(File out) throws IOException {
         List<String> routeLines = IOUtils.readLines(new ByteArrayInputStream(ZipFileUtils.extractFileFromZipFile(new FileInputStream(out), "routes.txt").toByteArray()));
-        routeLines.remove(0); // remove header
+        routeLines.removeFirst(); // remove header
         Assert.assertEquals(10, routeLines.size());
 
         List<String> transformedRouteTypes = routeLines.stream().map(routeLine -> routeLine.split(",")[4]).collect(Collectors.toList());
@@ -99,7 +99,7 @@ public class GtfsTransformationServiceTest {
 
     public static void assertStopVehicleTypesAreConvertedToBasicGtfsValues(File out) throws IOException {
         List<String> stopLines = IOUtils.readLines(new ByteArrayInputStream(ZipFileUtils.extractFileFromZipFile(new FileInputStream(out), "stops.txt").toByteArray()));
-        stopLines.remove(0); // remove header
+        stopLines.removeFirst(); // remove header
         Assert.assertTrue("Line with valid value 701 should be converted to 3", stopLines.get(1).endsWith(",3"));
         Assert.assertTrue("Line with extended value 1012 should be converted to 4", stopLines.get(2).endsWith(",4"));
         Assert.assertTrue("Line with extended value 1601 should be converted to 3 (default)", stopLines.get(3).endsWith(",3"));

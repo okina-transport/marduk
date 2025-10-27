@@ -1,5 +1,6 @@
 {
     "id": 4,
+    "mobiitiId": 5,
     "name": "rut",
     "sftpAccount": "oslo-akershus",
     "chouetteInfo": {

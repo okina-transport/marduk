@@ -20,254 +20,231 @@ import no.rutebanken.marduk.Constants;
 import no.rutebanken.marduk.MardukRouteBuilderIntegrationTestBase;
 import no.rutebanken.marduk.routes.chouette.json.JobResponse;
 import no.rutebanken.marduk.routes.status.JobEvent;
-import org.apache.camel.EndpointInject;
-import org.apache.camel.Exchange;
-import org.apache.camel.Expression;
-import org.apache.camel.Produce;
-import org.apache.camel.ProducerTemplate;
-import org.apache.camel.builder.AdviceWithRouteBuilder;
+import org.apache.camel.*;
+import org.apache.camel.builder.AdviceWith;
 import org.apache.camel.component.mock.MockEndpoint;
-import org.apache.camel.model.ModelCamelContext;
 import org.apache.commons.io.IOUtils;
-import org.junit.Assert;
-import org.junit.Test;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.test.context.SpringBootTest;
 
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,classes = ChouettePollJobStatusRoute.class, properties = "spring.main.sources=no.rutebanken.marduk.test")
-public class ChouettePollJobStatusMardukRouteIntegrationTest extends MardukRouteBuilderIntegrationTestBase {
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.when;
 
-	@Autowired
-	private ModelCamelContext context;
+class ChouettePollJobStatusMardukRouteIntegrationTest extends MardukRouteBuilderIntegrationTestBase {
 
-	@EndpointInject(uri = "mock:destination")
-	protected MockEndpoint destination;
+    @EndpointInject("mock:destination")
+    protected MockEndpoint destination;
 
-	@EndpointInject(uri = "mock:updateStatus")
-	protected MockEndpoint updateStatus;
+    @EndpointInject("mock:updateStatus")
+    protected MockEndpoint updateStatus;
+    @EndpointInject("mock:chouetteGetJobStatus")
+    protected MockEndpoint chouetteGetJobStatus;
 
-	@EndpointInject(uri = "mock:chouetteGetJobStatus")
-	protected MockEndpoint chouetteGetJobStatus;
+    @EndpointInject("mock:chouetteGetActionReport")
+    protected MockEndpoint chouetteGetActionReport;
 
-	@EndpointInject(uri = "mock:chouetteGetActionReport")
-	protected MockEndpoint chouetteGetActionReport;
+    @EndpointInject("mock:chouetteGetValidationReport")
+    protected MockEndpoint chouetteGetValidationReport;
 
-	@EndpointInject(uri = "mock:chouetteGetValidationReport")
-	protected MockEndpoint chouetteGetValidationReport;
+    @Produce("jms:queue:ChouettePollStatusQueue")
+    protected ProducerTemplate pollStartTemplate;
 
-	@Produce(uri = "jms:queue:ChouettePollStatusQueue")
-	protected ProducerTemplate pollStartTemplate;
+    @Produce("direct:checkValidationReport")
+    protected ProducerTemplate validationReportTemplate;
 
-	@Produce(uri = "direct:checkValidationReport")
-	protected ProducerTemplate validationReportTemplate;
+    @EndpointInject("mock:chouetteGetJobsForProvider")
+    protected MockEndpoint getJobs;
 
-	@EndpointInject(uri = "mock:chouetteGetJobsForProvider")
-	protected MockEndpoint getJobs;
+    @Produce("direct:chouetteGetJobsForProvider")
+    protected ProducerTemplate getJobsTemplate;
 
-	@Produce(uri = "direct:chouetteGetJobsForProvider")
-	protected ProducerTemplate getJobsTemplate;
+    @Value("${chouette.url}")
+    private String chouetteUrl;
 
-	@Value("${chouette.url}")
-	private String chouetteUrl;
+    @BeforeEach
+    void beforeEach() {
+        when(providerRepository.getProviders()).thenReturn(providers);
+        when(providerRepository.getProvider(2L)).thenReturn(providers.get(0));
+        when(providerRepository.getProvider(3L)).thenReturn(providers.get(1));
+    }
 
-		//does not work anymore with new poll status request
-	public void testPollJobStatus() throws Exception {
+    //does not work anymore with new poll status request
+    public void testPollJobStatus() throws Exception {
 
-		// Mock get status call to chouette
-		context.getRouteDefinition("chouette-get-job-status").adviceWith(context, new AdviceWithRouteBuilder() {
-			@Override
-			public void configure() throws Exception {
-				interceptSendToEndpoint(chouetteUrl + "/chouette_iev/referentials/rut/scheduled_jobs/1")
-						.skipSendToOriginalEndpoint().to("mock:chouetteGetJobStatus");
-				interceptSendToEndpoint("direct:updateStatus").skipSendToOriginalEndpoint().to("mock:updateStatus");
+        // Mock get status call to chouette
+        AdviceWith.adviceWith(context, "chouette-get-job-status", adviceWithRouteBuilder -> {
+            adviceWithRouteBuilder.interceptSendToEndpoint(chouetteUrl + "/chouette_iev/referentials/rut/scheduled_jobs/1")
+                    .skipSendToOriginalEndpoint().to("mock:chouetteGetJobStatus");
 
-			}
-		});
+            adviceWithRouteBuilder.interceptSendToEndpoint("direct:updateStatus").skipSendToOriginalEndpoint().to("mock:updateStatus");
+        });
 
-		context.getRouteDefinition("chouette-process-job-reports").adviceWith(context, new AdviceWithRouteBuilder() {
-			@Override
-			public void configure() throws Exception {
-				interceptSendToEndpoint(chouetteUrl + "/chouette_iev/referentials/rut/data/1/action_report.json")
-						.skipSendToOriginalEndpoint().to("mock:chouetteGetActionReport");
+        AdviceWith.adviceWith(context, "chouette-process-job-reports", adviceWithRouteBuilder -> {
+            adviceWithRouteBuilder.interceptSendToEndpoint(chouetteUrl + "/chouette_iev/referentials/rut/data/1/action_report.json")
+                    .skipSendToOriginalEndpoint().to("mock:chouetteGetActionReport");
 
-				interceptSendToEndpoint(chouetteUrl + "/chouette_iev/referentials/rut/data/1/validation_report.json")
-						.skipSendToOriginalEndpoint().to("mock:chouetteGetValidationReport");
+            adviceWithRouteBuilder.interceptSendToEndpoint(chouetteUrl + "/chouette_iev/referentials/rut/data/1/validation_report.json")
+                    .skipSendToOriginalEndpoint().to("mock:chouetteGetValidationReport");
+        });
 
-			}
-		});
+        AdviceWith.adviceWith(context, "chouette-reschedule-job", adviceWithRouteBuilder -> {
+            adviceWithRouteBuilder.interceptSendToEndpoint("direct:updateStatus").skipSendToOriginalEndpoint().to("mock:updateStatus");
+        });
 
-		context.getRouteDefinition("chouette-reschedule-job").adviceWith(context, new AdviceWithRouteBuilder() {
-			@Override
-			public void configure() throws Exception {
-
-				interceptSendToEndpoint("direct:updateStatus").skipSendToOriginalEndpoint().to("mock:updateStatus");
-
-			}
-		});
+        AdviceWith.adviceWith(context, "chouette-reschedule-job", adviceWithRouteBuilder -> {
+            adviceWithRouteBuilder.interceptSendToEndpoint("direct:updateStatus").skipSendToOriginalEndpoint().to("mock:updateStatus");
+        });
 
 
-		// we must manually start when we are done with all the advice with
-		context.start();
+        // we must manually start when we are done with all the advice with
+        context.start();
 
-		// 2 status calls, first return SCHEDULED, then TERMINATED
-		final AtomicInteger reportCounter = new AtomicInteger(0);
-		chouetteGetJobStatus.expectedMessageCount(2);
-		chouetteGetJobStatus.returnReplyBody(new Expression() {
+        // 2 status calls, first return SCHEDULED, then TERMINATED
+        final AtomicInteger reportCounter = new AtomicInteger(0);
+        chouetteGetJobStatus.expectedMessageCount(2);
+        chouetteGetJobStatus.returnReplyBody(new Expression() {
 
-			@SuppressWarnings("unchecked")
-			@Override
-			public <T> T evaluate(Exchange ex, Class<T> arg1) {
-				try {
-					int currval = reportCounter.getAndIncrement();
-					if (currval == 0) {
-						return (T) IOUtils.toString(getClass().getResourceAsStream(
-								"/no/rutebanken/marduk/chouette/getJobStatusResponseStarted.json"));
+            @SuppressWarnings("unchecked")
+            @Override
+            public <T> T evaluate(Exchange ex, Class<T> arg1) {
+                try {
+                    int currval = reportCounter.getAndIncrement();
+                    if (currval == 0) {
+                        return (T) IOUtils.toString(getClass().getResourceAsStream(
+                                "/no/rutebanken/marduk/chouette/getJobStatusResponseStarted.json"));
 
-					} else {
-						return (T) IOUtils.toString(getClass().getResourceAsStream(
-								"/no/rutebanken/marduk/chouette/getJobStatusResponseTerminated.json"));
+                    } else {
+                        return (T) IOUtils.toString(getClass().getResourceAsStream(
+                                "/no/rutebanken/marduk/chouette/getJobStatusResponseTerminated.json"));
 
-					}
-				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-					return null;
-				}
-			}
-		});
+                    }
+                } catch (IOException e) {
+                    return null;
+                }
+            }
+        });
 
-		// 1 aciton report call
-		chouetteGetActionReport.expectedMessageCount(1);
-		chouetteGetActionReport.returnReplyBody(new Expression() {
+        // 1 aciton report call
+        chouetteGetActionReport.expectedMessageCount(1);
+        chouetteGetActionReport.returnReplyBody(new Expression() {
 
-			@SuppressWarnings("unchecked")
-			@Override
-			public <T> T evaluate(Exchange ex, Class<T> arg1) {
-				try {
-					return (T) IOUtils.toString(getClass()
-							.getResourceAsStream("/no/rutebanken/marduk/chouette/getActionReportResponseOK.json"));
-				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-					return null;
-				}
-			}
-		});
+            @SuppressWarnings("unchecked")
+            @Override
+            public <T> T evaluate(Exchange ex, Class<T> arg1) {
+                try {
+                    return (T) IOUtils.toString(getClass()
+                            .getResourceAsStream("/no/rutebanken/marduk/chouette/getActionReportResponseOK.json"));
+                } catch (IOException e) {
+                    return null;
+                }
+            }
+        });
 
-		// 1 aciton report call
-		chouetteGetValidationReport.expectedMessageCount(1);
-		chouetteGetValidationReport.returnReplyBody(new Expression() {
+        // 1 aciton report call
+        chouetteGetValidationReport.expectedMessageCount(1);
+        chouetteGetValidationReport.returnReplyBody(new Expression() {
 
-			@SuppressWarnings("unchecked")
-			@Override
-			public <T> T evaluate(Exchange ex, Class<T> arg1) {
-				try {
-					return (T) IOUtils.toString(getClass()
-							.getResourceAsStream("/no/rutebanken/marduk/chouette/getValidationReportResponseOK.json"));
-				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-					return null;
-				}
-			}
-		});
+            @SuppressWarnings("unchecked")
+            @Override
+            public <T> T evaluate(Exchange ex, Class<T> arg1) {
+                try {
+                    return (T) IOUtils.toString(getClass()
+                            .getResourceAsStream("/no/rutebanken/marduk/chouette/getValidationReportResponseOK.json"));
+                } catch (IOException e) {
+                    return null;
+                }
+            }
+        });
 
-		// Should end up here with 2 headers
-		destination.expectedHeaderReceived("validation_report_result", "OK");
-		destination.expectedHeaderReceived("action_report_result", "OK");
-		destination.expectedMessageCount(1);
+        // Should end up here with 2 headers
+        destination.expectedHeaderReceived("validation_report_result", "OK");
+        destination.expectedHeaderReceived("action_report_result", "OK");
+        destination.expectedMessageCount(1);
 
-		updateStatus.expectedMessageCount(1);
+        updateStatus.expectedMessageCount(1);
 
-		Map<String, Object> headers = new HashMap<String, Object>();
-		headers.put(Constants.PROVIDER_ID, "0");
-		headers.put(Constants.FILE_NAME, "file_name");
-		headers.put(Constants.CORRELATION_ID, "corr_id");
-		headers.put(Constants.FILE_HANDLE, "rut/file_name");
-		headers.put(Constants.JOB_STATUS_ROUTING_DESTINATION, "mock:destination");
-		headers.put(Constants.JOB_STATUS_URL, chouetteUrl + "/chouette_iev/referentials/rut/scheduled_jobs/1");
-		headers.put(Constants.JOB_STATUS_JOB_TYPE, JobEvent.TimetableAction.IMPORT.name());
-		pollStartTemplate.sendBodyAndHeaders(null, headers);
+        Map<String, Object> headers = new HashMap<String, Object>();
+        headers.put(Constants.PROVIDER_ID, "0");
+        headers.put(Constants.FILE_NAME, "file_name");
+        headers.put(Constants.CORRELATION_ID, "corr_id");
+        headers.put(Constants.FILE_HANDLE, "rut/file_name");
+        headers.put(Constants.JOB_STATUS_ROUTING_DESTINATION, "mock:destination");
+        headers.put(Constants.JOB_STATUS_URL, chouetteUrl + "/chouette_iev/referentials/rut/scheduled_jobs/1");
+        headers.put(Constants.JOB_STATUS_JOB_TYPE, JobEvent.TimetableAction.IMPORT.name());
+        pollStartTemplate.sendBodyAndHeaders(null, headers);
 
-		chouetteGetJobStatus.assertIsSatisfied();
-		chouetteGetActionReport.assertIsSatisfied();
-		chouetteGetValidationReport.assertIsSatisfied();
-		destination.assertIsSatisfied();
-		updateStatus.assertIsSatisfied();
-	}
+        chouetteGetJobStatus.assertIsSatisfied();
+        chouetteGetActionReport.assertIsSatisfied();
+        chouetteGetValidationReport.assertIsSatisfied();
+        destination.assertIsSatisfied();
+        updateStatus.assertIsSatisfied();
+    }
 
-	//@Test
-	public void testValidationReportResultOK() throws Exception {
-		testValidationReportResult("/no/rutebanken/marduk/chouette/getValidationReportResponseOK.json", "OK");
-	}
+    //@Test
+    public void testValidationReportResultOK() throws Exception {
+        testValidationReportResult("/no/rutebanken/marduk/chouette/getValidationReportResponseOK.json", "OK");
+    }
 
-	//@Test
-	public void testValidationReportResultNOK() throws Exception {
-		testValidationReportResult("/no/rutebanken/marduk/chouette/getValidationReportResponseNOK.json", "NOK");
-	}
+    //@Test
+    public void testValidationReportResultNOK() throws Exception {
+        testValidationReportResult("/no/rutebanken/marduk/chouette/getValidationReportResponseNOK.json", "NOK");
+    }
 
-	public void testValidationReportResult(String validationReportClasspathReference, String expectedResult)
-			throws Exception {
+    public void testValidationReportResult(String validationReportClasspathReference, String expectedResult)
+            throws Exception {
 
-		context.start();
+        context.start();
 
-		validationReportTemplate.sendBodyAndHeader(getClass().getResourceAsStream(validationReportClasspathReference),
-				Constants.JOB_STATUS_ROUTING_DESTINATION, "mock:destination");
+        validationReportTemplate.sendBodyAndHeader(getClass().getResourceAsStream(validationReportClasspathReference),
+                Constants.JOB_STATUS_ROUTING_DESTINATION, "mock:destination");
 
-		destination.expectedMessageCount(1);
-		destination.expectedHeaderReceived("validation_report_result", expectedResult);
-		destination.assertIsSatisfied();
+        destination.expectedMessageCount(1);
+        destination.expectedHeaderReceived("validation_report_result", expectedResult);
+        destination.assertIsSatisfied();
 
-	}
-	
-	@Test
-	public void getJobs() throws Exception {
+    }
 
-		context.getRouteDefinition("chouette-list-jobs").adviceWith(context, new AdviceWithRouteBuilder() {
-			@Override
-			public void configure() throws Exception {
-				interceptSendToEndpoint(chouetteUrl + "/chouette_iev/referentials/rut/jobs?addActionParameters=false")
-				.skipSendToOriginalEndpoint()
-				.to("mock:chouetteGetJobsForProvider");
-			}
-		});
+    @Test
+    void getJobs() throws Exception {
+        AdviceWith.adviceWith(context, "chouette-list-jobs", adviceRouteBuilder -> {
+            adviceRouteBuilder.interceptSendToEndpoint(chouetteUrl + "/chouette_iev/referentials/rut/jobs?addActionParameters=false")
+                    .skipSendToOriginalEndpoint()
+                    .to("mock:chouetteGetJobsForProvider");
+        });
 
-		context.start();
 
-		getJobs.returnReplyBody(new Expression() {
+        context.start();
 
-			@SuppressWarnings("unchecked")
-			@Override
-			public <T> T evaluate(Exchange ex, Class<T> arg1) {
-				try {
-					return (T) IOUtils.toString(getClass()
-							.getResourceAsStream("/no/rutebanken/marduk/chouette/getJobListResponseScheduled.json"));
-				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-					return null;
-				}
-			}
-		});
+        getJobs.returnReplyBody(new Expression() {
 
-		
-		// Do rest call
-		Map<String, Object> headers = new HashMap<String, Object>();
-		headers.put(Exchange.HTTP_METHOD, "GET");
-		headers.put(Constants.PROVIDER_ID, "2");
-		JobResponse[] rsp =  (JobResponse[]) getJobsTemplate.requestBodyAndHeaders(null, headers);
-		// Parse response
+            @SuppressWarnings("unchecked")
+            @Override
+            public <T> T evaluate(Exchange ex, Class<T> arg1) {
+                try {
+                    return (T) IOUtils.toString(getClass()
+                            .getResourceAsStream("/no/rutebanken/marduk/chouette/getJobListResponseScheduled.json"));
+                } catch (IOException e) {
+                    return null;
+                }
+            }
+        });
 
-		Assert.assertFalse(rsp.length == 0);
-	
 
-	}
+        // Do rest call
+        Map<String, Object> headers = new HashMap<String, Object>();
+        headers.put(Exchange.HTTP_METHOD, "GET");
+        headers.put(Constants.PROVIDER_ID, "2");
+        JobResponse[] rsp = (JobResponse[]) getJobsTemplate.requestBodyAndHeaders(null, headers);
+        // Parse response
+
+        assertThat(rsp).isNotEmpty();
+    }
 
 
 }

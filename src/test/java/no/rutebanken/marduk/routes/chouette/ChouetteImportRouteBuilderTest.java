@@ -10,54 +10,47 @@ import org.apache.camel.EndpointInject;
 import org.apache.camel.Exchange;
 import org.apache.camel.Produce;
 import org.apache.camel.ProducerTemplate;
-import org.apache.camel.builder.AdviceWithRouteBuilder;
+import org.apache.camel.builder.AdviceWith;
 import org.apache.camel.component.mock.MockEndpoint;
-import org.apache.camel.model.ModelCamelContext;
-import org.junit.Before;
-import org.junit.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.annotation.DirtiesContext;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import static no.rutebanken.marduk.Constants.JSON_PART;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.when;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, classes = ChouetteImportRouteBuilder.class, properties = "spring.main.sources=no.rutebanken.marduk.test")
-@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
-public class ChouetteImportRouteBuilderTest  extends MardukRouteBuilderIntegrationTestBase {
+class ChouetteImportRouteBuilderTest  extends MardukRouteBuilderIntegrationTestBase {
 
     private static final String PARAMETERS = "parameters";
     private static final String GTFS_IMPORT = "gtfs-import";
 
-    @Autowired
-    private ModelCamelContext context;
 
-    @Produce(uri = "direct:addImportParameters")
+
+    @Produce("direct:addImportParameters")
     protected ProducerTemplate addImportParametersTemplate;
 
-    @EndpointInject(uri = "mock:sendImportJobRequest")
+    @EndpointInject("mock:sendImportJobRequest")
     protected MockEndpoint sendImportJobRequest;
 
-    @Before
-    @Override
-    public void setUp() throws IOException {
-        super.setUp();
+  
+
+    @BeforeEach
+    void beforeEach() {
+        when(providerRepository.getProviders()).thenReturn(providers);
+        when(providerRepository.getProvider(2L)).thenReturn(providers.get(0));
+        when(providerRepository.getProvider(3L)).thenReturn(providers.get(1));
         sendImportJobRequest.reset();
     }
 
     @Test
-    public void testImportParametersDefaultMapMatching() throws Exception {
-        context.getRouteDefinition("chouette-import-addToExchange-parameters").adviceWith(context, new AdviceWithRouteBuilder() {
-            @Override
-            public void configure() {
-                interceptSendToEndpoint("direct:sendImportJobRequest")
-                        .skipSendToOriginalEndpoint().to("mock:sendImportJobRequest");
-            }
+    void testImportParametersDefaultMapMatching() throws Exception {
+        AdviceWith.adviceWith(context, "chouette-import-addToExchange-parameters", adviceRouteBuilder -> {
+            adviceRouteBuilder.interceptSendToEndpoint("direct:sendImportJobRequest")
+                    .skipSendToOriginalEndpoint().to("mock:sendImportJobRequest");
         });
 
         context.start();
@@ -77,7 +70,7 @@ public class ChouetteImportRouteBuilderTest  extends MardukRouteBuilderIntegrati
         sendImportJobRequest.assertIsSatisfied();
         List<Exchange> receivedExchange = sendImportJobRequest.getExchanges();
         assertThat(receivedExchange).isNotEmpty().hasSize(1);
-        Exchange actualExchange = receivedExchange.get(0);
+        Exchange actualExchange = receivedExchange.getFirst();
         assertThat(actualExchange).isNotNull();
         Object header = actualExchange.getIn().getHeader(JSON_PART);
         assertThat(header).isNotNull().isInstanceOf(String.class);
@@ -92,13 +85,10 @@ public class ChouetteImportRouteBuilderTest  extends MardukRouteBuilderIntegrati
     }
 
     @Test
-    public void testImportParametersAirMapMatching() throws Exception {
-        context.getRouteDefinition("chouette-import-addToExchange-parameters").adviceWith(context, new AdviceWithRouteBuilder() {
-            @Override
-            public void configure() {
-                interceptSendToEndpoint("direct:sendImportJobRequest")
-                        .skipSendToOriginalEndpoint().to("mock:sendImportJobRequest");
-            }
+    void testImportParametersAirMapMatching() throws Exception {
+        AdviceWith.adviceWith(context, "chouette-import-addToExchange-parameters", adviceRouteBuilder -> {
+            adviceRouteBuilder.interceptSendToEndpoint("direct:sendImportJobRequest")
+                    .skipSendToOriginalEndpoint().to("mock:sendImportJobRequest");
         });
 
         context.start();
@@ -119,7 +109,7 @@ public class ChouetteImportRouteBuilderTest  extends MardukRouteBuilderIntegrati
         sendImportJobRequest.assertIsSatisfied();
         List<Exchange> receivedExchange = sendImportJobRequest.getExchanges();
         assertThat(receivedExchange).isNotEmpty().hasSize(1);
-        Exchange actualExchange = receivedExchange.get(0);
+        Exchange actualExchange = receivedExchange.getFirst();
         assertThat(actualExchange).isNotNull();
         Object header = actualExchange.getIn().getHeader(JSON_PART);
         assertThat(header).isNotNull().isInstanceOf(String.class);

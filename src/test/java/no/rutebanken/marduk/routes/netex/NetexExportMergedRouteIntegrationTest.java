@@ -21,28 +21,26 @@ import no.rutebanken.marduk.repository.BlobStoreRepository;
 import org.apache.camel.EndpointInject;
 import org.apache.camel.Produce;
 import org.apache.camel.ProducerTemplate;
+import org.apache.camel.builder.AdviceWith;
 import org.apache.camel.component.mock.MockEndpoint;
-import org.apache.camel.model.ModelCamelContext;
-import org.junit.Assert;
-import org.junit.Ignore;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.test.context.SpringBootTest;
 
 import java.io.File;
 import java.io.FileInputStream;
 
 import static no.rutebanken.marduk.Constants.BLOBSTORE_PATH_OUTBOUND;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, classes = NetexExportMergedRouteBuilder.class, properties = "spring.main.sources=no.rutebanken.marduk.test")
-public class NetexExportMergedRouteIntegrationTest extends MardukRouteBuilderIntegrationTestBase {
-
+@Disabled
+class NetexExportMergedRouteIntegrationTest extends MardukRouteBuilderIntegrationTestBase {
 
     @Autowired
     private BlobStoreRepository blobStoreRepository;
 
-    @Produce(uri = "direct:exportMergedNetex")
+    @Produce("direct:exportMergedNetex")
     protected ProducerTemplate startRoute;
 
     @Value("${netex.export.download.directory:files/netex/merged}")
@@ -54,18 +52,16 @@ public class NetexExportMergedRouteIntegrationTest extends MardukRouteBuilderInt
     @Value("${netex.export.file.path:netex/rb_norway-aggregated-netex.zip}")
     private String netexExportMergedFilePath;
 
-    @EndpointInject(uri = "mock:ChouetteExportGtfsQueue")
+    @EndpointInject("mock:ChouetteExportGtfsQueue")
     protected MockEndpoint mockEndpoint;
 
-    @Autowired
-    private ModelCamelContext context;
-
     @Test
-    @Ignore
-    public void testExportMergedNetex() throws Exception {
+    void testExportMergedNetex() throws Exception {
 
-       replaceEndpoint("netex-export-merged-route", "jms:queue:ChouetteExportGtfsQueue", "mockEndpoint");
-
+        AdviceWith.adviceWith(context, "netex-export-merged-route", a -> {
+            a.interceptSendToEndpoint("jms:queue:ChouetteExportGtfsQueue").skipSendToOriginalEndpoint()
+                    .to("mockEndpoint");
+        });
 
         // Create stop file in in memory blob store
         blobStoreRepository.uploadBlob(stopPlaceExportBlobPath, new FileInputStream(new File("src/test/resources/no/rutebanken/marduk/routes/netex/stops.zip")), false);
@@ -77,7 +73,7 @@ public class NetexExportMergedRouteIntegrationTest extends MardukRouteBuilderInt
 
         mockEndpoint.expectedMessageCount(1);
 
-        Assert.assertNotNull("Expected merged netex file to have been uploaded", blobStoreRepository.getBlob(BLOBSTORE_PATH_OUTBOUND + netexExportMergedFilePath));
+        Assertions.assertNotNull(blobStoreRepository.getBlob(BLOBSTORE_PATH_OUTBOUND + netexExportMergedFilePath), "Expected merged netex file to have been uploaded");
     }
 
 }

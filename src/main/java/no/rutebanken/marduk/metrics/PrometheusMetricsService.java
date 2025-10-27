@@ -2,8 +2,8 @@ package no.rutebanken.marduk.metrics;
 
 import io.micrometer.core.instrument.ImmutableTag;
 import io.micrometer.core.instrument.Tag;
-import io.micrometer.prometheus.PrometheusConfig;
-import io.micrometer.prometheus.PrometheusMeterRegistry;
+import io.micrometer.prometheusmetrics.PrometheusConfig;
+import io.micrometer.prometheusmetrics.PrometheusMeterRegistry;
 import no.rutebanken.marduk.domain.ConsumerType;
 import no.rutebanken.marduk.domain.ExportType;
 import org.apache.commons.collections.CollectionUtils;

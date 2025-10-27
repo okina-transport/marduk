@@ -16,7 +16,8 @@
 
 package no.rutebanken.marduk.rest;
 
-import no.rutebanken.marduk.Constants;
+import jakarta.ws.rs.NotFoundException;
+import jakarta.ws.rs.core.MediaType;
 import no.rutebanken.marduk.domain.BlobStoreFiles;
 import no.rutebanken.marduk.domain.BlobStoreFiles.File;
 import no.rutebanken.marduk.domain.ImportGenerateMapMatching;
@@ -25,46 +26,43 @@ import no.rutebanken.marduk.routes.BaseRouteBuilder;
 import no.rutebanken.marduk.routes.blobstore.BlobStoreRoute;
 import no.rutebanken.marduk.routes.chouette.json.JobResponse;
 import no.rutebanken.marduk.routes.chouette.json.Status;
-import no.rutebanken.marduk.routes.file.ZipFileUtils;
 import no.rutebanken.marduk.routes.status.JobEvent;
 import no.rutebanken.marduk.security.AuthorizationClaim;
 import no.rutebanken.marduk.security.AuthorizationService;
 import no.rutebanken.marduk.services.BlobStoreService;
 import no.rutebanken.marduk.services.FileSystemService;
+import no.rutebanken.marduk.services.processors.FileValidationProcessor;
+import no.rutebanken.marduk.services.processors.MultiPartProcessor;
 import org.apache.camel.Body;
 import org.apache.camel.Exchange;
+import org.apache.camel.ExchangePattern;
 import org.apache.camel.LoggingLevel;
-import org.apache.camel.converter.stream.FileInputStreamCache;
-import org.apache.camel.converter.stream.InputStreamCache;
 import org.apache.camel.model.dataformat.JsonLibrary;
 import org.apache.camel.model.rest.RestBindingMode;
 import org.apache.camel.model.rest.RestParamType;
 import org.apache.camel.model.rest.RestPropertyDefinition;
-import org.apache.tomcat.util.http.fileupload.FileItem;
-import org.apache.tomcat.util.http.fileupload.FileItemFactory;
-import org.apache.tomcat.util.http.fileupload.disk.DiskFileItemFactory;
-import org.apache.tomcat.util.http.fileupload.util.Streams;
 import org.rutebanken.helper.organisation.AuthorizationConstants;
 import org.rutebanken.helper.organisation.NotAuthenticatedException;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Component;
 
-import javax.ws.rs.NotFoundException;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.*;
 import java.util.stream.Collectors;
 
 import static javax.ws.rs.core.MediaType.MULTIPART_FORM_DATA;
 import static no.rutebanken.marduk.Constants.*;
+import static no.rutebanken.marduk.utils.constants.EndpointDeclarationConstants.*;
+import static no.rutebanken.marduk.utils.constants.MessageConstants.*;
+import static no.rutebanken.marduk.utils.constants.RouteDeclarationConstants.*;
+import static no.rutebanken.marduk.utils.constants.RouteParamsConstants.*;
+import static no.rutebanken.marduk.utils.constants.RouteParamsConstants.Description.PROVIDER_DESCRIPTION;
+import static no.rutebanken.marduk.utils.constants.RouteParamsConstants.Headers.ALL_CAMEL_HTTP;
+import static no.rutebanken.marduk.utils.constants.RouteParamsConstants.JOB_ID;
+import static no.rutebanken.marduk.utils.constants.RouteParamsConstants.ParamTypes.INTEGER;
+import static no.rutebanken.marduk.utils.constants.RouteParamsConstants.QueryParams.*;
 import static org.apache.camel.Exchange.HTTP_RESPONSE_CODE;
 
 /**
@@ -73,26 +71,11 @@ import static org.apache.camel.Exchange.HTTP_RESPONSE_CODE;
 @Component
 public class AdminRestRouteBuilder extends BaseRouteBuilder {
 
-
-    private static final String JSON = "application/json";
     private static final String X_OCTET_STREAM = "application/x-octet-stream";
-    private static final String PLAIN = "text/plain";
     private static final String CAMEL_HEADERS = "${headers}";
-
-    @Value("${server.admin.port}")
-    public String port;
 
     @Value("${server.admin.host}")
     public String host;
-
-    @Autowired
-    private AuthorizationService authorizationService;
-
-    @Autowired
-    private BlobStoreService blobStoreService;
-
-    @Autowired
-    FileSystemService fileSystemService;
 
     @Value("${superspace.name}")
     private String superspaceName;
@@ -102,6 +85,28 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
 
     @Value("${netex.merged.tmp.working.directory:/tmp/mergedNetex/allFiles}")
     private String mergedNetexTmpDirectory;
+
+    private final AuthorizationService authorizationService;
+
+    private final BlobStoreService blobStoreService;
+
+    private final FileSystemService fileSystemService;
+
+    private final MultiPartProcessor multiPartProcessor;
+
+    private final FileValidationProcessor fileValidationProcessor;
+
+    public AdminRestRouteBuilder(AuthorizationService authorizationService,
+                                 BlobStoreService blobStoreService,
+                                 FileSystemService fileSystemService,
+                                 MultiPartProcessor multiPartProcessor,
+                                 FileValidationProcessor fileValidationProcessor) {
+        this.authorizationService = authorizationService;
+        this.blobStoreService = blobStoreService;
+        this.fileSystemService = fileSystemService;
+        this.multiPartProcessor = multiPartProcessor;
+        this.fileValidationProcessor = fileValidationProcessor;
+    }
 
 
     @Override
@@ -122,52 +127,62 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
         onException(AccessDeniedException.class)
                 .handled(true)
                 .setHeader(HTTP_RESPONSE_CODE, constant(403))
-                .setHeader(Exchange.CONTENT_TYPE, constant("text/plain"))
+                .setHeader(Exchange.CONTENT_TYPE, constant(MediaType.TEXT_PLAIN))
                 .transform(exceptionMessage());
 
         onException(NotAuthenticatedException.class)
                 .handled(true)
                 .setHeader(HTTP_RESPONSE_CODE, constant(401))
-                .setHeader(Exchange.CONTENT_TYPE, constant("text/plain"))
+                .setHeader(Exchange.CONTENT_TYPE, constant(MediaType.TEXT_PLAIN))
                 .transform(exceptionMessage());
 
         onException(NotFoundException.class)
                 .handled(true)
                 .setHeader(HTTP_RESPONSE_CODE, constant(404))
-                .setHeader(Exchange.CONTENT_TYPE, constant("text/plain"))
+                .setHeader(Exchange.CONTENT_TYPE, constant(MediaType.TEXT_PLAIN))
                 .transform(exceptionMessage());
 
         // Remove "Authorization" header from all REST responses which make MARDUK crash sometimes
         // (java.io.IOException: org.eclipse.jetty.http.BadMessageException: 500: Response header too large)
         interceptFrom("rest:*")
                 .log(LoggingLevel.INFO, "Remove Authorization header")
-                .process(e -> {
-                    e.getMessage().removeHeader("Authorization");
-                });
+                .process(e -> e.getMessage().removeHeader("Authorization"));
 
         restConfiguration()
-                .component("jetty")
+                .component("servlet")
+                .contextPath(CAMEL_ENTRYPOINT)
                 .bindingMode(RestBindingMode.json)
-                .endpointProperty("filtersRef", "keycloakPreAuthActionsFilter,keycloakAuthenticationProcessingFilter")
-                .endpointProperty("sessionSupport", "true")
                 .endpointProperty("matchOnUriPrefix", "true")
-                .endpointProperty("enablemulti-partFilter", "true")
+                .endpointProperty("attachmentmultipartbinding", "true")
                 .enableCORS(true)
-                .dataFormatProperty("prettyPrint", "true")
                 .host(host)
-                .port(port)
-                .apiContextPath("/swagger.json")
-                .apiProperty("api.title", "Marduk Admin API").apiProperty("api.version", "1.0")
-                .contextPath("/services");
+                .apiContextPath(SWAGGER_ENDPOINT)
+                .apiProperty("api.title", "Marduk Admin API").apiProperty("api.version", "1.0");
+
 
         rest("")
                 .apiDocs(false)
                 .description("Wildcard definitions necessary to get Jetty to match authorization filters to endpoints with path params")
-                .get().route().routeId("admin-route-authorize-get").throwException(new NotFoundException()).endRest()
-                .post().route().routeId("admin-route-authorize-post").throwException(new NotFoundException()).endRest()
-                .put().route().routeId("admin-route-authorize-put").throwException(new NotFoundException()).endRest()
-                .delete().route().routeId("admin-route-authorize-delete").throwException(new NotFoundException()).endRest();
+                .get().to(ROUTE_ADMIN_ROUTE_AUTHORIZE_GET)
+                .post().to(ROUTE_ADMIN_ROUTE_AUTHORIZE_POST)
+                .put().to(ROUTE_ADMIN_ROUTE_AUTHORIZE_PUT)
+                .delete().to(ROUTE_ADMIN_ROUTE_AUTHORIZE_DELETE);
 
+        from(ROUTE_ADMIN_ROUTE_AUTHORIZE_GET)
+                .routeId(ROUTE_ID_ADMIN_ROUTE_AUTHORIZE_GET)
+                .throwException(new NotFoundException());
+
+        from(ROUTE_ADMIN_ROUTE_AUTHORIZE_POST)
+                .routeId(ROUTE_ID_ADMIN_ROUTE_AUTHORIZE_POST)
+                .throwException(new NotFoundException());
+
+        from(ROUTE_ADMIN_ROUTE_AUTHORIZE_PUT)
+                .routeId(ROUTE_ID_ADMIN_ROUTE_AUTHORIZE_PUT)
+                .throwException(new NotFoundException());
+
+        from(ROUTE_ADMIN_ROUTE_AUTHORIZE_DELETE)
+                .routeId(ROUTE_ID_ADMIN_ROUTE_AUTHORIZE_DELETE)
+                .throwException(new NotFoundException());
 
         String commonApiDocEndpoint = "rest:get:/services/swagger.json?bridgeEndpoint=true";
 
@@ -175,98 +190,57 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .post("/idempotentfilter/clean")
                 .description("Clean unique filename and digest Idempotent Stores")
                 .responseMessage().code(200).endResponseMessage()
-                .responseMessage().code(500).message("Internal error").endResponseMessage()
-                .route().routeId("admin-application-clean-unique-filename-and-digest-idempotent-repos")
-                .process(e -> authorizationService.verifyAtLeastOne(new AuthorizationClaim(AuthorizationConstants.ROLE_ROUTE_DATA_ADMIN)))
-                .to("direct:cleanIdempotentFileStore")
-                .setBody(constant(null))
-                .endRest()
+                .responseMessage().code(500).message(INTERNAL_ERROR).endResponseMessage()
+                .to(ROUTE_ADMIN_APPLICATION_CLEAN_UNIQUE_FILENAME_AND_DIGEST_IDEMPOTENT_REPOS)
 
                 .post("/validate/level1")
                 .description("Triggers the validate->transfer process for all level1 providers in Chouette")
-                .consumes(PLAIN)
-                .produces(PLAIN)
-                .responseMessage().code(200).message("Command accepted").endResponseMessage()
-                .route()
-                .to("direct:authorizeRequest")
-                .process(e -> authorizationService.verifyAtLeastOne(new AuthorizationClaim(AuthorizationConstants.ROLE_ROUTE_DATA_ADMIN)))
-                .log(LoggingLevel.INFO, correlation() + "Chouette start validation level1 for all providers")
-                .removeHeaders("CamelHttp*")
-                .inOnly("direct:chouetteValidateLevel1ForAllProviders")
-                .setBody(constant(null))
-                .routeId("admin-chouette-validate-level1-all-providers")
-                .endRest()
+                .consumes(MediaType.TEXT_PLAIN)
+                .produces(MediaType.TEXT_PLAIN)
+                .responseMessage().code(200).message(COMMAND_ACCEPTED).endResponseMessage()
+                .to(ROUTE_PROCESS_VALIDATE_LEVEL_1)
 
                 .post("/validate/level2")
                 .description("Triggers the validate->export process for all level2 providers in Chouette")
-                .consumes(PLAIN)
-                .produces(PLAIN)
-                .responseMessage().code(200).message("Command accepted").endResponseMessage()
-                .route()
-                .to("direct:authorizeRequest")
-                .process(e -> authorizationService.verifyAtLeastOne(new AuthorizationClaim(AuthorizationConstants.ROLE_ROUTE_DATA_ADMIN)))
-                .log(LoggingLevel.INFO, correlation() + "Chouette start validation level2 for all providers")
-                .removeHeaders("CamelHttp*")
-                .inOnly("direct:chouetteValidateLevel2ForAllProviders")
-                .setBody(constant(null))
-                .routeId("admin-chouette-validate-level2-all-providers")
-                .endRest()
+                .consumes(MediaType.TEXT_PLAIN)
+                .produces(MediaType.TEXT_PLAIN)
+                .responseMessage().code(200).message(COMMAND_ACCEPTED).endResponseMessage()
+                .to(ROUTE_PROCESS_VALIDATE_LEVEL_2)
 
-                .get("/jobs")
+                .get(JOBS_ENDPOINT)
                 .description("List Chouette jobs for all providers. Filters defaults to status=SCHEDULED,STARTED")
                 .param()
                 .required(Boolean.FALSE)
-                .name("status")
+                .name(STATUS)
                 .type(RestParamType.query)
                 .description("Chouette job statuses")
-                .allowableValues(Arrays.asList(Status.values()).stream().map(Status::name).collect(Collectors.toList()))
+                .allowableValues(Arrays.stream(Status.values()).map(Status::name).collect(Collectors.toList()))
                 .endParam()
                 .param()
                 .required(Boolean.FALSE)
-                .name("action")
+                .name(ACTION)
                 .type(RestParamType.query)
                 .description("Chouette job types")
-                .allowableValues("importer", "exporter", "validator")
+                .allowableValues(IMPORTER, EXPORTER, VALIDATOR)
                 .endParam()
                 .outType(ProviderAndJobs[].class)
-                .consumes(PLAIN)
-                .produces(JSON)
+                .consumes(MediaType.TEXT_PLAIN)
+                .produces(MediaType.APPLICATION_JSON)
                 .responseMessage().code(200).endResponseMessage()
-                .responseMessage().code(500).message("Internal error").endResponseMessage()
-                .route()
-                .process(e -> authorizationService.verifyAtLeastOne(new AuthorizationClaim(AuthorizationConstants.ROLE_ROUTE_DATA_ADMIN)))
-                .log(LoggingLevel.DEBUG, correlation() + "Get chouette active jobs all providers")
-                .removeHeaders("CamelHttp*")
-                .process(e -> e.getIn().setHeader("status", e.getIn().getHeader("status") != null ? e.getIn().getHeader("status") : Arrays.asList("STARTED", "SCHEDULED")))
-                .to("direct:chouetteGetJobsAll")
-                .routeId("admin-chouette-list-jobs-all")
-                .endRest()
+                .responseMessage().code(500).message(INTERNAL_ERROR).endResponseMessage()
+                .to(ROUTE_ADMIN_LIST_ALL_CHOUETTE_JOBS)
 
-                .delete("/jobs")
+                .delete(JOBS_ENDPOINT)
                 .description("Cancel all Chouette jobs for all providers")
                 .responseMessage().code(200).message("All jobs canceled").endResponseMessage()
                 .responseMessage().code(500).message("Could not cancel all jobs").endResponseMessage()
-                .route()
-                .process(e -> authorizationService.verifyAtLeastOne(new AuthorizationClaim(AuthorizationConstants.ROLE_ROUTE_DATA_ADMIN)))
-                .log(LoggingLevel.INFO, correlation() + "Cancel all chouette jobs for all providers")
-                .removeHeaders("CamelHttp*")
-                .to("direct:chouetteCancelAllJobsForAllProviders")
-                .routeId("admin-chouette-cancel-all-jobs-all")
-                .setBody(constant(null))
-                .endRest()
+                .to(ROUTE_ADMIN_CHOUETTE_CANCEL_ALL_JOBS_ALL)
 
                 .delete("/tiamat-jobs")
                 .description("Cancel all Tiamat jobs for all providers")
                 .responseMessage().code(200).message("All jobs canceled").endResponseMessage()
                 .responseMessage().code(500).message("Could not cancel all jobs").endResponseMessage()
-                .route()
-                .process(e -> authorizationService.verifyAtLeastOne(new AuthorizationClaim(AuthorizationConstants.ROLE_ROUTE_DATA_ADMIN)))
-                .log(LoggingLevel.INFO, correlation() + "Cancel all tiamat jobs for all providers")
-                .removeHeaders("CamelHttp*")
-                .to("direct:tiamatCancelAllJobsForAllProviders")
-                .routeId("admin-tiamat-cancel-all-jobs-all")
-                .setBody(constant(null))
-                .endRest()
+                .to(ROUTE_ADMIN_TIAMAT_CANCEL_ALL_JOBS)
 
                 .delete("/completed_jobs")
                 .description("Remove completed Chouette jobs for all providers. ")
@@ -274,27 +248,19 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .required(Boolean.FALSE)
                 .name("keepJobs")
                 .type(RestParamType.query)
-                .dataType("integer")
+                .dataType(INTEGER)
                 .description("No of jobs to keep, regardless of age")
                 .endParam()
                 .param()
                 .required(Boolean.FALSE)
                 .name("keepDays")
                 .type(RestParamType.query)
-                .dataType("integer")
+                .dataType(INTEGER)
                 .description("No of days to keep jobs for")
                 .endParam()
                 .responseMessage().code(200).message("Completed jobs removed").endResponseMessage()
                 .responseMessage().code(500).message("Could not remove complete jobs").endResponseMessage()
-                .route()
-                .process(e -> authorizationService.verifyAtLeastOne(new AuthorizationClaim(AuthorizationConstants.ROLE_ROUTE_DATA_ADMIN)))
-                .log(LoggingLevel.INFO, correlation() + "Removing old chouette jobs for all providers")
-                .removeHeaders("CamelHttp*")
-                .to("direct:chouetteRemoveOldJobs")
-                .routeId("admin-chouette-remove-old-jobs")
-                .setBody(constant(null))
-                .endRest()
-
+                .to(ROUTE_ADMIN_CHOUETTE_REMOVE_OLD_JOBS)
 
                 .post("/clean/{filter}")
                 .description("Triggers the clean ALL dataspace process in Chouette. Only timetable data are deleted, not job data (imports, exports, validations) or stop places")
@@ -304,40 +270,25 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .type(RestParamType.path)
                 .description("Optional filter to clean only level 1, level 2 or all spaces (no parameter value)")
                 .allowableValues("all", "level1", "level2")
-
                 .endParam()
-                .consumes(PLAIN)
-                .produces(PLAIN)
-                .responseMessage().code(200).message("Command accepted").endResponseMessage()
+                .consumes(MediaType.TEXT_PLAIN)
+                .produces(MediaType.TEXT_PLAIN)
+                .responseMessage().code(200).message(COMMAND_ACCEPTED).endResponseMessage()
                 .responseMessage().code(500).message("Internal error - check filter").endResponseMessage()
-                .route()
-                .process(e -> authorizationService.verifyAtLeastOne(new AuthorizationClaim(AuthorizationConstants.ROLE_ROUTE_DATA_ADMIN)))
-                .log(LoggingLevel.INFO, correlation() + "Chouette clean all dataspaces")
-                .removeHeaders("CamelHttp*")
-                .to("direct:chouetteCleanAllReferentials")
-                .setBody(constant(null))
-                .routeId("admin-chouette-clean-all")
-                .endRest()
+                .to(ROUTE_ADMIN_CHOUETTE_CLEAN_ALL)
 
                 .post("/stop_places/clean")
                 .description("Triggers the cleaning of ALL stop places in Chouette")
-                .consumes(PLAIN)
-                .produces(PLAIN)
-                .responseMessage().code(200).message("Command accepted").endResponseMessage()
+                .consumes(MediaType.TEXT_PLAIN)
+                .produces(MediaType.TEXT_PLAIN)
+                .responseMessage().code(200).message(COMMAND_ACCEPTED).endResponseMessage()
                 .responseMessage().code(500).message("Internal error - check filter").endResponseMessage()
-                .route()
-                .process(e -> authorizationService.verifyAtLeastOne(new AuthorizationClaim(AuthorizationConstants.ROLE_ROUTE_DATA_ADMIN)))
-                .log(LoggingLevel.INFO, correlation() + "Chouette clean all stop places")
-                .removeHeaders("CamelHttp*")
-                .to("direct:chouetteCleanStopPlaces")
-                .setBody(constant(null))
-                .routeId("admin-chouette-clean-stop-places")
-                .endRest()
+                .to(ROUTE_ADMIN_CHOUETTE_CLEAN_STOP_PLACES)
 
                 .get("/line_statistics/{filter}")
                 .description("List stats about data in chouette for multiple providers")
                 .param().name("providerIds")
-                .type(RestParamType.query).dataType("integer")
+                .type(RestParamType.query).dataType(INTEGER)
                 .required(Boolean.FALSE)
                 .description("Comma separated list of id for providers to fetch line stats for")
                 .endParam()
@@ -349,927 +300,382 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .allowableValues("all", "level1", "level2")
                 .endParam()
                 .bindingMode(RestBindingMode.off)
-                .consumes(PLAIN)
-                .produces(JSON)
+                .consumes(MediaType.TEXT_PLAIN)
+                .produces(MediaType.APPLICATION_JSON)
                 .responseMessage().code(200).endResponseMessage()
-                .responseMessage().code(500).message("Internal error").endResponseMessage()
-                .route()
-                .to("direct:authorizeRequest")
-                .log(LoggingLevel.INFO, correlation() + "get stats for multiple providers")
-                .removeHeaders("CamelHttp*")
-                .choice()
-                .when(simple("${header.providerIds}"))
-                .process(e -> e.getIn().setHeader(PROVIDER_IDS, e.getIn().getHeader("providerIds", "", String.class).split(",")))
-                .end()
-                .to("direct:chouetteGetStats")
-                .routeId("admin-chouette-stats-multiple-providers")
-                .endRest()
+                .responseMessage().code(500).message(INTERNAL_ERROR).endResponseMessage()
+                .to(ROUTE_ADMIN_CHOUETTE_STATS_MULTIPLE_PROVIDERS)
 
                 .post("/line_statistics/refresh")
                 .description("Recalculate stats about data in chouette for all providers")
                 .bindingMode(RestBindingMode.off)
-                .consumes(PLAIN)
-                .produces(PLAIN)
+                .consumes(MediaType.TEXT_PLAIN)
+                .produces(MediaType.TEXT_PLAIN)
                 .responseMessage().code(200).endResponseMessage()
-                .responseMessage().code(500).message("Internal error").endResponseMessage()
-                .route()
-                .to("direct:authorizeRequest")
-                .log(LoggingLevel.INFO, correlation() + "refresh stats cache")
-                .removeHeaders("CamelHttp*")
-                .to("direct:chouetteRefreshStatsCache")
-                .routeId("admin-chouette-stats-refresh-cache")
-                .endRest()
+                .responseMessage().code(500).message(INTERNAL_ERROR).endResponseMessage()
+                .to(ROUTE_ADMIN_CHOUETTE_STATS_REFRESH_CACHE)
 
                 .get("/export/files")
                 .description("List files containing exported time table data and graphs")
                 .outType(BlobStoreFiles.class)
-                .consumes(PLAIN)
-                .produces(JSON)
+                .consumes(MediaType.TEXT_PLAIN)
+                .produces(MediaType.APPLICATION_JSON)
                 .responseMessage().code(200).endResponseMessage()
-                .responseMessage().code(500).message("Internal error").endResponseMessage()
-                .route()
-                .to("direct:authorizeRequest")
-                .log(LoggingLevel.INFO, correlation() + "get time table and graph files")
-                .removeHeaders("CamelHttp*")
-                .to("direct:listTimetableExportAndGraphBlobs")
-                .routeId("admin-chouette-timetable-files-get")
-                .endRest()
+                .responseMessage().code(500).message(INTERNAL_ERROR).endResponseMessage()
+                .to(ROUTE_ADMIN_CHOUETTE_TIMETABLE_FILES_GET)
+
 
                 .get("/export/files/{providerId}")
                 .description("List files containing exported time table data and graphs for specified providerId")
-                .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the nabu service").dataType("integer").endParam()
+                .param().name(PROVIDER).type(RestParamType.path).description(PROVIDER_DESCRIPTION).dataType(INTEGER).endParam()
                 .outType(BlobStoreFiles.class)
-                .consumes(PLAIN)
-                .produces(JSON)
+                .consumes(MediaType.TEXT_PLAIN)
+                .produces(MediaType.APPLICATION_JSON)
                 .responseMessage().code(200).endResponseMessage()
-                .responseMessage().code(500).message("Internal error").endResponseMessage()
-                .route()
-                .setHeader(PROVIDER_ID, header("providerId"))
-                .to("direct:authorizeRequest")
-                .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
-                .log(LoggingLevel.INFO, correlation() + "get time table and graph files")
-                .removeHeaders("CamelHttp*")
-                .to("direct:listTimetableExportAndGraphBlobsByProvider")
-                .routeId("admin-chouette-timetable-files-get-provider")
-                .endRest()
+                .responseMessage().code(500).message(INTERNAL_ERROR).endResponseMessage()
+                .to(ROUTE_ADMIN_CHOUETTE_TIMETABLE_FILES_GET_PROVIDER)
 
 
                 .post("/export/gtfs/extended")
                 .description("Prepare and upload GTFS extended export")
-                .consumes(PLAIN)
-                .produces(PLAIN)
+                .consumes(MediaType.TEXT_PLAIN)
+                .produces(MediaType.TEXT_PLAIN)
                 .responseMessage().code(200).endResponseMessage()
-                .responseMessage().code(500).message("Internal error").endResponseMessage()
-                .route()
-                .to("direct:authorizeRequest")
-                .log(LoggingLevel.INFO, "Triggered GTFS extended export")
-                .removeHeaders("CamelHttp*")
-                .inOnly("jms:queue:GtfsExportMergedQueue")
-                .routeId("admin-timetable-gtfs-extended-export")
-                .endRest()
-
-
-                .post("/export/gtfs/basic")
-                .description("Prepare and upload GTFS basic export")
-                .consumes(PLAIN)
-                .produces(PLAIN)
-                .responseMessage().code(200).endResponseMessage()
-                .responseMessage().code(500).message("Internal error").endResponseMessage()
-                .route()
-                .to("direct:authorizeRequest")
-                .log(LoggingLevel.INFO, "Triggered GTFS basic export")
-                .removeHeaders("CamelHttp*")
-                .inOnly("jms:queue:GtfsBasicExportMergedQueue")
-                .routeId("admin-timetable-gtfs-basic-export")
-                .endRest()
-
-                .post("/export/gtfs/google")
-                .description("Prepare and upload GTFS export to Google")
-                .consumes(PLAIN)
-                .produces(PLAIN)
-                .responseMessage().code(200).endResponseMessage()
-                .responseMessage().code(500).message("Internal error").endResponseMessage()
-                .route()
-                .to("direct:authorizeRequest")
-                .log(LoggingLevel.INFO, "Triggered GTFS export to Google")
-                .removeHeaders("CamelHttp*")
-                .inOnly("jms:queue:GoogleExportQueue")
-                .routeId("admin-timetable-google-export")
-                .endRest()
-
-                .post("/export/gtfs/google-qa")
-                .description("Prepare and upload GTFS QA export to Google")
-                .consumes(PLAIN)
-                .produces(PLAIN)
-                .responseMessage().code(200).endResponseMessage()
-                .responseMessage().code(500).message("Internal error").endResponseMessage()
-                .route()
-                .to("direct:authorizeRequest")
-                .log(LoggingLevel.INFO, "Triggered GTFS QA export to Google")
-                .removeHeaders("CamelHttp*")
-                .inOnly("jms:queue:GoogleQaExportQueue")
-                .routeId("admin-timetable-google-qa-export")
-                .endRest()
-
-                .post("/export/google/publish")
-                .description("Upload GTFS export to Google")
-                .consumes(PLAIN)
-                .produces(PLAIN)
-                .responseMessage().code(200).endResponseMessage()
-                .responseMessage().code(500).message("Internal error").endResponseMessage()
-                .route()
-                .to("direct:authorizeRequest")
-                .log(LoggingLevel.INFO, "Triggered publish of GTFS to Google")
-                .removeHeaders("CamelHttp*")
-                .inOnly("jms:queue:GooglePublishQueue")
-                .routeId("admin-timetable-google-publish")
-                .endRest()
-
-                .post("/export/google-qa/publish/")
-                .description("Upload GTFS QA export to Google")
-                .consumes(PLAIN)
-                .produces(PLAIN)
-                .responseMessage().code(200).endResponseMessage()
-                .responseMessage().code(500).message("Internal error").endResponseMessage()
-                .route()
-                .to("direct:authorizeRequest")
-                .log(LoggingLevel.INFO, "Triggered publish of GTFS QA export to Google")
-                .removeHeaders("CamelHttp*")
-                .inOnly("jms:queue:GooglePublishQaQueue")
-                .routeId("admin-timetable-google-qa-publish")
-                .endRest()
+                .responseMessage().code(500).message(INTERNAL_ERROR).endResponseMessage()
+                .to(ROUTE_ADMIN_TIMETABLE_GTFS_EXTENDED_EXPORT)
 
 
                 .post("/export/netex/merged")
                 .description("Prepare and upload a merged Netex file for Norway")
-                .consumes(PLAIN)
-                .produces(PLAIN)
+                .consumes(MediaType.TEXT_PLAIN)
+                .produces(MediaType.TEXT_PLAIN)
                 .responseMessage().code(200).endResponseMessage()
-                .responseMessage().code(500).message("Internal error").endResponseMessage()
-                .route()
-                .to("direct:authorizeRequest")
-                .log(LoggingLevel.INFO, "Triggered Netex export of merged file for Norway")
-                .removeHeaders("CamelHttp*")
-                .inOnly("jms:queue:NetexExportMergedQueue")
-                .routeId("admin-timetable-netex-merged-export")
-                .endRest()
+                .responseMessage().code(500).message(INTERNAL_ERROR).endResponseMessage()
+                .to(ROUTE_ADMIN_TIMETABLE_NETEX_MERGED_EXPORT)
 
-                .get("/swagger.json")
+                .get(SWAGGER_ENDPOINT)
                 .apiDocs(false)
                 .bindingMode(RestBindingMode.off)
-                .route()
-                .to(commonApiDocEndpoint)
-                .endRest()
-
-                .post("routing_graph/build_base")
-                .description("Triggers building of the OTP base graph using map data (osm + height)")
-                .consumes(PLAIN)
-                .produces(PLAIN)
-                .responseMessage().code(200).message("Command accepted").endResponseMessage()
-                .route()
-                .process(e -> authorizationService.verifyAtLeastOne(new AuthorizationClaim(AuthorizationConstants.ROLE_ROUTE_DATA_ADMIN)))
-                .log(LoggingLevel.INFO, "Triggered build of OTP base graph with map data")
-                .removeHeaders("CamelHttp*")
-                .setBody(simple(""))
-                .setHeader(Constants.OTP_BASE_GRAPH_BUILD, constant(true))
-                .inOnly("jms:queue:OtpGraphBuildQueue")
-                .routeId("admin-build-base-graph")
-                .endRest()
-
-                .post("routing_graph/build")
-                .description("Triggers building of the OTP graph using existing NeTEx and and a pre-prepared base graph with map data")
-                .consumes(PLAIN)
-                .produces(PLAIN)
-                .responseMessage().code(200).message("Command accepted").endResponseMessage()
-                .route()
-                .process(e -> authorizationService.verifyAtLeastOne(new AuthorizationClaim(AuthorizationConstants.ROLE_ROUTE_DATA_ADMIN)))
-                .log(LoggingLevel.INFO, "OTP build graph from NeTEx")
-                .removeHeaders("CamelHttp*")
-                .setBody(simple(""))
-                .inOnly("jms:queue:OtpGraphBuildQueue")
-                .routeId("admin-build-graph-netex")
-                .endRest()
-
-                .post("routing_graph/qa")
-                .description("Triggers running the OTP TravelSearch QA (tests)")
-                .consumes(PLAIN)
-                .produces(PLAIN)
-                .responseMessage().code(200).message("Command accepted").endResponseMessage()
-                .route()
-                .process(e -> authorizationService.verifyAtLeastOne(new AuthorizationClaim(AuthorizationConstants.ROLE_ROUTE_DATA_ADMIN)))
-                .log(LoggingLevel.INFO, "Trigger OTP TravelSearch QA")
-                .removeHeaders("CamelHttp*")
-                .setBody(simple(""))
-                .to("direct:runOtpTravelSearchQA")
-                .routeId("admin-otp-travelsearch-qa")
-                .endRest();
+                .to(commonApiDocEndpoint);
 
 
         rest("/timetable_admin/{providerId}")
                 .post("/import")
                 .description("Triggers the import->validate->export process in Chouette for each blob store file handle. Use /files call to obtain available files. Files are imported in the same order as they are provided")
-                .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the nabu service").dataType("integer").endParam()
+                .param().name(PROVIDER).type(RestParamType.path).description(PROVIDER_DESCRIPTION).dataType(INTEGER).endParam()
                 .type(BlobStoreFiles.class)
                 .outType(String.class)
-                .consumes(JSON)
-                .produces(PLAIN)
+                .consumes(MediaType.APPLICATION_JSON)
+                .produces(MediaType.TEXT_PLAIN)
                 .responseMessage().code(200).message("Job accepted").endResponseMessage()
-                .responseMessage().code(500).message("Invalid providerId").endResponseMessage()
-                .route()
-                .removeHeaders("CamelHttp*")
-                .setHeader(PROVIDER_ID, header("providerId"))
-                .setHeader(IMPORT, constant(true))
-                .to("direct:authorizeRequest")
-                .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
-                .split(method(ImportFilesSplitter.class, "splitFiles"))
-
-                .process(e -> e.getIn().setHeader(FILE_HANDLE, getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)).mobiitiId
-                        + "/imports/" + e.getIn().getBody(String.class)))
-                .process(e -> e.getIn().setHeader(CORRELATION_ID, UUID.randomUUID().toString()))
-                .log(LoggingLevel.INFO, correlation() + "Chouette start import fileHandle=${body}")
-
-                .process(e -> {
-                    String fileNameForStatusLogging = "reimport-" + e.getIn().getBody(String.class);
-                    e.getIn().setHeader(FILE_NAME, fileNameForStatusLogging);
-                })
-                .setBody(constant(null))
-
-                .inOnly("jms:queue:ProcessFileQueue")
-                .routeId("admin-chouette-import")
-                .endRest()
+                .responseMessage().code(500).message(INVALID_PROVIDER).endResponseMessage()
+                .to(ROUTE_ADMIN_CHOUETTE_IMPORT)
 
                 .post("/import/{importConfigurationId}")
                 .description("Triggers a predefined import.")
-                .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the nabu service").dataType("integer").endParam()
-                .consumes(PLAIN)
-                .produces(PLAIN)
+                .param().name(PROVIDER).type(RestParamType.path).description(PROVIDER_DESCRIPTION).dataType(INTEGER).endParam()
+                .consumes(MediaType.TEXT_PLAIN)
+                .produces(MediaType.TEXT_PLAIN)
                 .responseMessage().code(200).message("Command for predefined import accepted").endResponseMessage()
-                .route()
-                .setHeader(PROVIDER_ID, header("providerId"))
-                .setHeader(IMPORT_CONFIGURATION_ID, header("importConfigurationId"))
-                .to("direct:authorizeRequest")
-                .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
-                .log(LoggingLevel.INFO, correlation() + "Chouette start import predefined")
-                .removeHeaders("CamelHttp*")
-                .process(e -> e.getIn().setHeader(USER, getHeaders(e, USER)))
-                 .setBody().simple(CAMEL_HEADERS)
-                .inOnly("jms:queue:ImportConfigurationQueue")
-                .routeId("admin-chouette-import-all")
-                .endRest()
+                .to(ROUTE_ADMIN_CHOUETTE_IMPORT_ALL)
 
                 .get("/files")
                 .description("List files available for reimport into Chouette")
-                .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the baba service").dataType("integer").endParam()
+                .param().name(PROVIDER).type(RestParamType.path).description("Provider id as obtained from the baba service").dataType(INTEGER).endParam()
                 .outType(BlobStoreFiles.class)
-                .consumes(PLAIN)
-                .produces(JSON)
+                .consumes(MediaType.TEXT_PLAIN)
+                .produces(MediaType.APPLICATION_JSON)
                 .responseMessage().code(200).endResponseMessage()
-                .responseMessage().code(500).message("Invalid providerId").endResponseMessage()
-                .route()
-                .setHeader(PROVIDER_ID, header("providerId"))
-                .to("direct:authorizeRequest")
-                .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
-                .log(LoggingLevel.INFO, correlation() + "blob store get files")
-                .removeHeaders("CamelHttp*")
-                .to("direct:listBlobsFlat")
-                .routeId("admin-chouette-import-list")
-                .endRest()
+                .responseMessage().code(500).message(INVALID_PROVIDER).endResponseMessage()
+                .to(ROUTE_ADMIN_CHOUETTE_IMPORT_LIST)
 
                 .post("/analyzeFile")
                 .description("Upload file for pre-import analyze into Chouette")
-                .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the nabu service").dataType("integer").endParam()
-                .consumes(MULTIPART_FORM_DATA)
-                .produces(JSON)
+                .param().name(PROVIDER).type(RestParamType.path).description(PROVIDER_DESCRIPTION).dataType(INTEGER).endParam()
+                .consumes(MediaType.MULTIPART_FORM_DATA)
+                .produces(MediaType.APPLICATION_JSON)
                 .bindingMode(RestBindingMode.off)
                 .responseMessage().code(200).endResponseMessage()
-                .responseMessage().code(500).message("Invalid providerId").endResponseMessage()
-                .route()
-                .streamCaching()
-                .setHeader(PROVIDER_ID, header("providerId"))
-                .to("direct:authorizeRequest")
-                .log(LoggingLevel.INFO, "Authorized request passed")
-                .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
-                .log(LoggingLevel.INFO, "Validation passed")
-                .process(e -> e.getIn().setHeader(ANALYZE_ACTION, true))
-                .log(LoggingLevel.INFO, correlation() + "upload files and start import pipeline")
-                .removeHeaders("CamelHttp*")
-                .doTry()
-                .process(e -> checkFileContent(e))
-                    .to("direct:uploadFilesAndStartImport")
-                .doCatch(Exception.class)
-                .process(e -> {
-                    Exception exception = e.getProperty(Exchange.EXCEPTION_CAUGHT, Exception.class);
-                    e.getIn().setHeader(HTTP_RESPONSE_CODE, 500);
-                    Map<String, String> result = new HashMap<>();
-                    result.put("message", exception.getMessage());
-                    e.getIn().setBody(result);
-                })
-                .marshal().json(JsonLibrary.Jackson)
-                .end()
-                .routeId("admin-chouette-upload-file-to-analysis")
-                .endRest()
+                .responseMessage().code(500).message(INVALID_PROVIDER).endResponseMessage()
+                .to(ROUTE_ADMIN_CHOUETTE_UPLOAD_FILE_TO_ANALYSIS)
 
 
                 .post("/files")
                 .description("Upload file for import into Chouette")
-                .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the nabu service").dataType("integer").endParam()
+                .param().name(PROVIDER).type(RestParamType.path).description(PROVIDER_DESCRIPTION).dataType(INTEGER).endParam()
                 .consumes(MULTIPART_FORM_DATA)
-                .produces(PLAIN)
+                .produces(MediaType.TEXT_PLAIN)
                 .bindingMode(RestBindingMode.off)
                 .responseMessage().code(200).endResponseMessage()
-                .responseMessage().code(500).message("Invalid providerId").endResponseMessage()
-                .route()
-                .streamCaching()
-                .setHeader(PROVIDER_ID, header("providerId"))
-                .to("direct:authorizeRequest")
-                .process(e -> log.info("Authorized request passed"))
-                .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
-                .process(e -> log.info("validation passed"))
-                .process(e -> {
-                    String referential = getProviderRepository().getReferential(e.getIn().getHeader(PROVIDER_ID, Long.class));
-                    String jobId = e.getIn().getHeader(ANALYSIS_JOB_ID, String.class);
-                    java.io.File gtfsZipFile = fileSystemService.getImportZipFileByReferentialAndJobId(referential, jobId);
-                    FileItemFactory fac = new DiskFileItemFactory();
-                    FileItem fileItem = fac.createItem("file", "application/zip", false, gtfsZipFile.getName());
-                    Streams.copy(new FileInputStream(gtfsZipFile), fileItem.getOutputStream(), true);
-                    e.getIn().setBody(fileItem);
-                    e.getIn().setHeader(CHOUETTE_REFERENTIAL, referential);
-                    e.getIn().setHeader(FILE_NAME, gtfsZipFile.getName());
-                    e.getIn().setHeader(GENERATE_MAP_MATCHING, getGenerateMapMatchingHeaders(e));
-                })
-                .log(LoggingLevel.INFO, correlation() + "upload files and start import pipeline")
-                .removeHeaders("CamelHttp*")
-                .to("direct:importLaunch")
-                .routeId("admin-chouette-upload-file")
-                .endRest()
+                .responseMessage().code(500).message(INVALID_PROVIDER).endResponseMessage()
+                .to(ROUTE_ADMIN_CHOUETTE_UPLOAD_FILE)
 
                 .get("/files/{fileName}")
                 .description("Download file for reimport into Chouette")
-                .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the nabu service").dataType("integer").endParam()
-                .param().name("fileName").type(RestParamType.path).description("Name of file to fetch").dataType("string").endParam()
-                .consumes(PLAIN)
+                .param().name(PROVIDER).type(RestParamType.path).description(PROVIDER_DESCRIPTION).dataType(INTEGER).endParam()
+                .param().name(FILENAME).type(RestParamType.path).description("Name of file to fetch").dataType("string").endParam()
+                .consumes(MediaType.TEXT_PLAIN)
                 .produces(X_OCTET_STREAM)
                 .responseMessage().code(200).endResponseMessage()
                 .responseMessage().code(500).message("Invalid fileName").endResponseMessage()
-                .route()
-                .setHeader(PROVIDER_ID, header("providerId"))
-                .to("direct:authorizeRequest")
-                .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
-                .process(e -> e.getIn().setHeader("fileName", URLDecoder.decode(e.getIn().getHeader("fileName", String.class), StandardCharsets.UTF_8)))
-                .process(e -> e.getIn().setHeader(FILE_HANDLE, BLOBSTORE_PATH_INBOUND
-                        + getProviderRepository().getReferential(e.getIn().getHeader(PROVIDER_ID, Long.class))
-                        + "/" + e.getIn().getHeader("fileName", String.class)))
-                .log(LoggingLevel.INFO, correlation() + "blob store download file by name")
-                .removeHeaders("CamelHttp*")
-                .to("direct:getBlob")
-                .choice().when(simple("${body} == null")).setHeader(HTTP_RESPONSE_CODE, constant(404)).endChoice()
-                .routeId("admin-chouette-file-download")
-                .endRest()
+                .to(ROUTE_ADMIN_CHOUETTE_FILE_DOWNLOAD)
+
 
                 .get("/files/stop-places")
                 .description("Download stop places export file (NeTEx stop places)")
-                .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the nabu service").dataType("integer").endParam()
-                .consumes(PLAIN)
+                .param().name(PROVIDER).type(RestParamType.path).description(PROVIDER_DESCRIPTION).dataType(INTEGER).endParam()
+                .consumes(MediaType.TEXT_PLAIN)
                 .produces(X_OCTET_STREAM)
                 .responseMessage().code(200).endResponseMessage()
-                .responseMessage().code(500).message("Invalid providerId").endResponseMessage()
-                .route()
-                .setHeader(PROVIDER_ID, header("providerId"))
-                .setHeader("Access-Control-Expose-Headers", simple(FILE_NAME))
-                .to("direct:authorizeRequest")
-                .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
-                .process(e -> {
-                    String ref = e.getIn().getHeader(OKINA_REFERENTIAL, String.class);
-                    if (!ref.contains(superspaceName + "_")) {
-                        e.getIn().setHeader(OKINA_REFERENTIAL, superspaceName + "_" + ref);
-                    } else {
-                        e.getIn().setHeader(OKINA_REFERENTIAL, ref);
-                    }
-                })
-                .removeHeaders("CamelHttp*")
-                .to("direct:getStopPlacesFile")
-                .choice().when(simple("${body} == null")).setHeader(HTTP_RESPONSE_CODE, constant(404)).endChoice()
-                .routeId("admin-stop-places-file-download")
-                .endRest()
+                .responseMessage().code(500).message(INVALID_PROVIDER).endResponseMessage()
+                .to(ROUTE_ADMIN_STOP_PLACES_FILE_DOWNLOAD)
 
                 .get("/files/offer/{jobId}")
                 .description("Download offer export file (GTFS, NeTEx or Concerto")
-                .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the nabu service").dataType("integer").endParam()
-                .param().name("jobId").type(RestParamType.path).description("Job id").dataType("integer").endParam()
-                .consumes(PLAIN)
+                .param().name(PROVIDER).type(RestParamType.path).description(PROVIDER_DESCRIPTION).dataType(INTEGER).endParam()
+                .param().name(JOB_ID).type(RestParamType.path).description("Job id").dataType(INTEGER).endParam()
+                .consumes(MediaType.TEXT_PLAIN)
                 .produces(X_OCTET_STREAM)
                 .responseMessage().code(200).endResponseMessage()
                 .responseMessage().code(500).message("Invalid providerId or jobId").endResponseMessage()
-                .route()
-                .setHeader(PROVIDER_ID, header("providerId"))
-                .setHeader(JOB_ID, header("jobId"))
-                .setHeader("Access-Control-Expose-Headers", simple(FILE_NAME))
-                .to("direct:authorizeRequest")
-                .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
-                .process(e -> {
-                    String ref = e.getIn().getHeader(OKINA_REFERENTIAL, String.class);
-                    if (!ref.contains(superspaceName + "_") && !ref.startsWith(simulationName + "_")) {
-                        e.getIn().setHeader(OKINA_REFERENTIAL, superspaceName + "_" + ref);
-                    } else {
-                        e.getIn().setHeader(OKINA_REFERENTIAL, ref);
-                    }
-                })
-                .removeHeaders("CamelHttp*")
-                .removeHeaders("Authorization*")
-                .to("direct:getOfferFile")
-                .choice().when(simple("${body} == null")).setHeader(HTTP_RESPONSE_CODE, constant(404)).endChoice()
-                .routeId("admin-offer-file-download")
-                .endRest()
+                .to(ROUTE_ADMIN_OFFER_FILE_DOWNLOAD)
 
                 .get("/line_statistics")
                 .description("List stats about data in chouette for a given provider")
-                .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the nabu service").dataType("integer").endParam()
+                .param().name(PROVIDER).type(RestParamType.path).description(PROVIDER_DESCRIPTION).dataType(INTEGER).endParam()
                 .bindingMode(RestBindingMode.off)
-                .consumes(PLAIN)
-                .produces(JSON)
+                .consumes(MediaType.TEXT_PLAIN)
+                .produces(MediaType.APPLICATION_JSON)
                 .responseMessage().code(200).endResponseMessage()
-                .responseMessage().code(500).message("Invalid providerId").endResponseMessage()
-                .route()
-                .setHeader(PROVIDER_ID, header("providerId"))
-                .to("direct:authorizeRequest")
-                .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
-                .log(LoggingLevel.INFO, correlation() + "get stats")
-                .removeHeaders("CamelHttp*")
-                .to("direct:chouetteGetStatsSingleProvider")
-                .routeId("admin-chouette-stats")
-                .endRest()
+                .responseMessage().code(500).message(INVALID_PROVIDER).endResponseMessage()
+                .to(ROUTE_ADMIN_CHOUETTE_STATS)
 
-                .get("/jobs")
+                .get(JOBS_ENDPOINT)
                 .description("List Chouette jobs for a given provider")
-                .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the nabu service").dataType("integer").endParam()
+                .param().name(PROVIDER).type(RestParamType.path).description(PROVIDER_DESCRIPTION).dataType(INTEGER).endParam()
                 .param()
                 .required(Boolean.FALSE)
-                .name("status")
+                .name(STATUS)
                 .type(RestParamType.query)
                 .description("Chouette job statuses")
-                .allowableValues(Arrays.asList(Status.values()).stream().map(Status::name).collect(Collectors.toList()))
+                .allowableValues(Arrays.stream(Status.values()).map(Status::name).collect(Collectors.toList()))
                 .endParam()
                 .param()
                 .required(Boolean.FALSE)
-                .name("action")
+                .name(ACTION)
                 .type(RestParamType.query)
                 .description("Chouette job types")
-                .allowableValues("importer", "exporter", "validator")
+                .allowableValues(IMPORTER, EXPORTER, VALIDATOR)
                 .endParam()
                 .outType(JobResponse[].class)
-                .consumes(PLAIN)
-                .produces(JSON)
+                .consumes(MediaType.TEXT_PLAIN)
+                .produces(MediaType.APPLICATION_JSON)
                 .responseMessage().code(200).endResponseMessage()
-                .responseMessage().code(500).message("Invalid providerId").endResponseMessage()
-                .route()
-                .setHeader(PROVIDER_ID, header("providerId"))
-                .to("direct:authorizeRequest")
-                .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
-                .log(LoggingLevel.INFO, correlation() + "Get chouette jobs status=${header.status} action=${header.action}")
-                .removeHeaders("CamelHttp*")
-                .to("direct:chouetteGetJobsForProvider")
-                .routeId("admin-chouette-list-jobs")
-                .endRest()
+                .responseMessage().code(500).message(INVALID_PROVIDER).endResponseMessage()
+                .to(ROUTE_ADMIN_CHOUETTE_LIST_JOBS)
 
                 .get("/tiamat-jobs")
                 .description("List Tiamat jobs for a given provider")
-                .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the nabu service").dataType("integer").endParam()
+                .param().name(PROVIDER).type(RestParamType.path).description(PROVIDER_DESCRIPTION).dataType(INTEGER).endParam()
                 .param()
                 .required(Boolean.FALSE)
-                .name("status")
+                .name(STATUS)
                 .type(RestParamType.query)
                 .description("Tiamat job statuses")
-                .allowableValues(Arrays.asList(Status.values()).stream().map(Status::name).collect(Collectors.toList()))
+                .allowableValues(Arrays.stream(Status.values()).map(Status::name).collect(Collectors.toList()))
                 .endParam()
                 .param()
                 .required(Boolean.FALSE)
-                .name("action")
+                .name(ACTION)
                 .type(RestParamType.query)
                 .description("Tiamat job types")
-                .allowableValues("importer")
+                .allowableValues(IMPORTER)
                 .endParam()
                 .outType(JobResponse[].class)
-                .consumes(PLAIN)
-                .produces(JSON)
+                .consumes(MediaType.TEXT_PLAIN)
+                .produces(MediaType.APPLICATION_JSON)
                 .responseMessage().code(200).endResponseMessage()
-                .responseMessage().code(500).message("Invalid providerId").endResponseMessage()
-                .route()
-                .setHeader(PROVIDER_ID, header("providerId"))
-                .to("direct:authorizeRequest")
-                .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
-                .log(LoggingLevel.INFO, correlation() + "Get timat jobs status=${header.status} action=${header.action}")
-                .removeHeaders("CamelHttp*")
-                .to("direct:tiamatGetJobsForProvider")
-                .routeId("admin-tiamat-list-jobs")
-                .endRest()
+                .responseMessage().code(500).message(INVALID_PROVIDER).endResponseMessage()
+                .to(ROUTE_ADMIN_TIAMAT_LIST_JOBS)
 
-                .delete("/jobs")
+                .delete(JOBS_ENDPOINT)
                 .description("Cancel all Chouette jobs for a given provider")
-                .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the nabu service").dataType("integer").endParam()
-                .consumes(PLAIN)
-                .produces(PLAIN)
+                .param().name(PROVIDER).type(RestParamType.path).description(PROVIDER_DESCRIPTION).dataType(INTEGER).endParam()
+                .consumes(MediaType.TEXT_PLAIN)
+                .produces(MediaType.TEXT_PLAIN)
                 .responseMessage().code(200).message("Job deleted").endResponseMessage()
                 .responseMessage().code(500).message("Invalid jobId").endResponseMessage()
-                .route()
-                .setHeader(PROVIDER_ID, header("providerId"))
-                .to("direct:authorizeRequest")
-                .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
-                .log(LoggingLevel.INFO, correlation() + "Cancel all chouette jobs")
-                .removeHeaders("CamelHttp*")
-                .to("direct:chouetteCancelAllJobsForProvider")
-                .routeId("admin-chouette-cancel-all-jobs")
-                .endRest()
+                .to(ROUTE_ADMIN_CHOUETTE_CANCEL_ALL_JOBS)
 
                 .delete("/jobs/{jobId}")
                 .description("Cancel a Chouette job for a given provider")
-                .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the nabu service").dataType("integer").endParam()
-                .param().name("jobId").type(RestParamType.path).description("Job id as returned in any of the /jobs GET calls").dataType("integer").endParam()
-                .consumes(PLAIN)
-                .produces(PLAIN)
+                .param().name(PROVIDER).type(RestParamType.path).description(PROVIDER_DESCRIPTION).dataType(INTEGER).endParam()
+                .param().name(JOB_ID).type(RestParamType.path).description("Job id as returned in any of the /jobs GET calls").dataType(INTEGER).endParam()
+                .consumes(MediaType.TEXT_PLAIN)
+                .produces(MediaType.TEXT_PLAIN)
                 .responseMessage().code(200).message("Job deleted").endResponseMessage()
                 .responseMessage().code(500).message("Invalid jobId").endResponseMessage()
-                .route()
-                .setHeader(PROVIDER_ID, header("providerId"))
-                .to("direct:authorizeRequest")
-                .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
-                .setHeader(JOB_ID, header("jobId"))
-                .log(LoggingLevel.INFO, correlation() + "Cancel chouette job")
-                .removeHeaders("CamelHttp*")
-                .to("direct:chouetteCancelJob")
-                .routeId("admin-chouette-cancel-job")
-                .endRest()
+                .to(ROUTE_ADMIN_CHOUETTE_CANCEL_JOB)
 
                 .post("/export")
                 .description("Triggers the export process in Chouette. Note that NO validation is performed before export, and that the data must be guaranteed to be error free")
-                .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the nabu service").dataType("integer").endParam()
-                .consumes(PLAIN)
-                .produces(PLAIN)
-                .responseMessage().code(200).message("Command accepted").endResponseMessage()
-                .route()
-                .setHeader(PROVIDER_ID, header("providerId"))
-                .setHeader(NO_GTFS_EXPORT, constant(false))
-                .setHeader(NETEX_EXPORT_GLOBAL, constant(false))
-                .setHeader(IS_SIMULATION_EXPORT, constant(false))
-                .to("direct:authorizeRequest")
-                .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
-                .log(LoggingLevel.INFO, correlation() + "Chouette start export")
-                .removeHeaders("CamelHttp*")
-                .inOnly("jms:queue:ChouetteExportNetexQueue")
-                .routeId("admin-chouette-export")
-                .endRest()
+                .param().name(PROVIDER).type(RestParamType.path).description(PROVIDER_DESCRIPTION).dataType(INTEGER).endParam()
+                .consumes(MediaType.TEXT_PLAIN)
+                .produces(MediaType.TEXT_PLAIN)
+                .responseMessage().code(200).message(COMMAND_ACCEPTED).endResponseMessage()
+                .to(ROUTE_ADMIN_CHOUETTE_EXPORT)
 
                 .post("/export/netex")
                 .description("Triggers the Netex export process in Chouette. Note that NO validation is performed before export, and that the data must be guaranteed to be error free")
-                .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the nabu service").dataType("integer").endParam()
-                .consumes(PLAIN)
-                .produces(PLAIN)
-                .responseMessage().code(200).message("Command accepted").endResponseMessage()
-                .route()
-                .process(e -> e.getIn().setHeader(EXPORT_GENERATED_MISSING_QUAYS, getHeaders(e, EXPORT_GENERATED_MISSING_QUAYS)))
-                .process(e -> e.getIn().setHeader(EXPORT_EXTERNAL_IDS, getHeaders(e, EXPORT_EXTERNAL_IDS)))
-                .setHeader(PROVIDER_ID, header("providerId"))
-                .setHeader(NO_GTFS_EXPORT, constant(true))
-                .setHeader(NETEX_EXPORT_GLOBAL, constant(false))
-                .setHeader(IS_SIMULATION_EXPORT, constant(false))
-                .to("direct:authorizeRequest")
-                .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
-                .log(LoggingLevel.INFO, correlation() + "Chouette start export Netex")
-                .removeHeaders("CamelHttp*")
-                .process(e -> e.getIn().setHeader(USER, getHeaders(e, USER)))
-                .setBody().simple(CAMEL_HEADERS)
-                .inOnly("jms:queue:ChouetteExportNetexQueue")
-                .routeId("admin-chouette-export-netex")
-                .endRest()
+                .param().name(PROVIDER).type(RestParamType.path).description(PROVIDER_DESCRIPTION).dataType(INTEGER).endParam()
+                .consumes(MediaType.TEXT_PLAIN)
+                .produces(MediaType.TEXT_PLAIN)
+                .responseMessage().code(200).message(COMMAND_ACCEPTED).endResponseMessage()
+                .to(ROUTE_ADMIN_CHOUETTE_EXPORT_NETEX)
 
                 .post("/export/neptune")
                 .description("Triggers the neptune export process in Chouette. Note that NO validation is performed before export, and that the data must be guaranteed to be error free")
-                .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the nabu service").dataType("integer").endParam()
-                .consumes(PLAIN)
-                .produces(PLAIN)
-                .responseMessage().code(200).message("Command accepted").endResponseMessage()
-                .route()
-                .setHeader(PROVIDER_ID, header("providerId"))
-                .setHeader(NO_GTFS_EXPORT, constant(true))
-                .setHeader(NETEX_EXPORT_GLOBAL, constant(false))
-                .setHeader(IS_SIMULATION_EXPORT, constant(false))
-                .to("direct:authorizeRequest")
-                .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
-                .log(LoggingLevel.INFO, correlation() + "Chouette start export Neptune")
-                .removeHeaders("CamelHttp*")
-                .process(e -> e.getIn().setHeader(USER, getHeaders(e, USER)))
-                .setBody().simple(CAMEL_HEADERS)
-                .inOnly("jms:queue:ChouetteExportNeptuneQueue")
-                .routeId("admin-chouette-export-neptune")
-                .endRest()
+                .param().name(PROVIDER).type(RestParamType.path).description(PROVIDER_DESCRIPTION).dataType(INTEGER).endParam()
+                .consumes(MediaType.TEXT_PLAIN)
+                .produces(MediaType.TEXT_PLAIN)
+                .responseMessage().code(200).message(COMMAND_ACCEPTED).endResponseMessage()
+                .to(ROUTE_ADMIN_CHOUETTE_EXPORT_NEPTUNE)
 
                 .post("/export/netex_simulation")
-                .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the nabu service").dataType("integer").endParam()
-                .consumes(PLAIN)
-                .produces(PLAIN)
-                .responseMessage().code(200).message("Command accepted").endResponseMessage()
-                .route()
-                .setHeader(PROVIDER_ID, header("providerId"))
-                .setHeader(NO_GTFS_EXPORT, constant(true))
-                .setHeader(NETEX_EXPORT_GLOBAL, constant(false))
-                .setHeader(IS_SIMULATION_EXPORT, constant(true))
-                .to("direct:authorizeRequest")
-                .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
-                .process(e -> authorizationService.verifyAtLeastOne(new AuthorizationClaim(ROLE_EXPORT_SIMULATION)))
-                .removeHeaders("CamelHttp*")
-                .process(e -> {
-                    e.getIn().setHeader(USER, getHeaders(e, USER));
-                    e.getIn().setHeader(EXPORT_SIMULATION_NAME, getSimulationExportPrefix(e));
-                })
-                .inOnly("jms:queue:ChouetteExportNetexQueue")
-                .routeId("simulation-export-netex")
-                .endRest()
+                .param().name(PROVIDER).type(RestParamType.path).description(PROVIDER_DESCRIPTION).dataType(INTEGER).endParam()
+                .consumes(MediaType.TEXT_PLAIN)
+                .produces(MediaType.TEXT_PLAIN)
+                .responseMessage().code(200).message(COMMAND_ACCEPTED).endResponseMessage()
+                .to(ROUTE_SIMULATION_EXPORT_NETEX)
 
                 .post("/export/gtfs")
                 .description("Triggers the Gtfs export process in Chouette. Note that NO validation is performed before export, and that the data must be guaranteed to be error free")
-                .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the nabu service").dataType("integer").endParam()
-                .consumes(PLAIN)
-                .produces(PLAIN)
-                .responseMessage().code(200).message("Command accepted").endResponseMessage()
-                .route()
-                .setHeader(PROVIDER_ID, header("providerId"))
-                .setHeader(GTFS_EXPORT_GLOBAL, constant(false))
-                .to("direct:authorizeRequest")
-                .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
-                .log(LoggingLevel.INFO, correlation() + "Chouette start export GTFS")
-                .removeHeaders("CamelHttp*")
-                .process(this::getFromHeadersForGTFS)
-                .setBody().simple(CAMEL_HEADERS)
-                .inOnly("jms:queue:ChouetteExportGtfsQueue")
-                .routeId("admin-chouette-export-gtfs")
-                .endRest()
+                .param().name(PROVIDER).type(RestParamType.path).description(PROVIDER_DESCRIPTION).dataType(INTEGER).endParam()
+                .consumes(MediaType.TEXT_PLAIN)
+                .produces(MediaType.TEXT_PLAIN)
+                .responseMessage().code(200).message(COMMAND_ACCEPTED).endResponseMessage()
+                .to(ROUTE_ADMIN_CHOUETTE_EXPORT_GTFS)
 
                 .post("/export/all")
                 .description("Triggers all exports process in Chouette.")
-                .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the nabu service").dataType("integer").endParam()
-                .consumes(PLAIN)
-                .produces(PLAIN)
+                .param().name(PROVIDER).type(RestParamType.path).description(PROVIDER_DESCRIPTION).dataType(INTEGER).endParam()
+                .consumes(MediaType.TEXT_PLAIN)
+                .produces(MediaType.TEXT_PLAIN)
                 .responseMessage().code(200).message("Command for all exports accepted").endResponseMessage()
-                .route()
-                .setHeader(PROVIDER_ID, header("providerId"))
-                .to("direct:authorizeRequest")
-                .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
-                .log(LoggingLevel.INFO, correlation() + "Chouette start all export process")
-                .removeHeaders("CamelHttp*")
-                .process(e -> e.getIn().setHeader(USER, getHeaders(e, USER)))
-                .setBody().simple(CAMEL_HEADERS)
-                .inOnly("jms:queue:predefinedExports")
-                .routeId("admin-chouette-export-all")
-                .endRest()
+                .to(ROUTE_ADMIN_CHOUETTE_EXPORT_ALL)
 
                 .post("/export-by-id/{exportConfigurationId}")
                 .description("Triggers export by id process in Chouette.")
-                .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the nabu service").dataType("integer").endParam()
-                .consumes(PLAIN)
-                .produces(PLAIN)
+                .param().name(PROVIDER).type(RestParamType.path).description(PROVIDER_DESCRIPTION).dataType(INTEGER).endParam()
+                .consumes(MediaType.TEXT_PLAIN)
+                .produces(MediaType.TEXT_PLAIN)
                 .responseMessage().code(200).message("Command for export accepted").endResponseMessage()
-                .route()
-                .setHeader(PROVIDER_ID, header("providerId"))
-                .setHeader(EXPORT_CONFIGURATION_ID, header("exportConfigurationId"))
-                .to("direct:authorizeRequest")
-                .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
-                .log(LoggingLevel.INFO, correlation() + "Chouette start export process")
-                .removeHeaders("CamelHttp*")
-                .process(e -> e.getIn().setHeader(USER, getHeaders(e, USER)))
-                .setBody().simple(CAMEL_HEADERS)
-                .inOnly("jms:queue:predefinedExport")
-                .routeId("admin-chouette-export-by-id")
-                .endRest()
-
+                .to(ROUTE_ADMIN_CHOUETTE_EXPORT_BY_ID)
 
                 .post("/export/concerto")
                 .description("Triggers the Concerto export process in Chouette. Note that NO validation is performed before export, and that the data must be guaranteed to be error free")
-                .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the nabu service").dataType("integer").endParam()
-                .consumes(PLAIN)
-                .produces(PLAIN)
-                .responseMessage().code(200).message("Command accepted").endResponseMessage()
-                .route()
-                .setHeader(PROVIDER_ID, header("providerId"))
-                .to("direct:authorizeRequest")
-                .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
-                .log(LoggingLevel.INFO, correlation() + "Chouette start export Concerto")
-                .removeHeaders("CamelHttp*")
-                .process(e -> e.getIn().setHeader(USER, getHeaders(e, USER)))
-                .setBody().simple(CAMEL_HEADERS)
-                .inOnly("jms:queue:ChouetteExportConcertoQueue")
-                .routeId("admin-chouette-export-concerto")
-                .endRest()
+                .param().name(PROVIDER).type(RestParamType.path).description(PROVIDER_DESCRIPTION).dataType(INTEGER).endParam()
+                .consumes(MediaType.TEXT_PLAIN)
+                .produces(MediaType.TEXT_PLAIN)
+                .responseMessage().code(200).message(COMMAND_ACCEPTED).endResponseMessage()
+                .to(ROUTE_ADMIN_CHOUETTE_EXPORT_CONCERTO)
 
                 .post("/export/stops")
                 .description("Triggers the stops export process in Tiamat. Note that NO validation is performed before export, and that the data must be guaranteed to be error free")
-                .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the nabu service").dataType("integer").endParam()
-                .consumes(PLAIN)
-                .produces(PLAIN)
-                .responseMessage().code(200).message("Command accepted").endResponseMessage()
-                .route()
-                .process(e -> e.getIn().setHeader(EXPORT_GENERATED_MISSING_QUAYS, getHeaders(e, EXPORT_GENERATED_MISSING_QUAYS)))
-                .process(e -> e.getIn().setHeader(EXPORT_EXTERNAL_IDS, getHeaders(e, EXPORT_EXTERNAL_IDS)))
-                .setHeader(PROVIDER_ID, header("providerId"))
-                .to("direct:authorizeRequest")
-                .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
-                .log(LoggingLevel.INFO, correlation() + "Tiamat start export Stops")
-                .removeHeaders("CamelHttp*")
-                .process(e -> e.getIn().setHeader(USER, getHeaders(e, USER)))
-                .setBody().simple(CAMEL_HEADERS)
-                .inOnly("jms:queue:TiamatStopPlacesExport")
-                .routeId("admin-tiamat-export-stops")
-                .endRest()
+                .param().name(PROVIDER).type(RestParamType.path).description(PROVIDER_DESCRIPTION).dataType(INTEGER).endParam()
+                .consumes(MediaType.TEXT_PLAIN)
+                .produces(MediaType.TEXT_PLAIN)
+                .responseMessage().code(200).message(COMMAND_ACCEPTED).endResponseMessage()
+                .to(ROUTE_ADMIN_TIAMAT_EXPORT_STOPS)
 
                 .post("/export/parkings")
                 .description("Triggers the parkings export process in Tiamat. Note that NO validation is performed before export, and that the data must be guaranteed to be error free")
-                .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the nabu service").dataType("integer").endParam()
-                .consumes(PLAIN)
-                .produces(PLAIN)
-                .responseMessage().code(200).message("Command accepted").endResponseMessage()
-                .route()
-                .setHeader(PROVIDER_ID, header("providerId"))
-                .to("direct:authorizeRequest")
-                .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
-                .log(LoggingLevel.INFO, correlation() + "Tiamat start export Parkings")
-                .removeHeaders("CamelHttp*")
-                .process(e -> e.getIn().setHeader(USER, getHeaders(e, USER)))
-                .setBody().simple(CAMEL_HEADERS)
-                .inOnly("jms:queue:TiamatParkingsExport")
-                .routeId("admin-tiamat-export-parkings")
-                .endRest()
+                .param().name(PROVIDER).type(RestParamType.path).description(PROVIDER_DESCRIPTION).dataType(INTEGER).endParam()
+                .consumes(MediaType.TEXT_PLAIN)
+                .produces(MediaType.TEXT_PLAIN)
+                .responseMessage().code(200).message(COMMAND_ACCEPTED).endResponseMessage()
+                .to(ROUTE_ADMIN_TIAMAT_EXPORT_PARKINGS)
 
                 .post("/export/poi")
                 .description("Triggers the poi export process in Tiamat. Note that NO validation is performed before export, and that the data must be guaranteed to be error free")
-                .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the nabu service").dataType("integer").endParam()
-                .consumes(PLAIN)
-                .produces(PLAIN)
-                .responseMessage().code(200).message("Command accepted").endResponseMessage()
-                .route()
-                .setHeader(PROVIDER_ID, header("providerId"))
-                .to("direct:authorizeRequest")
-                .process(e -> {
-                    log.info("providerId:" + e.getIn().getHeader(PROVIDER_ID, Long.class));
-                })
-                .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
-                .log(LoggingLevel.INFO, correlation() + "Tiamat start export POI")
-                .removeHeaders("CamelHttp*")
-                .process(e -> e.getIn().setHeader(USER, getHeaders(e, USER)))
-                .setBody().simple(CAMEL_HEADERS)
-                .inOnly("jms:queue:TiamatPointOfInterestExport")
-                .routeId("admin-tiamat-export-poi")
-                .endRest()
+                .param().name(PROVIDER).type(RestParamType.path).description(PROVIDER_DESCRIPTION).dataType(INTEGER).endParam()
+                .consumes(MediaType.TEXT_PLAIN)
+                .produces(MediaType.TEXT_PLAIN)
+                .responseMessage().code(200).message(COMMAND_ACCEPTED).endResponseMessage()
+                .to(ROUTE_ADMIN_TIAMAT_EXPORT_POI)
 
                 .post("/validate")
                 .description("Triggers the validate->export process in Chouette")
-                .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the nabu service").dataType("integer").endParam()
-                .consumes(JSON)
-                .produces(PLAIN)
-                .responseMessage().code(200).message("Command accepted").endResponseMessage()
-                .route()
-                .setHeader(PROVIDER_ID, header("providerId"))
-                .to("direct:authorizeRequest")
-                .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
-                .log(LoggingLevel.INFO, correlation() + "Chouette start validation")
-                .removeHeaders("CamelHttp*")
-                .process(e -> e.getIn().setHeader(USER, getHeaders(e, USER)))
-                .choice()
-                .when(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)).chouetteInfo.migrateDataToProvider == null)
-                .setHeader(JOB_STATUS_JOB_VALIDATION_LEVEL, constant(JobEvent.TimetableAction.VALIDATION_LEVEL_2.name()))
-                .otherwise()
-                .setHeader(JOB_STATUS_JOB_VALIDATION_LEVEL, constant(JobEvent.TimetableAction.VALIDATION_LEVEL_1.name()))
-                .end()
-                .setBody().simple(CAMEL_HEADERS)
-                .inOnly("jms:queue:ChouetteValidationQueue")
-                .routeId("admin-chouette-validate")
-                .endRest()
+                .param().name(PROVIDER).type(RestParamType.path).description(PROVIDER_DESCRIPTION).dataType(INTEGER).endParam()
+                .consumes(MediaType.APPLICATION_JSON)
+                .produces(MediaType.TEXT_PLAIN)
+                .responseMessage().code(200).message(COMMAND_ACCEPTED).endResponseMessage()
+                .to(ROUTE_ADMIN_CHOUETTE_VALIDATE)
 
                 .post("/delete-exports")
                 .description("Delete all exports linked to provider")
                 .responseMessage().code(200).message("Delete exports command accepted").endResponseMessage()
-                .route()
-                .setHeader(PROVIDER_ID, header("providerId"))
-                .process(e -> {
-                    log.info("Delete exports starting");
-                    Provider provider = getProviderRepository().getNonMobiitiProvider(e.getIn().getHeader(PROVIDER_ID, Long.class))
-                            .orElseThrow(() -> new RuntimeException("No valid base provider found. Provider id : " + e.getIn().getHeader(PROVIDER_ID)));
-                    String baseProviderFolder = BlobStoreRoute.exportSiteId(provider);
-                    blobStoreService.deleteAllBlobsInFolder(baseProviderFolder, e);
-                    blobStoreService.deleteBlob(baseProviderFolder, e);
-                    log.info("Delete exports done");
-                })
-                .routeId("admin-delete-exports")
-                .endRest()
+                .to(ROUTE_ADMIN_DELETE_EXPORTS)
 
                 .post("/clean")
                 .description("Triggers the clean dataspace process in Chouette. Only timetable data are deleted, not job data (imports, exports, validations)")
-                .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the nabu service").dataType("integer").endParam()
-                .consumes(PLAIN)
-                .produces(PLAIN)
-                .responseMessage().code(200).message("Command accepted").endResponseMessage()
-                .route()
-                .setHeader(PROVIDER_ID, header("providerId"))
-                .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
-                .log(LoggingLevel.INFO, correlation() + "Chouette clean dataspace")
-                .removeHeaders("CamelHttp*")
-                .to("direct:chouetteCleanReferential")
-                .routeId("admin-chouette-clean")
-                .endRest()
+                .param().name(PROVIDER).type(RestParamType.path).description(PROVIDER_DESCRIPTION).dataType(INTEGER).endParam()
+                .consumes(MediaType.TEXT_PLAIN)
+                .produces(MediaType.TEXT_PLAIN)
+                .responseMessage().code(200).message(COMMAND_ACCEPTED).endResponseMessage()
+                .to(ROUTE_ADMIN_CHOUETTE_CLEAN)
 
                 .post("/transfer")
                 .description("Triggers transfer of data from one dataspace to the next")
-                .param().name("providerId").type(RestParamType.path).description("Provider id as obtained from the nabu service").dataType("integer").endParam()
-                .consumes(PLAIN)
-                .produces(PLAIN)
-                .responseMessage().code(200).message("Command accepted").endResponseMessage()
-                .route()
-                .setHeader(PROVIDER_ID, header("providerId"))
-                .log(LoggingLevel.INFO, correlation() + "Chouette transfer dataspace")
-                .removeHeaders("CamelHttp*")
-                .setHeader(PROVIDER_ID, header("providerId"))
-                .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
-                .inOnly("jms:queue:ChouetteTransferExportQueue")
-                .routeId("admin-chouette-transfer")
-                .endRest()
+                .param().name(PROVIDER).type(RestParamType.path).description(PROVIDER_DESCRIPTION).dataType(INTEGER).endParam()
+                .consumes(MediaType.TEXT_PLAIN)
+                .produces(MediaType.TEXT_PLAIN)
+                .responseMessage().code(200).message(COMMAND_ACCEPTED).endResponseMessage()
+                .to(ROUTE_ADMIN_CHOUETTE_TRANSFER)
 
                 .post("/update-scheduler-import-configuration")
                 .description("Update scheduler for the import configuration process.")
-                .consumes(PLAIN)
-                .produces(PLAIN)
-                .responseMessage().code(200).message("Command accepted").endResponseMessage()
-                .route()
-                .to("direct:authorizeRequest")
-                .setHeader(PROVIDER_ID, header("providerId"))
-                .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
-                .log(LoggingLevel.INFO, correlation() + "Update scheduler for the import configuration")
-                .removeHeaders("CamelHttp*")
-                .to("direct:updateSchedulerImportConfiguration")
-                .routeId("admin-import-configuration-scheduler")
-                .endRest()
+                .consumes(MediaType.TEXT_PLAIN)
+                .produces(MediaType.TEXT_PLAIN)
+                .responseMessage().code(200).message(COMMAND_ACCEPTED).endResponseMessage()
+                .to(ROUTE_ADMIN_IMPORT_CONFIGURATION_SCHEDULER)
 
                 .get("/get-cron/{importConfigurationId}")
                 .description("Get cron import configuration")
-                .consumes(PLAIN)
-                .produces(JSON)
-                .responseMessage().code(200).message("Command accepted").endResponseMessage()
-                .route()
-                .to("direct:authorizeRequest")
-                .setHeader(PROVIDER_ID, header("providerId"))
-                .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
-                .setHeader(IMPORT_CONFIGURATION_ID, header("importConfigurationId"))
-                .log(LoggingLevel.INFO, correlation() + "Get cron from scheduler for the import configuration")
-                .removeHeaders("CamelHttp*")
-                .to("direct:getCron")
-                .routeId("admin-get-cron-import-configuration-scheduler")
-                .endRest()
+                .consumes(MediaType.TEXT_PLAIN)
+                .produces(MediaType.APPLICATION_JSON)
+                .responseMessage().code(200).message(COMMAND_ACCEPTED).endResponseMessage()
+                .to(ROUTE_ADMIN_GET_CRON_IMPORT_CONFIGURATION_SCHEDULER)
 
                 .post("/delete-scheduler-import-configuration/{importConfigurationId}")
                 .description("Delete scheduler import configuration process.")
                 .responseMessage().code(200).message("Delete scheduler import configuration command accepted").endResponseMessage()
-                .route()
-                .setHeader(PROVIDER_ID, header("providerId"))
-                .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
-                .setHeader(IMPORT_CONFIGURATION_ID, header("importConfigurationId"))
-                .log(LoggingLevel.INFO, correlation() + "Delete scheduler import configuration")
-                .removeHeaders("CamelHttp*")
-                .to("direct:deleteSchedulerImportConfiguration")
-                .routeId("admin-delete-import-configuration-scheduler")
-                .endRest();
+              .to(ROUTE_ADMIN_DELETE_IMPORT_CONFIGURATION_SCHEDULER);
+
+        declareTimeTableAdminRoute();
 
 
         rest("/map_admin")
                 .post("/download")
                 .description("Triggers downloading of the latest OSM data")
-                .consumes(PLAIN)
-                .produces(PLAIN)
-                .responseMessage().code(200).message("Command accepted").endResponseMessage()
-                .route()
-                .process(e -> authorizationService.verifyAtLeastOne(new AuthorizationClaim(AuthorizationConstants.ROLE_ROUTE_DATA_ADMIN)))
-                .log(LoggingLevel.INFO, "OSM update map data")
-                .removeHeaders("CamelHttp*")
-                .to("direct:considerToFetchOsmMapOverNorway")
-                .routeId("admin-fetch-osm")
-                .endRest()
+                .consumes(MediaType.TEXT_PLAIN)
+                .produces(MediaType.TEXT_PLAIN)
+                .responseMessage().code(200).message(COMMAND_ACCEPTED).endResponseMessage()
+                .to(ROUTE_ADMIN_FETCH_OSM)
 
                 .post("/mapbox_update")
                 .description("Triggers update of mapbox tileset from tiamat data")
-                .consumes(PLAIN)
-                .produces(PLAIN)
-                .responseMessage().code(200).message("Command accepted").endResponseMessage()
-                .route()
-                .process(e -> authorizationService.verifyAtLeastOne(new AuthorizationClaim(AuthorizationConstants.ROLE_ROUTE_DATA_ADMIN)))
-                .log(LoggingLevel.INFO, "Mapbox update with data from tiamat")
-                .removeHeaders("CamelHttp*")
-                .to("direct:runMapboxUpdate")
-                .routeId("admin-update-mapbox")
-                .endRest()
+                .consumes(MediaType.TEXT_PLAIN)
+                .produces(MediaType.TEXT_PLAIN)
+                .responseMessage().code(200).message(COMMAND_ACCEPTED).endResponseMessage()
+                .to(ROUTE_ADMIN_UPDATE_MAPBOX)
 
-                .get("/swagger.json")
+                .get(SWAGGER_ENDPOINT)
                 .apiDocs(false)
                 .bindingMode(RestBindingMode.off)
-                .route()
-                .to(commonApiDocEndpoint)
-                .endRest();
+                .to(commonApiDocEndpoint);
 
-        from("direct:authorizeRequest")
+        from(ROUTE_AUTHORIZE_REQUEST)
                 .doTry()
                 .process(e -> authorizationService.verifyAtLeastOne(
                                 new AuthorizationClaim(AuthorizationConstants.ROLE_ROUTE_DATA_ADMIN),
@@ -1282,78 +688,22 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                                 new AuthorizationClaim("ADMINEDITROUTEDATA")
                         )
                 )
-                .routeId("admin-authorize-request");
-
+                .routeId(ROUTE_ID_AUTHORIZE_REQUEST);
 
         from("direct:launchGlobalNetexExport")
                 .setHeader(Exchange.FILE_PARENT, simple(mergedNetexTmpDirectory))
-                .inOnly("direct:cleanUpLocalDirectory")
+                .setExchangePattern(ExchangePattern.InOnly)
+                .to("direct:cleanUpLocalDirectory")
                 .process(e -> e.getIn().setHeader(USER, getHeaders(e, USER)))
-                .inOnly("direct:chouetteNetexExportForAllProviders")
+                .setExchangePattern(ExchangePattern.InOnly)
+                .to("direct:chouetteNetexExportForAllProviders")
                 .routeId("launch-global-netex-export");
 
+        declareMapAdminRoute();
+        declareTimeTableAdminByProviderRoute();
     }
 
 
-    private void checkFileContent(Exchange e) throws IOException {
-        String importType = (String) e.getIn().getHeader("importType");
-        String incomingFile = copyIncomingFile(e);
-        Set<String> files = ZipFileUtils.listFilesInZip(new java.io.File(incomingFile));
-        boolean invalidZipInput = isZipContainingInvalidFiles(files, importType);
-        if (invalidZipInput) {
-            e.getIn().setHeader(CLEAN_INPUT_NETEX_ZIP, Boolean.TRUE);
-        }
-        Files.delete(Path.of(incomingFile));
-    }
-
-    private boolean isZipContainingInvalidFiles(Set<String> files, String importType ) {
-        boolean isInvalid = false;
-        if ("gtfs".equals(importType)){
-            for (String file : files) {
-                if (!file.endsWith(".txt")){
-                    String errorMsg = "GTFS file containing non-txt file:" + file;
-                    log.error(errorMsg);
-                    throw new RuntimeException(errorMsg);
-                }
-            }
-        } else {
-            for (String file : files) {
-                if (!file.endsWith(".xml")){
-                    String errorMsg = "Zip containing non-xml file: " + file;
-                    log.error(errorMsg);
-                    isInvalid = true;
-                }
-            }
-        }
-        return isInvalid;
-    }
-
-    private String copyIncomingFile(Exchange e) throws IOException {
-
-        String tmpDir = "/tmp/" + UUID.randomUUID();
-        String tmpFile = tmpDir + "/incoming.zip";
-        java.io.File incomingDir = new java.io.File(tmpDir);
-        incomingDir.mkdirs();
-
-        InputStream inputStream;
-        if (e.getIn().getBody() instanceof FileInputStreamCache){
-            inputStream =(FileInputStreamCache)e.getIn().getBody();
-        }else{
-            inputStream = (InputStreamCache) e.getIn().getBody();
-        }
-
-
-        try (FileOutputStream fichierSortie = new FileOutputStream(tmpFile)) {
-
-            byte[] tampon = new byte[1024];
-            int longueur;
-            while ((longueur = inputStream.read(tampon)) != -1) {
-                fichierSortie.write(tampon, 0, longueur);
-            }
-            return tmpFile;
-        }
-
-    }
 
     public static class ImportFilesSplitter {
         public List<String> splitFiles(@Body BlobStoreFiles files) {
@@ -1422,6 +772,582 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
             }
 
         }
+    }
+
+    private void declareTimeTableAdminRoute() {
+        from(ROUTE_ADMIN_APPLICATION_CLEAN_UNIQUE_FILENAME_AND_DIGEST_IDEMPOTENT_REPOS)
+                .routeId(ROUTE_ID_ADMIN_APPLICATION_CLEAN_UNIQUE_FILENAME_AND_DIGEST_IDEMPOTENT_REPOS)
+                .process(e -> authorizationService.verifyAtLeastOne(new AuthorizationClaim(AuthorizationConstants.ROLE_ROUTE_DATA_ADMIN)))
+                .to("direct:cleanIdempotentFileStore")
+                .setBody(constant((Object) null));
+
+        from(ROUTE_PROCESS_VALIDATE_LEVEL_1)
+                .routeId(ROUTE_ID_PROCESS_VALIDATE_LEVEL_1)
+                .to(ROUTE_AUTHORIZE_REQUEST)
+                .process(e -> authorizationService.verifyAtLeastOne(new AuthorizationClaim(AuthorizationConstants.ROLE_ROUTE_DATA_ADMIN)))
+                .log(LoggingLevel.INFO, correlation() + "Chouette start validation level1 for all providers")
+                .removeHeaders(ALL_CAMEL_HTTP)
+                .setExchangePattern(ExchangePattern.InOnly)
+                .to("direct:chouetteValidateLevel1ForAllProviders")
+                .setBody(constant((Object) null));
+
+        from(ROUTE_PROCESS_VALIDATE_LEVEL_2)
+                .routeId(ROUTE_ID_PROCESS_VALIDATE_LEVEL_2)
+                .to(ROUTE_AUTHORIZE_REQUEST)
+                .process(e -> authorizationService.verifyAtLeastOne(new AuthorizationClaim(AuthorizationConstants.ROLE_ROUTE_DATA_ADMIN)))
+                .log(LoggingLevel.INFO, correlation() + "Chouette start validation level2 for all providers")
+                .removeHeaders(ALL_CAMEL_HTTP)
+                .setExchangePattern(ExchangePattern.InOnly)
+                .to("direct:chouetteValidateLevel2ForAllProviders")
+                .setBody(constant((Object) null));
+
+        from(ROUTE_ADMIN_LIST_ALL_CHOUETTE_JOBS)
+                .routeId(ROUTE_ID_ADMIN_LIST_ALL_CHOUETTE_JOBS)
+                .process(e -> authorizationService.verifyAtLeastOne(new AuthorizationClaim(AuthorizationConstants.ROLE_ROUTE_DATA_ADMIN)))
+                .log(LoggingLevel.DEBUG, correlation() + "Get chouette active jobs all providers")
+                .removeHeaders(ALL_CAMEL_HTTP)
+                .process(e -> e.getIn().setHeader(STATUS, e.getIn().getHeader(STATUS) != null ? e.getIn().getHeader(STATUS) : Arrays.asList("STARTED", "SCHEDULED")))
+                .to("direct:chouetteGetJobsAll");
+
+        from(ROUTE_ADMIN_CHOUETTE_CANCEL_ALL_JOBS_ALL)
+                .routeId(ROUTE_ID_ADMIN_CHOUETTE_CANCEL_ALL_JOBS_ALL)
+                .process(e -> authorizationService.verifyAtLeastOne(new AuthorizationClaim(AuthorizationConstants.ROLE_ROUTE_DATA_ADMIN)))
+                .log(LoggingLevel.INFO, correlation() + "Cancel all chouette jobs for all providers")
+                .removeHeaders(ALL_CAMEL_HTTP)
+                .to("direct:chouetteCancelAllJobsForAllProviders")
+                .setBody(constant((Object) null));
+
+        from(ROUTE_ADMIN_TIAMAT_CANCEL_ALL_JOBS).process(e -> authorizationService.verifyAtLeastOne(new AuthorizationClaim(AuthorizationConstants.ROLE_ROUTE_DATA_ADMIN)))
+                .routeId(ROUTE_ID_ADMIN_TIAMAT_CANCEL_ALL_JOBS)
+                .log(LoggingLevel.INFO, correlation() + "Cancel all tiamat jobs for all providers")
+                .removeHeaders(ALL_CAMEL_HTTP)
+                .to("direct:tiamatCancelAllJobsForAllProviders")
+                .setBody(constant((Object) null));
+
+        from(ROUTE_ADMIN_CHOUETTE_REMOVE_OLD_JOBS)
+                .routeId(ROUTE_ID_ADMIN_CHOUETTE_REMOVE_OLD_JOBS)
+                .process(e -> authorizationService.verifyAtLeastOne(new AuthorizationClaim(AuthorizationConstants.ROLE_ROUTE_DATA_ADMIN)))
+                .log(LoggingLevel.INFO, correlation() + "Removing old chouette jobs for all providers")
+                .removeHeaders(ALL_CAMEL_HTTP)
+                .to("direct:chouetteRemoveOldJobs")
+                .setBody(constant((Object) null));
+
+        from(ROUTE_ADMIN_CHOUETTE_CLEAN_ALL)
+                .routeId(ROUTE_ID_ADMIN_CHOUETTE_CLEAN_ALL)
+                .process(e -> authorizationService.verifyAtLeastOne(new AuthorizationClaim(AuthorizationConstants.ROLE_ROUTE_DATA_ADMIN)))
+                .log(LoggingLevel.INFO, correlation() + "Chouette clean all dataspaces")
+                .removeHeaders(ALL_CAMEL_HTTP)
+                .to("direct:chouetteCleanAllReferentials")
+                .setBody(constant((Object) null))
+        ;
+
+        from(ROUTE_ADMIN_CHOUETTE_CLEAN_STOP_PLACES)
+                .routeId(ROUTE_ID_ADMIN_CHOUETTE_CLEAN_STOP_PLACES)
+                .process(e -> authorizationService.verifyAtLeastOne(new AuthorizationClaim(AuthorizationConstants.ROLE_ROUTE_DATA_ADMIN)))
+                .log(LoggingLevel.INFO, correlation() + "Chouette clean all stop places")
+                .removeHeaders(ALL_CAMEL_HTTP)
+                .to("direct:chouetteCleanStopPlaces")
+                .setBody(constant((Object) null));
+
+        from(ROUTE_ADMIN_CHOUETTE_STATS_MULTIPLE_PROVIDERS)
+                .routeId(ROUTE_ID_ADMIN_CHOUETTE_STATS_MULTIPLE_PROVIDERS)
+                .to(ROUTE_AUTHORIZE_REQUEST)
+                .log(LoggingLevel.INFO, correlation() + "get stats for multiple providers")
+                .removeHeaders(ALL_CAMEL_HTTP)
+                .choice()
+                .when(simple("${header.providerIds}"))
+                .process(e -> e.getIn().setHeader(PROVIDER_IDS, e.getIn().getHeader("providerIds", "", String.class).split(",")))
+                .end()
+                .to("direct:chouetteGetStats");
+
+        from(ROUTE_ADMIN_CHOUETTE_STATS_REFRESH_CACHE)
+                .routeId(ROUTE_ID_ADMIN_CHOUETTE_STATS_REFRESH_CACHE)
+                .to(ROUTE_AUTHORIZE_REQUEST)
+                .log(LoggingLevel.INFO, correlation() + "refresh stats cache")
+                .removeHeaders(ALL_CAMEL_HTTP)
+                .to("direct:chouetteRefreshStatsCache");
+
+        from(ROUTE_ADMIN_CHOUETTE_TIMETABLE_FILES_GET)
+                .routeId(ROUTE_ID_ADMIN_CHOUETTE_TIMETABLE_FILES_GET)
+                .to(ROUTE_AUTHORIZE_REQUEST)
+                .log(LoggingLevel.INFO, correlation() + "get time table and graph files")
+                .removeHeaders(ALL_CAMEL_HTTP)
+                .to("direct:listTimetableExportAndGraphBlobs");
+
+        from(ROUTE_ADMIN_CHOUETTE_TIMETABLE_FILES_GET_PROVIDER)
+                .routeId(ROUTE_ID_ADMIN_CHOUETTE_TIMETABLE_FILES_GET_PROVIDER)
+                .setHeader(PROVIDER_ID, header(PROVIDER))
+                .to(ROUTE_AUTHORIZE_REQUEST)
+                .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
+                .log(LoggingLevel.INFO, correlation() + "get time table and graph files")
+                .removeHeaders(ALL_CAMEL_HTTP)
+                .to("direct:listTimetableExportAndGraphBlobsByProvider");
+
+        from(ROUTE_ADMIN_TIMETABLE_GTFS_EXTENDED_EXPORT)
+                .routeId(ROUTE_ID_ADMIN_TIMETABLE_GTFS_EXTENDED_EXPORT)
+                .to(ROUTE_AUTHORIZE_REQUEST)
+                .log(LoggingLevel.INFO, "Triggered GTFS extended export")
+                .removeHeaders(ALL_CAMEL_HTTP)
+                .setExchangePattern(ExchangePattern.InOnly)
+                .to("jms:queue:GtfsExportMergedQueue");
+
+
+        from(ROUTE_ADMIN_TIMETABLE_GTFS_BASIC_EXPORT)
+                .routeId(ROUTE_ID_ADMIN_TIMETABLE_GTFS_BASIC_EXPORT)
+                .to(ROUTE_AUTHORIZE_REQUEST)
+                .log(LoggingLevel.INFO, "Triggered GTFS basic export")
+                .removeHeaders(ALL_CAMEL_HTTP)
+                .setExchangePattern(ExchangePattern.InOnly)
+                .to("jms:queue:GtfsBasicExportMergedQueue");
+
+        from(ROUTE_ADMIN_TIMETABLE_NETEX_MERGED_EXPORT)
+                .routeId(ROUTE_ID_ADMIN_TIMETABLE_NETEX_MERGED_EXPORT)
+                .to(ROUTE_AUTHORIZE_REQUEST)
+                .log(LoggingLevel.INFO, "Triggered Netex export of merged file for Norway")
+                .removeHeaders(ALL_CAMEL_HTTP)
+                .setExchangePattern(ExchangePattern.InOnly)
+                .to("jms:queue:NetexExportMergedQueue");
+
+    }
+
+    public void declareTimeTableAdminByProviderRoute() {
+        from(ROUTE_ADMIN_CHOUETTE_IMPORT)
+                .routeId(ROUTE_ID_ADMIN_CHOUETTE_IMPORT)
+                .removeHeaders(ALL_CAMEL_HTTP)
+                .setHeader(PROVIDER_ID, header(PROVIDER))
+                .setHeader(IMPORT, constant(true))
+                .to(ROUTE_AUTHORIZE_REQUEST)
+                .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
+                .split(method(ImportFilesSplitter.class, "splitFiles"))
+
+                .process(e -> e.getIn().setHeader(FILE_HANDLE, getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)).mobiitiId
+                        + "/imports/" + e.getIn().getBody(String.class)))
+                .process(e -> e.getIn().setHeader(CORRELATION_ID, UUID.randomUUID().toString()))
+                .log(LoggingLevel.INFO, correlation() + "Chouette start import fileHandle=${body}")
+
+                .process(e -> {
+                    String fileNameForStatusLogging = "reimport-" + e.getIn().getBody(String.class);
+                    e.getIn().setHeader(FILE_NAME, fileNameForStatusLogging);
+                })
+                .setBody(constant((Object) null))
+                .setExchangePattern(ExchangePattern.InOnly)
+                .to(ROUTE_PROCESS_FILE_QUEUE);
+
+        from(ROUTE_ADMIN_CHOUETTE_IMPORT_ALL)
+                .routeId(ROUTE_ID_ADMIN_CHOUETTE_IMPORT_ALL)
+                .setHeader(PROVIDER_ID, header(PROVIDER))
+                .setHeader(IMPORT_CONFIGURATION_ID, header("importConfigurationId"))
+                .to(ROUTE_AUTHORIZE_REQUEST)
+                .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
+                .log(LoggingLevel.INFO, correlation() + "Chouette start import predefined")
+                .removeHeaders(ALL_CAMEL_HTTP)
+                .process(e -> e.getIn().setHeader(USER, getHeaders(e, USER)))
+                .setBody().simple(CAMEL_HEADERS)
+                .setExchangePattern(ExchangePattern.InOnly)
+                .to("jms:queue:ImportConfigurationQueue");
+
+        from(ROUTE_ADMIN_CHOUETTE_IMPORT_LIST)
+                .routeId(ROUTE_ID_ADMIN_CHOUETTE_IMPORT_LIST)
+                .setHeader(PROVIDER_ID, header(PROVIDER))
+                .to(ROUTE_AUTHORIZE_REQUEST)
+                .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
+                .log(LoggingLevel.INFO, correlation() + "blob store get files")
+                .removeHeaders(ALL_CAMEL_HTTP)
+                .to("direct:listBlobsFlat");
+
+        from(ROUTE_ADMIN_CHOUETTE_UPLOAD_FILE_TO_ANALYSIS)
+                .routeId(ROUTE_ID_ADMIN_CHOUETTE_UPLOAD_FILE_TO_ANALYSIS)
+                .streamCache(Boolean.TRUE)
+                .setBody(simple("${exchange.getIn().getRequest().getFileMap()}"))
+                .split().body()
+                .process(multiPartProcessor)
+                .setHeader(PROVIDER_ID, header(PROVIDER))
+                .to(ROUTE_AUTHORIZE_REQUEST)
+                .log(LoggingLevel.INFO, "Authorized request passed")
+                .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
+                .log(LoggingLevel.INFO, "Validation passed")
+                .process(e -> e.getIn().setHeader(ANALYZE_ACTION, true))
+                .log(LoggingLevel.INFO, correlation() + "upload files and start import pipeline")
+                .removeHeaders(ALL_CAMEL_HTTP)
+                .doTry()
+                .process(fileValidationProcessor)
+                .to(ROUTE_UPLOAD_FILES_AND_START_IMPORT)
+                .doCatch(Exception.class)
+                .process(e -> {
+                    Exception exception = e.getProperty(Exchange.EXCEPTION_CAUGHT, Exception.class);
+                    e.getIn().setHeader(HTTP_RESPONSE_CODE, 500);
+                    Map<String, String> result = new HashMap<>();
+                    result.put("message", exception.getMessage());
+                    e.getIn().setBody(result);
+                })
+                .marshal().json(JsonLibrary.Jackson)
+                .end();
+
+        from(ROUTE_ADMIN_CHOUETTE_UPLOAD_FILE)
+                .routeId(ROUTE_ID_ADMIN_CHOUETTE_UPLOAD_FILE)
+                .streamCache(Boolean.TRUE)
+                .setHeader(PROVIDER_ID, header(PROVIDER))
+                .to(ROUTE_AUTHORIZE_REQUEST)
+                .process(e -> log.info("Authorized request passed"))
+                .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
+                .process(e -> log.info("validation passed"))
+                .process(e -> {
+                    String referential = getProviderRepository().getReferential(e.getIn().getHeader(PROVIDER_ID, Long.class));
+                    String jobId = e.getIn().getHeader(ANALYSIS_JOB_ID, String.class);
+                    java.io.File gtfsZipFile = fileSystemService.getImportZipFileByReferentialAndJobId(referential, jobId);
+                    e.getIn().setBody(gtfsZipFile);
+                    e.getIn().setHeader(CHOUETTE_REFERENTIAL, referential);
+                    e.getIn().setHeader(FILE_NAME, gtfsZipFile.getName());
+                    e.getIn().setHeader(GENERATE_MAP_MATCHING, getGenerateMapMatchingHeaders(e));
+                })
+                .log(LoggingLevel.INFO, correlation() + "upload files and start import pipeline")
+                .removeHeaders(ALL_CAMEL_HTTP)
+                .to(ROUTE_IMPORT_LAUNCH);
+
+        from(ROUTE_ADMIN_CHOUETTE_FILE_DOWNLOAD)
+                .routeId(ROUTE_ID_ADMIN_CHOUETTE_FILE_DOWNLOAD)
+                .setHeader(PROVIDER_ID, header(PROVIDER))
+                .to(ROUTE_AUTHORIZE_REQUEST)
+                .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
+                .process(e -> e.getIn().setHeader(FILENAME, URLDecoder.decode(e.getIn().getHeader(FILENAME, String.class), StandardCharsets.UTF_8)))
+                .process(e -> e.getIn().setHeader(FILE_HANDLE, BLOBSTORE_PATH_INBOUND
+                        + getProviderRepository().getReferential(e.getIn().getHeader(PROVIDER_ID, Long.class))
+                        + "/" + e.getIn().getHeader(FILENAME, String.class)))
+                .log(LoggingLevel.INFO, correlation() + "blob store download file by name")
+                .removeHeaders(ALL_CAMEL_HTTP)
+                .to("direct:getBlob")
+                .choice().when(simple("${body} == null")).setHeader(HTTP_RESPONSE_CODE, constant(404)).endChoice();
+
+        from(ROUTE_ADMIN_STOP_PLACES_FILE_DOWNLOAD)
+                .routeId(ROUTE_ID_ADMIN_STOP_PLACES_FILE_DOWNLOAD)
+                .setHeader(PROVIDER_ID, header(PROVIDER))
+                .setHeader("Access-Control-Expose-Headers", simple(FILE_NAME))
+                .to(ROUTE_AUTHORIZE_REQUEST)
+                .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
+                .process(e -> {
+                    String ref = e.getIn().getHeader(OKINA_REFERENTIAL, String.class);
+                    if (!ref.contains(superspaceName + "_")) {
+                        e.getIn().setHeader(OKINA_REFERENTIAL, superspaceName + "_" + ref);
+                    } else {
+                        e.getIn().setHeader(OKINA_REFERENTIAL, ref);
+                    }
+                })
+                .removeHeaders(ALL_CAMEL_HTTP)
+                .to("direct:getStopPlacesFile")
+                .choice().when(simple("${body} == null")).setHeader(HTTP_RESPONSE_CODE, constant(404)).endChoice();
+
+        from(ROUTE_ADMIN_OFFER_FILE_DOWNLOAD)
+                .routeId(ROUTE_ID_ADMIN_OFFER_FILE_DOWNLOAD)
+                .setHeader(PROVIDER_ID, header(PROVIDER))
+                .setHeader(Headers.JOB_ID, header(JOB_ID))
+                .setHeader("Access-Control-Expose-Headers", simple(FILE_NAME))
+                .to(ROUTE_AUTHORIZE_REQUEST)
+                .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
+                .process(e -> {
+                    String ref = e.getIn().getHeader(OKINA_REFERENTIAL, String.class);
+                    if (!ref.contains(superspaceName + "_") && !ref.startsWith(simulationName + "_")) {
+                        e.getIn().setHeader(OKINA_REFERENTIAL, superspaceName + "_" + ref);
+                    } else {
+                        e.getIn().setHeader(OKINA_REFERENTIAL, ref);
+                    }
+                })
+                .removeHeaders(ALL_CAMEL_HTTP)
+                .removeHeaders("Authorization*")
+                .to("direct:getOfferFile")
+                .choice().when(simple("${body} == null")).setHeader(HTTP_RESPONSE_CODE, constant(404)).endChoice();
+
+        from(ROUTE_ADMIN_CHOUETTE_STATS)
+                .routeId(ROUTE_ID_ADMIN_CHOUETTE_STATS)
+                .setHeader(PROVIDER_ID, header(PROVIDER))
+                .to(ROUTE_AUTHORIZE_REQUEST)
+                .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
+                .log(LoggingLevel.INFO, correlation() + "get stats")
+                .removeHeaders(ALL_CAMEL_HTTP)
+                .to("direct:chouetteGetStatsSingleProvider");
+
+        from(ROUTE_ADMIN_CHOUETTE_LIST_JOBS)
+                .routeId(ROUTE_ID_ADMIN_CHOUETTE_LIST_JOBS)
+                .setHeader(PROVIDER_ID, header(PROVIDER))
+                .to(ROUTE_AUTHORIZE_REQUEST)
+                .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
+                .log(LoggingLevel.INFO, correlation() + "Get chouette jobs status=${header.status} action=${header.action}")
+                .removeHeaders(ALL_CAMEL_HTTP)
+                .to("direct:chouetteGetJobsForProvider");
+
+        from(ROUTE_ADMIN_TIAMAT_LIST_JOBS)
+                .routeId(ROUTE_ID_ADMIN_TIAMAT_LIST_JOBS)
+                .setHeader(PROVIDER_ID, header(PROVIDER))
+                .to(ROUTE_AUTHORIZE_REQUEST)
+                .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
+                .log(LoggingLevel.INFO, correlation() + "Get timat jobs status=${header.status} action=${header.action}")
+                .removeHeaders(ALL_CAMEL_HTTP)
+                .to("direct:tiamatGetJobsForProvider");
+
+        from(ROUTE_ADMIN_CHOUETTE_CANCEL_ALL_JOBS)
+                .routeId(ROUTE_ID_ADMIN_CHOUETTE_CANCEL_ALL_JOBS)
+                .setHeader(PROVIDER_ID, header(PROVIDER))
+                .to(ROUTE_AUTHORIZE_REQUEST)
+                .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
+                .log(LoggingLevel.INFO, correlation() + "Cancel all chouette jobs")
+                .removeHeaders(ALL_CAMEL_HTTP)
+                .to("direct:chouetteCancelAllJobsForProvider");
+
+        from(ROUTE_ADMIN_CHOUETTE_CANCEL_JOB)
+                .routeId(ROUTE_ID_ADMIN_CHOUETTE_CANCEL_JOB)
+                .setHeader(PROVIDER_ID, header(PROVIDER))
+                .to(ROUTE_AUTHORIZE_REQUEST)
+                .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
+                .setHeader(Headers.JOB_ID, header(JOB_ID))
+                .log(LoggingLevel.INFO, correlation() + "Cancel chouette job")
+                .removeHeaders(ALL_CAMEL_HTTP)
+                .to("direct:chouetteCancelJob");
+
+        from(ROUTE_ADMIN_CHOUETTE_EXPORT)
+                .routeId(ROUTE_ID_ADMIN_CHOUETTE_EXPORT)
+                .setHeader(PROVIDER_ID, header(PROVIDER))
+                .setHeader(NO_GTFS_EXPORT, constant(false))
+                .setHeader(NETEX_EXPORT_GLOBAL, constant(false))
+                .setHeader(IS_SIMULATION_EXPORT, constant(false))
+                .to(ROUTE_AUTHORIZE_REQUEST)
+                .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
+                .log(LoggingLevel.INFO, correlation() + "Chouette start export")
+                .removeHeaders(ALL_CAMEL_HTTP)
+                .setExchangePattern(ExchangePattern.InOnly)
+                .to(ROUTE_CHOUETTE_EXPORT_NETEX_QUEUE);
+
+        from(ROUTE_ADMIN_CHOUETTE_EXPORT_NETEX)
+                .routeId(ROUTE_ID_ADMIN_CHOUETTE_EXPORT_NETEX)
+                .process(e -> e.getIn().setHeader(EXPORT_GENERATED_MISSING_QUAYS, getHeaders(e, EXPORT_GENERATED_MISSING_QUAYS)))
+                .process(e -> e.getIn().setHeader(EXPORT_EXTERNAL_IDS, getHeaders(e, EXPORT_EXTERNAL_IDS)))
+                .setHeader(PROVIDER_ID, header(PROVIDER))
+                .setHeader(NO_GTFS_EXPORT, constant(true))
+                .setHeader(NETEX_EXPORT_GLOBAL, constant(false))
+                .setHeader(IS_SIMULATION_EXPORT, constant(false))
+                .to(ROUTE_AUTHORIZE_REQUEST)
+                .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
+                .log(LoggingLevel.INFO, correlation() + "Chouette start export Netex")
+                .removeHeaders(ALL_CAMEL_HTTP)
+                .process(e -> e.getIn().setHeader(USER, getHeaders(e, USER)))
+                .setBody().simple(CAMEL_HEADERS)
+                .setExchangePattern(ExchangePattern.InOnly)
+                .to(ROUTE_CHOUETTE_EXPORT_NETEX_QUEUE);
+
+        from(ROUTE_ADMIN_CHOUETTE_EXPORT_NEPTUNE)
+                .routeId(ROUTE_ID_ADMIN_CHOUETTE_EXPORT_NEPTUNE)
+                .setHeader(PROVIDER_ID, header(PROVIDER))
+                .setHeader(NO_GTFS_EXPORT, constant(true))
+                .setHeader(NETEX_EXPORT_GLOBAL, constant(false))
+                .setHeader(IS_SIMULATION_EXPORT, constant(false))
+                .to(ROUTE_AUTHORIZE_REQUEST)
+                .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
+                .log(LoggingLevel.INFO, correlation() + "Chouette start export Neptune")
+                .removeHeaders(ALL_CAMEL_HTTP)
+                .process(e -> e.getIn().setHeader(USER, getHeaders(e, USER)))
+                .setBody().simple(CAMEL_HEADERS)
+                .setExchangePattern(ExchangePattern.InOnly)
+                .to("jms:queue:ChouetteExportNeptuneQueue");
+
+        from(ROUTE_SIMULATION_EXPORT_NETEX)
+                .routeId(ROUTE_ID_SIMULATION_EXPORT_NETEX)
+                .setHeader(PROVIDER_ID, header(PROVIDER))
+                .setHeader(NO_GTFS_EXPORT, constant(true))
+                .setHeader(NETEX_EXPORT_GLOBAL, constant(false))
+                .setHeader(IS_SIMULATION_EXPORT, constant(true))
+                .to(ROUTE_AUTHORIZE_REQUEST)
+                .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
+                .process(e -> authorizationService.verifyAtLeastOne(new AuthorizationClaim(ROLE_EXPORT_SIMULATION)))
+                .removeHeaders(ALL_CAMEL_HTTP)
+                .process(e -> {
+                    e.getIn().setHeader(USER, getHeaders(e, USER));
+                    e.getIn().setHeader(EXPORT_SIMULATION_NAME, getSimulationExportPrefix(e));
+                })
+                .setExchangePattern(ExchangePattern.InOnly)
+                .to(ROUTE_CHOUETTE_EXPORT_NETEX_QUEUE);
+
+        from(ROUTE_ADMIN_CHOUETTE_EXPORT_GTFS)
+                .routeId(ROUTE_ID_ADMIN_CHOUETTE_EXPORT_GTFS)
+                .setHeader(PROVIDER_ID, header(PROVIDER))
+                .setHeader(GTFS_EXPORT_GLOBAL, constant(false))
+                .to(ROUTE_AUTHORIZE_REQUEST)
+                .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
+                .log(LoggingLevel.INFO, correlation() + "Chouette start export GTFS")
+                .removeHeaders(ALL_CAMEL_HTTP)
+                .process(this::getFromHeadersForGTFS)
+                .setBody().simple(CAMEL_HEADERS)
+                .setExchangePattern(ExchangePattern.InOnly)
+                .to("jms:queue:ChouetteExportGtfsQueue");
+
+        from(ROUTE_ADMIN_CHOUETTE_EXPORT_ALL)
+                .routeId(ROUTE_ID_ADMIN_CHOUETTE_EXPORT_ALL)
+                .setHeader(PROVIDER_ID, header(PROVIDER))
+                .to(ROUTE_AUTHORIZE_REQUEST)
+                .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
+                .log(LoggingLevel.INFO, correlation() + "Chouette start all export process")
+                .removeHeaders(ALL_CAMEL_HTTP)
+                .process(e -> e.getIn().setHeader(USER, getHeaders(e, USER)))
+                .setBody().simple(CAMEL_HEADERS)
+                .setExchangePattern(ExchangePattern.InOnly)
+                .to("jms:queue:predefinedExports");
+
+        from(ROUTE_ADMIN_CHOUETTE_EXPORT_BY_ID)
+                .routeId(ROUTE_ID_ADMIN_CHOUETTE_EXPORT_BY_ID)
+                .setHeader(PROVIDER_ID, header(PROVIDER))
+                .setHeader(EXPORT_CONFIGURATION_ID, header("exportConfigurationId"))
+                .to(ROUTE_AUTHORIZE_REQUEST)
+                .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
+                .log(LoggingLevel.INFO, correlation() + "Chouette start export process")
+                .removeHeaders(ALL_CAMEL_HTTP)
+                .process(e -> e.getIn().setHeader(USER, getHeaders(e, USER)))
+                .setBody().simple(CAMEL_HEADERS)
+                .setExchangePattern(ExchangePattern.InOnly)
+                .to("jms:queue:predefinedExport");
+
+        from(ROUTE_ADMIN_CHOUETTE_EXPORT_CONCERTO)
+                .routeId(ROUTE_ID_ADMIN_CHOUETTE_EXPORT_CONCERTO)
+                .setHeader(PROVIDER_ID, header(PROVIDER))
+                .to(ROUTE_AUTHORIZE_REQUEST)
+                .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
+                .log(LoggingLevel.INFO, correlation() + "Chouette start export Concerto")
+                .removeHeaders(ALL_CAMEL_HTTP)
+                .process(e -> e.getIn().setHeader(USER, getHeaders(e, USER)))
+                .setBody().simple(CAMEL_HEADERS)
+                .setExchangePattern(ExchangePattern.InOnly)
+                .to("jms:queue:ChouetteExportConcertoQueue");
+
+        from(ROUTE_ADMIN_TIAMAT_EXPORT_STOPS)
+                .routeId(ROUTE_ID_ADMIN_TIAMAT_EXPORT_STOPS)
+                .process(e -> e.getIn().setHeader(EXPORT_GENERATED_MISSING_QUAYS, getHeaders(e, EXPORT_GENERATED_MISSING_QUAYS)))
+                .process(e -> e.getIn().setHeader(EXPORT_EXTERNAL_IDS, getHeaders(e, EXPORT_EXTERNAL_IDS)))
+                .setHeader(PROVIDER_ID, header(PROVIDER))
+                .to(ROUTE_AUTHORIZE_REQUEST)
+                .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
+                .log(LoggingLevel.INFO, correlation() + "Tiamat start export Stops")
+                .removeHeaders(ALL_CAMEL_HTTP)
+                .process(e -> e.getIn().setHeader(USER, getHeaders(e, USER)))
+                .setBody().simple(CAMEL_HEADERS)
+                .setExchangePattern(ExchangePattern.InOnly)
+                .to("jms:queue:TiamatStopPlacesExport");
+
+        from(ROUTE_ADMIN_TIAMAT_EXPORT_PARKINGS)
+                .routeId(ROUTE_ID_ADMIN_TIAMAT_EXPORT_PARKINGS)
+                .setHeader(PROVIDER_ID, header(PROVIDER))
+                .to(ROUTE_AUTHORIZE_REQUEST)
+                .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
+                .log(LoggingLevel.INFO, correlation() + "Tiamat start export Parkings")
+                .removeHeaders(ALL_CAMEL_HTTP)
+                .process(e -> e.getIn().setHeader(USER, getHeaders(e, USER)))
+                .setBody().simple(CAMEL_HEADERS)
+                .setExchangePattern(ExchangePattern.InOnly)
+                .to("jms:queue:TiamatParkingsExport");
+
+        from(ROUTE_ADMIN_TIAMAT_EXPORT_POI)
+                .routeId(ROUTE_ID_ADMIN_TIAMAT_EXPORT_POI)
+                .setHeader(PROVIDER_ID, header(PROVIDER))
+                .to(ROUTE_AUTHORIZE_REQUEST)
+                .process(e -> log.info("providerId: {}", e.getIn().getHeader(PROVIDER_ID, Long.class)))
+                .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
+                .log(LoggingLevel.INFO, correlation() + "Tiamat start export POI")
+                .removeHeaders(ALL_CAMEL_HTTP)
+                .process(e -> e.getIn().setHeader(USER, getHeaders(e, USER)))
+                .setBody().simple(CAMEL_HEADERS)
+                .setExchangePattern(ExchangePattern.InOnly)
+                .to("jms:queue:TiamatPointOfInterestExport");
+
+        from(ROUTE_ADMIN_CHOUETTE_VALIDATE)
+                .routeId(ROUTE_ID_ADMIN_CHOUETTE_VALIDATE)
+                .setHeader(PROVIDER_ID, header(PROVIDER))
+                .to(ROUTE_AUTHORIZE_REQUEST)
+                .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
+                .log(LoggingLevel.INFO, correlation() + "Chouette start validation")
+                .removeHeaders(ALL_CAMEL_HTTP)
+                .process(e -> e.getIn().setHeader(USER, getHeaders(e, USER)))
+                .choice()
+                .when(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)).chouetteInfo.migrateDataToProvider == null)
+                .setHeader(JOB_STATUS_JOB_VALIDATION_LEVEL, constant(JobEvent.TimetableAction.VALIDATION_LEVEL_2.name()))
+                .otherwise()
+                .setHeader(JOB_STATUS_JOB_VALIDATION_LEVEL, constant(JobEvent.TimetableAction.VALIDATION_LEVEL_1.name()))
+                .end()
+                .setBody().simple(CAMEL_HEADERS)
+                .setExchangePattern(ExchangePattern.InOnly)
+                .to("jms:queue:ChouetteValidationQueue");
+
+        from(ROUTE_ADMIN_DELETE_EXPORTS)
+                .routeId(ROUTE_ID_ADMIN_DELETE_EXPORTS)
+                .setHeader(PROVIDER_ID, header(PROVIDER))
+                .process(e -> {
+                    log.info("Delete exports starting");
+                    Provider provider = getProviderRepository().getNonMobiitiProvider(e.getIn().getHeader(PROVIDER_ID, Long.class))
+                            .orElseThrow(() -> new RuntimeException("No valid base provider found. Provider id : " + e.getIn().getHeader(PROVIDER_ID)));
+                    String baseProviderFolder = BlobStoreRoute.exportSiteId(provider);
+                    blobStoreService.deleteAllBlobsInFolder(baseProviderFolder, e);
+                    blobStoreService.deleteBlob(baseProviderFolder, e);
+                    log.info("Delete exports done");
+                });
+
+        from(ROUTE_ADMIN_CHOUETTE_CLEAN)
+                .routeId(ROUTE_ID_ADMIN_CHOUETTE_CLEAN)
+                .setHeader(PROVIDER_ID, header(PROVIDER))
+                .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
+                .log(LoggingLevel.INFO, correlation() + "Chouette clean dataspace")
+                .removeHeaders(ALL_CAMEL_HTTP)
+                .to("direct:chouetteCleanReferential");
+
+        from(ROUTE_ADMIN_CHOUETTE_TRANSFER)
+                .routeId(ROUTE_ID_ADMIN_CHOUETTE_TRANSFER)
+                .setHeader(PROVIDER_ID, header(PROVIDER))
+                .log(LoggingLevel.INFO, correlation() + "Chouette transfer dataspace")
+                .removeHeaders(ALL_CAMEL_HTTP)
+                .setHeader(PROVIDER_ID, header(PROVIDER))
+                .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
+                .setExchangePattern(ExchangePattern.InOnly)
+                .to("jms:queue:ChouetteTransferExportQueue");
+
+        from(ROUTE_ADMIN_IMPORT_CONFIGURATION_SCHEDULER)
+                .routeId(ROUTE_ID_ADMIN_IMPORT_CONFIGURATION_SCHEDULER)
+                .to(ROUTE_AUTHORIZE_REQUEST)
+                .setHeader(PROVIDER_ID, header(PROVIDER))
+                .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
+                .log(LoggingLevel.INFO, correlation() + "Update scheduler for the import configuration")
+                .removeHeaders(ALL_CAMEL_HTTP)
+                .to("direct:updateSchedulerImportConfiguration");
+
+        from(ROUTE_ADMIN_GET_CRON_IMPORT_CONFIGURATION_SCHEDULER)
+                .routeId(ROUTE_ID_ADMIN_GET_CRON_IMPORT_CONFIGURATION_SCHEDULER)
+                .to(ROUTE_AUTHORIZE_REQUEST)
+                .setHeader(PROVIDER_ID, header(PROVIDER))
+                .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
+                .setHeader(IMPORT_CONFIGURATION_ID, header("importConfigurationId"))
+                .log(LoggingLevel.INFO, correlation() + "Get cron from scheduler for the import configuration")
+                .removeHeaders(ALL_CAMEL_HTTP)
+                .to("direct:getCron");
+
+        from(ROUTE_ADMIN_DELETE_IMPORT_CONFIGURATION_SCHEDULER)
+                .routeId(ROUTE_ID_ADMIN_DELETE_IMPORT_CONFIGURATION_SCHEDULER)
+                .setHeader(PROVIDER_ID, header(PROVIDER))
+                .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
+                .setHeader(IMPORT_CONFIGURATION_ID, header("importConfigurationId"))
+                .log(LoggingLevel.INFO, correlation() + "Delete scheduler import configuration")
+                .removeHeaders(ALL_CAMEL_HTTP)
+                .to("direct:deleteSchedulerImportConfiguration");
+
+
+    }
+
+    public void declareMapAdminRoute() {
+        from(ROUTE_ADMIN_FETCH_OSM)
+                .routeId(ROUTE_ID_ADMIN_FETCH_OSM)
+                .process(e -> authorizationService.verifyAtLeastOne(new AuthorizationClaim(AuthorizationConstants.ROLE_ROUTE_DATA_ADMIN)))
+                .log(LoggingLevel.INFO, "OSM update map data")
+                .removeHeaders(ALL_CAMEL_HTTP)
+                .to("direct:considerToFetchOsmMapOverNorway");
+
+        from(ROUTE_ADMIN_UPDATE_MAPBOX)
+                .routeId(ROUTE_ID_ADMIN_UPDATE_MAPBOX)
+                .process(e -> authorizationService.verifyAtLeastOne(new AuthorizationClaim(AuthorizationConstants.ROLE_ROUTE_DATA_ADMIN)))
+                .log(LoggingLevel.INFO, "Mapbox update with data from tiamat")
+                .removeHeaders(ALL_CAMEL_HTTP)
+                .to("direct:runMapboxUpdate");
+
     }
 
 }

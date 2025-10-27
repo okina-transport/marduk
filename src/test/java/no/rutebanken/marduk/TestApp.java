@@ -14,17 +14,21 @@
  *
  */
 
-package no.rutebanken.marduk.test;
+package no.rutebanken.marduk;
 
-import no.rutebanken.marduk.App;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.FilterType;
 
-@SpringBootApplication
+@SpringBootApplication()
+@ComponentScan(excludeFilters = {
+        @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE, value = App.class),
+})
 public class TestApp extends App {
 
-    private static Logger logger = LoggerFactory.getLogger(TestApp.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(TestApp.class);
 
     public static void main(String... args){
         App.main(args);
@@ -33,5 +37,6 @@ public class TestApp extends App {
     @Override
     protected void waitForProviderRepository() throws InterruptedException {
         // NOOP
+        LOGGER.info("Starting test application");
     }
 }

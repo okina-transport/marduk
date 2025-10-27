@@ -17,7 +17,7 @@
 package no.rutebanken.marduk.routes.fares;
 
 import no.rutebanken.marduk.Constants;
-import no.rutebanken.marduk.Utils.ImportRouteBuilder;
+import no.rutebanken.marduk.utils.ImportRouteBuilder;
 import no.rutebanken.marduk.domain.Provider;
 import no.rutebanken.marduk.repository.ImportConfigurationDAO;
 import no.rutebanken.marduk.routes.chouette.AbstractChouetteRouteBuilder;
@@ -30,10 +30,11 @@ import no.rutebanken.marduk.routes.status.JobEvent.TimetableAction;
 import no.rutebanken.marduk.security.TokenService;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
-import org.apache.camel.component.http4.HttpMethods;
-import org.apache.http.HttpEntity;
-import org.apache.http.entity.ContentType;
-import org.apache.http.entity.mime.MultipartEntityBuilder;
+import org.apache.camel.Message;
+import org.apache.camel.component.http.HttpMethods;
+import org.apache.hc.client5.http.entity.mime.MultipartEntityBuilder;
+import org.apache.hc.core5.http.ContentType;
+import org.apache.hc.core5.http.HttpEntity;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -41,8 +42,9 @@ import org.springframework.stereotype.Component;
 import java.io.InputStream;
 
 import static no.rutebanken.marduk.Constants.*;
-import static no.rutebanken.marduk.Utils.Utils.getHttp4;
-import static no.rutebanken.marduk.Utils.Utils.getLastPathElementOfUrl;
+import static no.rutebanken.marduk.utils.Utils.getHttp4;
+import static no.rutebanken.marduk.utils.Utils.getLastPathElementOfUrl;
+import static no.rutebanken.marduk.utils.constants.RouteDeclarationConstants.ROUTE_UPDATE_STATUS;
 
 
 @Component
@@ -55,9 +57,6 @@ public class FaresImportRouteBuilder extends AbstractChouetteRouteBuilder {
     CreateMail createMail;
 
     @Autowired
-    ImportConfigurationDAO importConfigurationDAO;
-
-    @Autowired
     TokenService tokenService;
 
     // @formatter:off
@@ -65,12 +64,12 @@ public class FaresImportRouteBuilder extends AbstractChouetteRouteBuilder {
     public void configure() throws Exception {
         super.configure();
 
-        from("jms:queue:FaresImportQueue?transacted=true").streamCaching()
+        from("jms:queue:FaresImportQueue?transacted=true").streamCache(Boolean.TRUE)
                 .transacted()
                 .log(LoggingLevel.INFO, correlation() + "Starting Fares import")
                 .removeHeader(JOB_ID)
                 .process(e -> JobEvent.providerJobBuilder(e).timetableAction(TimetableAction.IMPORT).state(State.PENDING).type(e.getIn().getHeader(FILE_TYPE, String.class)).build())
-                .to("direct:updateStatus")
+                .to(ROUTE_UPDATE_STATUS)
                 .to("direct:getBlob")
                 .choice()
                     .when(body().isNull())
@@ -98,7 +97,7 @@ public class FaresImportRouteBuilder extends AbstractChouetteRouteBuilder {
 
         from("direct:faresSendImportJobRequest")
                 .log(LoggingLevel.DEBUG, correlation() + "Creating multipart request")
-                .setHeader(Exchange.HTTP_METHOD, constant(HttpMethods.GET))
+                .setHeader(Exchange.HTTP_METHOD, constant(HttpMethods.POST))
                 .process(exchange -> {
                     InputStream inputStream = exchange.getIn().getBody(InputStream.class);
                     String user = exchange.getIn().getHeader(USER, String.class);
@@ -115,20 +114,21 @@ public class FaresImportRouteBuilder extends AbstractChouetteRouteBuilder {
                     multipartEntityBuilder.addTextBody("fileName", fileName);
                     multipartEntityBuilder.addTextBody("folder", folder);
 
-                    exchange.getOut().setHeader("user", user);
-                    exchange.getOut().setHeader("fileName", fileName);
-                    exchange.getOut().setHeader("folder", folder);
+                    Message message = exchange.getMessage();
+                    message.setHeader("user", user);
+                    message.setHeader("fileName", fileName);
+                    message.setHeader("folder", folder);
 
                     HttpEntity httpEntity = multipartEntityBuilder.build();
 
-                    exchange.getOut().setBody(httpEntity);
+                    message.setBody(httpEntity);
 
                     if (exchange.getIn().getHeader("Authorization") == null) {
-                        exchange.getOut().setHeader("Authorization", "Bearer " + tokenService.getToken());
+                        message.setHeader("Authorization", "Bearer " + tokenService.getToken());
                     }
 
                     String url = faresUrl + "/import/netex";
-                    url = url.replace("http://", "http4://").replaceAll("([^:])//+", "$1/");
+                    url = url.replace("http4://", "http://").replaceAll("([^:])//+", "$1/");
 
                     exchange.setProperty("fares_url", url);
                     exchange.setProperty("PROVIDER_ID", exchange.getIn().getHeader(PROVIDER_ID));
@@ -148,7 +148,7 @@ public class FaresImportRouteBuilder extends AbstractChouetteRouteBuilder {
                 .setHeader(JOB_STATUS_JOB_TYPE, constant(TimetableAction.IMPORT_NETEX.name()))
                 .removeHeader("loopCounter")
                 .process(e -> JobEvent.providerJobBuilder(e).timetableAction(TimetableAction.IMPORT).state(State.STARTED).type(e.getIn().getHeader(FILE_TYPE, String.class)).build())
-                .to("direct:updateStatus")
+                .to(ROUTE_UPDATE_STATUS)
                 .to("jms:queue:FaresPollStatusQueue")
                 .routeId("fares-send-import-job");
 
@@ -167,7 +167,7 @@ public class FaresImportRouteBuilder extends AbstractChouetteRouteBuilder {
                      })
                 .end()
 
-                .to("direct:updateStatus")
+                .to(ROUTE_UPDATE_STATUS)
                 .routeId("fares-process-import-status");
 
 

@@ -1,6 +1,6 @@
 package no.rutebanken.marduk.routes.file.onebusaway;
 
-import org.codehaus.plexus.util.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.onebusaway.csv_entities.EntityHandler;
 import org.onebusaway.gtfs.model.Stop;
 import org.slf4j.Logger;
@@ -28,8 +28,7 @@ public class NonStandardStopTransformer implements EntityHandler {
 
     @Override
     public void handleEntity(Object o) {
-        if (o instanceof Stop) {
-            Stop stop = (Stop) o;
+        if (o instanceof Stop stop) {
             if (StringUtils.isBlank(stop.getName())) {
                 LOGGER.info("Found stop without name in GTFS input - filling with default value {}", defaultName);
                 stop.setName(defaultName);

@@ -10,10 +10,6 @@ import org.apache.commons.csv.CSVRecord;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.tomcat.util.http.fileupload.FileItem;
-import org.apache.tomcat.util.http.fileupload.FileItemFactory;
-import org.apache.tomcat.util.http.fileupload.disk.DiskFileItemFactory;
-import org.apache.tomcat.util.http.fileupload.util.Streams;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,6 +22,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -59,11 +56,11 @@ public class FileSystemService {
 
     public File getTiamatFile(Exchange e) {
         String filename = null;
-        if (e.getIn().getBody() != null && e.getIn().getBody() instanceof Job){
+        if (e.getIn().getBody() instanceof Job){
             Job job = e.getIn().getBody(Job.class);
-            filename = tiamatStoragePath + "/" + job.getSubFolder() + "/" + job.getFileName();
+            filename = tiamatStoragePath + File.separator + job.getSubFolder() + File.separator + job.getFileName();
         }else if (  e.getIn().getHeader(SUB_FOLDER) != null){
-            filename = tiamatStoragePath + "/" +  e.getIn().getHeader(SUB_FOLDER) + "/" + e.getIn().getHeader(FILE_NAME);
+            filename = tiamatStoragePath + File.separator+  e.getIn().getHeader(SUB_FOLDER) + File.separator + e.getIn().getHeader(FILE_NAME);
         }else{
             filename = tiamatStoragePath + "/technique/" + e.getIn().getHeader(FILE_NAME);
         }
@@ -77,16 +74,15 @@ public class FileSystemService {
 
 
     public File getLatestStopPlacesFile(Exchange exchange) {
-        ExchangeUtils.addHeadersAndAttachments(exchange);
         String referential = exchange.getIn().getHeader(OKINA_REFERENTIAL, String.class).replace(superspaceName.toUpperCase() + "_", "").replace(superspaceName.toLowerCase() + "_", "");
-        logger.info("------ referential : " + referential);
+        logger.info("------ referential : {}", referential);
 
         Provider provider = providerRepository.getByReferential(referential).orElseThrow(() -> new RuntimeException("Aucun provider correspondant au referential " + referential));
         logger.info("------ provider: " + provider.name + " with code idfm/filiale => " + ((provider.getChouetteInfo() != null) ? provider.getChouetteInfo().getCodeIdfm() : "no code idfm found"));
         String idSite = provider.getChouetteInfo().getCodeIdfm();
 
-        logger.info("------ idsite : " + idSite);
-        logger.info("------ filename a peu presque : ARRET_" + idSite + ".zip");
+        logger.info("------ idsite : {}", idSite);
+        logger.info("------ filename a peu presque : ARRET_{}.zip", idSite);
 
         FileSystemResource fileSystemResource = new FileSystemResource(tiamatStoragePath + "/" + provider.name);
 
@@ -111,7 +107,6 @@ public class FileSystemService {
     }
 
     public File getOfferFile(Exchange exchange) {
-        ExchangeUtils.addHeadersAndAttachments(exchange);
         String referential = exchange.getIn().getHeader(OKINA_REFERENTIAL, String.class);
         if (StringUtils.isNotBlank(referential) && !referential.startsWith(superspaceName + "_") && !referential.startsWith(simulationName + "_")) {
             referential = superspaceName + "_" + referential;
@@ -119,7 +114,7 @@ public class FileSystemService {
 
         String jobId = exchange.getIn().getHeader(JOB_ID, String.class);
 
-        logger.info("Get zip and csv files from path : " + chouetteStoragePath + "/" + referential + "/data/" + jobId);
+        logger.info("Get zip and csv files from path : {}/{}/data/{}", chouetteStoragePath, referential, jobId);
         FileSystemResource fileSystemResource = new FileSystemResource(chouetteStoragePath + "/" + referential + "/data/" + jobId);
 
         File offerFile = null;
@@ -161,12 +156,12 @@ public class FileSystemService {
     }
 
     public List<Path> getAllFilesFromLocalStorage(String prefix, String fileExtension) {
-        try {
-            return Files.walk(Paths.get(chouetteStoragePath + "/" + prefix))
+        try (Stream<Path> walk = Files.walk(Paths.get(chouetteStoragePath + "/" + prefix))) {
+            return walk
                     .filter(p -> p.toString().startsWith(chouetteStoragePath + "/" + prefix) && p.getFileName().toString().endsWith(fileExtension))
                     .collect(Collectors.toList());
         } catch (IOException e) {
-            logger.error("Récupération fichiers localStorage impossible: " + e);
+            logger.error("Récupération fichiers localStorage impossible: {}", e.getMessage());
             return new ArrayList<>();
         }
     }
@@ -175,7 +170,7 @@ public class FileSystemService {
         try {
             return new FileInputStream(getOrCreateFilePath(fileName).toFile());
         } catch (FileNotFoundException e) {
-            logger.error("Récupération fichiers localStorage impossible: " + e);
+            logger.error("Récupération fichiers localStorage impossible: {}", e.getMessage());
             throw new IllegalArgumentException("Fichier :" + fileName);
         }
     }
@@ -282,10 +277,10 @@ public class FileSystemService {
 
                             if (fileTime.isBefore(thresholdDate)) {
                                 Files.delete(path);
-                                logger.info("Deleted : " + path);
+                                logger.info("Deleted : {}", path);
                             }
                         } catch (IOException e) {
-                            logger.error("Error while deleting: " + path + " -> " + e.getMessage());
+                            logger.error("Error while deleting: {} -> {}", path, e.getMessage());
                         }
                     });
         }
@@ -301,37 +296,38 @@ public class FileSystemService {
                 Files.createDirectories(startDir.toPath());
             }
 
-            List<Path> pathList = Files.walk(startDir.toPath())
-                    .filter(p -> p.toString().equals(chouetteStoragePath + "/" + fileName))
-                    .collect(Collectors.toList());
+            try (Stream<Path> walk = Files.walk(startDir.toPath())) {
+                List<Path> pathList = walk
+                        .filter(p -> p.toString().equals(chouetteStoragePath + File.separator + fileName))
+                        .collect(Collectors.toList());
 
-            if (pathList.isEmpty()) {
-                File newFile = new File(chouetteStoragePath + "/" + fileName);
-                Path newPath = newFile.toPath();
-                Files.write(newPath, fileName.getBytes());
-                return newPath;
+                if (pathList.isEmpty()) {
+                    File newFile = new File(chouetteStoragePath + File.separator + fileName);
+                    Path newPath = newFile.toPath();
+                    Files.write(newPath, fileName.getBytes());
+                    return newPath;
+                }
+                return pathList.getFirst();
             }
-            return pathList.get(0);
         } catch (IOException e) {
-            logger.error("Récupération/Création fichier localStorage: " + e);
+            logger.error("Récupération/Création fichier localStorage: {}", e.getMessage());
             throw new IllegalArgumentException("Nom du fichier:" + fileName);
         }
     }
 
     public boolean deleteDirectoryFromStorage(String directory) {
-        try {
-            File startDir = new File(chouetteStoragePath + "/" + directory);
-            Files.walk(startDir.toPath())
-                    .map(Path::toFile)
-                    .forEach(File::delete);
+        File startDir = new File(chouetteStoragePath + File.separator + directory);
+        try (Stream<Path> walk = Files.walk(startDir.toPath())) {
+            walk.map(Path::toFile)
+                .forEach(File::delete);
         } catch (IOException e) {
-            logger.error("Erreur suppression répertoire: " + directory + e);
+            logger.error("Erreur suppression répertoire {} : {}", directory, e.getMessage());
         }
         return true;
     }
 
     public boolean isExists(String fileName) {
-        File f = new File(chouetteStoragePath + "/" + fileName);
+        File f = new File(chouetteStoragePath + File.separator + fileName);
         return f.exists() && !f.isDirectory();
     }
 
@@ -345,10 +341,10 @@ public class FileSystemService {
      *         ZIP contains no XML file
      * @throws IOException if unzipping fail
      */
-    public FileItem unzipNetexZip(FileItem netexZipFile) throws ZipException, IOException{
+    public Path unzipNetexZip(Path netexZipFile) throws IOException{
         // works only for Netex POI, parking and stop places where there is a single XML file
         File unzipTmpDir = new File("/tmp", String.valueOf(UUID.randomUUID()));
-        try (InputStream zipFileStream = netexZipFile.getInputStream()) {
+        try (InputStream zipFileStream = Files.newInputStream(netexZipFile)) {
             if (!unzipTmpDir.mkdirs()) {
                 throw new IOException("Error creating directory: " + unzipTmpDir);
             }
@@ -360,10 +356,8 @@ public class FileSystemService {
             if (!unzippedTmpFiles[0].getName().endsWith(".xml")) {
                 throw new ZipException("NeTEx ZIP contains no XML file but should contain exactly one");
             }
-            FileItemFactory fac = new DiskFileItemFactory();
-            String xmlFilename = unzippedTmpFiles[0].getName();
-            FileItem unzippedXml = fac.createItem("file", "text/xml", false, xmlFilename);
-            Streams.copy(new FileInputStream(unzippedTmpFiles[0]), unzippedXml.getOutputStream(), true);
+            Path unzippedXml = Path.of(unzippedTmpFiles[0].getName());
+            Files.copy(unzippedTmpFiles[0].toPath(), unzippedXml, StandardCopyOption.REPLACE_EXISTING);
             return unzippedXml;
         } finally {
             FileUtils.deleteQuietly(unzipTmpDir);

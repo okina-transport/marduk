@@ -41,7 +41,7 @@ public class FileStoreRepository implements BlobStoreRepository{
     @Value("${chouette.remove.old.jobs.keep.days:100}")
     private int keepDays;
 
-    private Logger logger = LoggerFactory.getLogger(this.getClass());
+    private static final Logger logger = LoggerFactory.getLogger(FileStoreRepository.class);
 
     @Override
     public BlobStoreFiles listBlobs(Collection<String> prefixes) {
@@ -70,7 +70,7 @@ public class FileStoreRepository implements BlobStoreRepository{
             }
             return Optional.of(file);
         } catch (IOException e) {
-            logger.error("Erreur lecture du fichier: "+pathToFile.getFileName());
+            logger.error("Erreur lecture du fichier: {}", pathToFile.getFileName());
             logger.error(e.toString());
             return Optional.empty();
         }
@@ -98,7 +98,7 @@ public class FileStoreRepository implements BlobStoreRepository{
     @Override
     public BlobStoreFiles listBlobsForProvider(Collection<String> prefixes, Long providerId) {
 
-        List<Path> pathList = new ArrayList();
+        List<Path> pathList = new ArrayList<>();
         prefixes.forEach(prefix -> pathList.addAll(fileSystemService.getAllFilesFromLocalStorage(prefix, ".zip")));
 
         BlobStoreFiles blobStoreFiles = new BlobStoreFiles();
@@ -122,7 +122,7 @@ public class FileStoreRepository implements BlobStoreRepository{
 
     @Override
     public InputStream getBlob(String objectName) {
-        logger.debug("get blob from file store: " + objectName);
+        logger.debug("get blob from file store: {}", objectName);
         return fileSystemService.getFile(objectName);
     }
 
@@ -135,7 +135,7 @@ public class FileStoreRepository implements BlobStoreRepository{
             Util.copyStream(inputStream, outStream);
 
         } catch (IOException e) {
-            logger.error("Erreur upload blob fichier: " + objectName);
+            logger.error("Erreur upload blob fichier: {}", objectName);
             logger.error(e.toString());
         }
     }
@@ -161,7 +161,7 @@ public class FileStoreRepository implements BlobStoreRepository{
         try {
             List<Path> mardukDirectory = fileSystemService.getMardukDirectories();
             for (Path path : mardukDirectory) {
-                logger.info("Cleaning directory: " + path.getFileName());
+                logger.info("Cleaning directory: {}", path.getFileName());
                 fileSystemService.cleanUpMardukDirectory(path,keepDays);
             }
         } catch (IOException e) {

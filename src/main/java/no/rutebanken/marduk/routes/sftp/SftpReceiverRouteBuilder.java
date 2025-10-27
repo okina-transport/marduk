@@ -32,11 +32,8 @@ import org.springframework.stereotype.Component;
 import java.util.Optional;
 import java.util.UUID;
 
-import static no.rutebanken.marduk.Constants.CHOUETTE_REFERENTIAL;
-import static no.rutebanken.marduk.Constants.CORRELATION_ID;
-import static no.rutebanken.marduk.Constants.FILE_HANDLE;
-import static no.rutebanken.marduk.Constants.FILE_SKIP_STATUS_UPDATE_FOR_DUPLICATES;
-import static no.rutebanken.marduk.Constants.PROVIDER_ID;
+import static no.rutebanken.marduk.Constants.*;
+import static no.rutebanken.marduk.utils.constants.RouteDeclarationConstants.ROUTE_PROCESS_FILE_QUEUE;
 
 /**
  * Downloads file from lamassu, putting it in blob store, posting handle on queue.
@@ -91,7 +88,7 @@ public class SftpReceiverRouteBuilder extends BaseRouteBuilder {
                 .process(e -> JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.FILE_TRANSFER).state(JobEvent.State.STARTED).build())
                 .to("direct:updateStatus")
                 .log(LoggingLevel.INFO, correlation() + "Putting handle ${header." + FILE_HANDLE + "} on queue...")
-                .to("jms:queue:ProcessFileQueue")
+                .to(ROUTE_PROCESS_FILE_QUEUE)
                 .otherwise()
                 .log(LoggingLevel.INFO, "Do not initiate processing of  ${header." + FILE_HANDLE + "} as autoImport is not enabled for provider")
                 .end()

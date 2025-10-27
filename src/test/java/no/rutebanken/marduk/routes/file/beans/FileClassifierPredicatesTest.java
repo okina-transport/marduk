@@ -16,7 +16,7 @@
 
 package no.rutebanken.marduk.routes.file.beans;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -25,36 +25,36 @@ import java.util.zip.ZipInputStream;
 
 import static no.rutebanken.marduk.routes.file.beans.FileClassifierPredicates.NETEX_PUBLICATION_DELIVERY_QNAME;
 
-public class FileClassifierPredicatesTest {
+class FileClassifierPredicatesTest {
 
     @Test
-    public void firstElementQNameMatchesNetex() throws Exception {
+    void firstElementQNameMatchesNetex() throws Exception {
         assertPredicateTrueInZipFile("netex_with_two_files.zip",
                 FileClassifierPredicates.firstElementQNameMatchesNetex());
     }
 
     @Test
-    public void firstElementQNameMatchesNetexNot() throws Exception {
+    void firstElementQNameMatchesNetexNot() throws Exception {
         assertPredicateFalseInZipFile("netex_with_two_files_one_invalid.zip",
                 FileClassifierPredicates.firstElementQNameMatchesNetex());
     }
 
     @Test
-    public void firstElementQNameMatches() throws Exception {
+    void firstElementQNameMatches() throws Exception {
         assertPredicateTrueInZipFile("netex_with_two_files.zip",
                 FileClassifierPredicates.firstElementQNameMatches(
                         NETEX_PUBLICATION_DELIVERY_QNAME));
     }
 
     @Test
-    public void firstElementQNameMatchesComment() throws Exception {
+    void firstElementQNameMatchesComment() throws Exception {
         assertPredicateTrueInZipFile("netex_with_initial_comment.zip",
                 FileClassifierPredicates.firstElementQNameMatches(
                         NETEX_PUBLICATION_DELIVERY_QNAME));
     }
 
     @Test
-    public void firstElementQNameMatchesNot() throws Exception {
+    void firstElementQNameMatchesNot() throws Exception {
         assertPredicateFalseInZipFile("netex_with_two_files_one_invalid.zip",
                 FileClassifierPredicates.firstElementQNameMatches(
                         NETEX_PUBLICATION_DELIVERY_QNAME));

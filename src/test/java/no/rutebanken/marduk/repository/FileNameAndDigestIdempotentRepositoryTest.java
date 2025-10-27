@@ -17,25 +17,22 @@
 package no.rutebanken.marduk.repository;
 
 
-import no.rutebanken.marduk.config.IdempotentRepositoryConfig;
+import no.rutebanken.marduk.MardukRouteBuilderIntegrationTestBase;
 import no.rutebanken.marduk.domain.FileNameAndDigest;
 import org.apache.commons.lang3.time.DateUtils;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.annotation.DirtiesContext;
-import org.springframework.test.context.junit4.SpringRunner;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.jdbc.datasource.init.ScriptUtils;
 
 import javax.sql.DataSource;
+import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.Date;
 
-@RunWith(SpringRunner.class)
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, classes = IdempotentRepositoryConfig.class, properties = "spring.main.sources=no.rutebanken.marduk.test")
-@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
-public class FileNameAndDigestIdempotentRepositoryTest {
+class FileNameAndDigestIdempotentRepositoryTest extends MardukRouteBuilderIntegrationTestBase {
 
     @Autowired
     private FileNameAndDigestIdempotentRepository idempotentRepository;
@@ -43,68 +40,72 @@ public class FileNameAndDigestIdempotentRepositoryTest {
     @Autowired
     private DataSource datasource;
 
+    @BeforeEach()
+    void beforeEach() throws SQLException {
+        ScriptUtils.executeSqlScript(datasource.getConnection(), new ClassPathResource("schema.sql"));
+    }
 
     @Test
-    public void testNonUniqueFileNameRejected() {
+    void testNonUniqueFileNameRejected() {
         idempotentRepository.clear();
         FileNameAndDigest fileNameAndDigest = new FileNameAndDigest("fileName", "digestOne");
-        Assert.assertTrue(idempotentRepository.add(fileNameAndDigest.toString()));
+        Assertions.assertTrue(idempotentRepository.add(fileNameAndDigest.toString()));
 
         FileNameAndDigest nonUniqueFileName = new FileNameAndDigest(fileNameAndDigest.getFileName(), "digestOther");
-        Assert.assertFalse(idempotentRepository.add(nonUniqueFileName.toString()));
+        Assertions.assertFalse(idempotentRepository.add(nonUniqueFileName.toString()));
     }
 
     @Test
-    public void testNonUniqueDigestRejected() {
+    void testNonUniqueDigestRejected() {
         idempotentRepository.clear();
         FileNameAndDigest fileNameAndDigest = new FileNameAndDigest("fileName", "digestOne");
-        Assert.assertTrue(idempotentRepository.add(fileNameAndDigest.toString()));
+        Assertions.assertTrue(idempotentRepository.add(fileNameAndDigest.toString()));
 
         FileNameAndDigest nonUniqueDigest = new FileNameAndDigest("fileNameOther", fileNameAndDigest.getDigest());
-        Assert.assertFalse(idempotentRepository.add(nonUniqueDigest.toString()));
+        Assertions.assertFalse(idempotentRepository.add(nonUniqueDigest.toString()));
     }
 
     @Test
-    public void testNonUniqueFileNameAndDigestRejected() {
+    void testNonUniqueFileNameAndDigestRejected() {
         idempotentRepository.clear();
         FileNameAndDigest fileNameAndDigest = new FileNameAndDigest("fileName", "digestOne");
-        Assert.assertTrue(idempotentRepository.add(fileNameAndDigest.toString()));
+        Assertions.assertTrue(idempotentRepository.add(fileNameAndDigest.toString()));
 
-        Assert.assertFalse(idempotentRepository.add(fileNameAndDigest.toString()));
+        Assertions.assertFalse(idempotentRepository.add(fileNameAndDigest.toString()));
     }
 
     @Test
-    public void testUniqueFileNameAndDigestAccepted() {
+    void testUniqueFileNameAndDigestAccepted() {
         idempotentRepository.clear();
         FileNameAndDigest fileNameAndDigest = new FileNameAndDigest("fileName", "digestOne");
-        Assert.assertTrue(idempotentRepository.add(fileNameAndDigest.toString()));
+        Assertions.assertTrue(idempotentRepository.add(fileNameAndDigest.toString()));
 
         FileNameAndDigest nonUniqueFileName = new FileNameAndDigest("fileNameOther", "digestOther");
-        Assert.assertTrue(idempotentRepository.add(nonUniqueFileName.toString()));
+        Assertions.assertTrue(idempotentRepository.add(nonUniqueFileName.toString()));
     }
 
 
     @Test
-    public void testRemoveEntryIfAddedRecently() {
+    void testRemoveEntryIfAddedRecently() {
         idempotentRepository.clear();
         FileNameAndDigest fileNameAndDigest = new FileNameAndDigest("fileName", "digestOne");
-        Assert.assertTrue(idempotentRepository.add(fileNameAndDigest.toString()));
+        Assertions.assertTrue(idempotentRepository.add(fileNameAndDigest.toString()));
 
-        Assert.assertTrue(idempotentRepository.remove(fileNameAndDigest.toString()));
-        Assert.assertFalse(idempotentRepository.contains(fileNameAndDigest.toString()));
+        Assertions.assertTrue(idempotentRepository.remove(fileNameAndDigest.toString()));
+        Assertions.assertFalse(idempotentRepository.contains(fileNameAndDigest.toString()));
     }
 
     @Test
-    public void testRemoveEntryIfAddedYesterday() {
+    void testRemoveEntryIfAddedYesterday() {
         idempotentRepository.clear();
         FileNameAndDigest fileNameAndDigest = new FileNameAndDigest("fileName", "digestOne");
 
         idempotentRepository.insert(fileNameAndDigest.toString(), new Timestamp(DateUtils.addDays(new Date(), -1).getTime()));
 
-        Assert.assertTrue(idempotentRepository.contains(fileNameAndDigest.toString()));
+        Assertions.assertTrue(idempotentRepository.contains(fileNameAndDigest.toString()));
 
-        Assert.assertFalse(idempotentRepository.remove(fileNameAndDigest.toString()));
-        Assert.assertTrue(idempotentRepository.contains(fileNameAndDigest.toString()));
+        Assertions.assertFalse(idempotentRepository.remove(fileNameAndDigest.toString()));
+        Assertions.assertTrue(idempotentRepository.contains(fileNameAndDigest.toString()));
     }
 
 }

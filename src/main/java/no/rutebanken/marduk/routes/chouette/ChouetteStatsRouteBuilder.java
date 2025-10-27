@@ -24,7 +24,7 @@ import no.rutebanken.marduk.domain.Provider;
 import no.rutebanken.marduk.routes.SendDataAlertExpired;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
-import org.apache.camel.component.http4.HttpMethods;
+import org.apache.camel.component.http.HttpMethods;
 import org.apache.camel.model.dataformat.JsonLibrary;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -74,14 +74,14 @@ public class ChouetteStatsRouteBuilder extends AbstractChouetteRouteBuilder {
         super.configure();
 
         // Quartz job must run on all nodes
-//        from("quartz2://marduk/refreshLine?" + quartzTrigger)
+//        from("quartz://marduk/refreshLine?" + quartzTrigger)
 //                .log(LoggingLevel.DEBUG, "Quartz triggers refresh of line stats.")
 //                .to("direct:chouetteRefreshStatsCache")
 //
 //                .log(LoggingLevel.DEBUG, "Quartz refresh of line stats done.")
 //                .routeId("chouette-line-stats-cache-refresh-quartz");
 
-        from("quartz2://marduk/sendMailAlert?cron=" + dataAlertExpiredCron)
+        from("quartz://marduk/sendMailAlert?cron=" + dataAlertExpiredCron)
                 .log(LoggingLevel.INFO, "Data alert expired")
                 .process(e -> sendEmailDataAlertMail = true)
                 .to("direct:chouetteRefreshStatsCache")
@@ -112,7 +112,7 @@ public class ChouetteStatsRouteBuilder extends AbstractChouetteRouteBuilder {
                 .setHeader(Exchange.HTTP_METHOD, constant(HttpMethods.GET))
                 .process(e -> e.getIn().setHeader("refParam", getAllReferentialsAsParam()))
                 .setProperty("chouette_url", simple(chouetteUrl + "/chouette_iev/statistics/line?days=" + days + "&" + getValidityCategories() + "${header.refParam}"))
-                .log(LoggingLevel.INFO, getClass().getName(), correlation() + "Calling chouette with ${property.chouette_url} and validity categories: " + getValidityCategories())
+                .log(LoggingLevel.INFO, getClass().getName(), correlation() + "Calling chouette with ${exchangeProperty.chouette_url} and validity categories: " + getValidityCategories())
                 .toD("${exchangeProperty.chouette_url}")
                 .unmarshal().json(JsonLibrary.Jackson, Map.class)
                 .process(e -> e.getIn().setBody(mapReferentialToProviderId((e.getIn().getBody(Map.class)), sendEmailDataAlertMail)))
@@ -124,7 +124,7 @@ public class ChouetteStatsRouteBuilder extends AbstractChouetteRouteBuilder {
                 .to("direct:chouetteGetFreshStats")
                 .unmarshal().json(JsonLibrary.Jackson, JsonNode.class)
                 .process(e -> cache = e.getIn().getBody(JsonNode.class))
-                .setBody(constant(null))
+                .setBody(constant((Object) null))
                 .log(LoggingLevel.INFO,  "Refresh of line stats done")
                 .routeId("chouette-line-stats-cache-refresh");
     }

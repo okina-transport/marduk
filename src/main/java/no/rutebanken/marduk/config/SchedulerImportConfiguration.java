@@ -4,16 +4,13 @@ import no.rutebanken.marduk.routes.ImportConfigurationJob;
 import org.quartz.SchedulerException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.autoconfigure.quartz.QuartzDataSource;
-import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.boot.jdbc.DataSourceBuilder;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.ClassPathResource;
-import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.springframework.scheduling.quartz.JobDetailFactoryBean;
 import org.springframework.scheduling.quartz.SchedulerFactoryBean;
 import org.springframework.scheduling.quartz.SpringBeanJobFactory;
@@ -22,11 +19,9 @@ import javax.sql.DataSource;
 
 
 @Configuration
-@EnableAutoConfiguration
 public class SchedulerImportConfiguration {
 
-    private Logger logger = LoggerFactory.getLogger(this.getClass());
-
+    private static final Logger logger = LoggerFactory.getLogger(SchedulerImportConfiguration.class);
     @Value("${spring.quartz.jobStore.driverDelegateClass}")
     private String driverClassName;
 
@@ -39,9 +34,11 @@ public class SchedulerImportConfiguration {
     @Value("${spring.datasource.password}")
     private String password;
 
+    private final ApplicationContext applicationContext;
 
-    @Autowired
-    private ApplicationContext applicationContext;
+    public SchedulerImportConfiguration(ApplicationContext applicationContext) {
+        this.applicationContext = applicationContext;
+    }
 
     @Bean
     public SchedulerFactoryBean getSchedulerImportConfiguration() {
@@ -51,19 +48,17 @@ public class SchedulerImportConfiguration {
         schedulerFactory.setConfigLocation(new ClassPathResource("import-configuration-quartz.properties"));
         schedulerFactory.setSchedulerName("QuartzScheduler-Import-Configuration");
         schedulerFactory.setJobFactory(springBeanJobFactory());
-
-        schedulerFactory.setDataSource(quartzDataSource());
+        schedulerFactory.setDataSource(this.quartzDataSource());
         return schedulerFactory;
     }
 
     @Bean
     public SpringBeanJobFactory springBeanJobFactory() {
         AutoWiringSpringBeanJobFactory jobFactory = new AutoWiringSpringBeanJobFactory();
-        logger.debug("Configuring Job factory");
-
         jobFactory.setApplicationContext(applicationContext);
         return jobFactory;
     }
+
 
     @Bean
     public JobDetailFactoryBean getJobImportConfiguration() {
@@ -91,14 +86,14 @@ public class SchedulerImportConfiguration {
 
     @Bean
     @QuartzDataSource
-    @ConfigurationProperties(prefix = "spring.datasource")
     public DataSource quartzDataSource() {
-        DriverManagerDataSource dataSource = new DriverManagerDataSource();
-        dataSource.setDriverClassName(driverClassName);
-        dataSource.setUrl(url);
-        dataSource.setUsername(user);
-        dataSource.setPassword(password);
-        return dataSource;
+        return
+                DataSourceBuilder.create()
+                        .driverClassName(driverClassName)
+                        .url(url)
+                        .username(user)
+                        .password(password)
+                        .build();
     }
 
 }

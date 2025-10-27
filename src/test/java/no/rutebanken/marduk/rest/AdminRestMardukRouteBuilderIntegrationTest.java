@@ -19,23 +19,21 @@ package no.rutebanken.marduk.rest;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import no.rutebanken.marduk.Constants;
 import no.rutebanken.marduk.MardukRouteBuilderIntegrationTestBase;
-import no.rutebanken.marduk.Utils.Utils;
 import no.rutebanken.marduk.domain.BlobStoreFiles;
 import no.rutebanken.marduk.domain.ImportGenerateMapMatching;
 import no.rutebanken.marduk.domain.Provider;
 import no.rutebanken.marduk.repository.BlobStoreRepository;
+import no.rutebanken.marduk.utils.Utils;
 import org.apache.camel.*;
-import org.apache.camel.builder.AdviceWithRouteBuilder;
+import org.apache.camel.builder.AdviceWith;
 import org.apache.camel.builder.ExchangeBuilder;
 import org.apache.camel.component.mock.MockEndpoint;
-import org.apache.camel.model.ModelCamelContext;
 import org.apache.commons.compress.utils.IOUtils;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.test.context.SpringBootTest;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -47,76 +45,69 @@ import java.util.Map;
 
 import static no.rutebanken.marduk.Constants.GENERATE_MAP_MATCHING;
 import static no.rutebanken.marduk.Constants.PROVIDER_ID;
-import static no.rutebanken.marduk.Utils.Utils.parseProviderFromFileName;
+import static no.rutebanken.marduk.utils.Utils.parseProviderFromFileName;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.when;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, classes = AdminRestRouteBuilder.class, properties = "spring.main.sources=no.rutebanken.marduk.test")
-public class AdminRestMardukRouteBuilderIntegrationTest extends MardukRouteBuilderIntegrationTestBase {
-
-    @Autowired
-    ModelCamelContext camelContext;
+class AdminRestMardukRouteBuilderIntegrationTest extends MardukRouteBuilderIntegrationTestBase {
 
     @Autowired
     private BlobStoreRepository blobStoreRepository;
 
-    @EndpointInject(uri = "mock:chouetteImportQueue")
+    @EndpointInject("mock:chouetteImportQueue")
     protected MockEndpoint importQueue;
 
-    @EndpointInject(uri = "mock:chouetteExportNetexQueue")
+    @EndpointInject("mock:chouetteExportNetexQueue")
     protected MockEndpoint exportQueue;
 
-    @EndpointInject(uri = "mock:importLaunch")
+    @EndpointInject("mock:importLaunch")
     protected MockEndpoint importLaunch;
 
-    @Produce(uri = "http4:localhost:28080/services/timetable_admin/2/import")
+    @Produce("http:localhost:{{server.port}}/services/timetable_admin/2/import")
     protected ProducerTemplate importTemplate;
 
-    @Produce(uri = "http4:localhost:28080/services/timetable_admin/2/export")
+    @Produce("http:localhost:{{server.port}}/services/timetable_admin/2/export")
     protected ProducerTemplate exportTemplate;
 
-    @Produce(uri = "http4:localhost:28080/services/timetable_admin/2/files")
+    @Produce("http:localhost:{{server.port}}/services/timetable_admin/2/files")
     protected ProducerTemplate listFilesTemplate;
 
-    @Produce(uri = "http4:localhost:28080/services/timetable_admin/2/files/existing_regtopp-file.zip")
+    @Produce("http:localhost:{{server.port}}/services/timetable_admin/2/files/existing_regtopp-file.zip")
     protected ProducerTemplate getFileTemplate;
 
-    @Produce(uri = "http4:localhost:28080/services/timetable_admin/2/files/unknown-file.zip")
+    @Produce("http:localhost:{{server.port}}/services/timetable_admin/2/files/unknown-file.zip")
     protected ProducerTemplate getUnknownFileTemplate;
 
-
-    @Produce(uri = "http4:localhost:28080/services/timetable_admin/export/files")
+    @Produce("http:localhost:{{server.port}}/services/timetable_admin/export/files")
     protected ProducerTemplate listExportFilesTemplate;
 
-    @Produce(uri = "http4:localhost:28080/services/timetable_admin/export/files/3")
+    @Produce("http:localhost:{{server.port}}/services/timetable_admin/export/files/3")
     protected ProducerTemplate listExportFilesProviderTemplate;
-
 
     @Value("#{'${timetable.export.blob.prefixes:outbound/gtfs/,outbound/netex/}'.split(',')}")
     private List<String> exportFileStaticPrefixes;
     @Autowired
     private AdminRestRouteBuilder adminRestRouteBuilder;
 
-
-    @Before
-    public void setUpProvider() {
+    @BeforeEach
+    void setUpProvider() {
+        when(providerRepository.getProviders()).thenReturn(providers);
+        when(providerRepository.getProvider(2L)).thenReturn(providers.get(0));
+        when(providerRepository.getProvider(3L)).thenReturn(providers.get(1));
         when(providerRepository.getReferential(2L)).thenReturn("rut");
     }
 
     @Test
-    public void runImport() throws Exception {
+    void runImport() throws Exception {
 
-        camelContext.getRouteDefinition("admin-chouette-import").adviceWith(camelContext, new AdviceWithRouteBuilder() {
-            @Override
-            public void configure() throws Exception {
-                interceptSendToEndpoint("jms:queue:ProcessFileQueue").skipSendToOriginalEndpoint().to("mock:chouetteImportQueue");
-            }
+        AdviceWith.adviceWith(context, "admin-chouette-import", adviceRouteBuilder -> {
+            adviceRouteBuilder.weaveByToUri("jms:(.*):ProcessFileQueue")
+                    .replace().to("mock:chouetteImportQueue");
         });
 
-
         // we must manually start when we are done with all the advice with
-        camelContext.start();
+        context.start();
 
         BlobStoreFiles d = new BlobStoreFiles();
         d.add(new BlobStoreFiles.File("file1", null, null, null));
@@ -140,24 +131,19 @@ public class AdminRestMardukRouteBuilderIntegrationTest extends MardukRouteBuild
         importQueue.assertIsSatisfied();
 
         List<Exchange> exchanges = importQueue.getExchanges();
-        String providerId = (String) exchanges.get(0).getIn().getHeader(PROVIDER_ID);
-        assertEquals("2", providerId);
-
+        String providerId = (String) exchanges.getFirst().getIn().getHeader(PROVIDER_ID);
+        assertThat(providerId).isEqualTo("2");
     }
 
     @Test
-    public void runExport() throws Exception {
-
-        camelContext.getRouteDefinition("admin-chouette-export").adviceWith(camelContext, new AdviceWithRouteBuilder() {
-            @Override
-            public void configure() throws Exception {
-                interceptSendToEndpoint("jms:queue:ChouetteExportNetexQueue").skipSendToOriginalEndpoint().to("mock:chouetteExportNetexQueue");
-
-            }
+    void runExport() throws Exception {
+        AdviceWith.adviceWith(context, "admin-chouette-export", adviceRouteBuilder -> {
+            adviceRouteBuilder.weaveByToUri("jms:(.*):ChouetteExportNetexQueue")
+                    .replace().to("mock:chouetteExportNetexQueue");
         });
 
         // we must manually start when we are done with all the advice with
-        camelContext.start();
+        context.start();
 
         // Do rest call
         Map<String, Object> headers = new HashMap<String, Object>();
@@ -171,26 +157,25 @@ public class AdminRestMardukRouteBuilderIntegrationTest extends MardukRouteBuild
         exportQueue.assertIsSatisfied();
 
         List<Exchange> exchanges = exportQueue.getExchanges();
-        String providerId = (String) exchanges.get(0).getIn().getHeader(PROVIDER_ID);
-        assertEquals("2", providerId);
+        String providerId = (String) exchanges.getFirst().getIn().getHeader(PROVIDER_ID);
+        assertThat(providerId).isEqualTo("2");
     }
 
-    //@Test
-    public void getBlobStoreFiles() throws Exception {
+    @Test
+    void getBlobStoreFiles() throws Exception {
 
         // Preparations
         String filename = "ruter_fake_data.zip";
-        String fileStorePath = Constants.BLOBSTORE_PATH_INBOUND + "rut/";
-        String pathname = "src/test/resources/no/rutebanken/marduk/routes/chouette/empty_regtopp.zip";
+        String fileStorePath = "5/imports/";
+        String pathname = "src/test/resources/no/rutebanken/marduk/routes/file/beans/gtfs.zip";
 
         //populate fake blob repo
-        blobStoreRepository.uploadBlob(fileStorePath + filename, new FileInputStream(new File(pathname)), false);
-		BlobStoreFiles blobStoreFiles = blobStoreRepository.listBlobs(fileStorePath);
+        blobStoreRepository.uploadBlob(fileStorePath + filename, new FileInputStream(pathname), false);
 
-        camelContext.start();
+        context.start();
 
         // Do rest call
-        Map<String, Object> headers = new HashMap<String, Object>();
+        Map<String, Object> headers = new HashMap<>();
         headers.put(Exchange.HTTP_METHOD, "GET");
         InputStream response = (InputStream) listFilesTemplate.requestBodyAndHeaders(null, headers);
         // Parse response
@@ -199,14 +184,14 @@ public class AdminRestMardukRouteBuilderIntegrationTest extends MardukRouteBuild
 
         ObjectMapper mapper = new ObjectMapper();
         BlobStoreFiles rsp = mapper.readValue(s, BlobStoreFiles.class);
-        Assert.assertEquals(1, rsp.getFiles().size());
-        Assert.assertEquals(fileStorePath + filename, rsp.getFiles().get(0).getName());
+        assertThat(rsp.getFiles()).hasSize(1);
+        assertThat(rsp.getFiles().getFirst().getName()).isEqualTo(fileStorePath + filename);
 
     }
 
 
     @Test
-    public void getBlobStoreFile() throws Exception {
+    void getBlobStoreFile() throws Exception {
         // Preparations
         String filename = "existing_regtopp-file.zip";
         String fileStorePath = Constants.BLOBSTORE_PATH_INBOUND + "rut/";
@@ -216,38 +201,39 @@ public class AdminRestMardukRouteBuilderIntegrationTest extends MardukRouteBuild
         blobStoreRepository.uploadBlob(fileStorePath + filename, testFileStream, false);
 
 
-        camelContext.start();
+        context.start();
 
         // Do rest call
         Map<String, Object> headers = new HashMap<String, Object>();
         headers.put(Exchange.HTTP_METHOD, "GET");
         InputStream response = (InputStream) getFileTemplate.requestBodyAndHeaders(null, headers);
         // Parse response
-
-//		Assert.assertTrue(org.apache.commons.io.IOUtils.contentEquals(testFileStream, response));
-    }
-
-
-    @Test(expected = CamelExecutionException.class)
-    public void getBlobStoreFile_unknownFile() throws Exception {
-
-        camelContext.start();
-
-        // Do rest call
-        Map<String, Object> headers = new HashMap<String, Object>();
-        headers.put(Exchange.HTTP_METHOD, "GET");
-        getUnknownFileTemplate.requestBodyAndHeaders(null, headers);
+        Assertions.assertNotNull(response);
     }
 
 
     @Test
-    public void getBlobStoreExportFiles() throws Exception {
+    void getBlobStoreFile_unknownFile() {
+        context.start();
+        assertThrows(CamelExecutionException.class, () -> {
+
+            // Do rest call
+            Map<String, Object> headers = new HashMap<String, Object>();
+            headers.put(Exchange.HTTP_METHOD, "GET");
+            getUnknownFileTemplate.requestBodyAndHeaders(null, headers);
+        });
+
+    }
+
+
+    @Test
+    void getBlobStoreExportFiles() throws Exception {
         String testFileName = "rut-testFile";
         //populate fake blob repo
         for (String prefix : exportFileStaticPrefixes) {
-            blobStoreRepository.uploadBlob(prefix + testFileName, new FileInputStream(new File( "src/test/resources/no/rutebanken/marduk/routes/chouette/empty_regtopp.zip")), false);
+            blobStoreRepository.uploadBlob(prefix + testFileName, new FileInputStream(new File("src/test/resources/no/rutebanken/marduk/routes/chouette/empty_regtopp.zip")), false);
         }
-        camelContext.start();
+        context.start();
 
         // Do rest call
         Map<String, Object> headers = new HashMap<String, Object>();
@@ -259,12 +245,12 @@ public class AdminRestMardukRouteBuilderIntegrationTest extends MardukRouteBuild
 
         ObjectMapper mapper = new ObjectMapper();
         BlobStoreFiles rsp = mapper.readValue(s, BlobStoreFiles.class);
-        Assert.assertEquals(exportFileStaticPrefixes.size(), rsp.getFiles().size());
+        assertThat(exportFileStaticPrefixes).hasSameSizeAs(rsp.getFiles());
         exportFileStaticPrefixes.forEach(prefix -> rsp.getFiles().stream().anyMatch(file -> (prefix + testFileName).equals(file.getName())));
 
         Provider provider = parseProviderFromFileName(providerRepository, testFileName);
-        Assert.assertEquals(provider.chouetteInfo.referential, "rut");
-        Assert.assertEquals(provider.id, new Long(2L));
+        assertThat(provider.chouetteInfo.referential).isEqualTo("rut");
+        assertThat(provider.id).isEqualTo(2L);
 
         // Clean up files for further tests
         for (String prefix : exportFileStaticPrefixes) {
@@ -274,13 +260,13 @@ public class AdminRestMardukRouteBuilderIntegrationTest extends MardukRouteBuild
 
 
     @Test
-    public void getBlobStoreExportFilesForProvider() throws Exception {
+    void getBlobStoreExportFilesForProvider() throws Exception {
         String testFileName = "rut3-testFile";
         //populate fake blob repo
         for (String prefix : exportFileStaticPrefixes) {
-            blobStoreRepository.uploadBlob(prefix + testFileName, new FileInputStream(new File( "src/test/resources/no/rutebanken/marduk/routes/chouette/empty_regtopp.zip")), false);
+            blobStoreRepository.uploadBlob(prefix + testFileName, new FileInputStream(new File("src/test/resources/no/rutebanken/marduk/routes/chouette/empty_regtopp.zip")), false);
         }
-        camelContext.start();
+        context.start();
 
         // Do rest call
         Map<String, Object> headers = new HashMap<String, Object>();
@@ -293,13 +279,13 @@ public class AdminRestMardukRouteBuilderIntegrationTest extends MardukRouteBuild
 
         ObjectMapper mapper = new ObjectMapper();
         BlobStoreFiles rsp = mapper.readValue(s, BlobStoreFiles.class);
-        Assert.assertEquals(exportFileStaticPrefixes.size(), rsp.getFiles().size());
+        assertThat(exportFileStaticPrefixes).hasSameSizeAs(rsp.getFiles());
         exportFileStaticPrefixes.forEach(prefix -> rsp.getFiles().stream().anyMatch(file -> (prefix + testFileName).equals(file.getName())));
 
         rsp.getFiles().forEach(f -> {
             Provider provider = Utils.parseProviderFromFileName(providerRepository, f.getFileNameOnly());
-            Assert.assertEquals(provider.chouetteInfo.referential, "rut3");
-            Assert.assertEquals(provider.id, new Long(3L));
+            assertThat(provider.chouetteInfo.referential).isEqualTo("rut3");
+            assertThat(provider.id).isEqualTo(3L);
         });
 
         // Clean up files for further tests
@@ -309,8 +295,8 @@ public class AdminRestMardukRouteBuilderIntegrationTest extends MardukRouteBuild
     }
 
     @Test
-    public void getGenerateMapMatchingHeadersNoHeaderValueFoundTest() {
-        Exchange build = ExchangeBuilder.anExchange(camelContext).withHeader("JOB_ID", "1").build();
+    void getGenerateMapMatchingHeadersNoHeaderValueFoundTest() {
+        Exchange build = ExchangeBuilder.anExchange(context).withHeader("JOB_ID", "1").build();
 
         String result = adminRestRouteBuilder.getGenerateMapMatchingHeaders(build);
 
@@ -318,8 +304,8 @@ public class AdminRestMardukRouteBuilderIntegrationTest extends MardukRouteBuild
     }
 
     @Test
-    public void getGenerateMapMatchingHeadersHeaderValueFoundTest() {
-        Exchange build = ExchangeBuilder.anExchange(camelContext).withHeader("JOB_ID", "1").withHeader(GENERATE_MAP_MATCHING, "CAR").build();
+    void getGenerateMapMatchingHeadersHeaderValueFoundTest() {
+        Exchange build = ExchangeBuilder.anExchange(context).withHeader("JOB_ID", "1").withHeader(GENERATE_MAP_MATCHING, "CAR").build();
 
         String result = adminRestRouteBuilder.getGenerateMapMatchingHeaders(build);
 

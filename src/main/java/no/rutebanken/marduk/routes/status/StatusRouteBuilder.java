@@ -19,6 +19,7 @@ package no.rutebanken.marduk.routes.status;
 import no.rutebanken.marduk.domain.ExportType;
 import no.rutebanken.marduk.metrics.PrometheusMetricsService;
 import no.rutebanken.marduk.routes.chouette.json.Job;
+import org.apache.camel.ExchangePattern;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.commons.lang3.StringUtils;
@@ -48,6 +49,7 @@ public class StatusRouteBuilder extends RouteBuilder {
                     }
 
                 })
+                .setExchangePattern(ExchangePattern.InOnly)
                 .to("jms:queue:JobEventQueue")
                 .routeId("update-status").startupOrder(1);
 
