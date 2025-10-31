@@ -108,7 +108,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
 
         RestPropertyDefinition corsAllowedHeaders = new RestPropertyDefinition();
         corsAllowedHeaders.setKey("Access-Control-Allow-Headers");
-        corsAllowedHeaders.setValue("Origin, Accept, X-Requested-With, Content-Type, Access-Control-Request-Method, Access-Control-Request-Headers, Authorization, x-okina-referential, RutebankenUser, RutebankenDescription, EXPORT_LINES_IDS, EXPORT_START_DATE, EXPORT_END_DATE, ImportType, routeMerge, splitCharacter, commercialPointIdPrefixToRemove, quayIdPrefixToRemove, areaCentroidPrefixToRemove, linePrefixToRemove, stopAreaPrefixToRemove, ignoreCommercialPoints, analysisJobId, cleanMode, keepBoardingAlightingPossibility, keepStopGeolocalisation, keepStopNames, removeParentStations, importShapesFile, updateStopAccessibility, railUICprocessing, generateMapMatching, routesReorganization, distanceGeolocation, routeSortOrder, netexImportLayouts, netexImportColors, useTargetNetwork, targetNetwork, renameRoutesAfterMerge, importFareFiles, recomputeStopPlacesLocation, importTargetRoutes, exportGeneratedMissingQuays, overwriteLineInformation");
+        corsAllowedHeaders.setValue("Origin, Accept, X-Requested-With, Content-Type, Access-Control-Request-Method, Access-Control-Request-Headers, Authorization, x-okina-referential, RutebankenUser, RutebankenDescription, EXPORT_LINES_IDS, EXPORT_START_DATE, EXPORT_END_DATE, ImportType, routeMerge, splitCharacter, commercialPointIdPrefixToRemove, quayIdPrefixToRemove, areaCentroidPrefixToRemove, linePrefixToRemove, stopAreaPrefixToRemove, ignoreCommercialPoints, analysisJobId, cleanMode, keepBoardingAlightingPossibility, keepStopGeolocalisation, keepStopNames, removeParentStations, importShapesFile, updateStopAccessibility, railUICprocessing, generateMapMatching, routesReorganization, distanceGeolocation, routeSortOrder, netexImportLayouts, netexImportColors, useTargetNetwork, targetNetwork, renameRoutesAfterMerge, importFareFiles, recomputeStopPlacesLocation, importTargetRoutes, overwriteLineInformation");
 
         RestPropertyDefinition corsAllowedOrigin = new RestPropertyDefinition();
         corsAllowedOrigin.setKey("Access-Control-Allow-Origin");
@@ -923,7 +923,6 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .produces(PLAIN)
                 .responseMessage().code(200).message("Command accepted").endResponseMessage()
                 .route()
-                .process(e -> e.getIn().setHeader(EXPORT_GENERATED_MISSING_QUAYS, getHeaders(e, EXPORT_GENERATED_MISSING_QUAYS)))
                 .setHeader(PROVIDER_ID, header("providerId"))
                 .setHeader(NO_GTFS_EXPORT, constant(true))
                 .setHeader(NETEX_EXPORT_GLOBAL, constant(false))
@@ -1063,7 +1062,6 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .produces(PLAIN)
                 .responseMessage().code(200).message("Command accepted").endResponseMessage()
                 .route()
-                .process(e -> e.getIn().setHeader(EXPORT_GENERATED_MISSING_QUAYS, getHeaders(e, EXPORT_GENERATED_MISSING_QUAYS)))
                 .setHeader(PROVIDER_ID, header("providerId"))
                 .to("direct:authorizeRequest")
                 .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)

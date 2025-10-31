@@ -53,12 +53,8 @@ public class NetexExportParameters {
         @JsonProperty("exported_filename")
         public String exportedFilename;
 
-        @JsonProperty("export_generated_missing_quays")
-        private boolean exportGeneratedMissingQuays;
-
-
         public NetexExport(String name, String referentialName, String organisationName, String userName, String projectionType, boolean exportStops, String defaultCodespacePrefix,
-                           String exportedFilename, String exportedReferentials, Long exportConfigurationId, boolean exportGeneratedMissingQuays) {
+                           String exportedFilename, String exportedReferentials, Long exportConfigurationId) {
             this.name = name;
             this.projectionType = projectionType;
             this.referentialName = referentialName;
@@ -71,7 +67,6 @@ public class NetexExportParameters {
             this.exportedFilename = exportedFilename;
             this.exportedReferentials = exportedReferentials;
             this.exportConfigurationId = exportConfigurationId;
-            this.exportGeneratedMissingQuays = exportGeneratedMissingQuays;
         }
 
     }
