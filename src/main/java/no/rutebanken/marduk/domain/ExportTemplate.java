@@ -37,6 +37,7 @@ public class ExportTemplate implements Serializable {
     private String agencyLang;
     private Boolean exportAllLines;
     private boolean exportGeneratedMissingQuays;
+    private boolean exportExternalIds;
 
 
 
@@ -267,4 +268,12 @@ public class ExportTemplate implements Serializable {
     public boolean isExportGeneratedMissingQuays() { return exportGeneratedMissingQuays; }
 
     public void setExportGeneratedMissingQuays(boolean exportGeneratedMissingQuays) { this.exportGeneratedMissingQuays = exportGeneratedMissingQuays; }
+
+    public boolean isExportExternalIds() {
+        return exportExternalIds;
+    }
+
+    public void setExportExternalIds(boolean exportExternalIds) {
+        this.exportExternalIds = exportExternalIds;
+    }
 }
