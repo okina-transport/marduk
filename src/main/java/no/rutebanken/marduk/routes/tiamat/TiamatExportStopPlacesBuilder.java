@@ -74,6 +74,7 @@ public class TiamatExportStopPlacesBuilder extends AbstractChouetteRouteBuilder 
                     URL url = new URL(stopPlacesExportUrl.replace("http4", "http") + "/initiate?providerId=" + tiamatProviderId);
                     HttpURLConnection con = (HttpURLConnection) url.openConnection();
                     con.setRequestProperty(USER, e.getIn().getHeader(USER) != null ? e.getIn().getHeader(USER).toString() : "Mobi-iti");
+                    con.setRequestProperty(EXPORT_GENERATED_MISSING_QUAYS, e.getIn().getHeader(EXPORT_GENERATED_MISSING_QUAYS).toString());
                     e.getIn().setBody(con.getInputStream());
 
                     Job job = e.getIn().getBody(Job.class);

@@ -36,6 +36,7 @@ public class ExportTemplate implements Serializable {
     private String agencyTimezone;
     private String agencyLang;
     private Boolean exportAllLines;
+    private boolean exportGeneratedMissingQuays;
 
 
 
@@ -262,4 +263,8 @@ public class ExportTemplate implements Serializable {
     public boolean isExportAllLines() { return exportAllLines; }
 
     public void setExportAllLines(boolean exportAllLines) { this.exportAllLines = exportAllLines; }
+
+    public boolean isExportGeneratedMissingQuays() { return exportGeneratedMissingQuays; }
+
+    public void setExportGeneratedMissingQuays(boolean exportGeneratedMissingQuays) { this.exportGeneratedMissingQuays = exportGeneratedMissingQuays; }
 }
