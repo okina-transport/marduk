@@ -58,6 +58,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -1297,11 +1299,15 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
         String importType = (String) e.getIn().getHeader("importType");
         String incomingFile = copyIncomingFile(e);
         Set<String> files = ZipFileUtils.listFilesInZip(new java.io.File(incomingFile));
-        checkFilesInZip(files, importType);
+        boolean invalidZipInput = isZipContainingInvalidFiles(files, importType);
+        if (invalidZipInput) {
+            e.getIn().setHeader(CLEAN_INPUT_NETEX_ZIP, Boolean.TRUE);
+        }
+        Files.delete(Path.of(incomingFile));
     }
 
-    private void checkFilesInZip(Set<String> files, String importType ) {
-
+    private boolean isZipContainingInvalidFiles(Set<String> files, String importType ) {
+        boolean isInvalid = false;
         if ("gtfs".equals(importType)){
             for (String file : files) {
                 if (!file.endsWith(".txt")){
@@ -1310,15 +1316,16 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                     throw new RuntimeException(errorMsg);
                 }
             }
-        }else {
+        } else {
             for (String file : files) {
                 if (!file.endsWith(".xml")){
-                    String errorMsg = "Zip containing non-xml file:" + file;
+                    String errorMsg = "Zip containing non-xml file: " + file;
                     log.error(errorMsg);
-                    throw new RuntimeException(errorMsg);
+                    isInvalid = true;
                 }
             }
         }
+        return isInvalid;
     }
 
     private String copyIncomingFile(Exchange e) throws IOException {
@@ -1336,14 +1343,15 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
         }
 
 
-        FileOutputStream fichierSortie = new FileOutputStream(tmpFile);
+        try (FileOutputStream fichierSortie = new FileOutputStream(tmpFile)) {
 
-        byte[] tampon = new byte[1024];
-        int longueur;
-        while ((longueur = inputStream.read(tampon)) != -1) {
-            fichierSortie.write(tampon, 0, longueur);
+            byte[] tampon = new byte[1024];
+            int longueur;
+            while ((longueur = inputStream.read(tampon)) != -1) {
+                fichierSortie.write(tampon, 0, longueur);
+            }
+            return tmpFile;
         }
-        return tmpFile;
 
     }
 

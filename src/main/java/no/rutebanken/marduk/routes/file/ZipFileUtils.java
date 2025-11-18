@@ -21,9 +21,12 @@ import no.rutebanken.marduk.routes.file.beans.FileTypeClassifierBean;
 import no.rutebanken.marduk.routes.file.beans.GtfsFileInputWithParameters;
 import no.rutebanken.marduk.routes.file.onebusaway.NonStandardStopTransformer;
 import org.apache.camel.Exchange;
+import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
+import org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.BooleanUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.onebusaway.gtfs_transformer.GtfsTransformer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,10 +36,7 @@ import java.nio.file.*;
 import java.nio.file.FileSystem;
 import java.util.*;
 import java.util.stream.Collectors;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipFile;
-import java.util.zip.ZipInputStream;
-import java.util.zip.ZipOutputStream;
+import java.util.zip.*;
 
 import static no.rutebanken.marduk.Constants.*;
 
@@ -266,6 +266,38 @@ public class ZipFileUtils {
         }
     }
 
+    public static void copyZipFileWithoutUnwantedFiles(Path inputFile, OutputStream outputStream, String fileExtensionToKeep) {
+        try (org.apache.commons.compress.archivers.zip.ZipFile zip = new org.apache.commons.compress.archivers.zip.ZipFile(inputFile.toFile())) {
+            try (ZipArchiveOutputStream out = new ZipArchiveOutputStream(outputStream)) {
+
+                Enumeration<? extends ZipArchiveEntry> entries = zip.getEntries();
+                while (entries.hasMoreElements()) {
+                    ZipArchiveEntry zipEntry = entries.nextElement();
+                    if (StringUtils.endsWith(zipEntry.getName(), fileExtensionToKeep)) {
+                        ZipArchiveEntry outEntry = copyZipArchiveEntry(zipEntry);
+                        out.addRawArchiveEntry(outEntry, zip.getRawInputStream(zipEntry));
+                    }
+                }
+            }
+        } catch (IOException e) {
+            logger.error(e.getMessage());
+        }
+    }
+
+    private static ZipArchiveEntry copyZipArchiveEntry(ZipArchiveEntry zipEntry) {
+        ZipArchiveEntry outEntry = new ZipArchiveEntry(zipEntry.getName());
+        outEntry.setCompressedSize(zipEntry.getCompressedSize());
+        outEntry.setCrc(zipEntry.getCrc());
+        outEntry.setExternalAttributes(zipEntry.getExternalAttributes());
+        outEntry.setExtra(zipEntry.getExtra());
+        outEntry.setExtraFields(zipEntry.getExtraFields());
+        outEntry.setGeneralPurposeBit(zipEntry.getGeneralPurposeBit());
+        outEntry.setInternalAttributes(zipEntry.getInternalAttributes());
+        outEntry.setMethod(zipEntry.getMethod());
+        outEntry.setRawFlag(zipEntry.getRawFlag());
+        outEntry.setSize(zipEntry.getSize());
+        return outEntry;
+    }
 
     private static File getFile(byte[] data) throws IOException {
         File inputFile = File.createTempFile("marduk-input", ".zip");
