@@ -250,7 +250,6 @@ public class MultipleExportProcessor implements Processor {
         headers.put(FILE_NAME, "export-" + export.getId() + "-" + export.getName());
         headers.put(CURRENT_EXPORT, exportJsonMapper.toJson(export));
         headers.put(EXPORT_GENERATED_MISSING_QUAYS, export.isExportGeneratedMissingQuays());
-        headers.put(EXPORT_EXTERNAL_IDS, export.isExportExternalIds());
         headers.put(EXPORTED_FILENAME, export.getExportedFileName());
         if (export.getPostProcess() != null){
             headers.put(POST_PROCESS, export.getPostProcess());

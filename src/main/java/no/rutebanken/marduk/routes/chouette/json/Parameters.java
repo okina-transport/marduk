@@ -144,7 +144,7 @@ public class Parameters {
     }
 
 
-    public static String getNetexExportProvider(Provider provider, boolean exportStops, String user, String exportedFilename, String exportedReferentials, Long exportConfigurationId, String exportGeneratedMissingQuays, String exportExternalIds) {
+    public static String getNetexExportProvider(Provider provider, boolean exportStops, String user, String exportedFilename, String exportedReferentials, Long exportConfigurationId, String exportGeneratedMissingQuays) {
         try {
             ChouetteInfo chouetteInfo = provider.chouetteInfo;
             String projectionType = null;
@@ -152,7 +152,7 @@ public class Parameters {
             if (StringUtils.isNotBlank(chouetteInfo.getNameNetexOffre())) {
                 defaultCodespacePrefix = chouetteInfo.getNameNetexOffre();
             }
-            NetexExportParameters.NetexExport netexExport = new NetexExportParameters.NetexExport("offre", chouetteInfo.referential, chouetteInfo.organisation, user, projectionType, exportStops, defaultCodespacePrefix, exportedFilename, exportedReferentials, exportConfigurationId, Boolean.parseBoolean(exportGeneratedMissingQuays), Boolean.parseBoolean(exportExternalIds));
+            NetexExportParameters.NetexExport netexExport = new NetexExportParameters.NetexExport("offre", chouetteInfo.referential, chouetteInfo.organisation, user, projectionType, exportStops, defaultCodespacePrefix, exportedFilename, exportedReferentials, exportConfigurationId, Boolean.parseBoolean(exportGeneratedMissingQuays));
             NetexExportParameters.Parameters parameters = new NetexExportParameters.Parameters(netexExport);
             NetexExportParameters exportParameters = new NetexExportParameters(parameters);
             ObjectMapper mapper = new ObjectMapper();

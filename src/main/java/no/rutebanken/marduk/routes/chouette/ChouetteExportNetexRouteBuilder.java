@@ -101,8 +101,7 @@ public class ChouetteExportNetexRouteBuilder extends AbstractChouetteRouteBuilde
                     String user = e.getIn().getHeader(USER, String.class);
                     String exportedFilename = e.getIn().getHeader(EXPORTED_FILENAME) != null && !e.getIn().getHeader(NETEX_EXPORT_GLOBAL, Boolean.class) ? (String) e.getIn().getHeader(EXPORTED_FILENAME) : null;
                     String exportGeneratedMissingQuays = e.getIn().getHeader(EXPORT_GENERATED_MISSING_QUAYS) != null ? String.valueOf(e.getIn().getHeader(EXPORT_GENERATED_MISSING_QUAYS)) : null;
-                    String exportExternalIds = e.getIn().getHeader(EXPORT_EXTERNAL_IDS) != null ? String.valueOf(e.getIn().getHeader(EXPORT_EXTERNAL_IDS)) : null;
-                    e.getIn().setHeader(JSON_PART, Parameters.getNetexExportProvider(getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)), exportStops, user, exportedFilename, null, null, exportGeneratedMissingQuays, exportExternalIds));
+                    e.getIn().setHeader(JSON_PART, Parameters.getNetexExportProvider(getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)), exportStops, user, exportedFilename, null, null, exportGeneratedMissingQuays));
                 }) //Using header to addToExchange json data
                 .log(LoggingLevel.INFO, correlation() + "Creating multipart request")
                 .process(this::toGenericChouetteMultipart)
@@ -241,8 +240,7 @@ public class ChouetteExportNetexRouteBuilder extends AbstractChouetteRouteBuilde
                     Long exportConfigurationId = e.getIn().getHeader(EXPORT_CONFIGURATION_ID) != null ? Long.valueOf((String) e.getIn().getHeader(EXPORT_CONFIGURATION_ID)) : null;
                     String exportedFilename = e.getIn().getHeader(EXPORTED_FILENAME) != null ? (String) e.getIn().getHeader(EXPORTED_FILENAME) : null;
                     String exportGeneratedMissingQuays = e.getIn().getHeader(EXPORT_GENERATED_MISSING_QUAYS) != null ? String.valueOf(e.getIn().getHeader(EXPORT_GENERATED_MISSING_QUAYS)) : null;
-                    String exportExternalIds = e.getIn().getHeader(EXPORT_EXTERNAL_IDS) != null ? String.valueOf(e.getIn().getHeader(EXPORT_EXTERNAL_IDS)) : null;
-                    e.getIn().setHeader(JSON_PART, Parameters.getNetexExportProvider(getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)), exportStops, user, exportedFilename, allReferentialsNames, exportConfigurationId, exportGeneratedMissingQuays, exportExternalIds));
+                    e.getIn().setHeader(JSON_PART, Parameters.getNetexExportProvider(getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)), exportStops, user, exportedFilename, allReferentialsNames, exportConfigurationId, exportGeneratedMissingQuays));
                     JobEvent.systemJobBuilder(e).jobDomain(JobEvent.JobDomain.TIMETABLE_PUBLISH).action("EXPORT_NETEX_MERGED").fileName(exportedFilename).state(JobEvent.State.PENDING).type("netex").correlationId(correlationId).build();
                 })
                 .to("direct:updateStatus")
