@@ -2,19 +2,26 @@ package no.rutebanken.marduk.routes.file;
 
 import no.rutebanken.marduk.exceptions.MardukException;
 import org.apache.camel.Exchange;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.BooleanUtils;
 import org.apache.tomcat.util.http.fileupload.FileItem;
 import org.apache.tomcat.util.http.fileupload.FileItemFactory;
 import org.apache.tomcat.util.http.fileupload.UploadContext;
+import org.apache.tomcat.util.http.fileupload.disk.DiskFileItem;
 import org.apache.tomcat.util.http.fileupload.disk.DiskFileItemFactory;
 import org.apache.tomcat.util.http.fileupload.servlet.ServletFileUpload;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 import java.util.List;
+
+import static no.rutebanken.marduk.Constants.CLEAN_INPUT_NETEX_ZIP;
 
 public class FileInformations {
 
@@ -37,7 +44,16 @@ public class FileInformations {
         try {
             fileItems = upload.parseRequest(new SimpleUploadContext(StandardCharsets.UTF_8, e.getIn().getHeader(Exchange.CONTENT_TYPE, String.class), byteArray));
             fileItems.removeIf(fileItem -> fileItem.getName() == null);
-            e.getIn().setBody(fileItems);
+            if (CollectionUtils.isNotEmpty(fileItems) && BooleanUtils.isTrue((Boolean) e.getIn().getHeader(CLEAN_INPUT_NETEX_ZIP))) {
+                String targetFilename = fileItems.get(0).getName();
+                String storeLocation = ((DiskFileItem) fileItems.get(0)).getStoreLocation().getAbsolutePath();
+                FileItem file = factory.createItem("file", "application/zip", false, targetFilename);
+                OutputStream outputStream = file.getOutputStream();
+                ZipFileUtils.copyZipFileWithoutUnwantedFiles(Path.of(storeLocation), outputStream, ".xml");
+                e.getIn().setBody(List.of(file));
+            } else {
+                e.getIn().setBody(fileItems);
+            }
         } catch (Exception ex) {
             throw new MardukException("Failed to parse File multipart content: " + ex.getMessage());
         }
