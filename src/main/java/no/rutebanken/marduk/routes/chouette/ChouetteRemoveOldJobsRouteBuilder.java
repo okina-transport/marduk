@@ -18,6 +18,7 @@ package no.rutebanken.marduk.routes.chouette;
 
 import no.rutebanken.marduk.Constants;
 import no.rutebanken.marduk.routes.BaseRouteBuilder;
+import no.rutebanken.marduk.security.TokenService;
 import no.rutebanken.marduk.services.BlobStoreService;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
@@ -49,6 +50,10 @@ public class ChouetteRemoveOldJobsRouteBuilder extends BaseRouteBuilder {
 
     @Autowired
     private BlobStoreService blobStoreService;
+
+    @Autowired
+    TokenService tokenService;
+
 
 
     @Override
@@ -99,7 +104,8 @@ public class ChouetteRemoveOldJobsRouteBuilder extends BaseRouteBuilder {
                     .when(header("keepDays").isNull())
                     .setHeader("keepDays", constant(keepDays))
                 .end()
-                .toD(nabuUrl + "/services/events/timetable/clear-events?keepJobs=${header.keepJobs}&keepDays=${header.keepDays}")
+                .setHeader("Authorization", constant("Bearer " + tokenService.getToken()))
+                .toD(nabuUrl + "/timetable/clear-events?keepJobs=${header.keepJobs}&keepDays=${header.keepDays}")
                 .log(LoggingLevel.INFO, correlation() + "Completed Nabu remove old events")
 
                 .routeId("nabu-remove-old-events");
