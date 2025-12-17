@@ -7,7 +7,10 @@ import no.rutebanken.marduk.routes.chouette.UpdateExportTemplateProcessor;
 import no.rutebanken.marduk.routes.chouette.json.Job;
 import no.rutebanken.marduk.routes.status.JobEvent;
 import no.rutebanken.marduk.services.FileSystemService;
+import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
+import org.apache.camel.component.http4.HttpMethods;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.FileSystemResource;
@@ -71,11 +74,13 @@ public class TiamatExportStopPlacesBuilder extends AbstractChouetteRouteBuilder 
                 .process(e -> {
                     Object tiamatProviderId = e.getIn().getHeaders().get("tiamatProviderId");
                     log.info("Tiamat Stop Places Export : launching export for provider {}", tiamatProviderId);
+                    boolean hasPostProcess = StringUtils.isNotEmpty(e.getIn().getHeader(POST_PROCESS, String.class));
                     URL url = new URL(stopPlacesExportUrl.replace("http4", "http") + "/initiate?providerId=" + tiamatProviderId);
                     HttpURLConnection con = (HttpURLConnection) url.openConnection();
                     con.setRequestProperty(USER, e.getIn().getHeader(USER) != null ? e.getIn().getHeader(USER).toString() : "Mobi-iti");
                     con.setRequestProperty(EXPORT_GENERATED_MISSING_QUAYS, e.getIn().getHeader(EXPORT_GENERATED_MISSING_QUAYS).toString());
                     con.setRequestProperty(EXPORT_EXTERNAL_IDS, e.getIn().getHeader(EXPORT_EXTERNAL_IDS).toString());
+                    con.setRequestProperty(HAS_POST_PROCESS, Boolean.toString(hasPostProcess));
 
                     e.getIn().setBody(con.getInputStream());
 
@@ -138,6 +143,7 @@ public class TiamatExportStopPlacesBuilder extends AbstractChouetteRouteBuilder 
                     FileSystemResource fsr = new FileSystemResource(file);
                     e.getIn().setBody(fsr.getInputStream());
                 })
+                .wireTap("direct:setLugCompleted")
                 .process(exportToConsumersProcessor)
                 .to("direct:updateExportToConsumerStatus")
                 .log(LoggingLevel.INFO, "Upload to consumers and blob store completed")
@@ -146,6 +152,13 @@ public class TiamatExportStopPlacesBuilder extends AbstractChouetteRouteBuilder 
                 .to("direct:uploadBlob")
                 .end()
                 .routeId("tiamat-stop-places-export-end-process");
+
+
+        from("direct:setLugCompleted")
+                .setHeader(Exchange.HTTP_METHOD, constant(HttpMethods.POST))
+                .toD(stopPlacesExportUrl + "/setPostProcessCompleted/${header." + JOB_ID + "}")
+                .end()
+                .routeId("tiamat-set-lug-completed");
     }
 
 }

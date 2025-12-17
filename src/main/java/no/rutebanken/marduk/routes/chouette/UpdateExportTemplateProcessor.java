@@ -2,6 +2,7 @@ package no.rutebanken.marduk.routes.chouette;
 
 import no.rutebanken.marduk.domain.ExportTemplate;
 import no.rutebanken.marduk.repository.ExportTemplateDAO;
+import no.rutebanken.marduk.routes.chouette.json.Status;
 import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
 import org.apache.commons.lang3.BooleanUtils;
@@ -46,7 +47,11 @@ public class UpdateExportTemplateProcessor implements Processor {
             }
 
             export.setExportJobId(jobId);
-            exportTemplateDAO.saveJobId(referential, export);
+            if (StringUtils.isEmpty(export.getPostProcess())){
+                export.setStatus(Status.FINISHED.name());
+            }
+
+            exportTemplateDAO.saveExportTemplate(referential, export);
         }
     }
 }

@@ -38,6 +38,7 @@ public class ExportTemplate implements Serializable {
     private Boolean exportAllLines;
     private boolean exportGeneratedMissingQuays;
     private boolean exportExternalIds;
+    private String status;
 
 
 
@@ -275,5 +276,21 @@ public class ExportTemplate implements Serializable {
 
     public void setExportExternalIds(boolean exportExternalIds) {
         this.exportExternalIds = exportExternalIds;
+    }
+
+    public Boolean getExportAllLines() {
+        return exportAllLines;
+    }
+
+    public void setExportAllLines(Boolean exportAllLines) {
+        this.exportAllLines = exportAllLines;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
     }
 }

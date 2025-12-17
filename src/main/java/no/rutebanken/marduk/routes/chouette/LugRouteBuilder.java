@@ -1,7 +1,12 @@
 package no.rutebanken.marduk.routes.chouette;
 
 import no.rutebanken.marduk.Utils.PollJobStatusRoute;
+import no.rutebanken.marduk.domain.ExportTemplate;
+import no.rutebanken.marduk.domain.Provider;
+import no.rutebanken.marduk.repository.ExportTemplateDAO;
+import no.rutebanken.marduk.repository.ProviderRepository;
 import no.rutebanken.marduk.routes.BaseRouteBuilder;
+import no.rutebanken.marduk.routes.chouette.json.Status;
 import org.apache.camel.LoggingLevel;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -17,6 +22,13 @@ public class LugRouteBuilder extends BaseRouteBuilder {
     @Autowired
     PollJobStatusRoute pollJobStatusRoute;
 
+
+    @Autowired
+    private ProviderRepository providerRepository;
+
+    @Autowired
+    private ExportTemplateDAO exportTemplateDAO;
+
     @Override
     public void configure() throws Exception {
         from("jms:queue:PostProcessCompleted?transacted=true&maxConcurrentConsumers=" + maxConsumers)
@@ -27,6 +39,22 @@ public class LugRouteBuilder extends BaseRouteBuilder {
 
                     e.getIn().setHeader(NETEX_EXPORT_GLOBAL, pollJobStatusRoute.convertToBoolean(netexGlobalRaw));
                     e.getIn().setHeader(IS_SIMULATION_EXPORT, pollJobStatusRoute.convertToBoolean(simulationExpRaw));
+
+                    String exportConfigurationId = e.getIn().getHeader(EXPORT_CONFIGURATION_ID, String.class);
+                    if (exportConfigurationId != null) {
+                        Provider provider;
+                        if(e.getIn().getHeader(PROVIDER_ID, Long.class) == null){
+                            provider = providerRepository.findByName("mobiiti_technique");
+                        }
+                        else{
+                            provider = providerRepository.getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class));
+                        }
+                        String providerName = provider.getChouetteInfo().getReferential();
+                        ExportTemplate export = exportTemplateDAO.getById(providerName.replace("mobiiti_",""), e.getIn().getHeader(EXPORT_CONFIGURATION_ID, String.class));
+                        export.setStatus(Status.FINISHED.name());
+                        exportTemplateDAO.saveExportTemplate(providerName,export);
+
+                    }
                 })
                 .choice()
                 .when(header(JOB_STATUS_JOB_TYPE).isEqualTo("EXPORT_NETEX"))

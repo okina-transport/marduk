@@ -21,7 +21,7 @@ public class ExportTemplateDAO extends RestDAO<ExportTemplate> {
         return super.getEntity(this.exportTemplatesUrl + "/" + id, providerReferential, ExportTemplate.class);
     }
 
-    public void saveJobId(String providerReferential, ExportTemplate export){
+    public void saveExportTemplate(String providerReferential, ExportTemplate export){
         super.updateEntity(this.exportTemplatesUrl + "/" + export.getId(), providerReferential.replace("mobiiti_",""), ExportTemplate.class, export);
     }
 

@@ -5,6 +5,7 @@ import no.rutebanken.marduk.domain.ExportTemplate;
 import no.rutebanken.marduk.domain.Provider;
 import no.rutebanken.marduk.repository.ExportTemplateDAO;
 import no.rutebanken.marduk.repository.ProviderRepository;
+import no.rutebanken.marduk.routes.chouette.json.Status;
 import org.apache.camel.LoggingLevel;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -95,10 +96,11 @@ public class PredefinedExportsRouteBuilder extends AbstractChouetteRouteBuilder 
                     Provider mobiitiProvider;
 
                     Long mobiitiProviderId = provider.getChouetteInfo().getMigrateDataToProvider();
+                    String providerName = provider.getChouetteInfo().getReferential();
                     mobiitiProvider = providerRepository.getProvider(mobiitiProviderId);
 
                     // get the matching migration mobiiti provider to target export
-                    ExportTemplate export = exportTemplateDAO.getById(provider.getChouetteInfo().getReferential(), e.getIn().getHeader(EXPORT_CONFIGURATION_ID, String.class));
+                    ExportTemplate export = exportTemplateDAO.getById(providerName, e.getIn().getHeader(EXPORT_CONFIGURATION_ID, String.class));
                     List<ExportTemplate> exports = new ArrayList<>();
                     exports.add(export);
 
@@ -107,8 +109,9 @@ public class PredefinedExportsRouteBuilder extends AbstractChouetteRouteBuilder 
                     e.getOut().getHeaders().put(CHOUETTE_REFERENTIAL, mobiitiProvider.chouetteInfo.getReferential());
                     e.getOut().getHeaders().put(PROVIDER_ID, mobiitiProvider.getId());
                     e.getOut().getHeaders().put("providerId", mobiitiProvider.getId());
-
                     e.getOut().getHeaders().put(ORIGINAL_PROVIDER_ID, provider.getId());
+                    export.setStatus(Status.PROCESSING.name());
+                    exportTemplateDAO.saveExportTemplate(providerName,export);
                 })
                 .process(multipleExportProcessor)
                 .routeId("chouette-send-export-by-id-job");
