@@ -28,6 +28,7 @@ import no.rutebanken.marduk.routes.chouette.mapping.ProviderAndJobsMapper;
 import no.rutebanken.marduk.routes.status.JobEvent;
 import no.rutebanken.marduk.routes.status.JobEvent.State;
 import no.rutebanken.marduk.routes.status.JobEvent.TimetableAction;
+import no.rutebanken.marduk.security.TokenService;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.builder.PredicateBuilder;
@@ -78,6 +79,9 @@ public class ChouettePollJobStatusRoute extends AbstractChouetteRouteBuilder {
 
     @Autowired
     PollJobStatusRoute pollJobStatusRoute;
+
+    @Autowired
+    TokenService tokenService;
 
     /**
      * This routebuilder polls a job until it is terminated. It expects a few headers set on the message it receives:
@@ -213,6 +217,7 @@ public class ChouettePollJobStatusRoute extends AbstractChouetteRouteBuilder {
                 .process(e -> {
                     URL url = new URL(e.getProperty("url").toString().replace("http4", "http"));
                     HttpURLConnection con = (HttpURLConnection) url.openConnection();
+                    con.setRequestProperty("Authorization","Bearer " + tokenService.getToken());
                     String response = getResponseAsString(con);
                     e.getIn().setBody(response);
                 })

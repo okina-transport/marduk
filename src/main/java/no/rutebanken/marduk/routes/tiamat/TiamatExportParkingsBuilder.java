@@ -6,6 +6,7 @@ import no.rutebanken.marduk.routes.chouette.ExportToConsumersProcessor;
 import no.rutebanken.marduk.routes.chouette.UpdateExportTemplateProcessor;
 import no.rutebanken.marduk.routes.chouette.json.Job;
 import no.rutebanken.marduk.routes.status.JobEvent;
+import no.rutebanken.marduk.security.TokenService;
 import no.rutebanken.marduk.services.FileSystemService;
 import org.apache.camel.LoggingLevel;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,6 +40,9 @@ public class TiamatExportParkingsBuilder extends AbstractChouetteRouteBuilder {
     @Autowired
     UpdateExportTemplateProcessor updateExportTemplateProcessor;
 
+    @Autowired
+    TokenService tokenService;
+
 
     @Override
     public void configure() throws Exception {
@@ -66,6 +70,7 @@ public class TiamatExportParkingsBuilder extends AbstractChouetteRouteBuilder {
                     log.info("Tiamat Parkings Export : launching export for provider " + tiamatProviderId.toString());
                     URL url = new URL(parkingsExportUrl.replace("http4", "http") + "/parkings?providerId=" + tiamatProviderId.toString());
                     HttpURLConnection con = (HttpURLConnection) url.openConnection();
+                    con.setRequestProperty("Authorization","Bearer " + tokenService.getToken());
                     con.setRequestProperty(USER, e.getIn().getHeader(USER) != null ? String.valueOf(e.getIn().getHeader(USER)) : "MOBIITI");
                     e.getIn().setBody(con.getInputStream());
 

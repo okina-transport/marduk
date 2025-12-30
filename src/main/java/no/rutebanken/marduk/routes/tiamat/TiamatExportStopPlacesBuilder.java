@@ -6,6 +6,7 @@ import no.rutebanken.marduk.routes.chouette.ExportToConsumersProcessor;
 import no.rutebanken.marduk.routes.chouette.UpdateExportTemplateProcessor;
 import no.rutebanken.marduk.routes.chouette.json.Job;
 import no.rutebanken.marduk.routes.status.JobEvent;
+import no.rutebanken.marduk.security.TokenService;
 import no.rutebanken.marduk.services.FileSystemService;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
@@ -50,6 +51,9 @@ public class TiamatExportStopPlacesBuilder extends AbstractChouetteRouteBuilder 
     @Value("${lug.url}")
     private String lugUrl;
 
+    @Autowired
+    TokenService tokenService;
+
     @Override
     public void configure() throws Exception {
         super.configure();
@@ -81,7 +85,7 @@ public class TiamatExportStopPlacesBuilder extends AbstractChouetteRouteBuilder 
                     con.setRequestProperty(EXPORT_GENERATED_MISSING_QUAYS, e.getIn().getHeader(EXPORT_GENERATED_MISSING_QUAYS).toString());
                     con.setRequestProperty(EXPORT_EXTERNAL_IDS, e.getIn().getHeader(EXPORT_EXTERNAL_IDS).toString());
                     con.setRequestProperty(HAS_POST_PROCESS, Boolean.toString(hasPostProcess));
-
+                    con.setRequestProperty("Authorization","Bearer " + tokenService.getToken());
                     e.getIn().setBody(con.getInputStream());
 
                     Job job = e.getIn().getBody(Job.class);
