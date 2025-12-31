@@ -11,9 +11,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 @Component
-public class TiamatGetPostCodeMissingRouteBuilder extends BaseRouteBuilder {
+public class TiamatGetInseeCodeMissingRouteBuilder extends BaseRouteBuilder {
 
-    @Value("${cron.get.missing.post.code}")
+    @Value("${cron.get.missing.insee.code}")
     private String cronSchedule;
 
     @Value("${tiamat.url}")
@@ -26,26 +26,26 @@ public class TiamatGetPostCodeMissingRouteBuilder extends BaseRouteBuilder {
     public void configure() throws Exception {
         super.configure();
 
-        singletonFrom("quartz2://marduk/tiamatGetMissingPostCodeQuartz?cron=" + cronSchedule + "&trigger.timeZone=" + Constants.TIME_ZONE)
-                .autoStartup("{{tiamat.get.missing.post.code.autoStartup:true}}")
+        singletonFrom("quartz2://marduk/tiamatGetMissingInseeCodeQuartz?cron=" + cronSchedule + "&trigger.timeZone=" + Constants.TIME_ZONE)
+                .autoStartup("{{tiamat.get.missing.insee.code.autoStartup:true}}")
                 .filter(e -> shouldQuartzRouteTrigger(e, cronSchedule))
-                .log(LoggingLevel.INFO, "Quartz triggers get missing post code in Tiamat.")
-                .to("direct:tiamatGetMissingPostCode")
-                .routeId("tiamat-get-missing-post-code-quartz");
+                .log(LoggingLevel.INFO, "Quartz triggers get missing INSEE code in Tiamat.")
+                .to("direct:tiamatGetMissingInseeCode")
+                .routeId("tiamat-get-missing-insee-code-quartz");
 
 
-        from("direct:tiamatGetMissingPostCode")
-                .log(LoggingLevel.INFO, correlation() + "Starting get missing post code in Tiamat")
+        from("direct:tiamatGetMissingInseeCode")
+                .log(LoggingLevel.INFO, correlation() + "Starting get missing INSEE code in Tiamat")
                 .removeHeaders("Camel*")
                 .setBody(constant(null))
                 .setHeader(Exchange.HTTP_METHOD, constant(HttpMethods.POST))
                 .process(e -> {
-                    String url = tiamatUrl.replace("http://", "http4://") + "/get_missing_postcode";
+                    String url = tiamatUrl.replace("http://", "http4://") + "/get_missing_inseecode";
                     e.setProperty("tiamat_url", url);
                     e.getIn().setHeader("Authorization", "Bearer " + tokenService.getToken());
                 })
                 .toD("${exchangeProperty.tiamat_url}")
-                .log(LoggingLevel.INFO, correlation() + "Completed get missing post code in Tiamat")
-                .routeId("tiamat-get-missing-post-code");
+                .log(LoggingLevel.INFO, correlation() + "Completed get missing INSEE code in Tiamat")
+                .routeId("tiamat-get-missing-insee-code");
     }
 }
