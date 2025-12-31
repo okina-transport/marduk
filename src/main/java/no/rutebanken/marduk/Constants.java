@@ -117,6 +117,7 @@ public class Constants {
     public static final String JOB_STATUS_ROUTING_DESTINATION = "RutebankenJobStatusRoutingDestination";
     public static final String JOB_STATUS_JOB_TYPE = "RutebankenJobStatusType";
     public static final String JOB_STATUS_JOB_VALIDATION_LEVEL = "RutebankenJobStatusValidationLevel";
+    public static final String JOB_OPERATORS = "JobOperators";
 
     public static final String JOB_ACTION = "RutebankenJobAction";
 

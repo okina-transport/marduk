@@ -33,6 +33,7 @@ import org.apache.camel.LoggingLevel;
 import org.apache.camel.builder.PredicateBuilder;
 import org.apache.camel.component.http4.HttpMethods;
 import org.apache.camel.model.dataformat.JsonLibrary;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.http.client.utils.URIBuilder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -43,9 +44,8 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
+import java.util.stream.Collectors;
 
 import static no.rutebanken.marduk.Constants.*;
 import static no.rutebanken.marduk.routes.chouette.json.Status.*;
@@ -247,6 +247,10 @@ public class ChouettePollJobStatusRoute extends AbstractChouetteRouteBuilder {
                                     Job job = e.getIn().getBody(Job.class);
                                     e.getProperties().put("STATUS", job.getStatus().name());
                                     e.getIn().setBody(job);
+                                    Set<String> operators = job.getOperators() == null ? Collections.EMPTY_SET : job.getOperators().stream()
+                                            .filter(StringUtils::isNotEmpty)
+                                            .collect(Collectors.toSet());
+                                    e.getIn().setHeader(JOB_OPERATORS,operators);
                                     isExportDone = job.getStatus().isDone();
                                     pollJobStatusRoute.countEvent(isPOI, isParkings, job);
                                 } else if(TimetableAction.EXPORT_NETEX.name().equals(e.getIn().getHeader(JOB_STATUS_JOB_TYPE))) {

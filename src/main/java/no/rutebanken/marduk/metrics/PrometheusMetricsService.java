@@ -6,13 +6,16 @@ import io.micrometer.prometheus.PrometheusConfig;
 import io.micrometer.prometheus.PrometheusMeterRegistry;
 import no.rutebanken.marduk.domain.ConsumerType;
 import no.rutebanken.marduk.domain.ExportType;
+import org.apache.commons.collections.CollectionUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.PreDestroy;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Component
 public class PrometheusMetricsService extends PrometheusMeterRegistry {
@@ -29,6 +32,8 @@ public class PrometheusMetricsService extends PrometheusMeterRegistry {
 
     private static final String RESULT_TAG = "result";
 
+    private static final String OPERATORS_TAG = "operators";
+
     private static final String EXPORT_TYPE_TAG_NAME = "exportType";
     private static final Logger log = LoggerFactory.getLogger(PrometheusMetricsService.class);
 
@@ -44,12 +49,18 @@ public class PrometheusMetricsService extends PrometheusMeterRegistry {
     }
 
     public void countConsumerCalls(ConsumerType consumerType, ExportType type, String result) {
+        countConsumerCalls(consumerType, type, result, new HashSet<>());
+    }
+
+    public void countConsumerCalls(ConsumerType consumerType, ExportType type, String result, Set<String> operators) {
         log.info("Prometheus metrics service consumer calls: {} - {} - {}", consumerType.name(), type.name(), result);
 
+        String jobOperators = CollectionUtils.isEmpty(operators) ? "NO_OPERATORS" : String.join(",", operators);
         List<Tag> counterTags = new ArrayList<>();
         counterTags.add(new ImmutableTag(CONSUMER_TAG_NAME, consumerType.name()));
         counterTags.add(new ImmutableTag(EXPORT_TYPE_TAG_NAME, type.name()));
         counterTags.add(new ImmutableTag(RESULT_TAG, result));
+        counterTags.add(new ImmutableTag(OPERATORS_TAG, jobOperators));
         counter(CONSUMER_CALLS_TOTAL, counterTags).increment();
     }
 
