@@ -402,7 +402,7 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
 
         // get import last modified time
         LocalDateTime importLastTimeModified = getImportModificationDateFromUrl(configurationUrl, importFileUrlConnection);
-        if (configurationUrl.getLastTimestamp() != null && configurationUrl.getLastTimestamp().isAfter(importLastTimeModified)) {
+        if (configurationUrl.getLastTimestamp() != null && !configurationUrl.getLastTimestamp().isBefore(importLastTimeModified)) {
             log.warn("{} No new file to import for the referential : {} for the import configuration URL : {}", correlation(), referential, configurationUrl.getUrl());
             sendMailForFileAlreadyImported(importConfiguration, referential, fileName);
             return Optional.empty();
