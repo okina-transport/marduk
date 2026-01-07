@@ -18,8 +18,8 @@ package no.rutebanken.marduk.routes.fares;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import no.rutebanken.marduk.Constants;
-import no.rutebanken.marduk.Utils.ImportRouteBuilder;
-import no.rutebanken.marduk.Utils.PollJobStatusRoute;
+import no.rutebanken.marduk.utils.ImportRouteBuilder;
+import no.rutebanken.marduk.utils.PollJobStatusRoute;
 import no.rutebanken.marduk.routes.chouette.*;
 import no.rutebanken.marduk.routes.chouette.json.JobResponse;
 import no.rutebanken.marduk.routes.chouette.json.JobResponseWithLinks;
@@ -30,7 +30,7 @@ import no.rutebanken.marduk.security.TokenService;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.builder.PredicateBuilder;
-import org.apache.camel.component.http4.HttpMethods;
+import org.apache.camel.component.http.HttpMethods;
 import org.apache.camel.model.dataformat.JsonLibrary;
 import org.apache.commons.lang3.BooleanUtils;
 import org.apache.http.client.utils.URIBuilder;
@@ -134,7 +134,7 @@ public class FaresPollJobStatusRoute extends AbstractChouetteRouteBuilder {
         from("direct:faresCancelJob")
                 .process(e -> e.getIn().setHeader(CHOUETTE_REFERENTIAL, getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)).chouetteInfo.referential))
                 .removeHeaders("Camel*")
-                .setBody(constant(null))
+                .setBody(constant((Object) null))
                 .setHeader(Exchange.HTTP_METHOD, constant(HttpMethods.DELETE))
                 .process(exchange -> {
                     String folder = exchange.getIn().getHeader(CHOUETTE_REFERENTIAL, String.class);
@@ -152,12 +152,12 @@ public class FaresPollJobStatusRoute extends AbstractChouetteRouteBuilder {
                     }
 
                     String url = faresUrl + "/" + folder + "/scheduled_jobs" + jobId;
-                    url = url.replace("http://", "http4://").replaceAll("([^:])//+", "$1/");
+                    url = url.replace("http4://", "http://").replaceAll("([^:])//+", "$1/");
 
                     exchange.setProperty("fares_url", url);
                 })
                 .toD("${exchangeProperty.fares_url}")
-                .setBody(constant(null))
+                .setBody(constant((Object) null))
                 .process(e -> JobEvent.providerJobBuilder(e).timetableAction(TimetableAction.IMPORT).state(State.CANCELLED).type(e.getIn().getHeader(FILE_TYPE, String.class)).build())
                 .to("direct:updateStatus")
                 .routeId("fares-cancel-job");
@@ -169,7 +169,7 @@ public class FaresPollJobStatusRoute extends AbstractChouetteRouteBuilder {
                 .removeHeaders("Camel*")
                 .split().body().parallelProcessing().executorService(allProvidersExecutorService)
                 .setHeader(Constants.JOB_ID, simple("${body.id}"))
-                .setBody(constant(null))
+                .setBody(constant((Object) null))
                 .to("direct:faresCancelJob")
                 .routeId("fares-cancel-all-jobs-for-provider");
 
@@ -177,7 +177,7 @@ public class FaresPollJobStatusRoute extends AbstractChouetteRouteBuilder {
                 .process(e -> e.getIn().setBody(getProviderRepository().getProviders()))
                 .split().body().parallelProcessing().executorService(allProvidersExecutorService)
                 .setHeader(Constants.PROVIDER_ID, simple("${body.id}"))
-                .setBody(constant(null))
+                .setBody(constant((Object) null))
                 .removeHeaders("Camel*")
                 .to("direct:faresCancelAllJobsForProvider")
                 .routeId("fares-cancel-all-jobs-for-all-providers");
@@ -216,7 +216,7 @@ public class FaresPollJobStatusRoute extends AbstractChouetteRouteBuilder {
                     }
 
                     String url = faresUrl + "/" + folder + "/scheduled_jobs/" + jobId;
-                    url = url.replace("http://", "http4://").replaceAll("([^:])//+", "$1/");
+                    url = url.replace("http4://", "http://").replaceAll("([^:])//+", "$1/");
 
                     exchange.setProperty("fares_url", url);
                     exchange.setProperty("PROVIDER_ID", exchange.getIn().getHeader(PROVIDER_ID));
@@ -248,10 +248,13 @@ public class FaresPollJobStatusRoute extends AbstractChouetteRouteBuilder {
                         .choice()
                             .when(simple("${exchangeProperty.STATUS} == 'FINISHED' || ${exchangeProperty.STATUS} == 'FAILED'"))
                                 .toD("${header." + JOB_STATUS_ROUTING_DESTINATION + "}")
+                            .endChoice()
                             .otherwise()
                                 .to("direct:faresRescheduleJob")
+                            .end()
                         .endChoice()
                         .stop()
+                    .endChoice()
                     .otherwise()
                         .unmarshal().json(JsonLibrary.Jackson, JobResponseWithLinks.class)
                 .end()
@@ -283,7 +286,7 @@ public class FaresPollJobStatusRoute extends AbstractChouetteRouteBuilder {
         from("direct:faresJobStatusDone")
                 .log(LoggingLevel.DEBUG, correlation() + "Exited retry loop with status ${header.current_status}")
                 .to("log:" + getClass().getName() + "?level=DEBUG&showAll=true&multiline=true")
-                .inOnly("direct:faresHandleGlobalNetexExportCase")
+                .to("direct:faresHandleGlobalNetexExportCase")
                 .choice()
                     .when(simple("${header.current_status} == '" + SCHEDULED + "' || ${header.current_status} == '" + STARTED + "' || ${header.current_status} == '" + PROCESSING + "' || ${header.current_status} == '" + RESCHEDULED + "'"))
                         .log(LoggingLevel.WARN, correlation() + "Job timed out with state ${header.current_status}. Config should probably be tweaked. Stopping route.")
@@ -316,7 +319,7 @@ public class FaresPollJobStatusRoute extends AbstractChouetteRouteBuilder {
         from("direct:faresHandleGlobalNetexExportCase")
                 .choice()
                     .when(e-> BooleanUtils.isTrue((Boolean) e.getIn().getHeader(NETEX_EXPORT_GLOBAL)))
-                        .inOnly("direct:updateMergedNetexStatus")
+                        .to("direct:updateMergedNetexStatus")
                 .end()
                 .routeId("fares-handle-global-netex-export-case");
     }

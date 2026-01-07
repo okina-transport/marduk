@@ -1,18 +1,18 @@
 package no.rutebanken.marduk.routes.file.beans;
 
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.HashSet;
 
 import static org.junit.Assert.*;
 
-public class GtfsFileInputWithParametersTest {
+class GtfsFileInputWithParametersTest {
 
     private static final int DEFAULT_VALUE = -999;
     private static final double DELTA = 0.1;
 
     @Test
-    public void initFileWithoutParameters() {
+    void initFileWithoutParameters() {
         GtfsFileInputWithParameters test = new GtfsFileInputWithParameters(
                 null,
                 new HashSet<>(0),
@@ -28,7 +28,7 @@ public class GtfsFileInputWithParametersTest {
     }
 
     @Test
-    public void initFileWithWrongCoordinatesParameters() {
+    void initFileWithWrongCoordinatesParameters() {
         GtfsFileInputWithParameters test = new GtfsFileInputWithParameters(
                 null,
                 new HashSet<>(0),
@@ -44,7 +44,7 @@ public class GtfsFileInputWithParametersTest {
     }
 
     @Test
-    public void initFileWithValidParameters() {
+    void initFileWithValidParameters() {
         GtfsFileInputWithParameters test = new GtfsFileInputWithParameters(
                 null,
                 new HashSet<>(0),

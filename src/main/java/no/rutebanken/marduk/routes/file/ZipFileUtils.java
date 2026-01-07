@@ -26,7 +26,7 @@ import org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.BooleanUtils;
-import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.Strings;
 import org.onebusaway.gtfs_transformer.GtfsTransformer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,7 +36,10 @@ import java.nio.file.*;
 import java.nio.file.FileSystem;
 import java.util.*;
 import java.util.stream.Collectors;
-import java.util.zip.*;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
+import java.util.zip.ZipInputStream;
+import java.util.zip.ZipOutputStream;
 
 import static no.rutebanken.marduk.Constants.*;
 
@@ -128,28 +131,27 @@ public class ZipFileUtils {
         }
 
         File tmpFile = File.createTempFile("marduk-output", ".zip");
-        ZipOutputStream out = new ZipOutputStream(new FileOutputStream(tmpFile));
+        try (ZipOutputStream out = new ZipOutputStream(new FileOutputStream(tmpFile))) {
 
-        String directoryName = "";
+            String directoryName = "";
 
-        ZipInputStream zipInputStream = new ZipInputStream(new ByteArrayInputStream(data));
+            ZipInputStream zipInputStream = new ZipInputStream(new ByteArrayInputStream(data));
 
-        ZipEntry zipEntry = zipInputStream.getNextEntry();
-        while (zipEntry != null) {
-            if (!zipEntry.isDirectory()) {
-                InputStream inputStream = zipFile.getInputStream(zipEntry);
-                ZipEntry outEntry = new ZipEntry(zipEntry.getName().replace(directoryName, ""));
-                out.putNextEntry(outEntry);
-                byte[] buf = new byte[inputStream.available()];
-                IOUtils.readFully(inputStream, buf);
-                out.write(buf);
-            } else {
-                directoryName = zipEntry.getName();
+            ZipEntry zipEntry = zipInputStream.getNextEntry();
+            while (zipEntry != null) {
+                if (!zipEntry.isDirectory()) {
+                    InputStream inputStream = zipFile.getInputStream(zipEntry);
+                    ZipEntry outEntry = new ZipEntry(zipEntry.getName().replace(directoryName, ""));
+                    out.putNextEntry(outEntry);
+                    byte[] buf = new byte[inputStream.available()];
+                    IOUtils.readFully(inputStream, buf);
+                    out.write(buf);
+                } else {
+                    directoryName = zipEntry.getName();
+                }
+                zipEntry = zipInputStream.getNextEntry();
             }
-            zipEntry = zipInputStream.getNextEntry();
         }
-        out.close();
-
         logger.info("File written to : {}", tmpFile.getAbsolutePath());
 
         return tmpFile;
@@ -267,13 +269,15 @@ public class ZipFileUtils {
     }
 
     public static void copyZipFileWithoutUnwantedFiles(Path inputFile, OutputStream outputStream, String fileExtensionToKeep) {
-        try (org.apache.commons.compress.archivers.zip.ZipFile zip = new org.apache.commons.compress.archivers.zip.ZipFile(inputFile.toFile())) {
+        try (org.apache.commons.compress.archivers.zip.ZipFile zip = org.apache.commons.compress.archivers.zip.ZipFile.builder()
+                .setFile(inputFile.toFile())
+                .get()) {
             try (ZipArchiveOutputStream out = new ZipArchiveOutputStream(outputStream)) {
 
                 Enumeration<? extends ZipArchiveEntry> entries = zip.getEntries();
                 while (entries.hasMoreElements()) {
                     ZipArchiveEntry zipEntry = entries.nextElement();
-                    if (StringUtils.endsWith(zipEntry.getName(), fileExtensionToKeep)) {
+                    if (Strings.CI.endsWith(zipEntry.getName(), fileExtensionToKeep)) {
                         ZipArchiveEntry outEntry = copyZipArchiveEntry(zipEntry);
                         out.addRawArchiveEntry(outEntry, zip.getRawInputStream(zipEntry));
                     }
@@ -302,9 +306,9 @@ public class ZipFileUtils {
     private static File getFile(byte[] data) throws IOException {
         File inputFile = File.createTempFile("marduk-input", ".zip");
 
-        FileOutputStream fos = new FileOutputStream(inputFile);
-        fos.write(data);
-        fos.close();
+        try (FileOutputStream fos = new FileOutputStream(inputFile)) {
+            fos.write(data);
+        }
         return inputFile;
     }
 
@@ -432,6 +436,7 @@ public class ZipFileUtils {
             return zipFile;
         }
         return null;
+
     }
 
 

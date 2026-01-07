@@ -15,7 +15,7 @@ public class MultipleExportsRouteBuilder extends AbstractChouetteRouteBuilder {
     public void configure() throws Exception {
         super.configure();
 
-        from("direct:multipleExports").streamCaching()
+        from("direct:multipleExports").streamCache(Boolean.TRUE)
                 .log(LoggingLevel.INFO, getClass().getName(), "Starting multiple exports route for provider with id ${header." + PROVIDER_ID + "}")
                 .process(multipleExportProcessor)
                 .routeId("marduk-multiple-exports-job");

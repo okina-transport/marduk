@@ -42,17 +42,14 @@ public class ExchangeBlobStoreService {
     private ApplicationContext context;
 
     public void uploadBlob(@Header(value = Constants.FILE_HANDLE) String name, InputStream inputStream, Exchange exchange) {
-        ExchangeUtils.addHeadersAndAttachments(exchange);
         repository.uploadBlob(name, inputStream, false);
     }
 
     public InputStream getBlob(@Header(value = FILE_HANDLE) String name, Exchange exchange) {
-        ExchangeUtils.addHeadersAndAttachments(exchange);
         return repository.getBlob(name);
     }
 
     public boolean deleteBlob(@Header(value = FILE_HANDLE) String name, Exchange exchange) {
-        ExchangeUtils.addHeadersAndAttachments(exchange);
         return repository.delete(name);
     }
 

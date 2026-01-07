@@ -15,7 +15,7 @@ import java.io.IOException;
 @Component
 public class NotificationService {
 
-    private Logger logger = LoggerFactory.getLogger(this.getClass());
+    private static final Logger logger = LoggerFactory.getLogger(NotificationService.class);
 
     public void sendNotification(@Header(value = Constants.NOTIFICATION_URL) String notificationUrl) throws IOException {
 
@@ -23,15 +23,15 @@ public class NotificationService {
         try (CloseableHttpClient httpClient = HttpClients.createDefault();
              CloseableHttpResponse response = httpClient.execute(post)) {
             if(response.getStatusLine().getStatusCode() == 200){
-                logger.info("Notification url OK : " + response.getStatusLine().getStatusCode());
+                logger.info("Notification url OK : {}", response.getStatusLine().getStatusCode());
             }
             else {
-                logger.error("Notification url KO : " + response.getStatusLine().getStatusCode());
+                logger.error("Notification url KO : {}", response.getStatusLine().getStatusCode());
             }
 
         }
         catch (Exception e){
-            logger.error("Impossible d'envoyer une notification sur l'url : " + notificationUrl + " Erreur: " + e);
+            logger.error("Impossible d'envoyer une notification sur l'url : {} Erreur : {}", notificationUrl, e.getMessage());
         }
 
     }

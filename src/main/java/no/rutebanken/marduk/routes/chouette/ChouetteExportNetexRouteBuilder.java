@@ -19,11 +19,10 @@ package no.rutebanken.marduk.routes.chouette;
 import no.rutebanken.marduk.domain.Provider;
 import no.rutebanken.marduk.routes.chouette.json.Parameters;
 import no.rutebanken.marduk.routes.status.JobEvent;
-import no.rutebanken.marduk.services.FileSystemService;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
-import org.apache.camel.component.http4.HttpMethods;
-import org.codehaus.plexus.util.StringUtils;
+import org.apache.camel.component.http.HttpMethods;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -36,7 +35,8 @@ import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.toList;
 import static no.rutebanken.marduk.Constants.*;
-import static no.rutebanken.marduk.Utils.Utils.getLastPathElementOfUrl;
+import static no.rutebanken.marduk.utils.Utils.getLastPathElementOfUrl;
+import static no.rutebanken.marduk.utils.constants.RouteDeclarationConstants.ROUTE_UPDATE_STATUS;
 
 @Component
 public class ChouetteExportNetexRouteBuilder extends AbstractChouetteRouteBuilder {
@@ -54,11 +54,7 @@ public class ChouetteExportNetexRouteBuilder extends AbstractChouetteRouteBuilde
 
     @Autowired
     UpdateExportTemplateProcessor updateExportTemplateProcessor;
-
-
-    @Autowired
-    FileSystemService fileSystemService;
-
+    
     @Autowired
     CreateMail createMail;
 
@@ -69,7 +65,7 @@ public class ChouetteExportNetexRouteBuilder extends AbstractChouetteRouteBuilde
     public void configure() throws Exception {
         super.configure();
 
-        from("jms:queue:ChouetteExportNetexQueue?transacted=true").streamCaching()
+        from("jms:queue:ChouetteExportNetexQueue?transacted=true").streamCache(Boolean.TRUE)
                 .transacted()
                 .log(LoggingLevel.INFO, getClass().getName(), "Starting Chouette Netex export for provider with id ${header." + PROVIDER_ID + "}")
                 .process(e -> {
@@ -82,7 +78,7 @@ public class ChouetteExportNetexRouteBuilder extends AbstractChouetteRouteBuilde
                     log.info("Lancement export Netex - Fichier : " + exportName + " - Espace de données : " + getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)).chouetteInfo.referential);
                 })
                 .process(e -> JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.EXPORT_NETEX).state(JobEvent.State.PENDING).build())
-                .to("direct:updateStatus")
+                .to(ROUTE_UPDATE_STATUS)
 
                 .process(e -> {
                     final Boolean isSimulation = e.getIn().getHeader(IS_SIMULATION_EXPORT, Boolean.class);
@@ -109,7 +105,7 @@ public class ChouetteExportNetexRouteBuilder extends AbstractChouetteRouteBuilde
                 .setHeader(Exchange.CONTENT_TYPE, simple("multipart/form-data"))
                 .toD(chouetteUrl + "/chouette_iev/referentials/${header." + CHOUETTE_REFERENTIAL + "}/exporter/netexprofile")
                 .process(e -> {
-                    e.getIn().setHeader(JOB_STATUS_URL, e.getIn().getHeader("Location").toString().replaceFirst("http", "http4"));
+                    e.getIn().setHeader(JOB_STATUS_URL, e.getIn().getHeader("Location").toString());
                     e.getIn().setHeader(JOB_ID, getLastPathElementOfUrl(e.getIn().getHeader("Location", String.class)));
                 })
                 .setHeader(JOB_STATUS_ROUTING_DESTINATION, constant("direct:processNetexExportResult"))
@@ -151,7 +147,7 @@ public class ChouetteExportNetexRouteBuilder extends AbstractChouetteRouteBuilde
                         createMail.createMail(e, "NETEX", JobEvent.TimetableAction.EXPORT_NETEX, false);
                     }
                 })
-                .to("direct:updateStatus")
+                .to(ROUTE_UPDATE_STATUS)
                 .routeId("chouette-process-export-netex-undefined-status");
 
 
@@ -164,7 +160,7 @@ public class ChouetteExportNetexRouteBuilder extends AbstractChouetteRouteBuilde
                         createMail.createMail(e, "NETEX", JobEvent.TimetableAction.EXPORT_NETEX, false);
                     }
                 })
-                .to("direct:updateStatus")
+                .to(ROUTE_UPDATE_STATUS)
                 .routeId("chouette-process-export-netex-nok-status");
 
         from("direct:processNetexExportResultCompletedSuccessFully")
@@ -206,9 +202,9 @@ public class ChouetteExportNetexRouteBuilder extends AbstractChouetteRouteBuilde
                     })
 
                 .setHeader(BLOBSTORE_MAKE_BLOB_PUBLIC, constant(publicPublication))
-                .to("direct:updateStatus")
+                .to(ROUTE_UPDATE_STATUS)
                 .removeHeader(JOB_ID)
-                .setBody(constant(null))
+                .setBody(constant((Object) null))
                 .choice()
                 .when(e -> !e.getIn().getHeader(NO_GTFS_EXPORT, Boolean.class))
                     .to("jms:queue:ChouetteExportGtfsQueue")
@@ -245,14 +241,14 @@ public class ChouetteExportNetexRouteBuilder extends AbstractChouetteRouteBuilde
                     e.getIn().setHeader(JSON_PART, Parameters.getNetexExportProvider(getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)), exportStops, user, exportedFilename, allReferentialsNames, exportConfigurationId, exportGeneratedMissingQuays, exportExternalIds));
                     JobEvent.systemJobBuilder(e).jobDomain(JobEvent.JobDomain.TIMETABLE_PUBLISH).action("EXPORT_NETEX_MERGED").fileName(exportedFilename).state(JobEvent.State.PENDING).type("netex").correlationId(correlationId).build();
                 })
-                .to("direct:updateStatus")
+                .to(ROUTE_UPDATE_STATUS)
                 .process(this::toGenericChouetteMultipart)
                 .toD(chouetteUrl + "/chouette_iev/referentials/${header." + CHOUETTE_REFERENTIAL + "}/globalExport/netexprofile")
                 .process(e -> {
-                    e.getIn().setHeader(JOB_STATUS_URL, e.getIn().getHeader("Location").toString().replaceFirst("http", "http4"));
+                    e.getIn().setHeader(JOB_STATUS_URL, e.getIn().getHeader("Location").toString());
                     e.getIn().setHeader(JOB_ID, getLastPathElementOfUrl(e.getIn().getHeader("Location", String.class)));
                 })
-                .setBody(constant(null))
+                .setBody(constant((Object) null))
                 .setHeader(JOB_STATUS_ROUTING_DESTINATION, constant("direct:processNetexExportResult"))
                 .setHeader(JOB_STATUS_JOB_TYPE, constant(JobEvent.TimetableAction.EXPORT_NETEX_MERGED.name()))
                 .to("jms:queue:ChouettePollStatusQueue")

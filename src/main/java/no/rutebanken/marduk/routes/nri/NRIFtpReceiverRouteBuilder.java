@@ -36,6 +36,7 @@ import static no.rutebanken.marduk.Constants.CORRELATION_ID;
 import static no.rutebanken.marduk.Constants.FILE_HANDLE;
 import static no.rutebanken.marduk.Constants.FILE_SKIP_STATUS_UPDATE_FOR_DUPLICATES;
 import static no.rutebanken.marduk.Constants.PROVIDER_ID;
+import static no.rutebanken.marduk.utils.constants.RouteDeclarationConstants.ROUTE_IMPORT_LAUNCH;
 
 /**
  * Downloads zip files from NRI ftp, sends to activemq
@@ -53,8 +54,7 @@ public class NRIFtpReceiverRouteBuilder extends BaseRouteBuilder {
     @Override
     public void configure() throws Exception {
         singletonFrom("ftp://{{nri.ftp.host}}/{{nri.ftp.folder}}?username={{nri.ftp.username}}&password={{nri.ftp.password}}&filter=#ftpFileFilter&delay={{nri.ftp.delay:1h}}&initialDelay={{nri.ftp.initialDelay:1m}}&recursive=true&delete=false&sorter=#caseIdNriFtpSorter&ftpClient.controlEncoding=UTF-8&passiveMode=true&binary=true")
-                .autoStartup("{{nri.ftp.autoStartup:true}}")
-                .filter(e -> shouldFileBeHandled(e))
+                .filter(this::shouldFileBeHandled)
                 .setHeader(CORRELATION_ID,constant(UUID.randomUUID().toString()))
                 .process(e -> {
                     RemoteFile<FTPFile> p = e.getProperty(FileComponent.FILE_EXCHANGE_FILE, RemoteFile.class);
@@ -83,7 +83,7 @@ public class NRIFtpReceiverRouteBuilder extends BaseRouteBuilder {
 
                 .choice().when(e-> autoImport && getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID,Long.class)).chouetteInfo.enableAutoImport)
                 .log(LoggingLevel.INFO, correlation() + "Putting handle ${header." + FILE_HANDLE + "}")
-                .to("jms:queue:ProcessFileQueue")
+                .to(ROUTE_IMPORT_LAUNCH)
                 .otherwise()
                 .log(LoggingLevel.INFO, "Do not initiate processing of  ${header." + FILE_HANDLE + "} as autoImport is not enabled globally and for provider")
                 .end()

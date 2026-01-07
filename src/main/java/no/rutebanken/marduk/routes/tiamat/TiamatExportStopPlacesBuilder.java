@@ -6,10 +6,11 @@ import no.rutebanken.marduk.routes.chouette.ExportToConsumersProcessor;
 import no.rutebanken.marduk.routes.chouette.UpdateExportTemplateProcessor;
 import no.rutebanken.marduk.routes.chouette.json.Job;
 import no.rutebanken.marduk.routes.status.JobEvent;
+import no.rutebanken.marduk.security.TokenService;
 import no.rutebanken.marduk.services.FileSystemService;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
-import org.apache.camel.component.http4.HttpMethods;
+import org.apache.camel.component.http.HttpMethods;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -50,11 +51,14 @@ public class TiamatExportStopPlacesBuilder extends AbstractChouetteRouteBuilder 
     @Value("${lug.url}")
     private String lugUrl;
 
+    @Autowired
+    TokenService tokenService;
+
     @Override
     public void configure() throws Exception {
         super.configure();
 
-        from("jms:queue:TiamatStopPlacesExport").streamCaching()
+        from("jms:queue:TiamatStopPlacesExport").streamCache(Boolean.TRUE)
                 .transacted()
                 .log(LoggingLevel.INFO, getClass().getName(), "Starting Tiamat export stop places for provider with id ${header.tiamatProviderId}")
                 .choice()
@@ -81,7 +85,7 @@ public class TiamatExportStopPlacesBuilder extends AbstractChouetteRouteBuilder 
                     con.setRequestProperty(EXPORT_GENERATED_MISSING_QUAYS, e.getIn().getHeader(EXPORT_GENERATED_MISSING_QUAYS).toString());
                     con.setRequestProperty(EXPORT_EXTERNAL_IDS, e.getIn().getHeader(EXPORT_EXTERNAL_IDS).toString());
                     con.setRequestProperty(HAS_POST_PROCESS, Boolean.toString(hasPostProcess));
-
+                    con.setRequestProperty("Authorization","Bearer " + tokenService.getToken());
                     e.getIn().setBody(con.getInputStream());
 
                     Job job = e.getIn().getBody(Job.class);
@@ -101,7 +105,7 @@ public class TiamatExportStopPlacesBuilder extends AbstractChouetteRouteBuilder 
                 .routeId("tiamat-stop-places-export-job");
 
         // called after a tiamat stop places export has been terminated (see CHOUETTE_JOB_STATUS_ROUTING_DESTINATION above and route direct:checkJobStatus)
-        from(TIAMAT_EXPORT_ROUTING_DESTINATION).streamCaching()
+        from(TIAMAT_EXPORT_ROUTING_DESTINATION).streamCache(Boolean.TRUE)
                 .log(LoggingLevel.INFO,"Export Arrêts terminé - Fichier : ${header." + FILE_NAME + "} - Espace de données : ${header." + CHOUETTE_REFERENTIAL + "}")
                 .log(LoggingLevel.INFO, getClass().getName(), "Tiamat process export results for provider with id ${header.tiamatProviderId}")
                 .setHeader(EXPORT_FROM_TIAMAT, simple("true"))

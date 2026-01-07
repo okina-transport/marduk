@@ -16,33 +16,34 @@
 
 package no.rutebanken.marduk;
 
-import no.rutebanken.marduk.Utils.Utils;
-import org.junit.Test;
+import no.rutebanken.marduk.utils.Utils;
+import org.junit.jupiter.api.Test;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertThrows;
 
-public class UtilsTest {
+class UtilsTest {
 
     @Test
-    public void testGetJobId(){
+    void testGetJobId() {
         String locationUrl = "http://localhost:8180/chouette_iev/referentials/avinor/scheduled_jobs/2321";
         assertEquals(Long.valueOf(2321), Utils.getLastPathElementOfUrl(locationUrl));
     }
 
-    @Test (expected = IllegalArgumentException.class)
-    public void testGetJobIdWithNull(){
-        Utils.getLastPathElementOfUrl(null);
+    @Test
+    void testGetJobIdWithNull() {
+        assertThrows(IllegalArgumentException.class, () -> Utils.getLastPathElementOfUrl(null));
     }
 
     @Test
-    public void testGetHttp4(){
-        String url = "http://localhost:8180/chouette_iev/referentials/avinor";
-        assertEquals("http4://localhost:8180/chouette_iev/referentials/avinor", Utils.getHttp4(url));
+    void testGetHttp4() {
+        String url = "http4://localhost:8180/chouette_iev/referentials/avinor";
+        assertEquals("http://localhost:8180/chouette_iev/referentials/avinor", Utils.getHttp4(url));
     }
 
-    @Test (expected = IllegalArgumentException.class)
-    public void testGetHttp4WithNull(){
-        Utils.getHttp4(null);
+    @Test
+    void testGetHttp4WithNull() {
+        assertThrows(IllegalArgumentException.class, () -> Utils.getHttp4(null));
     }
 
 

@@ -19,69 +19,56 @@ package no.rutebanken.marduk;
 import no.rutebanken.marduk.domain.ChouetteInfo;
 import no.rutebanken.marduk.domain.Provider;
 import no.rutebanken.marduk.repository.CacheProviderRepository;
-import org.apache.camel.builder.AdviceWithRouteBuilder;
-import org.apache.camel.model.ModelCamelContext;
-import org.apache.camel.test.spring.CamelSpringRunner;
-import org.apache.camel.test.spring.UseAdviceWith;
+import org.apache.camel.CamelContext;
+import org.apache.camel.test.spring.junit5.CamelSpringBootTest;
+import org.apache.camel.test.spring.junit5.UseAdviceWith;
 import org.apache.commons.io.IOUtils;
-import org.junit.Before;
-import org.junit.Ignore;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.annotation.DirtiesContext;
-import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
 import java.io.FileReader;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
-import static org.mockito.Mockito.when;
-@RunWith(CamelSpringRunner.class)
-@ActiveProfiles({"default", "in-memory-blobstore"})
+@CamelSpringBootTest
 @UseAdviceWith
-@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_CLASS)
-@Ignore
-public class MardukRouteBuilderIntegrationTestBase {
+@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
+public abstract class MardukRouteBuilderIntegrationTestBase extends MardukSpringBootBaseTest {
 
     @Autowired
-    protected ModelCamelContext context;
-    @MockBean
-    public CacheProviderRepository providerRepository;
+    protected CamelContext context;
 
-    @Before
-    public void setUp() throws IOException {
+    @MockitoBean
+    protected CacheProviderRepository providerRepository;
 
-        List<Provider> providers = new ArrayList<>();
+    protected static List<Provider> providers;
+
+    @BeforeAll
+    static void setUp() throws IOException {
+        providers = new CopyOnWriteArrayList<>();
         providers.add(Provider.create(IOUtils.toString(new FileReader("src/test/resources/no/rutebanken/marduk/providerRepository/provider2.json"))));
         providers.add(Provider.create(IOUtils.toString(new FileReader("src/test/resources/no/rutebanken/marduk/providerRepository/provider3.json"))));
         providers.add(Provider.create(IOUtils.toString(new FileReader("src/test/resources/no/rutebanken/marduk/providerRepository/provider4.json"))));
-
-        when(providerRepository.getProviders()).thenReturn(providers);
-        when(providerRepository.getProvider(2L)).thenReturn(providers.get(0));
-        when(providerRepository.getProvider(3L)).thenReturn(providers.get(1));
-
     }
 
-    protected void replaceEndpoint(String routeId,String originalEndpoint,String replacementEndpoint) throws Exception {
-        context.getRouteDefinition(routeId).adviceWith(context, new AdviceWithRouteBuilder() {
-            @Override
-            public void configure() throws Exception {
-                interceptSendToEndpoint(originalEndpoint)
-                        .skipSendToOriginalEndpoint().to(replacementEndpoint);
-            }
-        });
-    }
-
-    protected Provider provider(String ref, long id, Long migrateToProvider) throws Exception {
+    protected Provider provider(String ref, long id, Long migrateToProvider) {
         Provider provider = new Provider();
+        provider.mobiitiId = id;
         provider.chouetteInfo = new ChouetteInfo();
         provider.chouetteInfo.referential = ref;
         provider.chouetteInfo.migrateDataToProvider = migrateToProvider;
         provider.id = id;
 
         return provider;
+    }
+
+    @AfterEach
+    void stopContext() {
+        context.stop();
     }
 
 }

@@ -13,7 +13,8 @@ import org.springframework.stereotype.Component;
 import java.util.UUID;
 
 import static no.rutebanken.marduk.Constants.*;
-import static no.rutebanken.marduk.Utils.Utils.getLastPathElementOfUrl;
+import static no.rutebanken.marduk.utils.Utils.getLastPathElementOfUrl;
+import static no.rutebanken.marduk.utils.constants.RouteDeclarationConstants.ROUTE_UPDATE_STATUS;
 
 @Component
 public class ChouetteGenerateMapMatchingBuilder extends AbstractChouetteRouteBuilder {
@@ -28,7 +29,7 @@ public class ChouetteGenerateMapMatchingBuilder extends AbstractChouetteRouteBui
     public void configure() throws Exception {
         super.configure();
 
-        from("jms:queue:ChouetteGenerateMapMatchingQueue?transacted=true").streamCaching()
+        from("jms:queue:ChouetteGenerateMapMatchingQueue?transacted=true").streamCache(Boolean.TRUE)
                 .transacted()
                 .log(LoggingLevel.INFO, correlation() + "Starting Chouette map matching")
                 .process(e -> {
@@ -41,7 +42,7 @@ public class ChouetteGenerateMapMatchingBuilder extends AbstractChouetteRouteBui
                     String mapmatchingParameters =  Parameters.getMapMatchingParameters(provider, provider.chouetteInfo.referential, mapMatching);
                     e.getIn().setHeader(JSON_PART, mapmatchingParameters);
                 })
-                .to("direct:updateStatus")
+                .to(ROUTE_UPDATE_STATUS)
                 .process(e -> e.getIn().setHeader(CHOUETTE_REFERENTIAL, getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)).chouetteInfo.referential))
                 .to("direct:assertHeadersForChouetteMapMatching")
                 .log(LoggingLevel.DEBUG, correlation() + "Creating multipart request")
@@ -49,7 +50,7 @@ public class ChouetteGenerateMapMatchingBuilder extends AbstractChouetteRouteBui
                 .setHeader(Exchange.CONTENT_TYPE, simple("multipart/form-data"))
                 .toD(chouetteUrl + "/chouette_iev/referentials/${header." + CHOUETTE_REFERENTIAL + "}/mapmatching")
                 .process(e -> {
-                    e.getIn().setHeader(Constants.JOB_STATUS_URL, e.getIn().getHeader("Location").toString().replaceFirst("http", "http4"));
+                    e.getIn().setHeader(Constants.JOB_STATUS_URL, e.getIn().getHeader("Location").toString());
                     e.getIn().setHeader(Constants.JOB_ID, getLastPathElementOfUrl(e.getIn().getHeader("Location", String.class)));
                 })
                 .setHeader(Constants.JOB_STATUS_ROUTING_DESTINATION, constant("direct:processMapMatchingResult"))
@@ -60,10 +61,10 @@ public class ChouetteGenerateMapMatchingBuilder extends AbstractChouetteRouteBui
 
         from("direct:assertHeadersForChouetteMapMatching")
                 .choice()
-                    .when(simple("${header." + CHOUETTE_REFERENTIAL + "} == null or ${header." + PROVIDER_ID + "} == null "))
+                    .when(simple("${header." + CHOUETTE_REFERENTIAL + "} == null || ${header." + PROVIDER_ID + "} == null "))
                         .log(LoggingLevel.WARN, correlation() + "Unable to start Chouette map matching for missing referential or providerId")
                         .process(e -> JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.BUILD_MAP_MATCHING).state(JobEvent.State.FAILED).build())
-                    .to("direct:updateStatus")
+                    .to(ROUTE_UPDATE_STATUS)
                     .stop()
                 .end()
                 .routeId("chouette-send-map-matching-job-validate-headers");
@@ -82,7 +83,7 @@ public class ChouetteGenerateMapMatchingBuilder extends AbstractChouetteRouteBui
                                 createMail.createMail(e, null, JobEvent.TimetableAction.BUILD_MAP_MATCHING, true);
                             }
                         })
-                        .to("direct:updateStatus")
+                        .to(ROUTE_UPDATE_STATUS)
                         .to("direct:checkScheduledJobsBeforeTriggeringTransfer")
                     .when(simple("${header.action_report_result} == 'NOK'"))
                         .log(LoggingLevel.INFO, correlation() + "Map matching failed")
@@ -92,7 +93,7 @@ public class ChouetteGenerateMapMatchingBuilder extends AbstractChouetteRouteBui
                                 createMail.createMail(e, null, JobEvent.TimetableAction.BUILD_MAP_MATCHING, false);
                             }
                         })
-                        .to("direct:updateStatus")
+                        .to(ROUTE_UPDATE_STATUS)
                     .otherwise()
                         .log(LoggingLevel.ERROR, correlation() + "Map matching went wrong")
                         .process(e -> {
@@ -101,13 +102,13 @@ public class ChouetteGenerateMapMatchingBuilder extends AbstractChouetteRouteBui
                                 createMail.createMail(e, null, JobEvent.TimetableAction.BUILD_MAP_MATCHING, false);
                             }
                         })
-                        .to("direct:updateStatus")
+                        .to(ROUTE_UPDATE_STATUS)
                 .end()
                 .routeId("chouette-process-map-matching-status");
 
         // Check that no other map matching jobs in status SCHEDULED exists for this referential. If so, do not trigger transfer
         from("direct:checkScheduledJobsBeforeTriggeringTransfer")
-                .setProperty("job_status_url", simple("{{chouette.url}}/chouette_iev/referentials/${header." + CHOUETTE_REFERENTIAL + "}/jobs?timetableAction=importer&status=SCHEDULED&status=STARTED"))
+                .setProperty("job_status_url", simple(chouetteUrl + "/chouette_iev/referentials/${header." + CHOUETTE_REFERENTIAL + "}/jobs?timetableAction=importer&status=SCHEDULED&status=STARTED"))
                 .toD("${exchangeProperty.job_status_url}")
                 .choice()
                     .when().jsonpath("$.*[?(@.status == 'SCHEDULED')].status")

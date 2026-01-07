@@ -1,6 +1,6 @@
 package no.rutebanken.marduk.routes;
 
-import no.rutebanken.marduk.Utils.SendMail;
+import no.rutebanken.marduk.utils.SendMail;
 import no.rutebanken.marduk.domain.Provider;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;

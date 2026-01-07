@@ -15,7 +15,7 @@ public class ToConsumersRouteBuilder extends AbstractChouetteRouteBuilder {
     public void configure() throws Exception {
         super.configure();
 
-        from("direct:toConsumers").streamCaching()
+        from("direct:toConsumers").streamCache(Boolean.TRUE)
                 .log(LoggingLevel.INFO, getClass().getName(), "Starting sending exports to consumers for provider with id ${header." + PROVIDER_ID + "}")
                 .process(exchange -> {
                     List<ExportTemplate> exports = (List<ExportTemplate>) exchange.getIn().getBody();

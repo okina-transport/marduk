@@ -71,7 +71,7 @@ public class CommonGtfsExportMergedRouteBuilder extends BaseRouteBuilder {
 
         from("direct:reportExportMergedGtfsOK")
                 .process(e -> JobEvent.systemJobBuilder(e).state(JobEvent.State.OK).build())
-                .inOnly("direct:updateStatus")
+                .to("direct:updateStatus")
                 .routeId("gtfs-export-merged-report-ok");
 
         from("direct:fetchLatestGtfs")
@@ -84,15 +84,15 @@ public class CommonGtfsExportMergedRouteBuilder extends BaseRouteBuilder {
         from("direct:getGtfsFiles")
                 .log(LoggingLevel.INFO, getClass().getName(), correlation() + "Fetching mobiiti_technique/gtfs/allFiles/${header.ID_FORMAT}/${body}")
                 .setProperty("fileName", body())
-                .setHeader(FILE_HANDLE, simple("mobiiti_technique/gtfs/allFiles/${header.ID_FORMAT}/${property.fileName}"))
+                .setHeader(FILE_HANDLE, simple("mobiiti_technique/gtfs/allFiles/${header.ID_FORMAT}/${exchangeProperty.fileName}"))
                 .choice()
                 .when(e -> fileSystemService.isExists(e.getIn().getHeader(FILE_HANDLE, String.class)))
                 .to("direct:getBlob")
                 .choice()
                 .when(body().isNotEqualTo(null))
-                .toD("file:${header." + FILE_PARENT + "}+/${header.ID_FORMAT}?fileName=${property.fileName}")
+                .toD("file:${header." + FILE_PARENT + "}+/${header.ID_FORMAT}?fileName=${exchangeProperty.fileName}")
                 .otherwise()
-                .log(LoggingLevel.INFO, getClass().getName(), correlation() + "${property.fileName} was empty when trying to fetch it from blobstore.")
+                .log(LoggingLevel.INFO, getClass().getName(), correlation() + "${exchangeProperty.fileName} was empty when trying to fetch it from blobstore.")
                 .routeId("gtfs-export-get-latest-for-provider");
 
         from("direct:mergeGtfs")

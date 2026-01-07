@@ -18,208 +18,116 @@ package no.rutebanken.marduk.routes.chouette;
 
 import no.rutebanken.marduk.Constants;
 import no.rutebanken.marduk.MardukRouteBuilderIntegrationTestBase;
-import no.rutebanken.marduk.routes.status.JobEvent;
-import org.apache.camel.EndpointInject;
-import org.apache.camel.Exchange;
-import org.apache.camel.Expression;
-import org.apache.camel.Produce;
-import org.apache.camel.ProducerTemplate;
-import org.apache.camel.builder.AdviceWithRouteBuilder;
+import org.apache.camel.*;
+import org.apache.camel.builder.AdviceWith;
 import org.apache.camel.component.mock.MockEndpoint;
-import org.apache.camel.model.ModelCamelContext;
-import org.apache.camel.model.language.SimpleExpression;
 import org.apache.commons.io.IOUtils;
-import org.junit.Before;
-import org.junit.Test;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.test.annotation.DirtiesContext;
 
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,classes = ChouetteValidationRouteBuilder.class, properties = "spring.main.sources=no.rutebanken.marduk.test")
-@DirtiesContext(classMode = DirtiesContext.ClassMode.AFTER_EACH_TEST_METHOD)
-public class ChouetteValidationRouteIntegrationTest extends MardukRouteBuilderIntegrationTestBase {
+import static org.mockito.Mockito.when;
 
-	@Autowired
-	private ModelCamelContext context;
+class ChouetteValidationRouteIntegrationTest extends MardukRouteBuilderIntegrationTestBase {
 
-	@EndpointInject(uri = "mock:chouetteCreateValidation")
-	protected MockEndpoint chouetteCreateValidation;
+    @EndpointInject("mock:chouetteCreateValidation")
+    protected MockEndpoint chouetteCreateValidation;
 
-	@EndpointInject(uri = "mock:pollJobStatus")
-	protected MockEndpoint pollJobStatus;
+    @EndpointInject("mock:pollJobStatus")
+    protected MockEndpoint pollJobStatus;
 
-	@EndpointInject(uri = "mock:chouetteGetJobsForProvider")
-	protected MockEndpoint chouetteGetJobs;
+    @EndpointInject("mock:chouetteGetJobsForProvider")
+    protected MockEndpoint chouetteGetJobs;
 
-	@EndpointInject(uri = "mock:processValidationResult")
-	protected MockEndpoint processValidationResult;
+    @EndpointInject("mock:processValidationResult")
+    protected MockEndpoint processValidationResult;
 
-	@EndpointInject(uri = "mock:chouetteTransferExportQueue")
-	protected MockEndpoint chouetteTransferExportQueue;
+    @EndpointInject("mock:chouetteTransferExportQueue")
+    protected MockEndpoint chouetteTransferExportQueue;
 
-	@EndpointInject(uri = "mock:checkScheduledJobsBeforeTriggeringExport")
-	protected MockEndpoint chouetteCheckScheduledJobs;
+    @EndpointInject("mock:checkScheduledJobsBeforeTriggeringExport")
+    protected MockEndpoint chouetteCheckScheduledJobs;
 
-	@EndpointInject(uri = "mock:updateStatus")
-	protected MockEndpoint updateStatus;
+    @EndpointInject("mock:updateStatus")
+    protected MockEndpoint updateStatus;
 
-	@Produce(uri = "jms:queue:ChouetteValidationQueue")
-	protected ProducerTemplate validationTemplate;
+    @Produce("jms:queue:ChouetteValidationQueue")
+    protected ProducerTemplate validationTemplate;
 
-	@Produce(uri = "direct:processValidationResult")
-	protected ProducerTemplate processValidationResultTemplate;
+    @Produce("direct:processValidationResult")
+    protected ProducerTemplate processValidationResultTemplate;
 
-	@Produce(uri = "direct:checkScheduledJobsBeforeTriggeringExport")
-	protected ProducerTemplate triggerJobListTemplate;
+    @Produce("direct:checkScheduledJobsBeforeTriggeringExport")
+    protected ProducerTemplate triggerJobListTemplate;
 
-	@Value("${chouette.url}")
-	private String chouetteUrl;
+    @Value("${chouette.url}")
+    private String chouetteUrl;
 
-	@Before
-	public void setUp() throws IOException {
-		super.setUp();
-		chouetteCreateValidation.reset();
-		pollJobStatus.reset();
-		chouetteGetJobs.reset();
-		processValidationResult.reset();
-		chouetteTransferExportQueue.reset();
-		chouetteCheckScheduledJobs.reset();
-		updateStatus.reset();
-	}
-	
-	//@Test
-	//no usefull anymore due to modifications on global exports
-	public void testRunChouetteValidation() throws Exception {
-
-		// Mock initial call to Chouette to validation job
-		context.getRouteDefinition("chouette-send-validation-job").adviceWith(context, new AdviceWithRouteBuilder() {
-			@Override
-			public void configure() throws Exception {
-				interceptSendToEndpoint(chouetteUrl + "/chouette_iev/referentials/rut/validator")
-						.skipSendToOriginalEndpoint().to("mock:chouetteCreateValidation");
-				interceptSendToEndpoint("direct:updateStatus").skipSendToOriginalEndpoint()
-						.to("mock:updateStatus");
-			}
-		});
-
-		// Mock job polling route - AFTER header validatio (to ensure that we send correct headers in test as well)
-		context.getRouteDefinition("chouette-validate-job-status-parameters").adviceWith(context, new AdviceWithRouteBuilder() {
-			@Override
-			public void configure() throws Exception {
-				interceptSendToEndpoint("direct:checkJobStatus").skipSendToOriginalEndpoint()
-				.to("mock:pollJobStatus");
-			}
-		});
-
-		// Mock update status calls
-		context.getRouteDefinition("chouette-process-validation-status").adviceWith(context, new AdviceWithRouteBuilder() {
-			@Override
-			public void configure() throws Exception {
-				interceptSendToEndpoint("direct:updateStatus").skipSendToOriginalEndpoint()
-				.to("mock:updateStatus");
-				interceptSendToEndpoint("direct:checkScheduledJobsBeforeTriggeringExport").skipSendToOriginalEndpoint()
-				.to("mock:checkScheduledJobsBeforeTriggeringExport");
-			}
-		});
-
-		// we must manually start when we are done with all the advice with
-		context.start();
-
-		// 1 initial import call
-		chouetteCreateValidation.expectedMessageCount(1);
-		chouetteCreateValidation.returnReplyHeader("Location", new SimpleExpression(
-				chouetteUrl.replace("http4://", "http://") + "/chouette_iev/referentials/rut/scheduled_jobs/1"));
-
-	
-		pollJobStatus.expectedMessageCount(1);
-		
-		
-		updateStatus.expectedMessageCount(2);
-		chouetteCheckScheduledJobs.expectedMessageCount(1);
-		
-		
-		Map<String, Object> headers = new HashMap<String, Object>();
-		headers.put(Constants.PROVIDER_ID, "2");
-		headers.put(Constants.JOB_STATUS_JOB_VALIDATION_LEVEL, JobEvent.TimetableAction.VALIDATION_LEVEL_2.toString());
-		validationTemplate.sendBodyAndHeaders(null, headers);
-
-		chouetteCreateValidation.assertIsSatisfied();
-		pollJobStatus.assertIsSatisfied();
-		
-		Exchange exchange = pollJobStatus.getReceivedExchanges().get(0);
-		exchange.getIn().setHeader("action_report_result", "OK");
-		exchange.getIn().setHeader("validation_report_result", "OK");
-		processValidationResultTemplate.send(exchange );
-		
-		chouetteCheckScheduledJobs.assertIsSatisfied();
-		updateStatus.assertIsSatisfied();
-		
-		
-	}
+    @BeforeEach
+    void beforeEach() {
+        when(providerRepository.getProviders()).thenReturn(providers);
+        when(providerRepository.getProvider(2L)).thenReturn(providers.get(0));
+        when(providerRepository.getProvider(3L)).thenReturn(providers.get(1));
+        chouetteCreateValidation.reset();
+        pollJobStatus.reset();
+        chouetteGetJobs.reset();
+        processValidationResult.reset();
+        chouetteTransferExportQueue.reset();
+        chouetteCheckScheduledJobs.reset();
+        updateStatus.reset();
+    }
 
 
-	//@Test
-	//no usefull anymore due to modifications on global exports
-	public void testJobListResponseTerminated() throws Exception {
-		testJobListResponse("/no/rutebanken/marduk/chouette/getJobListResponseAllTerminated.json", true);
-	}
+    @Test
+    void testJobListResponseScheduled() throws Exception {
+        testJobListResponse("/no/rutebanken/marduk/chouette/getJobListResponseScheduled.json", false);
+    }
 
-	@Test
-	public void testJobListResponseScheduled() throws Exception {
-		testJobListResponse("/no/rutebanken/marduk/chouette/getJobListResponseScheduled.json", false);
-	}
+    void testJobListResponse(String jobListResponseClasspathReference, boolean expectExport) throws Exception {
 
-	public void testJobListResponse(String jobListResponseClasspathReference, boolean expectExport) throws Exception {
+        AdviceWith.adviceWith(context, "chouette-process-job-list-after-validation", adviceRouteBuilder -> {
+            adviceRouteBuilder.interceptSendToEndpoint(chouetteUrl + "/*")
+                    .skipSendToOriginalEndpoint()
+                    .to("mock:chouetteGetJobsForProvider");
+            adviceRouteBuilder.interceptSendToEndpoint("jms:queue:ChouetteTransferExportQueue")
+                    .skipSendToOriginalEndpoint()
+                    .to("mock:chouetteTransferExportQueue");
+        });
 
-		context.getRouteDefinition("chouette-process-job-list-after-validation").adviceWith(context, new AdviceWithRouteBuilder() {
-			@Override
-			public void configure() throws Exception {
-				interceptSendToEndpoint(chouetteUrl + "/*")
-						.skipSendToOriginalEndpoint()
-						.to("mock:chouetteGetJobsForProvider");
-				interceptSendToEndpoint("jms:queue:ChouetteTransferExportQueue")
-					.skipSendToOriginalEndpoint()
-					.to("mock:chouetteTransferExportQueue");
-			}
-		});
+        context.start();
 
-		context.start();
+        // 1 call to list other import jobs in referential
+        chouetteGetJobs.expectedMessageCount(1);
+        chouetteGetJobs.returnReplyBody(new Expression() {
 
-		// 1 call to list other import jobs in referential
-		chouetteGetJobs.expectedMessageCount(1);
-		chouetteGetJobs.returnReplyBody(new Expression() {
+            @SuppressWarnings("unchecked")
+            @Override
+            public <T> T evaluate(Exchange ex, Class<T> arg1) {
+                try {
+                    return (T) IOUtils.toString(getClass().getResourceAsStream(jobListResponseClasspathReference));
+                } catch (IOException e) {
+                    return null;
+                }
+            }
+        });
 
-			@SuppressWarnings("unchecked")
-			@Override
-			public <T> T evaluate(Exchange ex, Class<T> arg1) {
-				try {
-					return (T) IOUtils.toString(getClass().getResourceAsStream(jobListResponseClasspathReference));
-				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-					return null;
-				}
-			}
-		});
+        Map<String, Object> headers = new HashMap<String, Object>();
+        headers.put(Constants.CHOUETTE_REFERENTIAL, "rut");
+        headers.put(Constants.PROVIDER_ID, 2);
 
-		Map<String, Object> headers = new HashMap<String,Object>();
-		headers.put(Constants.CHOUETTE_REFERENTIAL, "rut");
-		headers.put(Constants.PROVIDER_ID,2);
-		
-		triggerJobListTemplate.sendBodyAndHeaders(null,headers);
-		
-		chouetteGetJobs.assertIsSatisfied();
+        triggerJobListTemplate.sendBodyAndHeaders(null, headers);
 
-		if (expectExport) {
-			chouetteTransferExportQueue.expectedMessageCount(1);
-		}
-		chouetteTransferExportQueue.assertIsSatisfied();
+        chouetteGetJobs.assertIsSatisfied();
 
-	}
+        if (expectExport) {
+            chouetteTransferExportQueue.expectedMessageCount(1);
+        }
+        chouetteTransferExportQueue.assertIsSatisfied();
+
+    }
 
 }

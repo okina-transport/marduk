@@ -1,4 +1,4 @@
-echo Building docker image
+echo "Building docker image"
 
 mvn clean package -DskipTests
 

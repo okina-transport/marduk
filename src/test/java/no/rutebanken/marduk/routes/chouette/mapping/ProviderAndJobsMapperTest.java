@@ -22,15 +22,15 @@ import no.rutebanken.marduk.domain.Provider;
 import no.rutebanken.marduk.rest.ProviderAndJobs;
 import no.rutebanken.marduk.routes.chouette.json.JobResponse;
 import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 import java.util.Arrays;
 import java.util.List;
 
-public class ProviderAndJobsMapperTest {
+class ProviderAndJobsMapperTest {
 
 	@Test
-	public void testMapJobResponseToProviderAndJobs() {
+	void testMapJobResponseToProviderAndJobs() {
 		List<Provider> providers = Arrays.asList(provider(1, "ref1"), provider(2, "ref2"), provider(3, "ref3"));
 
 		JobResponse[] jobs = new JobResponse[]{job("ref1"), job("ref2"), job("ref1")};

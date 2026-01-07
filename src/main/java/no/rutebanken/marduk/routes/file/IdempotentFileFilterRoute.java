@@ -23,7 +23,6 @@ import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.spi.IdempotentRepository;
 import org.apache.commons.codec.digest.DigestUtils;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.io.InputStream;
@@ -35,11 +34,13 @@ import static org.apache.camel.builder.PredicateBuilder.not;
 @Component
 public class IdempotentFileFilterRoute extends BaseRouteBuilder {
 
-    @Autowired
-    private IdempotentRepository fileNameAndDigestIdempotentRepository;
-
+    private final IdempotentRepository fileNameAndDigestIdempotentRepository;
 
     private static final String HEADER_FILE_NAME_AND_DIGEST = "file_NameAndDigest";
+
+    public IdempotentFileFilterRoute(IdempotentRepository fileNameAndDigestIdempotentRepository) {
+        this.fileNameAndDigestIdempotentRepository = fileNameAndDigestIdempotentRepository;
+    }
 
     @Override
     public void configure() throws Exception {
@@ -64,7 +65,7 @@ public class IdempotentFileFilterRoute extends BaseRouteBuilder {
 
         from("direct:runIdempotentConsumer")
                 .process(e -> e.getIn().setHeader(HEADER_FILE_NAME_AND_DIGEST, new FileNameAndDigest(e.getIn().getHeader(Exchange.FILE_NAME, String.class), DigestUtils.md5Hex(e.getIn().getBody(InputStream.class)))))
-                .idempotentConsumer(header(HEADER_FILE_NAME_AND_DIGEST)).messageIdRepository(fileNameAndDigestIdempotentRepository).skipDuplicate(false).removeOnFailure(false)
+                .idempotentConsumer(header(HEADER_FILE_NAME_AND_DIGEST),fileNameAndDigestIdempotentRepository).skipDuplicate(false).removeOnFailure(false)
                 .filter(exchangeProperty(Exchange.DUPLICATE_MESSAGE).isEqualTo(true))
                 .log(LoggingLevel.DEBUG, getClass().getName(), "Detected ${header." + Exchange.FILE_NAME + "} as duplicate.")
                 .to("direct:updateStatusForDuplicateFile")

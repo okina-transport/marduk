@@ -1,11 +1,12 @@
 package no.rutebanken.marduk.routes.chouette;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import no.rutebanken.marduk.Utils.CipherEncryption;
+import no.rutebanken.marduk.utils.CipherEncryption;
 import no.rutebanken.marduk.domain.ConsumerType;
 import no.rutebanken.marduk.domain.ExportTemplate;
 import no.rutebanken.marduk.domain.OrganisationView;
 import no.rutebanken.marduk.metrics.PrometheusMetricsService;
+
 import no.rutebanken.marduk.routes.chouette.json.exporter.FileToConsumerInfo;
 import no.rutebanken.marduk.routes.status.JobEvent;
 import no.rutebanken.marduk.security.TokenService;
@@ -28,9 +29,11 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import static no.rutebanken.marduk.Constants.*;
 import static no.rutebanken.marduk.repository.RestDAO.HEADER_REFERENTIAL;
+
 
 @Component
 public class ExportToConsumersProcessor implements Processor {
@@ -165,19 +168,22 @@ public class ExportToConsumersProcessor implements Processor {
                         uploadInfo.add(fileToConsumerInfo.toString());
                         log.info("Envoi du fichier terminé : {} vers le consommateur : {} - de type {} - Espace de données {}", filePath, consumer.getName(), consumer.getType().name(), referential);
                         exchange.getIn().setHeader(EXPORT_TO_CONSUMER_STATUS, "OK");
-                        metrics.countConsumerCalls(consumer.getType(), export.getType(), "OK");
+                        Set<String> operators = exchange.getIn().getHeader(JOB_OPERATORS, Set.class);
+                        metrics.countConsumerCalls(consumer.getType(), export.getType(), "OK",operators);
 
                     } catch (IOException e) {
                         log.error("Error while getting the file before upload to consumer {}", exchange.getIn().getHeader(FILE_HANDLE, String.class), e);
                         exchange.getIn().setHeader(EXPORT_TO_CONSUMER_STATUS, JobEvent.State.FAILED.name());
-                        metrics.countConsumerCalls(consumer.getType(), export.getType(), JobEvent.State.FAILED.name());
+                        Set<String> operators = exchange.getIn().getHeader(JOB_OPERATORS, Set.class);
+                        metrics.countConsumerCalls(consumer.getType(), export.getType(), JobEvent.State.FAILED.name(), operators);
                         FileToConsumerInfo fileToConsumerInfo = new FileToConsumerInfo(consumer.getType().name(), JobEvent.State.FAILED.name(), consumer.getName());
                         uploadInfo.add(fileToConsumerInfo.toString());
                     }
                 } catch (Exception e) {
                     log.error("Error while uploading to consumer {}", consumer, e);
                     exchange.getIn().setHeader(EXPORT_TO_CONSUMER_STATUS, JobEvent.State.FAILED.name());
-                    metrics.countConsumerCalls(consumer.getType(), export.getType(), JobEvent.State.FAILED.name());
+                    Set<String> operators = exchange.getIn().getHeader(JOB_OPERATORS, Set.class);
+                    metrics.countConsumerCalls(consumer.getType(), export.getType(), JobEvent.State.FAILED.name(),operators);
                     FileToConsumerInfo fileToConsumerInfo = new FileToConsumerInfo(consumer.getType().name(), JobEvent.State.FAILED.name(),consumer.getName());
                     uploadInfo.add(fileToConsumerInfo.toString());
                 }

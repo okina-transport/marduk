@@ -23,7 +23,7 @@ import no.rutebanken.marduk.routes.status.JobEvent.State;
 import no.rutebanken.marduk.routes.status.JobEvent.TimetableAction;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
-import org.apache.camel.component.http4.HttpMethods;
+import org.apache.camel.component.http.HttpMethods;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -37,7 +37,7 @@ import static no.rutebanken.marduk.Constants.FILE_HANDLE;
 import static no.rutebanken.marduk.Constants.JSON_PART;
 import static no.rutebanken.marduk.Constants.PROVIDER_ID;
 import static no.rutebanken.marduk.Constants.USER;
-import static no.rutebanken.marduk.Utils.Utils.getLastPathElementOfUrl;
+import static no.rutebanken.marduk.utils.Utils.getLastPathElementOfUrl;
 
 /**
  * Exports concerto files from Chouette
@@ -61,13 +61,13 @@ public class ExportConcertoRouteBuilder extends AbstractChouetteRouteBuilder {
     public void configure() throws Exception {
         super.configure();
 
-        from("jms:queue:ChouetteExportConcertoQueue?transacted=true").streamCaching()
+        from("jms:queue:ChouetteExportConcertoQueue?transacted=true").streamCache(Boolean.TRUE)
                 .transacted()
                 .log(LoggingLevel.INFO, getClass().getName(), "Starting Chouette mapping ZDEP ZDER ZDLR for provider with id ${header." + PROVIDER_ID + "}")
                 .doTry()
                 .process(e -> e.getIn().setHeader(CHOUETTE_REFERENTIAL, getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)).chouetteInfo.referential))
                 .setHeader(Exchange.HTTP_METHOD, constant(HttpMethods.GET))
-                .setBody(constant(null))
+                .setBody(constant((Object) null))
                 .toD(chouetteUrl + "/chouette_iev/referentials/${header." + CHOUETTE_REFERENTIAL + "}/update-mapping-zdep-zder-zdlr")
                 .log(LoggingLevel.WARN, getClass().getName(), "Chouette mapping ZDEP ZDER ZDLR for provider with id ${header." + PROVIDER_ID + "} completed")
                 .endDoTry()
@@ -99,7 +99,7 @@ public class ExportConcertoRouteBuilder extends AbstractChouetteRouteBuilder {
                 .toD(chouetteUrl + "/chouette_iev/referentials/${header." + CHOUETTE_REFERENTIAL + "}/exporter/concerto")
                 .to("log:" + getClass().getName() + "?level=DEBUG&showAll=true&multiline=true")
                 .process(e -> {
-                    e.getIn().setHeader(JOB_STATUS_URL, e.getIn().getHeader("Location").toString().replaceFirst("http", "http4"));
+                    e.getIn().setHeader(JOB_STATUS_URL, e.getIn().getHeader("Location").toString());
                     e.getIn().setHeader(Constants.JOB_ID, getLastPathElementOfUrl(e.getIn().getHeader("Location", String.class)));
                 })
                 .setHeader(Constants.JOB_STATUS_ROUTING_DESTINATION, constant("direct:processExportConcertoResult"))
@@ -118,7 +118,7 @@ public class ExportConcertoRouteBuilder extends AbstractChouetteRouteBuilder {
                 .log(LoggingLevel.INFO, correlation() + "Calling url ${header.data_url}")
                 .removeHeaders("Camel*")
                 .setBody(simple(""))
-                .setHeader(Exchange.HTTP_METHOD, constant(org.apache.camel.component.http4.HttpMethods.GET))
+                .setHeader(Exchange.HTTP_METHOD, constant(org.apache.camel.component.http.HttpMethods.GET))
                 .toD("${header.data_url}")
                 .setHeader(BLOBSTORE_MAKE_BLOB_PUBLIC, constant(publicPublication))
                 .setHeader(FILE_HANDLE, simple(BLOBSTORE_PATH_OUTBOUND + "concerto/${header." + CHOUETTE_REFERENTIAL + "}-" + Constants.CURRENT_AGGREGATED_CONCERTO_FILENAME))

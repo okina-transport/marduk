@@ -1,6 +1,6 @@
 package no.rutebanken.marduk.routes.chouette;
 
-import no.rutebanken.marduk.Utils.PollJobStatusRoute;
+import no.rutebanken.marduk.utils.PollJobStatusRoute;
 import no.rutebanken.marduk.domain.ExportTemplate;
 import no.rutebanken.marduk.domain.Provider;
 import no.rutebanken.marduk.repository.ExportTemplateDAO;

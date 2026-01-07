@@ -1,8 +1,9 @@
 package no.rutebanken.marduk.routes.chouette.json;
 
-import javax.xml.bind.annotation.XmlAccessType;
-import javax.xml.bind.annotation.XmlAccessorType;
-import javax.xml.bind.annotation.XmlRootElement;
+import jakarta.xml.bind.annotation.XmlAccessType;
+import jakarta.xml.bind.annotation.XmlAccessorType;
+import jakarta.xml.bind.annotation.XmlRootElement;
+import java.util.Set;
 
 @XmlRootElement(name = "job")
 @XmlAccessorType(XmlAccessType.FIELD)
@@ -14,6 +15,7 @@ public class Job {
     private String subFolder;
     private String message;
     private JobStatus status;
+    private Set<String> operators;
 
     public Long getId() {
         return id;
@@ -61,5 +63,13 @@ public class Job {
 
     public void setStatus(JobStatus status) {
         this.status = status;
+    }
+
+    public Set<String> getOperators() {
+        return operators;
+    }
+
+    public void setOperators(Set<String> operators) {
+        this.operators = operators;
     }
 }

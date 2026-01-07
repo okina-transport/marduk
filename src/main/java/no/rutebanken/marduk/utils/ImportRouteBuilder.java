@@ -1,4 +1,4 @@
-package no.rutebanken.marduk.Utils;
+package no.rutebanken.marduk.utils;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import no.rutebanken.marduk.domain.ConfigurationFtp;

@@ -48,49 +48,40 @@ public class BlobStoreService {
     private ApplicationContext context;
 
     public BlobStoreFiles listBlobsInFolder(@Header(value = Exchange.FILE_PARENT) String folder, Exchange exchange) {
-        ExchangeUtils.addHeadersAndAttachments(exchange);
         return repository.listBlobs(folder + "/");
     }
 
     public BlobStoreFiles listBlobsInFolders(@Header(value = Constants.FILE_PARENT_COLLECTION) Collection<String> folders, Exchange exchange) {
-        ExchangeUtils.addHeadersAndAttachments(exchange);
         return repository.listBlobs(folders);
     }
 
     public BlobStoreFiles listBlobsInFoldersByProvider(@Header(value = Constants.FILE_PARENT_COLLECTION) Collection<String> folders, @Header(value = Constants.PROVIDER_ID) String providerId, Exchange exchange) {
-        ExchangeUtils.addHeadersAndAttachments(exchange);
         return repository.listBlobs(folders);
     }
 
 
     public BlobStoreFiles listBlobs(@Header(value = Constants.CHOUETTE_REFERENTIAL) String referential, Exchange exchange) {
-        ExchangeUtils.addHeadersAndAttachments(exchange);
         return repository.listBlobs(getMobiitiIdFromReferential(referential) + "/imports/");
     }
 
     public BlobStoreFiles listBlobsFlat(@Header(value = Constants.CHOUETTE_REFERENTIAL) String referential, Exchange exchange) {
-        ExchangeUtils.addHeadersAndAttachments(exchange);
         return repository.listBlobsFlat(getMobiitiIdFromReferential(referential) + "/imports/");
     }
 
     public InputStream getBlob(@Header(value = Constants.FILE_HANDLE) String name, Exchange exchange) {
-        ExchangeUtils.addHeadersAndAttachments(exchange);
         return repository.getBlob(name);
     }
 
     public void uploadBlob(@Header(value = Constants.FILE_HANDLE) String name,
                            @Header(value = Constants.BLOBSTORE_MAKE_BLOB_PUBLIC) boolean makePublic, InputStream inputStream, Exchange exchange) {
-        ExchangeUtils.addHeadersAndAttachments(exchange);
         repository.uploadBlob(name, inputStream, makePublic);
     }
 
     public boolean deleteBlob(@Header(value = FILE_HANDLE) String name, Exchange exchange) {
-        ExchangeUtils.addHeadersAndAttachments(exchange);
         return repository.delete(name);
     }
 
     public boolean deleteAllBlobsInFolder(String folder, Exchange exchange) {
-        ExchangeUtils.addHeadersAndAttachments(exchange);
         return repository.deleteAllFilesInFolder(folder);
     }
 

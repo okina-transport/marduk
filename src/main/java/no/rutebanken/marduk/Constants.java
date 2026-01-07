@@ -117,6 +117,7 @@ public class Constants {
     public static final String JOB_STATUS_ROUTING_DESTINATION = "RutebankenJobStatusRoutingDestination";
     public static final String JOB_STATUS_JOB_TYPE = "RutebankenJobStatusType";
     public static final String JOB_STATUS_JOB_VALIDATION_LEVEL = "RutebankenJobStatusValidationLevel";
+    public static final String JOB_OPERATORS = "JobOperators";
 
     public static final String JOB_ACTION = "RutebankenJobAction";
 
@@ -136,8 +137,6 @@ public class Constants {
     public static final String PROVIDER_WHITE_LIST = "RutebankenProviderWhiteList";
     public static final String TRANSFORMATION_ROUTING_DESTINATION = "RutebankenTransformationRoutingDestination";
 
-    public static final String OTP_BASE_GRAPH_BUILD = "RutebankenOtpBaseGraphBuild";
-
     public static final String TIME_ZONE = "Europe/Paris";
 
     public static final String OKINA_REFERENTIAL = "x-okina-referential";
@@ -154,6 +153,7 @@ public class Constants {
 
     public static final String IMPORT_MODE = "ImportMode";
 
+    public static final String MOBIITI_TECHNIQUE = "mobiiti_technique";
     public static final String MERGED_NETEX_ROOT_DIR = "mobiiti_technique/netex/merged";
     public static final String MERGED_NETEX_STOPS_ROOT_DIR = "mobiiti_technique/netex_stops";
     public static final String MERGED_NETEX_POI_ROOT_DIR = "mobiiti_technique/netex_poi";

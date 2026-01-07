@@ -16,20 +16,21 @@
 
 package no.rutebanken.marduk.routes.file;
 
-import no.rutebanken.marduk.Constants;
 import no.rutebanken.marduk.domain.Provider;
 import no.rutebanken.marduk.routes.BaseRouteBuilder;
 import no.rutebanken.marduk.routes.blobstore.BlobStoreRoute;
 import no.rutebanken.marduk.routes.status.JobEvent;
+import org.apache.camel.ExchangePattern;
 import org.apache.camel.LoggingLevel;
 import org.apache.commons.io.input.CloseShieldInputStream;
-import org.apache.tomcat.util.http.fileupload.FileItem;
-import org.apache.tomcat.util.http.fileupload.disk.DiskFileItem;
 import org.springframework.stereotype.Component;
 
+import java.io.File;
+import java.io.InputStream;
 import java.util.UUID;
 
 import static no.rutebanken.marduk.Constants.*;
+import static no.rutebanken.marduk.utils.constants.RouteDeclarationConstants.*;
 
 /**
  * Upload file to blob store and trigger import pipeline.
@@ -45,75 +46,80 @@ public class FileUploadRouteBuilder extends BaseRouteBuilder {
         super.configure();
 
 
-        from("direct:uploadFilesAndStartImport")
+        from(ROUTE_UPLOAD_FILES_AND_START_IMPORT)
                 .process(FileInformations::getObjectUpload)
                 .split().body()
-                .to("direct:importLaunch")
+                .to(ROUTE_IMPORT_LAUNCH)
                 .routeId("files-upload");
 
 
         from("direct:uploadFileAndStartImport")
-                .process(e -> JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.FILE_TRANSFER).state(JobEvent.State.STARTED).build()).inOnly("direct:updateStatus")
+                .process(e -> JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.FILE_TRANSFER).state(JobEvent.State.STARTED).build()).to("direct:updateStatus")
                 .doTry()
                 .log(LoggingLevel.INFO, correlation() + "About to upload timetable file to blob store: ${header." + FILE_HANDLE + "}")
                 .setBody(header(FILE_CONTENT_HEADER))
                 .to("direct:uploadBlob")
                 .log(LoggingLevel.INFO, correlation() + "Finished uploading timetable file to blob store: ${header." + FILE_HANDLE + "}")
-                .setBody(constant(null))
-                .inOnly("jms:queue:ProcessFileQueue")
+                .setBody(constant((Object) null))
+                .setExchangePattern(ExchangePattern.InOnly)
+                .to(ROUTE_PROCESS_FILE_QUEUE)
                 .log(LoggingLevel.INFO, correlation() + "Triggered import pipeline for timetable file: ${header." + FILE_HANDLE + "}")
                 .doCatch(Exception.class)
                 .log(LoggingLevel.WARN, correlation() + "Upload of timetable data to blob store failed for file: ${header." + FILE_HANDLE + "}")
-                .process(e -> JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.FILE_TRANSFER).state(JobEvent.State.FAILED).build()).inOnly("direct:updateStatus")
+                .process(e -> JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.FILE_TRANSFER).state(JobEvent.State.FAILED).build()).to("direct:updateStatus")
                 .end()
                 .routeId("file-upload-and-start-import");
 
         from("direct:tiamatUploadFileAndStartImport")
-                .process(e -> JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.FILE_TRANSFER).type(e.getIn().getHeader(IMPORT_TYPE, String.class)).state(JobEvent.State.STARTED).build()).inOnly("direct:updateStatus")
+                .process(e -> JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.FILE_TRANSFER).type(e.getIn().getHeader(IMPORT_TYPE, String.class)).state(JobEvent.State.STARTED).build()).to("direct:updateStatus")
                 .doTry()
                 .log(LoggingLevel.INFO, correlation() + "About to upload timetable file to blob store: ${header." + FILE_HANDLE + "}")
                 .setBody(header(FILE_CONTENT_HEADER))
                 .to("direct:uploadBlob")
                 .log(LoggingLevel.INFO, correlation() + "Finished uploading timetable file to blob store: ${header." + FILE_HANDLE + "}")
-                .setBody(constant(null))
-                .inOnly("jms:queue:ProcessFileQueue")
+                .setBody(constant((Object) null))
+                .setExchangePattern(ExchangePattern.InOnly)
+                .to(ROUTE_PROCESS_FILE_QUEUE)
                 .log(LoggingLevel.INFO, correlation() + "Triggered import pipeline for timetable file: ${header." + FILE_HANDLE + "}")
                 .doCatch(Exception.class)
                 .log(LoggingLevel.WARN, correlation() + "Upload of timetable data to blob store failed for file: ${header." + FILE_HANDLE + "}")
-                .process(e -> JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.FILE_TRANSFER).state(JobEvent.State.FAILED).build()).inOnly("direct:updateStatus")
+                .process(e -> JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.FILE_TRANSFER).state(JobEvent.State.FAILED).build()).to("direct:updateStatus")
                 .end()
                 .routeId("tiamat-file-upload-and-start-import");
 
         from("direct:faresUploadFileAndStartImport")
-                .process(e -> JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.FILE_TRANSFER).type(e.getIn().getHeader(IMPORT_TYPE, String.class)).state(JobEvent.State.STARTED).build()).inOnly("direct:updateStatus")
+                .process(e -> JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.FILE_TRANSFER).type(e.getIn().getHeader(IMPORT_TYPE, String.class)).state(JobEvent.State.STARTED).build()).to("direct:updateStatus")
                 .doTry()
                 .log(LoggingLevel.INFO, correlation() + "About to upload timetable file to blob store: ${header." + FILE_HANDLE + "}")
                 .setBody(header(FILE_CONTENT_HEADER))
                 .to("direct:uploadBlob")
                 .log(LoggingLevel.INFO, correlation() + "Finished uploading timetable file to blob store: ${header." + FILE_HANDLE + "}")
-                .setBody(constant(null))
-                .inOnly("jms:queue:ProcessFileQueue")
+                .setBody(constant((Object) null))
+                .setExchangePattern(ExchangePattern.InOnly)
+                .to(ROUTE_PROCESS_FILE_QUEUE)
                 .log(LoggingLevel.INFO, correlation() + "Triggered import pipeline for timetable file: ${header." + FILE_HANDLE + "}")
                 .doCatch(Exception.class)
                 .log(LoggingLevel.WARN, correlation() + "Upload of timetable data to blob store failed for file: ${header." + FILE_HANDLE + "}")
-                .process(e -> JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.FILE_TRANSFER).state(JobEvent.State.FAILED).build()).inOnly("direct:updateStatus")
+                .process(e -> JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.FILE_TRANSFER).state(JobEvent.State.FAILED).build()).to("direct:updateStatus")
                 .end()
                 .routeId("fares-file-upload-and-start-import");
 
-        from("direct:importLaunch")
-                .process(e -> e.getIn().setHeader(Constants.CORRELATION_ID, e.getIn().getHeader(Constants.CORRELATION_ID, UUID.randomUUID().toString())))
+        from(ROUTE_IMPORT_LAUNCH)
+                .process(e -> e.getIn().setHeader(CORRELATION_ID, e.getIn().getHeader(CORRELATION_ID, UUID.randomUUID().toString())))
                 .setHeader(FILE_NAME, simple("${body.name}"))
                 .setHeader(FILE_HANDLE, simple("inbound/received/${header." + CHOUETTE_REFERENTIAL + "}/${header." + FILE_NAME + "}"))
                 .process(e -> {
                     Long providerId = e.getIn().getHeader(PROVIDER_ID, Long.class);
                     Provider provider = getProviderRepository().getNonMobiitiProvider(providerId)
                             .orElseThrow(() -> new Exception("No provider found for import with id " + providerId));
-                    DiskFileItem fileItem = (DiskFileItem) e.getIn().getBody();
-                    String importPath = BlobStoreRoute.importPath(provider) + "/" + fileItem.getName();
-                    e.getIn().setHeader(FILE_HANDLE, importPath);
+                    File fileItem = (File) e.getIn().getBody();
+                    if (fileItem != null) {
+                        String importPath = BlobStoreRoute.importPath(provider) + "/" + fileItem.getName();
+                        e.getIn().setHeader(FILE_HANDLE, importPath);
+                    }
                 })
                 .setHeader(IMPORT, constant(true))
-                .process(e -> e.getIn().setHeader(FILE_CONTENT_HEADER, new CloseShieldInputStream(e.getIn().getBody(FileItem.class).getInputStream())))
+                .process(e -> e.getIn().setHeader(FILE_CONTENT_HEADER, CloseShieldInputStream.wrap(e.getIn().getBody(InputStream.class))))
                 .choice()
                     .when(header(IMPORT_TYPE).in(FileType.NETEX_PARKING.name(), FileType.NETEX_POI.name(), FileType.NETEX_STOP_PLACE.name()))
                         .to("direct:tiamatUploadFileAndStartImport")

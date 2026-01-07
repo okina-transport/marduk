@@ -18,6 +18,7 @@ package no.rutebanken.marduk.routes.singleton;
 
 
 import org.apache.camel.CamelContext;
+import org.apache.camel.NamedNode;
 import org.apache.camel.component.hazelcast.policy.HazelcastRoutePolicy;
 import org.apache.camel.model.RouteDefinition;
 import org.apache.camel.spi.RoutePolicy;
@@ -60,10 +61,9 @@ public class SingletonRoutePolicyFactory extends HazelCastService implements Rou
     }
 
     @Override
-    public RoutePolicy createRoutePolicy(CamelContext camelContext, String routeId, RouteDefinition routeDefinition) {
+    public RoutePolicy createRoutePolicy(CamelContext camelContext, String routeId, NamedNode namedRoute) {
         try {
-
-            if (!ignorePolicy && SINGLETON_ROUTE_DEFINITION_GROUP_NAME.equals(routeDefinition.getGroup())) {
+            if (!ignorePolicy && SINGLETON_ROUTE_DEFINITION_GROUP_NAME.equals(((RouteDefinition) namedRoute).getGroup())) {
                 return build(routeId);
             }
         } catch (Exception e) {
@@ -71,6 +71,4 @@ public class SingletonRoutePolicyFactory extends HazelCastService implements Rou
         }
         return null;
     }
-
-
 }

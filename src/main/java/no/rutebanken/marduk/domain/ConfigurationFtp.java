@@ -3,8 +3,8 @@ package no.rutebanken.marduk.domain;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import no.rutebanken.marduk.Utils.LocalDateTimeDeserializer;
-import no.rutebanken.marduk.Utils.LocalDateTimeSerializer;
+import no.rutebanken.marduk.utils.LocalDateTimeDeserializer;
+import no.rutebanken.marduk.utils.LocalDateTimeSerializer;
 
 import java.time.LocalDateTime;
 
