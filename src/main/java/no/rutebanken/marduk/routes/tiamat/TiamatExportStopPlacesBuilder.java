@@ -8,6 +8,7 @@ import no.rutebanken.marduk.routes.chouette.json.Job;
 import no.rutebanken.marduk.routes.status.JobEvent;
 import no.rutebanken.marduk.services.FileSystemService;
 import no.rutebanken.marduk.services.processors.GetTiamatFileProcessor;
+import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -138,7 +139,6 @@ public class TiamatExportStopPlacesBuilder extends AbstractChouetteRouteBuilder 
                 .choice()
                 .when(header(CHOUETTE_REFERENTIAL).isEqualTo("mobiiti_technique"))
                 .process(getTiamatFileProcessor)
-                .wireTap("direct:setLugCompleted")
                 .process(exportToConsumersProcessor)
                 .to("direct:updateExportToConsumerStatus")
                 // After updateExportToConsumerStatus, exchange body has been replaced by job. We neeed to put back inputStream in the body
@@ -151,11 +151,6 @@ public class TiamatExportStopPlacesBuilder extends AbstractChouetteRouteBuilder 
                 .routeId("tiamat-stop-places-export-end-process");
 
 
-        from("direct:setLugCompleted")
-                .setHeader(Exchange.HTTP_METHOD, constant(HttpMethods.POST))
-                .toD(stopPlacesExportUrl + "/setPostProcessCompleted/${header." + JOB_ID + "}")
-                .end()
-                .routeId("tiamat-set-lug-completed");
     }
 
 }
