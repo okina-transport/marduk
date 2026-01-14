@@ -288,6 +288,35 @@ public class ZipFileUtils {
         }
     }
 
+    public static void copyGtfsZipFileWithoutFareFiles(File file) {
+        List<String> fareFilesToRemove = Arrays.asList(
+                "fare_attributes.txt",
+                "fare_rules.txt",
+                "fare_products.txt",
+                "fare_media.txt",
+                "fare_leg_rules.txt",
+                "fare_transfer_rules.txt",
+                "fare_leg_join_rules.txt"
+        );
+
+        Map<String, String> env = new HashMap<>();
+        env.put("create", "false");
+
+        try (FileSystem zipfs = FileSystems.newFileSystem(file.toPath(), env, null)) {
+            for (String fileName : fareFilesToRemove) {
+                Path pathInZip = zipfs.getPath(fileName);
+                if (Files.exists(pathInZip)) {
+                    Files.delete(pathInZip);
+                    logger.info("File removed from ZIP: {}", fileName);
+                }
+            }
+        } catch (IOException e) {
+            logger.error("Error while modifying ZIP: {}", file.getName(), e);
+            throw new RuntimeException("Error while removing fare files from ZIP", e);
+        }
+
+    }
+
     private static ZipArchiveEntry copyZipArchiveEntry(ZipArchiveEntry zipEntry) {
         ZipArchiveEntry outEntry = new ZipArchiveEntry(zipEntry.getName());
         outEntry.setCompressedSize(zipEntry.getCompressedSize());
@@ -331,6 +360,7 @@ public class ZipFileUtils {
 
         String fillMissingStopName = exchange.getIn().getHeader(FILL_MISSING_STOP_NAME, String.class);
         String fillMissingCoordinates = exchange.getIn().getHeader(FILL_MISSING_COORDINATES, String.class);
+        Boolean importFareFiles = exchange.getIn().getHeader(IMPORT_FARE_FILES, Boolean.class);
 
         if (file.exists() && file.length() > 0) {
             Set<String> filenamesInZip = listFilesInZip(file);
@@ -338,6 +368,9 @@ public class ZipFileUtils {
                 try {
                     GtfsFileInputWithParameters gtfsFileInputWithParameter =
                             new GtfsFileInputWithParameters(file, routeIds, allowNonStandardGtfs, fillMissingStopName, fillMissingCoordinates);
+                    if (importFareFiles != null && importFareFiles.equals(false)) {
+                        copyGtfsZipFileWithoutFareFiles(file);
+                    }
                     if (!routeIds.isEmpty()) {
                         file = filterGtfsByRouteIds(gtfsFileInputWithParameter);
                     } else {
