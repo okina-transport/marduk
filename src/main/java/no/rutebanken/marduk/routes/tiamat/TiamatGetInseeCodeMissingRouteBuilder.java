@@ -13,7 +13,7 @@ import org.springframework.stereotype.Component;
 @Component
 public class TiamatGetInseeCodeMissingRouteBuilder extends BaseRouteBuilder {
 
-    @Value("${cron.get.missing.insee.code}")
+    @Value("${cron.get.missing.insee.code:0+0+0+1+1+?+2099}")
     private String cronSchedule;
 
     @Value("${tiamat.url}")
