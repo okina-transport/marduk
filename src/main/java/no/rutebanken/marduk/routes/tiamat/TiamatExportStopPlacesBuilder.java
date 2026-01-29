@@ -9,17 +9,14 @@ import no.rutebanken.marduk.routes.status.JobEvent;
 import no.rutebanken.marduk.security.TokenService;
 import no.rutebanken.marduk.services.FileSystemService;
 import no.rutebanken.marduk.services.processors.GetTiamatFileProcessor;
-import no.rutebanken.marduk.services.processors.MultiPartProcessor;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.component.http.HttpMethods;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.FileSystemResource;
 import org.springframework.stereotype.Component;
 
-import java.io.File;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.UUID;
@@ -163,6 +160,7 @@ public class TiamatExportStopPlacesBuilder extends AbstractChouetteRouteBuilder 
 
         from("direct:setLugCompleted")
                 .setHeader(Exchange.HTTP_METHOD, constant(HttpMethods.POST))
+                .process(e -> e.getIn().getHeaders().put("Authorization", tokenService.getAuthorizationHeader()))
                 .toD(stopPlacesExportUrl + "/setPostProcessCompleted/${header." + JOB_ID + "}")
                 .end()
                 .routeId("tiamat-set-lug-completed");

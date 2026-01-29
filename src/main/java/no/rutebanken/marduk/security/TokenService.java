@@ -22,6 +22,8 @@ import org.springframework.stereotype.Service;
 @Service
 public class TokenService {
 
+    private static final String BEARER_PREFIX = "Bearer ";
+
     private final Keycloak keycloakClient;
 
     public TokenService(Keycloak keycloakClient) {
@@ -30,6 +32,10 @@ public class TokenService {
 
     public String getToken() {
         return keycloakClient.tokenManager().getAccessTokenString();
+    }
+
+    public String getAuthorizationHeader() {
+        return BEARER_PREFIX + getToken();
     }
 
 }
