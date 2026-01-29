@@ -104,7 +104,7 @@ public class ChouetteRemoveOldJobsRouteBuilder extends BaseRouteBuilder {
                     .when(header("keepDays").isNull())
                     .setHeader("keepDays", constant(keepDays))
                 .end()
-                .process(e -> e.getIn().getHeaders().put("Authorization", tokenService.getToken()))
+                .process(e -> e.getIn().getHeaders().put("Authorization", tokenService.getAuthorizationHeader()))
                 .toD(nabuUrl + "/timetable/clear-events?keepJobs=${header.keepJobs}&keepDays=${header.keepDays}")
                 .log(LoggingLevel.INFO, correlation() + "Completed Nabu remove old events")
 
