@@ -8,7 +8,6 @@ import no.rutebanken.marduk.routes.chouette.json.Job;
 import no.rutebanken.marduk.routes.status.JobEvent;
 import no.rutebanken.marduk.services.FileSystemService;
 import no.rutebanken.marduk.services.processors.GetTiamatFileProcessor;
-import no.rutebanken.marduk.services.processors.MultiPartProcessor;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.component.http4.HttpMethods;
