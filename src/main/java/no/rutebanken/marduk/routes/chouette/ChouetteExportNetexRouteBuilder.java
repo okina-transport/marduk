@@ -72,7 +72,8 @@ public class ChouetteExportNetexRouteBuilder extends AbstractChouetteRouteBuilde
                     // Force new correlation ID : each export must have its own correlation ID to me displayed correctly in export screen
                     e.getIn().setHeader(CORRELATION_ID, UUID.randomUUID().toString());
                     e.getIn().removeHeader(JOB_ID);
-                    String exportName = org.springframework.util.StringUtils.hasText(e.getIn().getHeader(EXPORTED_FILENAME, String.class)) && !e.getIn().getHeader(NETEX_EXPORT_GLOBAL, Boolean.class) ? (String) e.getIn().getHeader(EXPORTED_FILENAME) : "offre";
+                    String exportName = e.getIn().getHeader(EXPORT_FILE_NAME) != null ? e.getIn().getHeader(EXPORT_FILE_NAME, String.class) :
+                            org.springframework.util.StringUtils.hasText(e.getIn().getHeader(EXPORTED_FILENAME, String.class)) && !e.getIn().getHeader(NETEX_EXPORT_GLOBAL, Boolean.class) ? (String) e.getIn().getHeader(EXPORTED_FILENAME) : "offre";
                     e.getIn().setHeader(FILE_NAME, exportName);
                     e.getIn().setHeader(FILE_TYPE, "netex");
                     log.info("Lancement export Netex - Fichier : " + exportName + " - Espace de données : " + getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)).chouetteInfo.referential);

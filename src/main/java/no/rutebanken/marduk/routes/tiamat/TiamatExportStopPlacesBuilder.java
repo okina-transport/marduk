@@ -87,11 +87,19 @@ public class TiamatExportStopPlacesBuilder extends AbstractChouetteRouteBuilder 
                     con.setRequestProperty(EXPORT_GENERATED_MISSING_QUAYS, e.getIn().getHeader(EXPORT_GENERATED_MISSING_QUAYS).toString());
                     con.setRequestProperty(EXPORT_EXTERNAL_IDS, e.getIn().getHeader(EXPORT_EXTERNAL_IDS).toString());
                     con.setRequestProperty(HAS_POST_PROCESS, Boolean.toString(hasPostProcess));
+                    if (e.getIn().getHeader(EXPORT_FILE_NAME) != null) {
+                        con.setRequestProperty(EXPORT_FILE_NAME, e.getIn().getHeader(EXPORT_FILE_NAME).toString());
+                    }
                     con.setRequestProperty("Authorization","Bearer " + tokenService.getToken());
                     e.getIn().setBody(con.getInputStream());
 
                     Job job = e.getIn().getBody(Job.class);
-                    e.getIn().getHeaders().put(FILE_NAME,  job.getFileName());
+                    if (e.getIn().getHeader(EXPORT_FILE_NAME) != null) {
+                        job.setFileName(e.getIn().getHeader(EXPORT_FILE_NAME).toString());
+                    } else {
+                        job.setFileName(e.getIn().getHeader(FILE_NAME).toString());
+                    }
+                    e.getIn().getHeaders().put(FILE_NAME, job.getFileName());
                     // required to skip chouette reports parsing when polling job status
                     e.getIn().setHeader(Constants.TIAMAT_STOP_PLACES_EXPORT, job.getId());
                     String tiamatJobStatusUrl = stopPlacesExportUrl + "/" + job.getId() + "/status";

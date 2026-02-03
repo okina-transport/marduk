@@ -1167,7 +1167,11 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
                 .log(LoggingLevel.INFO, correlation() + "Chouette start export Netex")
                 .removeHeaders(ALL_CAMEL_HTTP)
-                .process(e -> e.getIn().setHeader(USER, getHeaders(e, USER)))
+                .process(e -> {
+                    e.getIn().setHeader(USER, getHeaders(e, USER));
+                    e.getIn().setHeader(EXPORT_FILE_NAME, getHeaders(e, EXPORT_FILE_NAME));
+                })
+                .marshal().json(JsonLibrary.Jackson)
                 .setBody().simple(CAMEL_HEADERS)
                 .setExchangePattern(ExchangePattern.InOnly)
                 .to(ROUTE_CHOUETTE_EXPORT_NETEX_QUEUE);
@@ -1213,6 +1217,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .log(LoggingLevel.INFO, correlation() + "Chouette start export GTFS")
                 .removeHeaders(ALL_CAMEL_HTTP)
                 .process(this::getFromHeadersForGTFS)
+                .marshal().json(JsonLibrary.Jackson)
                 .setBody().simple(CAMEL_HEADERS)
                 .setExchangePattern(ExchangePattern.InOnly)
                 .to("jms:queue:ChouetteExportGtfsQueue");
@@ -1263,7 +1268,11 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
                 .log(LoggingLevel.INFO, correlation() + "Tiamat start export Stops")
                 .removeHeaders(ALL_CAMEL_HTTP)
-                .process(e -> e.getIn().setHeader(USER, getHeaders(e, USER)))
+                .process(e -> {
+                    e.getIn().setHeader(USER, getHeaders(e, USER));
+                    e.getIn().setHeader(EXPORT_FILE_NAME, getHeaders(e, EXPORT_FILE_NAME));
+                })
+                .marshal().json(JsonLibrary.Jackson)
                 .setBody().simple(CAMEL_HEADERS)
                 .setExchangePattern(ExchangePattern.InOnly)
                 .to("jms:queue:TiamatStopPlacesExport");
