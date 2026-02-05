@@ -16,24 +16,31 @@
 
 package no.rutebanken.marduk.routes.status;
 
+import no.rutebanken.marduk.domain.ExportStatusDto;
 import no.rutebanken.marduk.domain.ExportType;
 import no.rutebanken.marduk.metrics.PrometheusMetricsService;
 import no.rutebanken.marduk.routes.chouette.json.Job;
+import no.rutebanken.marduk.services.KafkaService;
 import org.apache.camel.ExchangePattern;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.builder.RouteBuilder;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Component;
 
+import java.util.Set;
+
 import static no.rutebanken.marduk.Constants.*;
+import static no.rutebanken.marduk.routes.status.JobEvent.State.OK;
 
 @Component
 public class StatusRouteBuilder extends RouteBuilder {
 
     private final PrometheusMetricsService metrics;
+    private final KafkaService kafkaService;
 
-    public StatusRouteBuilder(PrometheusMetricsService metrics) {
+    public StatusRouteBuilder(PrometheusMetricsService metrics, KafkaService kafkaService) {
         this.metrics = metrics;
+        this.kafkaService = kafkaService;
     }
 
     @Override
@@ -69,7 +76,7 @@ public class StatusRouteBuilder extends RouteBuilder {
                             description = exportToConsummerData;
                         }
                         if (exportToConsumerStatus.equals("OK")) {
-                            JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.EXPORT_TO_CONSUMER).state(JobEvent.State.OK)
+                            JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.EXPORT_TO_CONSUMER).state(OK)
                                     .description(description)
                                     .build();
                         } else {
@@ -104,6 +111,7 @@ public class StatusRouteBuilder extends RouteBuilder {
                 exportType = ExportType.GTFS;
             }
             metrics.countExports(exportType, jobEvent.state.toString());
+            kafkaService.sendExportStatusToKafka(new ExportStatusDto(exportType, jobEvent.state == OK, Set.of()));
         }
     }
 
