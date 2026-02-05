@@ -1,16 +1,16 @@
 package no.rutebanken.marduk.routes.chouette;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import no.rutebanken.marduk.utils.CipherEncryption;
 import no.rutebanken.marduk.domain.ConsumerType;
 import no.rutebanken.marduk.domain.ExportTemplate;
+import no.rutebanken.marduk.domain.ExportToConsumerStatusDto;
 import no.rutebanken.marduk.domain.OrganisationView;
 import no.rutebanken.marduk.metrics.PrometheusMetricsService;
-
 import no.rutebanken.marduk.routes.chouette.json.exporter.FileToConsumerInfo;
 import no.rutebanken.marduk.routes.status.JobEvent;
 import no.rutebanken.marduk.security.TokenService;
 import no.rutebanken.marduk.services.*;
+import no.rutebanken.marduk.utils.CipherEncryption;
 import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
 import org.apache.commons.lang3.BooleanUtils;
@@ -87,7 +87,9 @@ public class ExportToConsumersProcessor implements Processor {
 
     private final TokenService tokenService;
 
-    public ExportToConsumersProcessor(FtpService ftpService, RestUploadService restUploadService, CipherEncryption cipherEncryption, BlobStoreService blobStoreService, FileSystemService fileSystemService, NotificationService notificationService, OpendatasoftService opendatasoftService, PrometheusMetricsService metrics, TokenService tokenService) {
+    private final KafkaService kafkaService;
+
+    public ExportToConsumersProcessor(FtpService ftpService, RestUploadService restUploadService, CipherEncryption cipherEncryption, BlobStoreService blobStoreService, FileSystemService fileSystemService, NotificationService notificationService, OpendatasoftService opendatasoftService, PrometheusMetricsService metrics, TokenService tokenService, KafkaService kafkaService) {
         this.ftpService = ftpService;
         this.restUploadService = restUploadService;
         this.cipherEncryption = cipherEncryption;
@@ -97,6 +99,7 @@ public class ExportToConsumersProcessor implements Processor {
         this.opendatasoftService = opendatasoftService;
         this.metrics = metrics;
         this.tokenService = tokenService;
+        this.kafkaService = kafkaService;
     }
 
     /**
@@ -169,13 +172,14 @@ public class ExportToConsumersProcessor implements Processor {
                         log.info("Envoi du fichier terminé : {} vers le consommateur : {} - de type {} - Espace de données {}", filePath, consumer.getName(), consumer.getType().name(), referential);
                         exchange.getIn().setHeader(EXPORT_TO_CONSUMER_STATUS, "OK");
                         Set<String> operators = exchange.getIn().getHeader(JOB_OPERATORS, Set.class);
-                        metrics.countConsumerCalls(consumer.getType(), export.getType(), "OK",operators);
-
+                        metrics.countConsumerCalls(consumer.getType(), export.getType(), "OK", operators);
+                        kafkaService.sendExportToConsumerStatusToKafka(new ExportToConsumerStatusDto(consumer.getType(), export.getType(), true, operators));
                     } catch (IOException e) {
                         log.error("Error while getting the file before upload to consumer {}", exchange.getIn().getHeader(FILE_HANDLE, String.class), e);
                         exchange.getIn().setHeader(EXPORT_TO_CONSUMER_STATUS, JobEvent.State.FAILED.name());
                         Set<String> operators = exchange.getIn().getHeader(JOB_OPERATORS, Set.class);
                         metrics.countConsumerCalls(consumer.getType(), export.getType(), JobEvent.State.FAILED.name(), operators);
+                        kafkaService.sendExportToConsumerStatusToKafka(new ExportToConsumerStatusDto(consumer.getType(), export.getType(), false, operators));
                         FileToConsumerInfo fileToConsumerInfo = new FileToConsumerInfo(consumer.getType().name(), JobEvent.State.FAILED.name(), consumer.getName());
                         uploadInfo.add(fileToConsumerInfo.toString());
                     }
@@ -183,7 +187,8 @@ public class ExportToConsumersProcessor implements Processor {
                     log.error("Error while uploading to consumer {}", consumer, e);
                     exchange.getIn().setHeader(EXPORT_TO_CONSUMER_STATUS, JobEvent.State.FAILED.name());
                     Set<String> operators = exchange.getIn().getHeader(JOB_OPERATORS, Set.class);
-                    metrics.countConsumerCalls(consumer.getType(), export.getType(), JobEvent.State.FAILED.name(),operators);
+                    metrics.countConsumerCalls(consumer.getType(), export.getType(), JobEvent.State.FAILED.name(), operators);
+                    kafkaService.sendExportToConsumerStatusToKafka(new ExportToConsumerStatusDto(consumer.getType(), export.getType(), false, operators));
                     FileToConsumerInfo fileToConsumerInfo = new FileToConsumerInfo(consumer.getType().name(), JobEvent.State.FAILED.name(),consumer.getName());
                     uploadInfo.add(fileToConsumerInfo.toString());
                 }
