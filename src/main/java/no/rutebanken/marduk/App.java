@@ -31,6 +31,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Import;
 import org.springframework.scheduling.annotation.EnableScheduling;
 
@@ -42,6 +43,7 @@ import java.util.Set;
  */
 @SpringBootApplication
 @EnableScheduling
+@EnableConfigurationProperties
 @Import({IdempotentRepositoryConfig.class})
 public class App extends RouteBuilder {
 
