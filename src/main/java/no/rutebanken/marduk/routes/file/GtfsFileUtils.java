@@ -242,7 +242,7 @@ public class GtfsFileUtils {
 
 
     private static GtfsMerger buildGtfsMerger(EDuplicateDetectionStrategy duplicateDetectionStrategy) {
-        GtfsMerger merger = new GtfsMerger();
+        GtfsMerger merger = new GtfsMerger(Boolean.FALSE);
 
         merger.setTransferStrategy(new ExtendedTransferMergeStrategy());
         for (Class<?> entityClass : GtfsEntitySchemaFactory.getEntityClasses()) {

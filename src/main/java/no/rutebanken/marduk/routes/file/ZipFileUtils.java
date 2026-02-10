@@ -16,9 +16,11 @@
 
 package no.rutebanken.marduk.routes.file;
 
+import no.rutebanken.marduk.config.MardukPropertiesConfig;
 import no.rutebanken.marduk.exceptions.MardukException;
 import no.rutebanken.marduk.routes.file.beans.FileTypeClassifierBean;
 import no.rutebanken.marduk.routes.file.beans.GtfsFileInputWithParameters;
+import no.rutebanken.marduk.routes.file.onebusaway.FilterOneStopJourney;
 import no.rutebanken.marduk.routes.file.onebusaway.NonStandardStopTransformer;
 import org.apache.camel.Exchange;
 import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
@@ -28,8 +30,10 @@ import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.Strings;
 import org.onebusaway.gtfs_transformer.GtfsTransformer;
+import org.onebusaway.gtfs_transformer.TransformSpecificationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Component;
 
 import java.io.*;
 import java.nio.file.*;
@@ -43,8 +47,15 @@ import java.util.zip.ZipOutputStream;
 
 import static no.rutebanken.marduk.Constants.*;
 
+@Component
 public class ZipFileUtils {
     private static final Logger logger = LoggerFactory.getLogger(ZipFileUtils.class);
+
+    private final MardukPropertiesConfig mardukPropertiesConfig;
+
+    public ZipFileUtils(MardukPropertiesConfig mardukPropertiesConfig) {
+        this.mardukPropertiesConfig = mardukPropertiesConfig;
+    }
 
     public static Set<String> listFilesInZip(File file) {
         try (ZipFile zipFile = new ZipFile(file)) {
@@ -78,13 +89,14 @@ public class ZipFileUtils {
         }
     }
 
-    private static File transformGtfsFiles(GtfsFileInputWithParameters gtfsFileInputWithParameter) throws Exception {
+    private File transformGtfsFiles(GtfsFileInputWithParameters gtfsFileInputWithParameter) throws Exception {
         logger.info("Transforming GTFS-file");
         long time = System.currentTimeMillis();
         GtfsTransformer transformer = new GtfsTransformer();
         File outputFile = File.createTempFile("marduk-cleanup", ".zip");
         transformer.setGtfsInputDirectories(Collections.singletonList(gtfsFileInputWithParameter.getInputFile()));
         transformer.setOutputDirectory(outputFile);
+        addLocationTypeFilter(transformer);
         if (gtfsFileInputWithParameter.isAllowNonStandardGtfs()) {
             transformer.getReader()
                     .addEntityHandler(new NonStandardStopTransformer(
@@ -341,7 +353,7 @@ public class ZipFileUtils {
         return inputFile;
     }
 
-    public static File transformGtfsFile(byte[] data, Exchange exchange) throws IOException {
+    public File transformGtfsFile(byte[] data, Exchange exchange) throws IOException {
         File file = getFile(data);
 
         try {
@@ -520,7 +532,7 @@ public class ZipFileUtils {
         return directoryToBeDeleted.delete();
     }
 
-    private static File filterGtfsByRouteIds(GtfsFileInputWithParameters gtfsFileInputWithParameters) throws Exception {
+    private File filterGtfsByRouteIds(GtfsFileInputWithParameters gtfsFileInputWithParameters) throws Exception {
         logger.info("Filtrage du GTFS pour les route IDs: {}", gtfsFileInputWithParameters.getRouteIds());
         long time = System.currentTimeMillis();
         GtfsTransformer transformer = new GtfsTransformer();
@@ -528,6 +540,7 @@ public class ZipFileUtils {
         transformer.setGtfsInputDirectories(Collections.singletonList(gtfsFileInputWithParameters.getInputFile()));
         transformer.setOutputDirectory(outputFile);
         transformer.addTransform(new FilterByRouteIdsStrategy(gtfsFileInputWithParameters.getRouteIds()));
+        addLocationTypeFilter(transformer);
         if (gtfsFileInputWithParameters.isAllowNonStandardGtfs()) {
             transformer.getReader()
                     .addEntityHandler(new NonStandardStopTransformer(
@@ -542,14 +555,18 @@ public class ZipFileUtils {
         return outputFile;
     }
 
-    private static void executeTransformations(GtfsTransformer transformer, long time) {
-        transformer.getReader().setOverwriteDuplicates(true);
-        try {
-            transformer.run();
-        } catch (Exception e) {
-            logger.error("Erreur durant l'exécution de GtfsTransformer", e);
-            throw new RuntimeException("Échec de l'exécution de GtfsTransformer", e);
+    private void addLocationTypeFilter(GtfsTransformer transformer) throws IOException, TransformSpecificationException {
+        if (mardukPropertiesConfig.isGtfsImportFilterLocationTypeEnabled()) {
+            transformer.getTransformFactory().addModificationsFromString("{'op':'remove', 'match':{'file':'stops.txt', 'location_type':'3'}}");
+            transformer.getTransformFactory().addModificationsFromString("{'op':'remove', 'match':{'file':'stops.txt', 'location_type':'4'}}");
+            transformer.addTransform(new FilterOneStopJourney());
         }
+    }
+
+    private void executeTransformations(GtfsTransformer transformer, long time) throws Exception {
+        transformer.getReader().setOverwriteDuplicates(true);
+        transformer.run();
+
         logger.info("Filtrage GTFS par route IDs terminé en {} ms", (System.currentTimeMillis() - time));
     }
 }

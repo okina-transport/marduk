@@ -33,7 +33,7 @@ public abstract class CustomGtfsFileTransformer {
         try {
             // Must replace feed_info.txt file with original because feed_id is being stripped away by transformation process
             try (FileInputStream inputStream = new FileInputStream(inputFile)) {
-                ByteArrayOutputStream orgFeedInfo = new ZipFileUtils().extractFileFromZipFile(inputStream, FEED_INFO_FILE_NAME);
+                ByteArrayOutputStream orgFeedInfo = ZipFileUtils.extractFileFromZipFile(inputStream, FEED_INFO_FILE_NAME);
                 return transform(inputFile, orgFeedInfo);
             }
         } catch (IOException e) {
