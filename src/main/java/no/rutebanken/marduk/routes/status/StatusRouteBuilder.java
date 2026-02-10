@@ -111,7 +111,7 @@ public class StatusRouteBuilder extends RouteBuilder {
                 exportType = ExportType.GTFS;
             }
             metrics.countExports(exportType, jobEvent.state.toString());
-            kafkaService.sendExportStatusToKafka(new ExportStatusDto(exportType, jobEvent.state == OK, Set.of()));
+            kafkaService.sendExportStatusToKafka(new ExportStatusDto(exportType, jobEvent.state == OK, Set.of("Semitan")));
         }
     }
 

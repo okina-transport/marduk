@@ -50,6 +50,7 @@ public class PollJobStatusRoute {
             exportType = ExportType.PARKING;
         } else {
             exportType = ExportType.ARRET;
+            operators = Set.of("Semitan");
         }
         metrics.countExports(exportType,JobStatus.FINISHED.equals(job.getStatus()) ? "OK" : job.getStatus().name());
         kafkaService.sendExportStatusToKafka(new ExportStatusDto(exportType,JobStatus.FINISHED.equals(job.getStatus()), operators));

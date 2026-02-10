@@ -1,10 +1,7 @@
 package no.rutebanken.marduk.routes.chouette;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import no.rutebanken.marduk.domain.ConsumerType;
-import no.rutebanken.marduk.domain.ExportTemplate;
-import no.rutebanken.marduk.domain.ExportToConsumerStatusDto;
-import no.rutebanken.marduk.domain.OrganisationView;
+import no.rutebanken.marduk.domain.*;
 import no.rutebanken.marduk.metrics.PrometheusMetricsService;
 import no.rutebanken.marduk.routes.chouette.json.exporter.FileToConsumerInfo;
 import no.rutebanken.marduk.routes.status.JobEvent;
@@ -171,13 +168,13 @@ public class ExportToConsumersProcessor implements Processor {
                         uploadInfo.add(fileToConsumerInfo.toString());
                         log.info("Envoi du fichier terminé : {} vers le consommateur : {} - de type {} - Espace de données {}", filePath, consumer.getName(), consumer.getType().name(), referential);
                         exchange.getIn().setHeader(EXPORT_TO_CONSUMER_STATUS, "OK");
-                        Set<String> operators = exchange.getIn().getHeader(JOB_OPERATORS, Set.class);
+                        Set<String> operators = getOperators(exchange, export);
                         metrics.countConsumerCalls(consumer.getType(), export.getType(), "OK", operators);
                         kafkaService.sendExportToConsumerStatusToKafka(new ExportToConsumerStatusDto(consumer.getType(), export.getType(), true, operators));
                     } catch (IOException e) {
                         log.error("Error while getting the file before upload to consumer {}", exchange.getIn().getHeader(FILE_HANDLE, String.class), e);
                         exchange.getIn().setHeader(EXPORT_TO_CONSUMER_STATUS, JobEvent.State.FAILED.name());
-                        Set<String> operators = exchange.getIn().getHeader(JOB_OPERATORS, Set.class);
+                        Set<String> operators = getOperators(exchange, export);
                         metrics.countConsumerCalls(consumer.getType(), export.getType(), JobEvent.State.FAILED.name(), operators);
                         kafkaService.sendExportToConsumerStatusToKafka(new ExportToConsumerStatusDto(consumer.getType(), export.getType(), false, operators));
                         FileToConsumerInfo fileToConsumerInfo = new FileToConsumerInfo(consumer.getType().name(), JobEvent.State.FAILED.name(), consumer.getName());
@@ -186,7 +183,7 @@ public class ExportToConsumersProcessor implements Processor {
                 } catch (Exception e) {
                     log.error("Error while uploading to consumer {}", consumer, e);
                     exchange.getIn().setHeader(EXPORT_TO_CONSUMER_STATUS, JobEvent.State.FAILED.name());
-                    Set<String> operators = exchange.getIn().getHeader(JOB_OPERATORS, Set.class);
+                    Set<String> operators = getOperators(exchange, export);
                     metrics.countConsumerCalls(consumer.getType(), export.getType(), JobEvent.State.FAILED.name(), operators);
                     kafkaService.sendExportToConsumerStatusToKafka(new ExportToConsumerStatusDto(consumer.getType(), export.getType(), false, operators));
                     FileToConsumerInfo fileToConsumerInfo = new FileToConsumerInfo(consumer.getType().name(), JobEvent.State.FAILED.name(),consumer.getName());
@@ -224,6 +221,14 @@ public class ExportToConsumersProcessor implements Processor {
                 exchange.getIn().setHeader(EXPORT_TO_CONSUMER_STATUS, JobEvent.State.FAILED.name());
             }
         }
+    }
+
+    private static Set<String> getOperators(Exchange exchange, ExportTemplate export) {
+        Set<String> operators = exchange.getIn().getHeader(JOB_OPERATORS, Set.class);
+        if (export.getType() == ExportType.GTFS || export.getType() == ExportType.NETEX || export.getType() == ExportType.NEPTUNE || export.getType() == ExportType.ARRET) {
+            operators = Set.of("Semitan");
+        }
+        return operators;
     }
 
     private Pair<String, String> getWorkingDates(String referential) {
