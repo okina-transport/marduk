@@ -1,5 +1,6 @@
 package no.rutebanken.marduk.routes.chouette;
 
+import no.rutebanken.marduk.routes.status.JobEvent;
 import no.rutebanken.marduk.utils.PollJobStatusRoute;
 import no.rutebanken.marduk.domain.ExportTemplate;
 import no.rutebanken.marduk.domain.Provider;
@@ -55,7 +56,16 @@ public class LugRouteBuilder extends BaseRouteBuilder {
                         exportTemplateDAO.saveExportTemplate(providerName,export);
 
                     }
+
+                    JobEvent.Builder event = JobEvent.providerJobBuilder(e);
+                    if (e.getIn().getHeader(POST_PROCESS, String.class) != null) {
+                        event.lugStatus(Status.FINISHED);
+                    }
+                    event.timetableAction(JobEvent.TimetableAction.EXPORT_TO_CONSUMER)
+                            .state(JobEvent.State.OK)
+                            .build();
                 })
+                .to("direct:updateStatus")
                 .choice()
                 .when(header(JOB_STATUS_JOB_TYPE).isEqualTo("EXPORT_NETEX"))
                     .to("direct:processNetexExportResultEnd")

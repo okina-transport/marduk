@@ -22,6 +22,7 @@ import java.net.URL;
 import java.util.UUID;
 
 import static no.rutebanken.marduk.Constants.*;
+import static no.rutebanken.marduk.utils.constants.RouteDeclarationConstants.ROUTE_UPDATE_STATUS;
 
 
 /**
@@ -63,6 +64,11 @@ public class TiamatExportStopPlacesBuilder extends AbstractChouetteRouteBuilder 
         from("jms:queue:TiamatStopPlacesExport").streamCache(Boolean.TRUE)
                 .transacted()
                 .log(LoggingLevel.INFO, getClass().getName(), "Starting Tiamat export stop places for provider with id ${header.tiamatProviderId}")
+                .process(e -> {
+                    String correlationId = UUID.randomUUID().toString();
+                    JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.EXPORT).state(JobEvent.State.PENDING).type("arret").correlationId(correlationId).build();
+                })
+                .to(ROUTE_UPDATE_STATUS)
                 .choice()
                     .when(simple("${header.RutebankenOriginalProviderId} == null"))
                     .log(LoggingLevel.INFO, "Valorisation du tiamatProviderId avec RutebankenOriginialProviderId")
@@ -122,6 +128,10 @@ public class TiamatExportStopPlacesBuilder extends AbstractChouetteRouteBuilder 
                 .process(exportToConsumersProcessor)
                 .to("direct:updateExportToConsumerStatus")
                 .process(updateExportTemplateProcessor)
+                .process(e -> {
+                    JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.EXPORT).state(JobEvent.State.OK).type("arret").build();
+                })
+                .to(ROUTE_UPDATE_STATUS)
                 .choice()
                 .when(header(POST_PROCESS).isEqualTo(STOP_OPERATORS_POST_PROCESS_NAME))
                     .to("direct:sendStopPlaceExportToLug")

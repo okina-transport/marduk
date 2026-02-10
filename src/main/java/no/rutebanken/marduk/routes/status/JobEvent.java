@@ -20,6 +20,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import no.rutebanken.marduk.Constants;
+import no.rutebanken.marduk.routes.chouette.json.Status;
 import org.apache.camel.Exchange;
 
 import java.io.IOException;
@@ -27,14 +28,7 @@ import java.io.StringWriter;
 import java.time.Instant;
 import java.util.UUID;
 
-import static no.rutebanken.marduk.Constants.JOB_ID;
-import static no.rutebanken.marduk.Constants.CHOUETTE_REFERENTIAL;
-import static no.rutebanken.marduk.Constants.CORRELATION_ID;
-import static no.rutebanken.marduk.Constants.DESCRIPTION;
-import static no.rutebanken.marduk.Constants.FILE_TYPE;
-import static no.rutebanken.marduk.Constants.PROVIDER_ID;
-import static no.rutebanken.marduk.Constants.SYSTEM_STATUS;
-import static no.rutebanken.marduk.Constants.USER;
+import static no.rutebanken.marduk.Constants.*;
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class JobEvent {
@@ -68,6 +62,8 @@ public class JobEvent {
     public String description;
 
     public String type;
+
+    public Status lugStatus;
 
     private JobEvent() {
     }
@@ -182,6 +178,11 @@ public class JobEvent {
             return this;
         }
 
+        public Builder lugStatus(Status lugStatus) {
+            jobEvent.lugStatus = lugStatus;
+            return this;
+        }
+
         public JobEvent build() {
             if (JobDomain.TIMETABLE.equals(jobEvent.domain) && jobEvent.providerId == null) {
                 throw new IllegalArgumentException("No provider id");
@@ -223,6 +224,7 @@ public class JobEvent {
             jobEvent.username = exchange.getIn().getHeader(USER, String.class);
             jobEvent.description = exchange.getIn().getHeader(DESCRIPTION, String.class);
             jobEvent.type = exchange.getIn().getHeader(FILE_TYPE, String.class);
+            jobEvent.lugStatus = exchange.getIn().getHeader(LUG_STATUS, Status.class);
             return this;
         }
 
