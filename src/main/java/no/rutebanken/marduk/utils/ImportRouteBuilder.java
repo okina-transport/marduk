@@ -15,7 +15,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static no.rutebanken.marduk.Constants.*;
-import static no.rutebanken.marduk.Constants.ANALYZE_ACTION;
 
 @Component
 public class ImportRouteBuilder extends AbstractChouetteRouteBuilder {

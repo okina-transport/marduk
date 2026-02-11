@@ -21,20 +21,21 @@ import no.rutebanken.marduk.Constants;
 import no.rutebanken.marduk.domain.Provider;
 import no.rutebanken.marduk.routes.BaseRouteBuilder;
 import no.rutebanken.marduk.routes.status.JobEvent;
+import no.rutebanken.marduk.services.QuartzService;
 import org.apache.camel.Exchange;
 import org.apache.camel.Message;
 import org.apache.camel.builder.ThreadPoolBuilder;
 import org.apache.hc.client5.http.entity.mime.MultipartEntityBuilder;
 import org.apache.hc.core5.http.ContentType;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 
 import java.io.InputStream;
+import java.util.Date;
 import java.util.UUID;
 import java.util.concurrent.ExecutorService;
 
-import static no.rutebanken.marduk.Constants.JOB_STATUS_URL;
-import static no.rutebanken.marduk.Constants.FILE_NAME;
-import static no.rutebanken.marduk.Constants.JSON_PART;
+import static no.rutebanken.marduk.Constants.*;
 
 public abstract class AbstractChouetteRouteBuilder extends BaseRouteBuilder {
 
@@ -43,7 +44,10 @@ public abstract class AbstractChouetteRouteBuilder extends BaseRouteBuilder {
 
 	protected ExecutorService allProvidersExecutorService;
 
-	@Override
+	@Autowired
+	QuartzService quartzService;
+
+    @Override
 	public synchronized void configure() throws Exception {
 		super.configure();
 
@@ -99,6 +103,22 @@ public abstract class AbstractChouetteRouteBuilder extends BaseRouteBuilder {
 	    exchange.getOut().setHeader("Accept", "application/json");
 	}
 
+	public boolean isValidationExportScheduled(Exchange exchange) {
+		Long providerId = exchange.getIn().getHeader(Constants.PROVIDER_ID, Long.class);
+		Integer importConfigurationId = exchange.getIn().getHeader(IMPORT_CONFIGURATION_ID, Integer.class);
+		if (providerId == null || importConfigurationId == null) {
+			// this is not an automatic import
+			return false;
+		}
+		// check if export validation trigger is in the future
+		Provider provider = getProviderRepository().getProvider(providerId);
+		String triggerName = QuartzService.getAutomaticChouetteValidationExportJobTriggerName(provider,
+				importConfigurationId);
+		return quartzService.getNextFireTimeForTrigger(triggerName)
+				.map(triggerDate -> triggerDate.after(new Date()))
+				.orElse(false);
+	}
+
 	public boolean shouldTransferData(Exchange exchange) {
 
 		if (!isAutoTransferData()) {
@@ -110,7 +130,6 @@ public abstract class AbstractChouetteRouteBuilder extends BaseRouteBuilder {
 	}
 
 	public boolean isAutoTransferData() {
-
 		return autoTransferData;
 	}
 

@@ -1,19 +1,15 @@
 package no.rutebanken.marduk.routes.chouette;
 
-import no.rutebanken.marduk.utils.SendMail;
+import no.rutebanken.marduk.domain.ImportGenerateMapMatching;
 import no.rutebanken.marduk.routes.status.JobEvent;
+import no.rutebanken.marduk.utils.SendMail;
 import org.apache.camel.Exchange;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import static no.rutebanken.marduk.Constants.JOB_STATUS_JOB_VALIDATION_LEVEL;
-import static no.rutebanken.marduk.Constants.CHOUETTE_REFERENTIAL;
-import static no.rutebanken.marduk.Constants.EXPORT_NAME;
-import static no.rutebanken.marduk.Constants.FILE_NAME;
-import static no.rutebanken.marduk.Constants.GENERATE_MAP_MATCHING;
-import static no.rutebanken.marduk.Constants.RECIPIENTS;
+import static no.rutebanken.marduk.Constants.*;
 import static no.rutebanken.marduk.routes.status.JobEvent.TimetableAction.VALIDATION_LEVEL_1;
 import static no.rutebanken.marduk.routes.status.JobEvent.TimetableAction.VALIDATION_LEVEL_2;
 
@@ -156,7 +152,7 @@ public class CreateMail {
         if(VALIDATION_LEVEL_1.equals(timetableAction) || JobEvent.TimetableAction.VALIDATION_LEVEL_2.equals(timetableAction) ){
             String message = null;
             if (e.getIn().getHeader(JOB_STATUS_JOB_VALIDATION_LEVEL, String.class).equals(VALIDATION_LEVEL_2.name())) {
-                if (e.getIn().getHeader(GENERATE_MAP_MATCHING, Boolean.class).equals(true)) {
+                if (!ImportGenerateMapMatching.NONE.name().equals(e.getIn().getHeader(GENERATE_MAP_MATCHING, String.class))) {
                     message = "L'import, la validation niveau 1, la génération des tracés, le transfert et la validation niveau 2 du fichier : " + fileName + " se sont correctement effectués.";
                 } else {
                     message = "L'import, la validation niveau 1, le transfert et la validation niveau 2 du fichier : " + fileName + " se sont correctement effectués.";
@@ -164,7 +160,7 @@ public class CreateMail {
             }
 
             if (e.getIn().getHeader(JOB_STATUS_JOB_VALIDATION_LEVEL, String.class).equals(VALIDATION_LEVEL_1.name())){
-                if(e.getIn().getHeader(GENERATE_MAP_MATCHING, Boolean.class).equals(true)){
+                if(!ImportGenerateMapMatching.NONE.name().equals(e.getIn().getHeader(GENERATE_MAP_MATCHING, String.class))){
                     message = "L'import, la validation niveau 1 et la génération des tracés du fichier : " + fileName + " se sont correctement effectués.";
                 } else{
                     message = "L'import et la validation niveau 1 du fichier : " + fileName + " se sont correctement effectués.";

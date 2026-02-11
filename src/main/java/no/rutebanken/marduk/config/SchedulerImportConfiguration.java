@@ -1,6 +1,6 @@
 package no.rutebanken.marduk.config;
 
-import no.rutebanken.marduk.routes.ImportConfigurationJob;
+import no.rutebanken.marduk.jobs.ImportConfigurationJob;
 import org.quartz.SchedulerException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

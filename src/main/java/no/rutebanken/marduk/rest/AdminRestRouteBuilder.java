@@ -20,6 +20,7 @@ import jakarta.ws.rs.NotFoundException;
 import jakarta.ws.rs.core.MediaType;
 import no.rutebanken.marduk.domain.BlobStoreFiles;
 import no.rutebanken.marduk.domain.BlobStoreFiles.File;
+import no.rutebanken.marduk.domain.ChouetteValidationSchedule;
 import no.rutebanken.marduk.domain.ImportGenerateMapMatching;
 import no.rutebanken.marduk.domain.Provider;
 import no.rutebanken.marduk.routes.BaseRouteBuilder;
@@ -30,6 +31,7 @@ import no.rutebanken.marduk.routes.status.JobEvent;
 import no.rutebanken.marduk.security.AuthorizationClaim;
 import no.rutebanken.marduk.security.AuthorizationService;
 import no.rutebanken.marduk.services.BlobStoreService;
+import no.rutebanken.marduk.services.ChouetteValidationScheduleService;
 import no.rutebanken.marduk.services.FileSystemService;
 import no.rutebanken.marduk.services.processors.FileValidationProcessor;
 import no.rutebanken.marduk.services.processors.MultiPartProcessor;
@@ -96,16 +98,20 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
 
     private final FileValidationProcessor fileValidationProcessor;
 
+    private final ChouetteValidationScheduleService chouetteValidationScheduleService;
+
     public AdminRestRouteBuilder(AuthorizationService authorizationService,
                                  BlobStoreService blobStoreService,
                                  FileSystemService fileSystemService,
                                  MultiPartProcessor multiPartProcessor,
-                                 FileValidationProcessor fileValidationProcessor) {
+                                 FileValidationProcessor fileValidationProcessor,
+                                 ChouetteValidationScheduleService chouetteValidationScheduleService) {
         this.authorizationService = authorizationService;
         this.blobStoreService = blobStoreService;
         this.fileSystemService = fileSystemService;
         this.multiPartProcessor = multiPartProcessor;
         this.fileValidationProcessor = fileValidationProcessor;
+        this.chouetteValidationScheduleService = chouetteValidationScheduleService;
     }
 
 
@@ -612,6 +618,21 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .responseMessage().code(200).message(COMMAND_ACCEPTED).endResponseMessage()
                 .to(ROUTE_ADMIN_CHOUETTE_VALIDATE)
 
+                .get("/validate/schedule")
+                .outType(ChouetteValidationSchedule.class)
+                .description("Get next the validate->export process in Chouette")
+                .param().name(PROVIDER).type(RestParamType.path).description(PROVIDER_DESCRIPTION).dataType(INTEGER).endParam()
+                .produces(MediaType.APPLICATION_JSON)
+                .to(ROUTE_ADMIN_GET_CHOUETTE_VALIDATE_SCHEDULE)
+
+                .post("/validate/schedule")
+                .type(ChouetteValidationSchedule.class)
+                .description("Schedule manual validate->export process in Chouette")
+                .param().name(PROVIDER).type(RestParamType.path).description(PROVIDER_DESCRIPTION).dataType(INTEGER).endParam()
+                .consumes(MediaType.APPLICATION_JSON)
+                .responseMessage(200, COMMAND_ACCEPTED)
+                .to(ROUTE_ADMIN_POST_CHOUETTE_VALIDATE_SCHEDULE)
+
                 .post("/delete-exports")
                 .description("Delete all exports linked to provider")
                 .responseMessage().code(200).message("Delete exports command accepted").endResponseMessage()
@@ -650,7 +671,26 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .post("/delete-scheduler-import-configuration/{importConfigurationId}")
                 .description("Delete scheduler import configuration process.")
                 .responseMessage().code(200).message("Delete scheduler import configuration command accepted").endResponseMessage()
-              .to(ROUTE_ADMIN_DELETE_IMPORT_CONFIGURATION_SCHEDULER);
+                .to(ROUTE_ADMIN_DELETE_IMPORT_CONFIGURATION_SCHEDULER)
+
+                .post("/update-scheduler-validation-export")
+                .description("Update scheduler validation and export process.")
+                .consumes(MediaType.TEXT_PLAIN)
+                .produces(MediaType.TEXT_PLAIN)
+                .responseMessage().code(200).message(COMMAND_ACCEPTED).endResponseMessage()
+                .to(ROUTE_ADMIN_VALIDATION_EXPORT_SCHEDULER)
+
+                .get("/get-cron-validation-export/{importConfigurationId}")
+                .description("Get cron for validation and export")
+                .consumes(MediaType.TEXT_PLAIN)
+                .produces(MediaType.APPLICATION_JSON)
+                .responseMessage().code(200).message(COMMAND_ACCEPTED).endResponseMessage()
+                .to(ROUTE_ADMIN_GET_CRON_VALIDATION_EXPORT_SCHEDULER)
+
+                .post("/delete-scheduler-validation-export/{importConfigurationId}")
+                .description("Delete scheduler validation and export.")
+                .responseMessage().code(200).message("Delete scheduler validation and export command accepted").endResponseMessage()
+                .to(ROUTE_ADMIN_DELETE_VALIDATION_EXPORT_SCHEDULER);
 
         declareTimeTableAdminRoute();
 
@@ -1271,6 +1311,27 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .setExchangePattern(ExchangePattern.InOnly)
                 .to("jms:queue:ChouetteValidationQueue");
 
+        from(ROUTE_ADMIN_GET_CHOUETTE_VALIDATE_SCHEDULE)
+                .routeId(ROUTE_ID_ADMIN_GET_CHOUETTE_VALIDATE_SCHEDULE)
+                .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER, Long.class)) != null)
+                .removeHeaders(ALL_CAMEL_HTTP)
+                .log(LoggingLevel.INFO, correlation() + "Retrieve next scheduled chouette validation")
+                .process(e -> {
+                    ChouetteValidationSchedule schedule = new ChouetteValidationSchedule();
+                    schedule.setValidationSchedule(chouetteValidationScheduleService.getNextManualValidationScheduledForProvider(e.getIn().getHeader(PROVIDER, Long.class)));
+                    e.getIn().setBody(schedule);
+                })
+                .end();
+
+        from(ROUTE_ADMIN_POST_CHOUETTE_VALIDATE_SCHEDULE)
+                .routeId(ROUTE_ID_ADMIN_POST_CHOUETTE_VALIDATE_SCHEDULE)
+                .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER, Long.class)) != null)
+                .removeHeaders(ALL_CAMEL_HTTP)
+                .process(e -> chouetteValidationScheduleService.scheduleManualValidationForProvider(
+                                e.getIn().getHeader(PROVIDER, Long.class),
+                                e.getIn().getBody(ChouetteValidationSchedule.class).getValidationSchedule()))
+                .end();
+
         from(ROUTE_ADMIN_DELETE_EXPORTS)
                 .routeId(ROUTE_ID_ADMIN_DELETE_EXPORTS)
                 .setHeader(PROVIDER_ID, header(PROVIDER))
@@ -1330,7 +1391,33 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .removeHeaders(ALL_CAMEL_HTTP)
                 .to("direct:deleteSchedulerImportConfiguration");
 
+        from(ROUTE_ADMIN_VALIDATION_EXPORT_SCHEDULER)
+                .routeId(ROUTE_ID_ADMIN_VALIDATION_EXPORT_SCHEDULER)
+                .to(ROUTE_AUTHORIZE_REQUEST)
+                .setHeader(PROVIDER_ID, header(PROVIDER))
+                .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
+                .log(LoggingLevel.INFO, correlation() + "Update scheduler for the import configuration")
+                .removeHeaders(ALL_CAMEL_HTTP)
+                .to("direct:updateSchedulerValidationExport");
 
+        from(ROUTE_ADMIN_GET_CRON_VALIDATION_EXPORT_SCHEDULER)
+                .routeId(ROUTE_ID_ADMIN_GET_CRON_VALIDATION_EXPORT_SCHEDULER)
+                .to(ROUTE_AUTHORIZE_REQUEST)
+                .setHeader(PROVIDER_ID, header(PROVIDER))
+                .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
+                .setHeader(IMPORT_CONFIGURATION_ID, header("importConfigurationId"))
+                .log(LoggingLevel.INFO, correlation() + "Get cron from scheduler for the validation & export")
+                .removeHeaders(ALL_CAMEL_HTTP)
+                .to("direct:getCronValidationExport");
+
+        from(ROUTE_ADMIN_DELETE_VALIDATION_EXPORT_SCHEDULER)
+                .routeId(ROUTE_ID_ADMIN_DELETE_VALIDATION_EXPORT_SCHEDULER)
+                .setHeader(PROVIDER_ID, header(PROVIDER))
+                .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
+                .setHeader(IMPORT_CONFIGURATION_ID, header("importConfigurationId"))
+                .log(LoggingLevel.INFO, correlation() + "Delete scheduler import configuration")
+                .removeHeaders(ALL_CAMEL_HTTP)
+                .to("direct:deleteSchedulerValidationExport");
     }
 
     public void declareMapAdminRoute() {

@@ -145,6 +145,13 @@ public class RouteDeclarationConstants {
     public static final String ROUTE_ID_ADMIN_CHOUETTE_VALIDATE = "admin-chouette-validate";
     public static final String ROUTE_ADMIN_CHOUETTE_VALIDATE = DIRECT_ROUTE_PREFIX + ROUTE_ID_ADMIN_CHOUETTE_VALIDATE;
 
+    public static final String ROUTE_ID_ADMIN_GET_CHOUETTE_VALIDATE_SCHEDULE = "admin-get-chouette-validate-schedule";
+    public static final String ROUTE_ADMIN_GET_CHOUETTE_VALIDATE_SCHEDULE = DIRECT_ROUTE_PREFIX + ROUTE_ID_ADMIN_GET_CHOUETTE_VALIDATE_SCHEDULE;
+
+    public static final String ROUTE_ID_ADMIN_POST_CHOUETTE_VALIDATE_SCHEDULE = "admin-post-chouette-validate-schedule";
+    public static final String ROUTE_ADMIN_POST_CHOUETTE_VALIDATE_SCHEDULE =
+            DIRECT_ROUTE_PREFIX + ROUTE_ID_ADMIN_POST_CHOUETTE_VALIDATE_SCHEDULE;
+
     public static final String ROUTE_ID_ADMIN_DELETE_EXPORTS = "admin-delete-exports";
     public static final String ROUTE_ADMIN_DELETE_EXPORTS =  DIRECT_ROUTE_PREFIX + ROUTE_ID_ADMIN_DELETE_EXPORTS;
 
@@ -162,6 +169,15 @@ public class RouteDeclarationConstants {
 
     public static final String ROUTE_ID_ADMIN_DELETE_IMPORT_CONFIGURATION_SCHEDULER = "admin-delete-import-configuration-scheduler";
     public static final String ROUTE_ADMIN_DELETE_IMPORT_CONFIGURATION_SCHEDULER = DIRECT_ROUTE_PREFIX + ROUTE_ID_ADMIN_DELETE_IMPORT_CONFIGURATION_SCHEDULER;
+
+    public static final String ROUTE_ID_ADMIN_VALIDATION_EXPORT_SCHEDULER = "admin-validation-export-scheduler";
+    public static final String ROUTE_ADMIN_VALIDATION_EXPORT_SCHEDULER = DIRECT_ROUTE_PREFIX + ROUTE_ID_ADMIN_VALIDATION_EXPORT_SCHEDULER;
+
+    public static final String ROUTE_ID_ADMIN_GET_CRON_VALIDATION_EXPORT_SCHEDULER = "admin-get-cron-validation-export-scheduler";
+    public static final String ROUTE_ADMIN_GET_CRON_VALIDATION_EXPORT_SCHEDULER = DIRECT_ROUTE_PREFIX + ROUTE_ID_ADMIN_GET_CRON_VALIDATION_EXPORT_SCHEDULER;
+
+    public static final String ROUTE_ID_ADMIN_DELETE_VALIDATION_EXPORT_SCHEDULER = "admin-delete-validation-export-scheduler";
+    public static final String ROUTE_ADMIN_DELETE_VALIDATION_EXPORT_SCHEDULER = DIRECT_ROUTE_PREFIX + ROUTE_ID_ADMIN_DELETE_VALIDATION_EXPORT_SCHEDULER;
 
     // map admin
 

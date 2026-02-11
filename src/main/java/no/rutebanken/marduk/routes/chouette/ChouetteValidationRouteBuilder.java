@@ -26,7 +26,6 @@ import no.rutebanken.marduk.routes.status.JobEvent.State;
 import org.apache.camel.Exchange;
 import org.apache.camel.ExchangePattern;
 import org.apache.camel.LoggingLevel;
-import org.apache.camel.builder.PredicateBuilder;
 import org.apache.commons.collections4.CollectionUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -36,9 +35,9 @@ import java.util.List;
 import java.util.UUID;
 
 import static no.rutebanken.marduk.Constants.*;
-import static no.rutebanken.marduk.utils.Utils.getLastPathElementOfUrl;
 import static no.rutebanken.marduk.routes.status.JobEvent.TimetableAction.VALIDATION_LEVEL_1;
 import static no.rutebanken.marduk.routes.status.JobEvent.TimetableAction.VALIDATION_LEVEL_2;
+import static no.rutebanken.marduk.utils.Utils.getLastPathElementOfUrl;
 import static no.rutebanken.marduk.utils.constants.RouteDeclarationConstants.*;
 import static org.apache.camel.support.builder.PredicateBuilder.and;
 import static org.apache.camel.support.builder.PredicateBuilder.or;
@@ -177,11 +176,13 @@ public class ChouetteValidationRouteBuilder extends AbstractChouetteRouteBuilder
                 .process(e -> {
                     JobEvent.providerJobBuilder(e).timetableAction(e.getIn().getHeader(JOB_STATUS_JOB_VALIDATION_LEVEL, JobEvent.TimetableAction.class)).state(JobEvent.State.OK).build();
                     if (e.getIn().getHeader(WORKLOW, String.class) != null) {
-                        if ("VALIDATION".equals(e.getIn().getHeader(WORKLOW, String.class))
+                        if (("VALIDATION".equals(e.getIn().getHeader(WORKLOW, String.class))
                                 && VALIDATION_LEVEL_2.name().equals(e.getIn().getHeader(JOB_STATUS_JOB_VALIDATION_LEVEL, String.class))
                                 || "IMPORT".equals(e.getIn().getHeader(WORKLOW, String.class))
                                 && VALIDATION_LEVEL_1.name().equals(e.getIn().getHeader(JOB_STATUS_JOB_VALIDATION_LEVEL, String.class))
                                 && ImportGenerateMapMatching.NONE.name().equals(e.getIn().getHeader(GENERATE_MAP_MATCHING, String.class)))
+                                || isValidationExportScheduled(e)
+                        )
                         {
                             JobEvent.TimetableAction timetableAction = e.getIn().getHeader(JOB_STATUS_JOB_VALIDATION_LEVEL, String.class).equals(VALIDATION_LEVEL_2.name()) ? VALIDATION_LEVEL_2 : VALIDATION_LEVEL_1;
                             createMail.createMail(e, null, timetableAction, true);
@@ -250,7 +251,7 @@ public class ChouetteValidationRouteBuilder extends AbstractChouetteRouteBuilder
                                                 (shouldTransferData(e) ||
                                                 e.getIn().getHeader(IMPORT, Boolean.class) == null ||
                                                 "VALIDATION".equals(e.getIn().getHeader(WORKLOW, String.class)) ||
-                                                "EXPORT".equals(e.getIn().getHeader(WORKLOW, String.class))
+                                                ("EXPORT".equals(e.getIn().getHeader(WORKLOW, String.class)) && !isValidationExportScheduled(e))
                                         )
                                 )
                             .log(LoggingLevel.INFO, correlation() + "Validation ok, transfering data to next dataspace")

@@ -144,6 +144,7 @@ public class Constants {
     public static final String NOTIFICATION_URL = "NotificationUrl";
 
     public static final String IMPORT_CONFIGURATION_SCHEDULER = "importConfigurationScheduler";
+    public static final String VALIDATION_EXPORT_SCHEDULER = "validationExportScheduler";
 
     public static final String ANALYZE_ACTION = "Analyze";
 

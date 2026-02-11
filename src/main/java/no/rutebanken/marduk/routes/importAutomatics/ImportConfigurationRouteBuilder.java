@@ -2,17 +2,18 @@ package no.rutebanken.marduk.routes.importAutomatics;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.jcraft.jsch.*;
-import no.rutebanken.marduk.utils.CipherEncryption;
-import no.rutebanken.marduk.utils.SendMail;
-import no.rutebanken.marduk.config.SchedulerImportConfiguration;
 import no.rutebanken.marduk.domain.*;
 import no.rutebanken.marduk.exceptions.AutomaticImportException;
+import no.rutebanken.marduk.jobs.ChouetteValidationExportJob;
+import no.rutebanken.marduk.jobs.ImportConfigurationJob;
 import no.rutebanken.marduk.repository.ImportConfigurationDAO;
-import no.rutebanken.marduk.routes.ImportConfigurationJob;
 import no.rutebanken.marduk.routes.MyAuthenticator;
 import no.rutebanken.marduk.routes.chouette.AbstractChouetteRouteBuilder;
 import no.rutebanken.marduk.routes.file.FileType;
 import no.rutebanken.marduk.services.FileSystemService;
+import no.rutebanken.marduk.services.QuartzService;
+import no.rutebanken.marduk.utils.CipherEncryption;
+import no.rutebanken.marduk.utils.SendMail;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.apache.commons.collections4.CollectionUtils;
@@ -27,9 +28,9 @@ import org.json.JSONException;
 import org.json.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
+import org.jspecify.annotations.NonNull;
 import org.quartz.*;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.scheduling.quartz.SchedulerFactoryBean;
 import org.springframework.stereotype.Component;
 
 import javax.net.ssl.HttpsURLConnection;
@@ -49,7 +50,6 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
-import java.util.Calendar;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.zip.ZipException;
@@ -79,22 +79,22 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
     public static final String ERROR_INVALID_NETEX_POI_OR_PARKING_OR_STOP_PLACE_ZIP = "Le fichier ZIP NeTEx POI ou parking ou arrêts à importer est invalide, il doit contenir seulement un fichier XML";
     public static final String SIGNING = "<br><br>Cordialement,<br>L'équipe Mobi-iti";
 
-    private final SchedulerImportConfiguration schedulerImportConfiguration;
     private final CipherEncryption cipherEncryption;
     private final ImportConfigurationDAO importConfigurationDAO;
     private final SendMail sendMail;
     private final FileSystemService fileSystemService;
+    private final QuartzService quartzService;
 
-    public ImportConfigurationRouteBuilder(SchedulerImportConfiguration schedulerImportConfiguration,
-                                           CipherEncryption cipherEncryption,
+    public ImportConfigurationRouteBuilder(CipherEncryption cipherEncryption,
                                            ImportConfigurationDAO importConfigurationDAO,
                                            SendMail sendMail,
-                                           FileSystemService fileSystemService) {
-        this.schedulerImportConfiguration = schedulerImportConfiguration;
+                                           FileSystemService fileSystemService,
+                                           QuartzService quartzService) {
         this.cipherEncryption = cipherEncryption;
         this.importConfigurationDAO = importConfigurationDAO;
         this.sendMail = sendMail;
         this.fileSystemService = fileSystemService;
+        this.quartzService = quartzService;
     }
 
     @Override
@@ -126,6 +126,21 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
                 .log(LoggingLevel.INFO, getClass().getName(), "Get scheduler Import Configuration")
                 .process(this::getCron)
                 .routeId("get-cron-scheduler-process-import-configuration");
+
+        from("direct:updateSchedulerValidationExport")
+                .log(LoggingLevel.INFO, getClass().getName(), "Update scheduler Import configuration")
+                .process(this::updateSchedulerValidationExport)
+                .routeId("update-scheduler-process-validation-export");
+
+        from("direct:deleteSchedulerValidationExport")
+                .log(LoggingLevel.INFO, getClass().getName(), "Delete scheduler Import configuration")
+                .process(this::deleteSchedulerValidationExport)
+                .routeId("delete-scheduler-process-validation-export");
+
+        from("direct:getCronValidationExport")
+                .log(LoggingLevel.INFO, getClass().getName(), "Get scheduler for validation export")
+                .process(this::getCronValidationExport)
+                .routeId("get-cron-scheduler-process-validation-export");
     }
 
     private void handleImportConfigurationQueueMessage(Exchange e) {
@@ -711,17 +726,49 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
     }
 
     private void getCron(Exchange e) throws SchedulerException, JSONException {
-        SchedulerFactoryBean scheduler = schedulerImportConfiguration.getSchedulerImportConfiguration();
         Provider provider = getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class));
         Integer importConfigurationId = e.getIn().getHeader(IMPORT_CONFIGURATION_ID, Integer.class);
-        CronTrigger trigger = (CronTrigger) scheduler.getScheduler().getTrigger(TriggerKey.triggerKey("ImportConfigurationJobTrigger-" + provider.chouetteInfo.referential + "-" + importConfigurationId));
-        if (trigger != null) {
-            String[] dateFromCron = trigger.getCronExpression().split(" ");
-            JSONObject jsonObject = new JSONObject();
-            jsonObject.append("hour", dateFromCron[2]);
-            jsonObject.append("minutes", dateFromCron[1]);
-            jsonObject.append("date", trigger.getStartTime().getTime());
-            jsonObject.append("applicationDays", dateFromCron[5]);
+        String triggerName = QuartzService.getImportConfigurationJobTriggerName(provider, importConfigurationId);
+        Optional<Trigger> trigger = quartzService.findTriggerByName(triggerName);
+        if (trigger.isPresent()) {
+            JSONObject jsonObject = cronTriggerToJson(trigger);
+            e.getIn().setBody(jsonObject.toString());
+        } else {
+            JSONObject jsonObject = emptyCronTriggerJson();
+            e.getIn().setBody(jsonObject.toString());
+        }
+    }
+
+    private static @NonNull JSONObject cronTriggerToJson(Optional<Trigger> trigger) throws JSONException {
+        CronTrigger cronTrigger = (CronTrigger) trigger.get();
+        String[] dateFromCron = cronTrigger.getCronExpression().split(" ");
+        JSONObject jsonObject = new JSONObject();
+        jsonObject.append("hour", dateFromCron[2]);
+        jsonObject.append("minutes", dateFromCron[1]);
+        jsonObject.append("date", cronTrigger.getStartTime().getTime());
+        jsonObject.append("applicationDays", dateFromCron[5]);
+        return jsonObject;
+    }
+
+    private static @NonNull JSONObject emptyCronTriggerJson() throws JSONException {
+        JSONObject jsonObject = new JSONObject();
+        jsonObject.append("hour", "");
+        jsonObject.append("minutes", "");
+        jsonObject.append("date", "");
+        jsonObject.append("applicationDays", "");
+        return jsonObject;
+    }
+
+    private void getCronValidationExport(Exchange e) throws JSONException {
+        Provider provider = getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class));
+        Integer importConfigurationId = e.getIn().getHeader(IMPORT_CONFIGURATION_ID, Integer.class);
+        String triggerName = QuartzService.getAutomaticChouetteValidationExportJobTriggerName(provider, importConfigurationId);
+        Optional<Trigger> trigger = quartzService.findTriggerByName(triggerName);
+        if (trigger.isPresent()) {
+            JSONObject jsonObject = cronTriggerToJson(trigger);
+            e.getIn().setBody(jsonObject.toString());
+        } else {
+            JSONObject jsonObject = emptyCronTriggerJson();
             e.getIn().setBody(jsonObject.toString());
         }
     }
@@ -731,70 +778,104 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
         Provider provider = getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class));
         if (headers != null) {
             if (headers.get(IMPORT_CONFIGURATION_SCHEDULER) != null && provider.chouetteInfo.referential != null && headers.get(IMPORT_CONFIGURATION_ID) != null) {
-                SchedulerFactoryBean scheduler = schedulerImportConfiguration.getSchedulerImportConfiguration();
 
                 String importConfigurationSchedulerCron = (String) headers.get(IMPORT_CONFIGURATION_SCHEDULER);
                 Integer importConfigurationId = (Integer) headers.get(IMPORT_CONFIGURATION_ID);
 
                 if (StringUtils.isNotEmpty(importConfigurationSchedulerCron)) {
-                    String[] dateFromCron = importConfigurationSchedulerCron.split(" ");
 
-                    Date startDate = getStartDate();
 
-                    importConfigurationSchedulerCron = dateFromCron[0] + " " + dateFromCron[1] + " " + dateFromCron[2] + " ? * " + dateFromCron[5] + " " + dateFromCron[6];
+                    JobDetail importConfigurationJobDetails = JobBuilder.newJob(ImportConfigurationJob.class)
+                            .withIdentity(QuartzService.getImportConfigurationJobName(provider, importConfigurationId)).storeDurably(true)
+                            .build();
 
-                    JobDetail importConfigurationJobDetails = JobBuilder.newJob(ImportConfigurationJob.class).withIdentity("ImportConfigurationJobDetails-" + provider.chouetteInfo.referential + "-" + importConfigurationId).storeDurably(true).build();
+                    importConfigurationSchedulerCron = cronHeaderToQuartzCronSchedule(importConfigurationSchedulerCron);
+                    Trigger importConfigurationTrigger = TriggerBuilder.newTrigger()
+                            .forJob(importConfigurationJobDetails)
+                            .withIdentity(QuartzService.getImportConfigurationJobTriggerName(provider, importConfigurationId))
+                            .withSchedule(CronScheduleBuilder
+                                    .cronSchedule(importConfigurationSchedulerCron)
+                                    .withMisfireHandlingInstructionDoNothing())
+                            .startAt(new Date())
+                            .build();
 
-                    Trigger importConfigurationTrigger = TriggerBuilder.newTrigger().forJob(importConfigurationJobDetails).withIdentity("ImportConfigurationJobTrigger-" + provider.chouetteInfo.referential + "-" + importConfigurationId).withSchedule(CronScheduleBuilder.cronSchedule(importConfigurationSchedulerCron).withMisfireHandlingInstructionDoNothing()).startAt(startDate).build();
-
-                    scheduler.start();
-
-                    if (scheduler.getScheduler().checkExists(importConfigurationJobDetails.getKey())) {
-                        scheduler.getScheduler().deleteJob(importConfigurationJobDetails.getKey());
-                    }
-
-                    scheduler.getScheduler().scheduleJob(importConfigurationJobDetails, importConfigurationTrigger);
+                    quartzService.rescheduleJob(importConfigurationJobDetails, importConfigurationTrigger);
 
                     log.info("Import Configuration Scheduler for " + provider.chouetteInfo.referential + "-" + importConfigurationId + " created with cron expression: " + importConfigurationSchedulerCron);
                 } else {
-                    deleteScheduler(provider, scheduler, importConfigurationId);
+                    deleteSchedulerImportConfiguration(provider, importConfigurationId);
                 }
             }
         }
     }
 
-    private void deleteScheduler(Provider provider, SchedulerFactoryBean scheduler, Integer importConfigurationId) throws SchedulerException {
-        JobDetail importConfigurationJobDetails = JobBuilder.newJob(ImportConfigurationJob.class).withIdentity("ImportConfigurationJobDetails-" + provider.chouetteInfo.referential + "-" + importConfigurationId).build();
-        if (scheduler.getScheduler().checkExists(importConfigurationJobDetails.getKey())) {
-            scheduler.getScheduler().deleteJob(importConfigurationJobDetails.getKey());
-            log.info("Import Configuration Scheduler for {}-{} deleted", provider.chouetteInfo.referential, importConfigurationId);
-        } else {
-            log.info("Import Configuration Scheduler for {}-{} not deleted because not existed", provider.chouetteInfo.referential, importConfigurationId);
+    private static @NonNull String cronHeaderToQuartzCronSchedule(String importConfigurationSchedulerCron) {
+        String[] cronParts = importConfigurationSchedulerCron.split(" ");
+        if (cronParts.length != 7) {
+            throw new IllegalArgumentException("Invalid cron expression: " + importConfigurationSchedulerCron);
         }
+        return cronParts[0] + " " + cronParts[1] + " " + cronParts[2] + " ? * " + cronParts[5] + " " + cronParts[6];
+    }
+
+    private void deleteSchedulerImportConfiguration(Provider provider, Integer importConfigurationId) throws SchedulerException {
+        String jobName = QuartzService.getImportConfigurationJobName(provider, importConfigurationId);
+        quartzService.deleteJobByName(jobName);
     }
 
     private void deleteSchedulerImportConfiguration(Exchange e) throws SchedulerException {
         Provider provider = getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class));
         Integer importConfigurationId = e.getIn().getHeader(IMPORT_CONFIGURATION_ID, Integer.class);
         if (provider.chouetteInfo.referential != null && importConfigurationId != null) {
-            SchedulerFactoryBean scheduler = schedulerImportConfiguration.getSchedulerImportConfiguration();
-            deleteScheduler(provider, scheduler, importConfigurationId);
+            deleteSchedulerImportConfiguration(provider, importConfigurationId);
         }
     }
 
-    /**
-     * @return the start date of the cron : 1st day of the current month
-     */
-    private Date getStartDate() {
-        Calendar currentDate = Calendar.getInstance();
-        int month = currentDate.get(Calendar.MONTH);
-        int year = currentDate.get(Calendar.YEAR);
+    private void updateSchedulerValidationExport(Exchange e) throws SchedulerException {
+        Provider provider = getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class));
+        Map<String, Object> headers = (Map<String, Object>) e.getIn().getBody(Map.class).get("headers");
+        Integer importConfigurationId = (Integer) headers.get(IMPORT_CONFIGURATION_ID);
+        String cronExpression = (String) headers.get(VALIDATION_EXPORT_SCHEDULER);
+        if (StringUtils.isBlank(cronExpression)) {
+            deleteSchedulerValidationExport(provider, importConfigurationId);
+        } else {
+            JobDataMap jobDataMap = new JobDataMap(Map.of(PROVIDER_ID, provider.getId(), IMPORT_CONFIGURATION_ID,
+                    String.valueOf(importConfigurationId)));
 
-        Calendar startDate = Calendar.getInstance();
-        startDate.set(Calendar.DAY_OF_MONTH, 1);
-        startDate.set(Calendar.MONTH, month);
-        startDate.set(Calendar.YEAR, year);
-        return startDate.getTime();
+            JobDetail jobDetail = JobBuilder.newJob(ChouetteValidationExportJob.class)
+                    .setJobData(jobDataMap)
+                    .withIdentity(QuartzService.getAutomaticChouetteValidationExportJobName(provider, importConfigurationId))
+                    .storeDurably(true)
+                    .build();
+
+            String quartzCronSchedule = cronHeaderToQuartzCronSchedule(cronExpression);
+
+            Trigger cronTrigger = TriggerBuilder.newTrigger()
+                    .forJob(jobDetail)
+                    .withIdentity(QuartzService.getAutomaticChouetteValidationExportJobTriggerName(provider, importConfigurationId))
+                    .withSchedule(CronScheduleBuilder
+                            .cronSchedule(quartzCronSchedule)
+                            .withMisfireHandlingInstructionDoNothing())
+                    .startAt(new Date())
+                    .build();
+
+            quartzService.rescheduleJob(jobDetail, cronTrigger);
+        }
+
     }
+
+    private void deleteSchedulerValidationExport(Provider provider, Integer importConfigurationId) throws SchedulerException {
+        String jobName = QuartzService.getAutomaticChouetteValidationExportJobName(provider,
+                importConfigurationId);
+        quartzService.deleteJobByName(jobName);
+    }
+
+    private void deleteSchedulerValidationExport(Exchange e) throws SchedulerException {
+        Provider provider = getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class));
+        Integer importConfigurationId = e.getIn().getHeader(IMPORT_CONFIGURATION_ID, Integer.class);
+        if (provider.chouetteInfo.referential != null && importConfigurationId != null) {
+            deleteSchedulerValidationExport(provider, importConfigurationId);
+        }
+    }
+
 }
 

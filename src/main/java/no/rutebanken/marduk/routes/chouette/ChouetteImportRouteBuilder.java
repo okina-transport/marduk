@@ -356,6 +356,8 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
                                 .log(LoggingLevel.INFO, correlation() + "Import ok, triggering validation")
                                 .setHeader(JOB_STATUS_JOB_VALIDATION_LEVEL, constant(JobEvent.TimetableAction.VALIDATION_LEVEL_1.name()))
                                 .to("jms:queue:ChouetteValidationQueue")
+                            .when(method(getClass(), "isValidationExportScheduled").isEqualTo(true))
+                                .log(LoggingLevel.INFO, correlation() + "Import ok, validation and export are scheduled, stopping here")
                             .when(method(getClass(), "shouldTransferData").isEqualTo(true))
                                 .log(LoggingLevel.INFO, correlation() + "Import ok, transfering data to next dataspace")
                                 .to("jms:queue:ChouetteTransferExportQueue")
