@@ -18,8 +18,6 @@ package no.rutebanken.marduk.routes.fares;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import no.rutebanken.marduk.Constants;
-import no.rutebanken.marduk.utils.ImportRouteBuilder;
-import no.rutebanken.marduk.utils.PollJobStatusRoute;
 import no.rutebanken.marduk.routes.chouette.*;
 import no.rutebanken.marduk.routes.chouette.json.JobResponse;
 import no.rutebanken.marduk.routes.chouette.json.JobResponseWithLinks;
@@ -27,6 +25,8 @@ import no.rutebanken.marduk.routes.status.JobEvent;
 import no.rutebanken.marduk.routes.status.JobEvent.State;
 import no.rutebanken.marduk.routes.status.JobEvent.TimetableAction;
 import no.rutebanken.marduk.security.TokenService;
+import no.rutebanken.marduk.utils.ImportRouteBuilder;
+import no.rutebanken.marduk.utils.PollJobStatusRoute;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.builder.PredicateBuilder;
@@ -125,6 +125,9 @@ public class FaresPollJobStatusRoute extends AbstractChouetteRouteBuilder {
                         uriBuilder.addParameter("addActionParameters", Boolean.FALSE.toString());
                     String newUri = uriBuilder.toString();
                     exchange.setProperty("fares_url", newUri);
+                    if (exchange.getIn().getHeader("Authorization") == null) {
+                        exchange.getIn().setHeader("Authorization", "Bearer " + tokenService.getToken());
+                    }
                 })
                 .toD("${exchangeProperty.fares_url}")
                 .unmarshal().json(JsonLibrary.Jackson, JobResponse[].class)
