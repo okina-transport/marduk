@@ -39,6 +39,7 @@ public class ExportTemplate implements Serializable {
     private boolean exportGeneratedMissingQuays;
     private boolean exportExternalIds;
     private String status;
+    private boolean includeFares;
 
 
 
@@ -292,5 +293,13 @@ public class ExportTemplate implements Serializable {
 
     public void setStatus(String status) {
         this.status = status;
+    }
+
+    public boolean isIncludeFares() {
+        return includeFares;
+    }
+
+    public void setIncludeFares(boolean includeFares) {
+        this.includeFares = includeFares;
     }
 }

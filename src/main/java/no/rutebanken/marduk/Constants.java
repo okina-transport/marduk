@@ -94,6 +94,9 @@ public class Constants {
     // (providerId can change during the process when transferring data from one referential to another
     public static final String CORRELATION_ID = "RutebankenCorrelationId";
     public static final String CHOUETTE_REFERENTIAL = "RutebankenChouetteReferential";
+    public static final String FARES_INCLUDED_HEADER = "faresIncluded";
+    public static final String FARES_EXPORT_STATUS = "faresExportStatus";
+    public static final String FARES_DIRECTORY = "faresDirectory";
     public static final String JSON_PART = "RutebankenJsonPart";
     public static final String FILE_NAME = "RutebankenFileName";
     public static final String USER = "RutebankenUser";

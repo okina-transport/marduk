@@ -26,6 +26,7 @@ import no.rutebanken.marduk.routes.file.ZipFileUtils;
 import no.rutebanken.marduk.routes.status.JobEvent;
 import no.rutebanken.marduk.routes.status.JobEvent.State;
 import no.rutebanken.marduk.routes.status.JobEvent.TimetableAction;
+import no.rutebanken.marduk.services.processors.MergeOfferAndFaresInGTFSProcessor;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.component.http.HttpMethods;
@@ -58,20 +59,23 @@ import static no.rutebanken.marduk.utils.constants.RouteParamsConstants.Headers.
 @Component
 public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder {
 
-    @Value("${chouette.url}")
-    private String chouetteUrl;
 
-    @Value("${google.publish.public:false}")
-    private boolean publicPublication;
+    private final String chouetteUrl;
+    private final boolean publicPublication;
+    private final ExportToConsumersProcessor exportToConsumersProcessor;
+    private final UpdateExportTemplateProcessor updateExportTemplateProcessor;
+    private final CreateMail createMail;
+    private final MergeOfferAndFaresInGTFSProcessor mergeOfferAndFaresInGTFSProcessor;
 
-    @Autowired
-    ExportToConsumersProcessor exportToConsumersProcessor;
-
-    @Autowired
-    UpdateExportTemplateProcessor updateExportTemplateProcessor;
-
-    @Autowired
-    CreateMail createMail;
+    public ChouetteExportGtfsRouteBuilder(@Value("${chouette.url}") String chouetteUrl, @Value("${google.publish.public:false}") boolean publicPublication, ExportToConsumersProcessor exportToConsumersProcessor,
+                                          UpdateExportTemplateProcessor updateExportTemplateProcessor, CreateMail createMail, MergeOfferAndFaresInGTFSProcessor mergeOfferAndFaresInGTFSProcessor) {
+        this.chouetteUrl = chouetteUrl;
+        this.publicPublication = publicPublication;
+        this.exportToConsumersProcessor = exportToConsumersProcessor;
+        this.updateExportTemplateProcessor = updateExportTemplateProcessor;
+        this.createMail = createMail;
+        this.mergeOfferAndFaresInGTFSProcessor = mergeOfferAndFaresInGTFSProcessor;
+    }
 
     @Override
     public void configure() throws Exception {
@@ -130,60 +134,95 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
                     }else{
                         action = TimetableAction.EXPORT;
                     }
-                    e.getIn().setHeader(EXPORT_ACTION, action);
+                    e.getIn().setHeader(EXPORT_ACTION, action.toString());
                 })
                 .choice()
                     .when(simple("${header.action_report_result} == 'OK'"))
-                        .log(LoggingLevel.INFO,"Export GTFS terminé - Fichier : ${header." + FILE_NAME + "} - Espace de données : ${header." + CHOUETTE_REFERENTIAL + "}")
-                        .log(LoggingLevel.INFO, correlation() + "Export ended with status '${header.action_report_result}'")
-                        .log(LoggingLevel.INFO, correlation() + "Calling url ${header.data_url}")
-                        .removeHeaders(ALL_CAMEL_HEADERS)
-                        .setBody(simple(""))
-                        .setHeader(Exchange.HTTP_METHOD, constant(org.apache.camel.component.http.HttpMethods.GET))
-                        .choice()
-                            .when(e -> e.getIn().getHeader(GTFS_EXPORT_GLOBAL, Boolean.class))
-                                .toD("${header.data_url}")
-                                .setHeader(FILE_HANDLE, simple("mobiiti_technique/gtfs/allFiles/${header.ID_FORMAT}/${header." + CHOUETTE_REFERENTIAL + "}-" + Constants.CURRENT_AGGREGATED_GTFS_FILENAME))
-                                .to("direct:uploadBlob")
-                                .to("direct:exportMergedGtfs")
-                            .endChoice()
-                        .end()
-                        .process(exportToConsumersProcessor)
-                        .to("direct:updateExportToConsumerStatus")
-                        .setHeader(BLOBSTORE_MAKE_BLOB_PUBLIC, constant(publicPublication))
-                        .log(LoggingLevel.INFO,"Upload to consumers and blob store completed")
-                        .process(updateExportTemplateProcessor)
-                        .process(e -> {
-                            TimetableAction action =  (TimetableAction) e.getIn().getHeader(EXPORT_ACTION);
-                            JobEvent.providerJobBuilder(e).timetableAction(action).state(JobEvent.State.OK).build();
-                            if (e.getIn().getHeader(WORKLOW, String.class) != null) {
-                                createMail.createMail(e, "GTFS", JobEvent.TimetableAction.EXPORT, true);
-                            }
-                        })
-                    .endChoice()
-                    .when(simple("${header.action_report_result} == 'NOK'"))
-                        .log(LoggingLevel.WARN, correlation() + "Export failed")
-                        .process(e -> {
-                            TimetableAction action =  (TimetableAction) e.getIn().getHeader(EXPORT_ACTION);
-                            JobEvent.providerJobBuilder(e).timetableAction(action).state(JobEvent.State.FAILED).build();
-                            if (e.getIn().getHeader(WORKLOW, String.class) != null) {
-                                createMail.createMail(e, "GTFS", JobEvent.TimetableAction.EXPORT, false);
-                            }
-                        })
-                    .endChoice()
+                        .to("direct:handleGtfsExportOK")
                     .otherwise()
-                        .log(LoggingLevel.ERROR, correlation() + "Something went wrong on export")
-                        .process(e -> {
-                            TimetableAction action =  (TimetableAction) e.getIn().getHeader(EXPORT_ACTION);
-                            JobEvent.providerJobBuilder(e).timetableAction(action).state(JobEvent.State.FAILED).build();
-                            if (e.getIn().getHeader(WORKLOW, String.class) != null) {
-                                createMail.createMail(e, "GTFS", JobEvent.TimetableAction.EXPORT, false);
-                            }
-                        })
+                        .to("direct:handleGtfsExportERROR")
+                .end()
+                .routeId("chouette-process-export-status");
+
+
+        from("direct:handleGtfsExportERROR")
+                .choice()
+                .when(simple("${header.action_report_result} == 'NOK'"))
+                    .log(LoggingLevel.WARN, correlation() + "Export failed")
+                    .process(e -> {
+                        TimetableAction action =  TimetableAction.valueOf(e.getIn().getHeader(EXPORT_ACTION, String.class));
+                        JobEvent.providerJobBuilder(e).timetableAction(action).state(State.FAILED).build();
+                        if (e.getIn().getHeader(WORKLOW, String.class) != null) {
+                            createMail.createMail(e, "GTFS", TimetableAction.EXPORT, false);
+                        }
+                    })
+                .otherwise()
+                    .log(LoggingLevel.ERROR, correlation() + "Something went wrong on export")
+                    .process(e -> {
+                        TimetableAction action = TimetableAction.valueOf(e.getIn().getHeader(EXPORT_ACTION, String.class));
+                        JobEvent.providerJobBuilder(e).timetableAction(action).state(State.FAILED).build();
+                        if (e.getIn().getHeader(WORKLOW, String.class) != null) {
+                            createMail.createMail(e, "GTFS", TimetableAction.EXPORT, false);
+                        }
+                    })
+                .endChoice()
+                .to(ROUTE_UPDATE_STATUS)
+                .routeId("handle-gtfs-export-error");
+
+        from("direct:handleGtfsExportOK")
+                .log(LoggingLevel.INFO,"Export GTFS terminé - Fichier : ${header." + FILE_NAME + "} - Espace de données : ${header." + CHOUETTE_REFERENTIAL + "}")
+                .log(LoggingLevel.INFO, correlation() + "Export ended with status '${header.action_report_result}'")
+                .log(LoggingLevel.INFO, correlation() + "Calling url ${header.data_url}")
+                .removeHeaders(ALL_CAMEL_HEADERS)
+                .setBody(simple(""))
+                .setHeader(Exchange.HTTP_METHOD, constant(org.apache.camel.component.http.HttpMethods.GET))
+                .choice()
+                .when(e -> e.getIn().getHeader(GTFS_EXPORT_GLOBAL, Boolean.class))
+                .toD("${header.data_url}")
+                .setHeader(FILE_HANDLE, simple("mobiiti_technique/gtfs/allFiles/${header.ID_FORMAT}/${header." + CHOUETTE_REFERENTIAL + "}-" + Constants.CURRENT_AGGREGATED_GTFS_FILENAME))
+                .to("direct:uploadBlob")
+                .to("direct:exportMergedGtfs")
                 .endChoice()
                 .end()
+                .choice()
+                .when(header(FARES_INCLUDED_HEADER).isEqualTo(Boolean.TRUE))
+                   .log(LoggingLevel.INFO,"Launching fares export")
+                   .to("jms:queue:exportGtfsFaresQueue")
+                .otherwise()
+                   .to("direct:terminateGtfsExport")
+                .end()
+
+                .routeId("handle-gtfs-export-ok");
+
+        from("jms:queue:exportGtfsFaresCompleted")
+                .choice()
+                .when(header(FARES_EXPORT_STATUS).isEqualTo("OK"))
+                    .log(LoggingLevel.INFO,"GTFS fares export completed successfully")
+                    .process(mergeOfferAndFaresInGTFSProcessor)
+                    .to("direct:terminateGtfsExport")
+                .otherwise()
+                    .log(LoggingLevel.ERROR,"Error on GTFS fares export")
+                    .to("direct:handleGtfsExportERROR")
+                .endChoice()
+                .end()
+                .routeId("export-gtfs-fares-completed");
+
+        from("direct:terminateGtfsExport")
+                .process(exportToConsumersProcessor)
+                .to("direct:updateExportToConsumerStatus")
+                .setHeader(BLOBSTORE_MAKE_BLOB_PUBLIC, constant(publicPublication))
+                .log(LoggingLevel.INFO,"Upload to consumers and blob store completed")
+                .process(updateExportTemplateProcessor)
+                .process(e -> {
+                    TimetableAction action =  TimetableAction.valueOf(e.getIn().getHeader(EXPORT_ACTION, String.class));
+                    JobEvent.providerJobBuilder(e).timetableAction(action).state(State.OK).build();
+                    if (e.getIn().getHeader(WORKLOW, String.class) != null) {
+                        createMail.createMail(e, "GTFS", TimetableAction.EXPORT, true);
+                    }
+                })
                 .to(ROUTE_UPDATE_STATUS)
-                .routeId("chouette-process-export-status");
+        .routeId("terminate-gtfs-export");
+
 
         from("direct:addGtfsFeedInfo")
                 .log(LoggingLevel.INFO, correlation() + "Adding feed_info.txt to GTFS file")

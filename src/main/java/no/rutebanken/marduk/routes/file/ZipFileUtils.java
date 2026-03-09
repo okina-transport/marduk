@@ -40,6 +40,7 @@ import java.nio.file.*;
 import java.nio.file.FileSystem;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 import java.util.zip.ZipInputStream;
@@ -187,6 +188,24 @@ public class ZipFileUtils {
         }
     }
 
+    public static File zipFilesWithExtensionInFolder(String folder, String targetFilePath, String extension) {
+        try {
+
+            FileOutputStream out = new FileOutputStream(targetFilePath);
+            ZipOutputStream outZip = new ZipOutputStream(out);
+
+            List<String> extensions = List.of(extension);
+            FileUtils.listFiles(new File(folder), extensions.toArray(new String[0]), true).forEach(file -> addToZipFile(file, outZip));
+
+            outZip.close();
+            out.close();
+
+            return new File(targetFilePath);
+        } catch (IOException ioe) {
+            throw new MardukException("Failed to zip files in folder: " + ioe.getMessage(), ioe);
+        }
+    }
+
     public static void addToZipFile(File file, ZipOutputStream zos) {
         try {
             try (FileInputStream fis = new FileInputStream(file)) {
@@ -244,6 +263,38 @@ public class ZipFileUtils {
             tmp.delete();
         } catch (IOException e) {
             throw new RuntimeException("Failed to replace file in archive: " + e.getMessage(), e);
+        }
+    }
+
+    public static void unzip(String zipFilePath) throws IOException {
+        File zipFile = new File(zipFilePath);
+        String destDir = zipFile.getParent();
+
+        try (ZipInputStream zis = new ZipInputStream(new FileInputStream(zipFile))) {
+            ZipEntry entry;
+            while ((entry = zis.getNextEntry()) != null) {
+
+                File outFile =  Path.of(destDir, entry.getName()).toFile();
+                try (FileOutputStream fos = new FileOutputStream(outFile)) {
+                    byte[] bytes = new byte[1024];
+                    int length;
+                    while ((length = zis.read(bytes)) >= 0) {
+                        fos.write(bytes, 0, length);
+                    }
+                }
+            }
+        }
+    }
+
+    public static void unzipAndDeleteAll(String directory) throws IOException {
+        File[] files = new File(directory).listFiles();
+        if (files != null) {
+            for (File file : files) {
+                if (file.getName().endsWith(".zip")) {
+                    unzip(file.getAbsolutePath());
+                    file.delete();
+                }
+            }
         }
     }
 
@@ -568,5 +619,14 @@ public class ZipFileUtils {
         transformer.run();
 
         logger.info("Filtrage GTFS par route IDs terminé en {} ms", (System.currentTimeMillis() - time));
+    }
+
+    public static void deleteFilesByExtension(String directory, String extension) {
+        File[] files = new File(directory).listFiles();
+        if (files != null) {
+            Stream.of(files)
+                    .filter(file -> !file.isDirectory() && file.getName().endsWith(extension))
+                    .forEach(File::delete);
+        }
     }
 }

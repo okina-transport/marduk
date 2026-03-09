@@ -810,6 +810,9 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
             if (headers.get(USE_EXTENDED_GTFS_ROUTE_TYPES) != null) {
                 e.getIn().setHeader(USE_EXTENDED_GTFS_ROUTE_TYPES, headers.get(USE_EXTENDED_GTFS_ROUTE_TYPES));
             }
+            if (headers.get(FARES_INCLUDED_HEADER) != null){
+                e.getIn().setHeader(FARES_INCLUDED_HEADER, headers.get(FARES_INCLUDED_HEADER));
+            }
 
         }
     }
