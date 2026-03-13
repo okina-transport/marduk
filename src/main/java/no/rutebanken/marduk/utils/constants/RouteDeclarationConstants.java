@@ -142,6 +142,9 @@ public class RouteDeclarationConstants {
     public static final String ROUTE_ID_ADMIN_TIAMAT_EXPORT_POI = "admin-tiamat-export-poi";
     public static final String ROUTE_ADMIN_TIAMAT_EXPORT_POI = DIRECT_ROUTE_PREFIX + ROUTE_ID_ADMIN_TIAMAT_EXPORT_POI;
 
+    public static final String ROUTE_ID_ADMIN_FARES_EXPORT_NETEX_FARES = "admin-fares-export-netex-fares";
+    public static final String ROUTE_ADMIN_FARES_EXPORT_NETEX_FARES = DIRECT_ROUTE_PREFIX + ROUTE_ID_ADMIN_FARES_EXPORT_NETEX_FARES;
+
     public static final String ROUTE_ID_ADMIN_CHOUETTE_VALIDATE = "admin-chouette-validate";
     public static final String ROUTE_ADMIN_CHOUETTE_VALIDATE = DIRECT_ROUTE_PREFIX + ROUTE_ID_ADMIN_CHOUETTE_VALIDATE;
 

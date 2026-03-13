@@ -32,7 +32,6 @@ import org.apache.camel.LoggingLevel;
 import org.apache.camel.component.http.HttpMethods;
 import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -150,7 +149,7 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
                 .when(simple("${header.action_report_result} == 'NOK'"))
                     .log(LoggingLevel.WARN, correlation() + "Export failed")
                     .process(e -> {
-                        TimetableAction action =  TimetableAction.valueOf(e.getIn().getHeader(EXPORT_ACTION, String.class));
+                        TimetableAction action = TimetableAction.valueOf(e.getIn().getHeader(EXPORT_ACTION, String.class));
                         JobEvent.providerJobBuilder(e).timetableAction(action).state(State.FAILED).build();
                         if (e.getIn().getHeader(WORKLOW, String.class) != null) {
                             createMail.createMail(e, "GTFS", TimetableAction.EXPORT, false);

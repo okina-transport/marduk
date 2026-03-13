@@ -286,18 +286,17 @@ public class ExportToConsumersProcessor implements Processor {
     private InputStream getInputStream(Exchange exchange) throws FileNotFoundException {
         File file;
         InputStream streamToUpload;
-        if (exchange.getIn().getHeader(GTFS_EXPORT_GLOBAL_OK, Boolean.class) != null &&
-                exchange.getIn().getHeader(GTFS_EXPORT_GLOBAL_OK, Boolean.class).equals(true)) {
+        if (BooleanUtils.isTrue(exchange.getIn().getHeader(GTFS_EXPORT_GLOBAL_OK, Boolean.class))) {
             streamToUpload = fileSystemService.getFile("mobiiti_technique/gtfs/" + exchange.getIn().getHeader(ID_FORMAT, String.class) + "/" + EXPORT_GLOBAL_GTFS_ZIP);
             exchange.getIn().setHeader(EXPORT_FILE_NAME, EXPORT_GLOBAL_GTFS_ZIP);
-        } else if (exchange.getIn().getHeader(NETEX_EXPORT_GLOBAL_OK, Boolean.class) != null &&
-                exchange.getIn().getHeader(NETEX_EXPORT_GLOBAL_OK, Boolean.class).equals(true)) {
+        } else if (BooleanUtils.isTrue(exchange.getIn().getHeader(NETEX_EXPORT_GLOBAL_OK, Boolean.class))) {
             streamToUpload = fileSystemService.getFile("mobiiti_technique/netex/" + EXPORT_GLOBAL_NETEX_ZIP);
             exchange.getIn().setHeader(EXPORT_FILE_NAME, EXPORT_GLOBAL_NETEX_ZIP);
-
-        } else if (exchange.getIn().getHeader(EXPORT_FROM_TIAMAT, Boolean.class) != null &&
-                exchange.getIn().getHeader(EXPORT_FROM_TIAMAT, Boolean.class).equals(true)) {
+        } else if (BooleanUtils.isTrue(exchange.getIn().getHeader(EXPORT_FROM_TIAMAT, Boolean.class))) {
             file = fileSystemService.getTiamatFile(exchange);
+            streamToUpload = new FileInputStream(file);
+        } else if (BooleanUtils.isTrue(exchange.getIn().getHeader(EXPORT_FROM_FARES, Boolean.class))) {
+            file = fileSystemService.getNetexFaresFile(exchange);
             streamToUpload = new FileInputStream(file);
         } else {
             file = fileSystemService.getOfferFile(exchange);

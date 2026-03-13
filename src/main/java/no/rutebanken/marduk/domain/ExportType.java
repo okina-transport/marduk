@@ -7,5 +7,6 @@ public enum ExportType {
     ARRET,
     NEPTUNE,
     POI,
-    PARKING;
+    PARKING,
+    NETEX_FARES
 }

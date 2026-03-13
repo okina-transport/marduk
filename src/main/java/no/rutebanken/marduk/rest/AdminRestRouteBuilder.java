@@ -610,6 +610,14 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .responseMessage().code(200).message(COMMAND_ACCEPTED).endResponseMessage()
                 .to(ROUTE_ADMIN_TIAMAT_EXPORT_POI)
 
+                .post("/export/netexFares")
+                .description("Triggers the NETEX FARES export process in FARES. Note that NO validation is performed before export, and that the data must be guaranteed to be error free")
+                .param().name(PROVIDER).type(RestParamType.path).description(PROVIDER_DESCRIPTION).dataType(INTEGER).endParam()
+                .consumes(MediaType.TEXT_PLAIN)
+                .produces(MediaType.TEXT_PLAIN)
+                .responseMessage().code(200).message(COMMAND_ACCEPTED).endResponseMessage()
+                .to(ROUTE_ADMIN_FARES_EXPORT_NETEX_FARES)
+
                 .post("/validate")
                 .description("Triggers the validate->export process in Chouette")
                 .param().name(PROVIDER).type(RestParamType.path).description(PROVIDER_DESCRIPTION).dataType(INTEGER).endParam()
@@ -1304,6 +1312,19 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .setBody().simple(CAMEL_HEADERS)
                 .setExchangePattern(ExchangePattern.InOnly)
                 .to("jms:queue:TiamatPointOfInterestExport");
+
+            from(ROUTE_ADMIN_FARES_EXPORT_NETEX_FARES)
+                .routeId(ROUTE_ID_ADMIN_FARES_EXPORT_NETEX_FARES)
+                .setHeader(PROVIDER_ID, header(PROVIDER))
+                .to(ROUTE_AUTHORIZE_REQUEST)
+                .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
+                .log(LoggingLevel.INFO, correlation() + "FARES start export NETEX FARES")
+                .removeHeaders(ALL_CAMEL_HTTP)
+                .process(e -> e.getIn().setHeader(CHOUETTE_REFERENTIAL, getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)).chouetteInfo.referential))
+                .process(e -> e.getIn().setHeader(USER, getHeaders(e, USER)))
+                .setBody(simple(null))
+                .setExchangePattern(ExchangePattern.InOnly)
+                .to("jms:queue:exportNetexFaresQueue");
 
         from(ROUTE_ADMIN_CHOUETTE_VALIDATE)
                 .routeId(ROUTE_ID_ADMIN_CHOUETTE_VALIDATE)

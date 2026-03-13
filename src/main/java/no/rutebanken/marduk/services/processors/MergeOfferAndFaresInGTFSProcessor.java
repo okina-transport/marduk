@@ -18,12 +18,14 @@ import static no.rutebanken.marduk.Constants.*;
 public class MergeOfferAndFaresInGTFSProcessor implements Processor {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(MergeOfferAndFaresInGTFSProcessor.class);
+    public static final String GTFS_V2_DIR = "gtfsv2";
 
-    private final String gtfsFaresExportDir;
+    private final String faresStoragePath;
     private final String chouetteStoragePath;
 
-    public MergeOfferAndFaresInGTFSProcessor(@Value("${gtfs.fares.export.dir}")String gtfsFaresExportDir, @Value("${chouette.storage.path:/srv/docker-data/data/chouette}") String chouetteStoragePath) {
-        this.gtfsFaresExportDir = gtfsFaresExportDir;
+    public MergeOfferAndFaresInGTFSProcessor(@Value("${fares.storage.path:/srv/docker-data/data/fares}") String faresStoragePath,
+                                             @Value("${chouette.storage.path:/srv/docker-data/data/chouette}") String chouetteStoragePath) {
+        this.faresStoragePath = faresStoragePath;
         this.chouetteStoragePath = chouetteStoragePath;
     }
 
@@ -41,7 +43,7 @@ public class MergeOfferAndFaresInGTFSProcessor implements Processor {
         String faresFileName = referential.replace("mobiiti_","").toUpperCase() + ".zip";
         String chouetteJobId = exchange.getIn().getHeader(JOB_ID, String.class);
 
-        Path source = Path.of(gtfsFaresExportDir, faresExportDir, faresFileName);
+        Path source = Path.of(faresStoragePath, GTFS_V2_DIR, faresExportDir, faresFileName);
         String chouetteJobDirectory = chouetteStoragePath + "/" + referential + "/data/" + chouetteJobId;
         Path destination = Path.of(chouetteJobDirectory + "/" + faresFileName);
         Files.copy(source, destination, StandardCopyOption.REPLACE_EXISTING);

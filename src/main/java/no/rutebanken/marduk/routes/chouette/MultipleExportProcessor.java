@@ -64,8 +64,10 @@ public class MultipleExportProcessor implements Processor {
                     toNeptuneExport(export, exchange.copy());
                 }else if (ExportType.POI == export.getType()) {
                     toPointsOfInterestExport(export, exchange.copy());
-                } else if  (ExportType.PARKING == export.getType()) {
+                } else if (ExportType.PARKING == export.getType()) {
                     toParkingsExport(export, exchange.copy());
+                } else if (ExportType.NETEX_FARES == export.getType()) {
+                    toNetexFaresExport(export, exchange.copy());
                 } else {
                     log.info("Routing not supported yet for => {}/{}/{}", export.getId(), export.getName(), export.getType());
                 }
@@ -214,6 +216,12 @@ public class MultipleExportProcessor implements Processor {
         exchange.getIn().getHeaders().put("tiamatProviderId", tiamatProviderId);
         prepareHeadersForExport(exchange, export);
         producer.send("jms:queue:TiamatParkingsExport", exchange);
+    }
+
+    private void toNetexFaresExport(ExportTemplate export, Exchange exchange) throws Exception {
+        log.info("Routing to NETEX fares export => {}/{}", export.getId(), export.getName());
+        prepareHeadersForExport(exchange, export);
+        producer.send("jms:queue:NetexFaresPredefinedExport", exchange);
     }
 
 

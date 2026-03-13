@@ -26,7 +26,10 @@ import java.nio.file.StandardCopyOption;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.zip.ZipException;
@@ -41,6 +44,9 @@ public class FileSystemService {
 
     @Value("${chouette.storage.path:/srv/docker-data/data/chouette}")
     private String chouetteStoragePath;
+
+    @Value("${fares.storage.path:/srv/docker-data/data/fares}")
+    private String faresStoragePath;
 
     @Autowired
     CacheProviderRepository providerRepository;
@@ -71,7 +77,13 @@ public class FileSystemService {
         return file;
     }
 
-
+    public File getNetexFaresFile(Exchange e) {
+        String filename = e.getIn().getHeader(FARES_EXPORT_FILENAME, String.class);
+        File file = Path.of(faresStoragePath, "globalDirectory", filename).toFile();
+        e.getIn().setHeader("fileName", file.getName());
+        e.getIn().setHeader(EXPORT_FILE_NAME, file.getName());
+        return file;
+    }
 
     public File getLatestStopPlacesFile(Exchange exchange) {
         String referential = exchange.getIn().getHeader(OKINA_REFERENTIAL, String.class).replace(superspaceName.toUpperCase() + "_", "").replace(superspaceName.toLowerCase() + "_", "");
