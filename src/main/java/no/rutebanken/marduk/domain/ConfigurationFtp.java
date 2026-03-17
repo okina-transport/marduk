@@ -23,6 +23,8 @@ public class ConfigurationFtp {
     @JsonDeserialize(using = LocalDateTimeDeserializer.class)
     private LocalDateTime lastTimestamp;
 
+    private boolean dynamicFilename = false;
+
     public Long getId() {
         return id;
     }
@@ -94,4 +96,8 @@ public class ConfigurationFtp {
     public void setLastTimestamp(LocalDateTime lastTimestamp) {
         this.lastTimestamp = lastTimestamp;
     }
+
+    public boolean getDynamicFilename() { return dynamicFilename; }
+
+    public void setDynamicFilename(boolean dynamicFilename) { this.dynamicFilename = dynamicFilename; }
 }

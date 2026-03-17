@@ -319,7 +319,6 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
         FTPClient ftpClient = new FTPClient();
         ftpClient.configure(new FTPClientConfig());
         try {
-            // connection
             try {
                 ftpClient.connect(configurationFtp.getUrl(), Math.toIntExact(configurationFtp.getPort()));
             } catch (ArithmeticException e) {
@@ -328,7 +327,6 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
                 throw new AutomaticImportException(ERROR_FTP_CONNEXION_FAIL, e);
             }
 
-            // authentication
             if (StringUtils.isNotEmpty(configurationFtp.getLogin()) && ArrayUtils.isNotEmpty(configurationFtp.getPassword())) {
                 try {
                     if (!ftpClient.login(configurationFtp.getLogin(), decryptPassword(configurationFtp.getPassword()))) {
@@ -347,35 +345,54 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
                 log.error("{} Error listing files from FTP server", correlation());
                 throw new AutomaticImportException(ERROR_ACCESSING_IMPORT_FOLDER_OR_FILE, e);
             }
-            Optional<FTPFile> optionalFTPFile = Arrays.stream(files).filter(ftpFile -> ftpFile.getName().equals(configurationFtp.getFilename())).findFirst();
+            Optional<FTPFile> optionalFTPFile = selectMostRecentFile(files, configurationFtp);
             if (optionalFTPFile.isPresent()) {
                 FTPFile file = optionalFTPFile.get();
-                LocalDateTime localDateTime = LocalDateTime.ofInstant(file.getTimestamp().toInstant(), file.getTimestamp().getTimeZone().toZoneId());
-                if (configurationFtp.getLastTimestamp() == null || localDateTime.isAfter(configurationFtp.getLastTimestamp())) {
-                    configurationFtp.setLastTimestamp(localDateTime);
-                    try (InputStream importFile = ftpClient.retrieveFileStream(configurationFtp.getFolder() + "/" + file.getName())){
-                        return Optional.of(copyFileFromInputStream(importFile, file.getName()));
+                LocalDateTime fileTimestamp = LocalDateTime.ofInstant(file.getTimestamp().toInstant(), file.getTimestamp().getTimeZone().toZoneId());
+                if (configurationFtp.getLastTimestamp() == null || fileTimestamp.isAfter(configurationFtp.getLastTimestamp())) {
+                    String remotePath = Path.of(configurationFtp.getFolder(), file.getName()).toString();
+                    try (InputStream importFile = ftpClient.retrieveFileStream(remotePath)) {
+                        if (importFile == null) {
+                            throw new IOException("RetrieveFileStream returned null");
+                        }
+                        Path downloadedFile = copyFileFromInputStream(importFile, file.getName());
+                        configurationFtp.setLastTimestamp(fileTimestamp);
+                        return Optional.of(downloadedFile);
                     } catch (IOException e) {
-                        log.error("{} Error retrieving file from FTP server", correlation());
+                        log.error("{} Error retrieving file {} from FTP", correlation(), file.getName());
                         throw new AutomaticImportException(ERROR_RETRIEVING_IMPORT_FILE, e);
                     }
                 } else {
-                    log.warn("{} No new file to import for the dataspace : {} for the import configuration FTP : {}", correlation(), referential, configurationFtp.getUrl());
+                    log.warn("{} No new file more recent than {} for : {}", correlation(), configurationFtp.getLastTimestamp(), configurationFtp.getFilename());
                     sendMailForFileAlreadyImported(importConfiguration, referential, configurationFtp.getFilename());
                     return Optional.empty();
                 }
             } else {
-                log.error("{} File {} not found for the dataspace {}", correlation(), configurationFtp.getFilename(), referential);
+                log.error("{} No file matching {} found on FTP", correlation(), configurationFtp.getFilename());
                 sendMailForFileNotFound(importConfiguration, referential, configurationFtp.getFilename());
                 return Optional.empty();
             }
         } finally {
             try {
-                ftpClient.disconnect();
+                if (ftpClient.isConnected()) {
+                    ftpClient.disconnect();
+                }
             } catch (IOException e) {
-                log.error(String.format("%s Error disconnecting from FTP client", correlation()), e);
+                log.error("{} Error disconnecting from FTP client", correlation(), e);
             }
         }
+    }
+
+    public static Optional<FTPFile> selectMostRecentFile(FTPFile[] files, ConfigurationFtp config) {
+        return Arrays.stream(files)
+                .filter(ftpFile -> {
+                    if (config.getDynamicFilename()) {
+                        return ftpFile.getName().matches(config.getFilename());
+                    } else {
+                        return ftpFile.getName().equals(config.getFilename());
+                    }
+                })
+                .max(Comparator.comparing(f -> f.getTimestamp()));
     }
 
     private Optional<Path> retrieveImportFromUrl(String referential, ImportConfiguration importConfiguration, ConfigurationUrl configurationUrl) throws AutomaticImportException {

@@ -8,6 +8,8 @@ import no.rutebanken.marduk.repository.ImportConfigurationDAO;
 import no.rutebanken.marduk.routes.chouette.AbstractChouetteRouteBuilder;
 import no.rutebanken.marduk.routes.status.JobEvent;
 import org.apache.camel.Exchange;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -18,6 +20,8 @@ import static no.rutebanken.marduk.Constants.*;
 
 @Component
 public class ImportRouteBuilder extends AbstractChouetteRouteBuilder {
+
+    private static final Logger LOG = LoggerFactory.getLogger(ImportRouteBuilder.class);
 
     @Autowired
     static ImportConfigurationDAO importConfigurationDAO;
@@ -39,10 +43,26 @@ public class ImportRouteBuilder extends AbstractChouetteRouteBuilder {
 
         importConfigurationDAO.update(referential, importConfiguration);
     }
-    // Méthode pour mettre à jour lastTimestamp si le fichier correspond (pour les configurations FTP)
+
     private static void updateLastTimestampIfFileNameMatchesForFtp(List<ConfigurationFtp> ftpList, String fileName) {
-        ftpList.stream().filter(config -> config.getFilename().equals(fileName))
-                .findFirst().ifPresent(config -> config.setLastTimestamp(null));
+        for (ConfigurationFtp config : ftpList) {
+            boolean match;
+
+            if (config.getDynamicFilename()) {
+                try {
+                    match = java.util.regex.Pattern.matches(config.getFilename(), fileName);
+                } catch (Exception ex) {
+                    match = false;
+                    LOG.error("Error matching FTP filename with pattern", ex);
+                }
+            } else {
+                match = config.getFilename().equals(fileName);
+            }
+
+            if (match) {
+                config.setLastTimestamp(java.time.LocalDateTime.now());
+            }
+        }
     }
 
     // Méthode pour mettre à jour lastTimestamp si le fichier correspond (pour les configurations URL)
