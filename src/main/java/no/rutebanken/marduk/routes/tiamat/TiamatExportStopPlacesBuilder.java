@@ -81,7 +81,7 @@ public class TiamatExportStopPlacesBuilder extends AbstractChouetteRouteBuilder 
                 .choice()
                     .when(simple("${header.RutebankenCorrelationId} == null"))
                     .log(LoggingLevel.INFO, "Ajout d'un correlation id")
-                    .process(e -> e.getIn().setHeader(Constants.CORRELATION_ID, e.getIn().getHeader(Constants.CORRELATION_ID, UUID.randomUUID().toString())))
+                    .process(e -> e.getIn().setHeader(CORRELATION_ID, e.getIn().getHeader(CORRELATION_ID, UUID.randomUUID().toString())))
                 .end()
                 .process(e -> {
                     Object tiamatProviderId = e.getIn().getHeaders().get("tiamatProviderId");
@@ -93,10 +93,10 @@ public class TiamatExportStopPlacesBuilder extends AbstractChouetteRouteBuilder 
                     con.setRequestProperty(EXPORT_GENERATED_MISSING_QUAYS, e.getIn().getHeader(EXPORT_GENERATED_MISSING_QUAYS).toString());
                     con.setRequestProperty(EXPORT_EXTERNAL_IDS, e.getIn().getHeader(EXPORT_EXTERNAL_IDS).toString());
                     con.setRequestProperty(HAS_POST_PROCESS, Boolean.toString(hasPostProcess));
-                    if (e.getIn().getHeader(EXPORT_FILE_NAME) != null) {
-                        con.setRequestProperty(EXPORT_FILE_NAME, e.getIn().getHeader(EXPORT_FILE_NAME).toString());
-                    }
+                    feedExportFileName(con, e);
                     con.setRequestProperty("Authorization","Bearer " + tokenService.getToken());
+
+
                     e.getIn().setBody(con.getInputStream());
 
                     Job job = e.getIn().getBody(Job.class);
@@ -107,15 +107,15 @@ public class TiamatExportStopPlacesBuilder extends AbstractChouetteRouteBuilder 
                     }
                     e.getIn().getHeaders().put(FILE_NAME, job.getFileName());
                     // required to skip chouette reports parsing when polling job status
-                    e.getIn().setHeader(Constants.TIAMAT_STOP_PLACES_EXPORT, job.getId());
+                    e.getIn().setHeader(TIAMAT_STOP_PLACES_EXPORT, job.getId());
                     String tiamatJobStatusUrl = stopPlacesExportUrl + "/" + job.getId() + "/status";
                     e.getIn().setHeader(JOB_STATUS_URL, tiamatJobStatusUrl);
-                    e.getIn().setHeader(Constants.JOB_ID, job.getId());
+                    e.getIn().setHeader(JOB_ID, job.getId());
                     log.info("Tiamat Stop Places Export  : export parsed => {} : {}", job.getId(), tiamatJobStatusUrl);
                     log.info("Lancement export Arrêts - Fichier : {} - Espace de données : {}" , job.getFileName(), getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)).chouetteInfo.referential);
                 })
 
-                .setHeader(Constants.JOB_STATUS_ROUTING_DESTINATION, constant(TIAMAT_EXPORT_ROUTING_DESTINATION))
+                .setHeader(JOB_STATUS_ROUTING_DESTINATION, constant(TIAMAT_EXPORT_ROUTING_DESTINATION))
                 .setHeader(JOB_STATUS_JOB_TYPE, constant(JobEvent.TimetableAction.EXPORT.name()))
                 .to("jms:queue:ChouettePollStatusQueue")
                 .routeId("tiamat-stop-places-export-job");
@@ -182,6 +182,19 @@ public class TiamatExportStopPlacesBuilder extends AbstractChouetteRouteBuilder 
                 .toD(stopPlacesExportUrl + "/setPostProcessCompleted/${header." + JOB_ID + "}")
                 .end()
                 .routeId("tiamat-set-lug-completed");
+    }
+
+    private void feedExportFileName(HttpURLConnection con, Exchange e) {
+        String exportFileName = "";
+        if (e.getIn().getHeader(EXPORT_FILE_NAME) != null) {
+            exportFileName = e.getIn().getHeader(EXPORT_FILE_NAME, String.class);
+        }else if (e.getIn().getHeader(EXPORTED_FILENAME) != null){
+            exportFileName = e.getIn().getHeader(EXPORTED_FILENAME, String.class);
+        }
+
+        if (StringUtils.isNotBlank(exportFileName)){
+            con.setRequestProperty(EXPORT_FILE_NAME, exportFileName);
+        }
     }
 
 }
