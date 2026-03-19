@@ -18,11 +18,8 @@ package no.rutebanken.marduk.rest;
 
 import jakarta.ws.rs.NotFoundException;
 import jakarta.ws.rs.core.MediaType;
-import no.rutebanken.marduk.domain.BlobStoreFiles;
+import no.rutebanken.marduk.domain.*;
 import no.rutebanken.marduk.domain.BlobStoreFiles.File;
-import no.rutebanken.marduk.domain.ChouetteValidationSchedule;
-import no.rutebanken.marduk.domain.ImportGenerateMapMatching;
-import no.rutebanken.marduk.domain.Provider;
 import no.rutebanken.marduk.routes.BaseRouteBuilder;
 import no.rutebanken.marduk.routes.blobstore.BlobStoreRoute;
 import no.rutebanken.marduk.routes.chouette.json.JobResponse;
@@ -32,6 +29,7 @@ import no.rutebanken.marduk.security.AuthorizationClaim;
 import no.rutebanken.marduk.security.AuthorizationService;
 import no.rutebanken.marduk.services.BlobStoreService;
 import no.rutebanken.marduk.services.ChouetteValidationScheduleService;
+import no.rutebanken.marduk.services.FaresScheduleService;
 import no.rutebanken.marduk.services.FileSystemService;
 import no.rutebanken.marduk.services.processors.FileValidationProcessor;
 import no.rutebanken.marduk.services.processors.MultiPartProcessor;
@@ -65,6 +63,7 @@ import static no.rutebanken.marduk.utils.constants.RouteParamsConstants.Headers.
 import static no.rutebanken.marduk.utils.constants.RouteParamsConstants.JOB_ID;
 import static no.rutebanken.marduk.utils.constants.RouteParamsConstants.ParamTypes.INTEGER;
 import static no.rutebanken.marduk.utils.constants.RouteParamsConstants.QueryParams.*;
+import static no.rutebanken.marduk.utils.constants.RouteParamsConstants.SimpleExpression.BODY_IS_NULL;
 import static org.apache.camel.Exchange.HTTP_RESPONSE_CODE;
 
 /**
@@ -100,18 +99,22 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
 
     private final ChouetteValidationScheduleService chouetteValidationScheduleService;
 
+    private final FaresScheduleService faresScheduleService;
+
     public AdminRestRouteBuilder(AuthorizationService authorizationService,
                                  BlobStoreService blobStoreService,
                                  FileSystemService fileSystemService,
                                  MultiPartProcessor multiPartProcessor,
                                  FileValidationProcessor fileValidationProcessor,
-                                 ChouetteValidationScheduleService chouetteValidationScheduleService) {
+                                 ChouetteValidationScheduleService chouetteValidationScheduleService,
+                                 FaresScheduleService faresScheduleService) {
         this.authorizationService = authorizationService;
         this.blobStoreService = blobStoreService;
         this.fileSystemService = fileSystemService;
         this.multiPartProcessor = multiPartProcessor;
         this.fileValidationProcessor = fileValidationProcessor;
         this.chouetteValidationScheduleService = chouetteValidationScheduleService;
+        this.faresScheduleService = faresScheduleService;
     }
 
 
@@ -641,6 +644,14 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .responseMessage(200, COMMAND_ACCEPTED)
                 .to(ROUTE_ADMIN_POST_CHOUETTE_VALIDATE_SCHEDULE)
 
+                .post("/export/netexFares/schedule")
+                .type(FaresExportSchedule.class)
+                .description("Schedule manual FARES export for provider")
+                .param().name(PROVIDER).type(RestParamType.path).description(PROVIDER_DESCRIPTION).dataType(INTEGER).endParam()
+                .consumes(MediaType.APPLICATION_JSON)
+                .responseMessage(200, COMMAND_ACCEPTED)
+                .to(ROUTE_ADMIN_POST_FARES_EXPORT_SCHEDULE)
+
                 .post("/delete-exports")
                 .description("Delete all exports linked to provider")
                 .responseMessage().code(200).message("Delete exports command accepted").endResponseMessage()
@@ -762,7 +773,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
     private String getHeaders(Exchange e, String headerToCollect) {
         Map body = e.getIn().getBody(Map.class);
         Map headers;
-        headers = body == null ? e.getIn().getHeaders() : (Map) body.get("headers");
+        headers = body == null ? e.getIn().getHeaders() : (Map) body.get(HEADERS);
 
         if (headers != null) {
             return String.valueOf(headers.get(headerToCollect));
@@ -774,7 +785,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
     protected String getGenerateMapMatchingHeaders(Exchange e) {
         Map<String, Object> body = e.getIn().getBody(Map.class);
         Map<String, Object> headers;
-        headers = body == null ? e.getIn().getHeaders() : (Map<String, Object>) body.get("headers");
+        headers = body == null ? e.getIn().getHeaders() : (Map<String, Object>) body.get(HEADERS);
         String result = ImportGenerateMapMatching.NONE.name();
         if (headers != null && headers.get(GENERATE_MAP_MATCHING) != null) {
             result = (String) headers.get(GENERATE_MAP_MATCHING);
@@ -783,7 +794,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
     }
 
     private String getSimulationExportPrefix(Exchange e) {
-        Map headers = (Map) e.getIn().getBody(Map.class).get("headers");
+        Map headers = (Map) e.getIn().getBody(Map.class).get(HEADERS);
 
         if (headers != null) {
             return (String) headers.get(EXPORT_SIMULATION_NAME);
@@ -792,7 +803,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
     }
 
     private void getFromHeadersForGTFS(Exchange e) {
-        Map headers = (Map) e.getIn().getBody(Map.class).get("headers");
+        Map headers = (Map) e.getIn().getBody(Map.class).get(HEADERS);
         if (headers != null) {
             if (headers.get(USER) != null) {
                 e.getIn().setHeader(USER, headers.get(USER));
@@ -821,7 +832,6 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
             if (headers.get(FARES_INCLUDED_HEADER) != null){
                 e.getIn().setHeader(FARES_INCLUDED_HEADER, headers.get(FARES_INCLUDED_HEADER));
             }
-
         }
     }
 
@@ -987,7 +997,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
         from(ROUTE_ADMIN_CHOUETTE_IMPORT_ALL)
                 .routeId(ROUTE_ID_ADMIN_CHOUETTE_IMPORT_ALL)
                 .setHeader(PROVIDER_ID, header(PROVIDER))
-                .setHeader(IMPORT_CONFIGURATION_ID, header("importConfigurationId"))
+                .setHeader(IMPORT_CONFIGURATION_ID, header(IMPORT_CONFIGURATION_ID))
                 .to(ROUTE_AUTHORIZE_REQUEST)
                 .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
                 .log(LoggingLevel.INFO, correlation() + "Chouette start import predefined")
@@ -1067,7 +1077,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .log(LoggingLevel.INFO, correlation() + "blob store download file by name")
                 .removeHeaders(ALL_CAMEL_HTTP)
                 .to("direct:getBlob")
-                .choice().when(simple("${body} == null")).setHeader(HTTP_RESPONSE_CODE, constant(404)).endChoice();
+                .choice().when(simple(BODY_IS_NULL)).setHeader(HTTP_RESPONSE_CODE, constant(404)).endChoice();
 
         from(ROUTE_ADMIN_STOP_PLACES_FILE_DOWNLOAD)
                 .routeId(ROUTE_ID_ADMIN_STOP_PLACES_FILE_DOWNLOAD)
@@ -1085,7 +1095,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 })
                 .removeHeaders(ALL_CAMEL_HTTP)
                 .to("direct:getStopPlacesFile")
-                .choice().when(simple("${body} == null")).setHeader(HTTP_RESPONSE_CODE, constant(404)).endChoice();
+                .choice().when(simple(BODY_IS_NULL)).setHeader(HTTP_RESPONSE_CODE, constant(404)).endChoice();
 
         from(ROUTE_ADMIN_OFFER_FILE_DOWNLOAD)
                 .routeId(ROUTE_ID_ADMIN_OFFER_FILE_DOWNLOAD)
@@ -1105,7 +1115,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .removeHeaders(ALL_CAMEL_HTTP)
                 .removeHeaders("Authorization*")
                 .to("direct:getOfferFile")
-                .choice().when(simple("${body} == null")).setHeader(HTTP_RESPONSE_CODE, constant(404)).endChoice();
+                .choice().when(simple(BODY_IS_NULL)).setHeader(HTTP_RESPONSE_CODE, constant(404)).endChoice();
 
         from(ROUTE_ADMIN_CHOUETTE_STATS)
                 .routeId(ROUTE_ID_ADMIN_CHOUETTE_STATS)
@@ -1365,6 +1375,17 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                                 e.getIn().getBody(ChouetteValidationSchedule.class).getValidationSchedule()))
                 .end();
 
+        from(ROUTE_ADMIN_POST_FARES_EXPORT_SCHEDULE)
+                .routeId(ROUTE_ID_ADMIN_POST_FARES_EXPORT_SCHEDULE)
+                .log(LoggingLevel.INFO, "Scheduling NeTeX fares export")
+                .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER, Long.class)) != null)
+                .removeHeaders(ALL_CAMEL_HTTP)
+                .process(e -> faresScheduleService.scheduleManualFaresExportForProvider(
+                        e.getIn().getHeader(PROVIDER, Long.class),
+                        e.getIn().getBody(FaresExportSchedule.class).getExportSchedule(),
+                        e.getIn().getHeader(USER, String.class)))
+                .end();
+
         from(ROUTE_ADMIN_DELETE_EXPORTS)
                 .routeId(ROUTE_ID_ADMIN_DELETE_EXPORTS)
                 .setHeader(PROVIDER_ID, header(PROVIDER))
@@ -1410,7 +1431,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .to(ROUTE_AUTHORIZE_REQUEST)
                 .setHeader(PROVIDER_ID, header(PROVIDER))
                 .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
-                .setHeader(IMPORT_CONFIGURATION_ID, header("importConfigurationId"))
+                .setHeader(IMPORT_CONFIGURATION_ID, header(IMPORT_CONFIGURATION_ID))
                 .log(LoggingLevel.INFO, correlation() + "Get cron from scheduler for the import configuration")
                 .removeHeaders(ALL_CAMEL_HTTP)
                 .to("direct:getCron");
@@ -1419,7 +1440,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .routeId(ROUTE_ID_ADMIN_DELETE_IMPORT_CONFIGURATION_SCHEDULER)
                 .setHeader(PROVIDER_ID, header(PROVIDER))
                 .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
-                .setHeader(IMPORT_CONFIGURATION_ID, header("importConfigurationId"))
+                .setHeader(IMPORT_CONFIGURATION_ID, header(IMPORT_CONFIGURATION_ID))
                 .log(LoggingLevel.INFO, correlation() + "Delete scheduler import configuration")
                 .removeHeaders(ALL_CAMEL_HTTP)
                 .to("direct:deleteSchedulerImportConfiguration");
@@ -1438,7 +1459,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .to(ROUTE_AUTHORIZE_REQUEST)
                 .setHeader(PROVIDER_ID, header(PROVIDER))
                 .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
-                .setHeader(IMPORT_CONFIGURATION_ID, header("importConfigurationId"))
+                .setHeader(IMPORT_CONFIGURATION_ID, header(IMPORT_CONFIGURATION_ID))
                 .log(LoggingLevel.INFO, correlation() + "Get cron from scheduler for the validation & export")
                 .removeHeaders(ALL_CAMEL_HTTP)
                 .to("direct:getCronValidationExport");
@@ -1447,7 +1468,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .routeId(ROUTE_ID_ADMIN_DELETE_VALIDATION_EXPORT_SCHEDULER)
                 .setHeader(PROVIDER_ID, header(PROVIDER))
                 .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
-                .setHeader(IMPORT_CONFIGURATION_ID, header("importConfigurationId"))
+                .setHeader(IMPORT_CONFIGURATION_ID, header(IMPORT_CONFIGURATION_ID))
                 .log(LoggingLevel.INFO, correlation() + "Delete scheduler import configuration")
                 .removeHeaders(ALL_CAMEL_HTTP)
                 .to("direct:deleteSchedulerValidationExport");

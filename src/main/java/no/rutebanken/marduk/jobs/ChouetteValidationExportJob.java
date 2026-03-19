@@ -23,7 +23,7 @@ import static no.rutebanken.marduk.Constants.*;
 @Component
 public class ChouetteValidationExportJob implements Job {
 
-    private final static Logger logger = LoggerFactory.getLogger(ChouetteValidationExportJob.class);
+    private static final Logger logger = LoggerFactory.getLogger(ChouetteValidationExportJob.class);
 
     @Autowired
     private ProviderRepository providerRepository;

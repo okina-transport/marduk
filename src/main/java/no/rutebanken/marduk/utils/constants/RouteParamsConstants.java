@@ -11,6 +11,7 @@ public class RouteParamsConstants {
     public static final String PROVIDER = "providerId";
     public static final String FILENAME = "fileName";
     public static final String JOB_ID = "jobId";
+    public static final String HEADERS = "headers";
 
     public static class QueryParams {
 
@@ -65,6 +66,16 @@ public class RouteParamsConstants {
         }
 
         public static final String CHOUETTE_URL = "chouette_url";
+    }
+
+    public static class SimpleExpression {
+
+        private SimpleExpression() {
+            throw new IllegalArgumentException();
+        }
+
+        public static final String BODY_IS_NULL = "${body} == null";
+
     }
 
 }

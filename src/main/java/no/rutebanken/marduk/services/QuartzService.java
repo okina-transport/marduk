@@ -46,6 +46,15 @@ public class QuartzService {
         return "ChouetteValidationExportJobDetails-manual-" + provider.chouetteInfo.referential;
     }
 
+
+    public static @NonNull String getPredefinedNetexFaresExportJobTriggerName(Provider provider, Long exportConfigurationId) {
+        return "NetexFaresExportJobTrigger-predefined-" + provider.chouetteInfo.referential + "-" + exportConfigurationId;
+    }
+
+    public static @NonNull String getPredefinedNetexFaresExportJobName(Provider provider, Long exportConfigurationId) {
+        return "NetexFaresExportJobDetails-predefined-" + provider.chouetteInfo.referential + "-" + exportConfigurationId;
+    }
+
     /**
      * Unschedule a job from QUARTZ if it exists
      * @param jobName job to unschedule
