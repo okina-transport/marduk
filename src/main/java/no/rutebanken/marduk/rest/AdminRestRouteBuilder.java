@@ -646,6 +646,12 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .responseMessage(200, COMMAND_ACCEPTED)
                 .to(ROUTE_ADMIN_POST_CHOUETTE_VALIDATE_SCHEDULE)
 
+                .get("/export/netexFares/schedule")
+                .description("Schedule manual FARES export for provider")
+                .param().name(PROVIDER).type(RestParamType.path).description(PROVIDER_DESCRIPTION).dataType(INTEGER).endParam()
+                .produces(MediaType.APPLICATION_JSON)
+                .to(ROUTE_ADMIN_GET_FARES_EXPORT_SCHEDULE)
+
                 .post("/export/netexFares/schedule")
                 .type(FaresExportSchedule.class)
                 .description("Schedule manual FARES export for provider")
@@ -1396,6 +1402,18 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .process(e -> chouetteValidationScheduleService.scheduleManualValidationForProvider(
                                 e.getIn().getHeader(PROVIDER, Long.class),
                                 e.getIn().getBody(ChouetteValidationSchedule.class).getValidationSchedule()))
+                .end();
+
+        from(ROUTE_ADMIN_GET_FARES_EXPORT_SCHEDULE)
+                .routeId(ROUTE_ID_ADMIN_GET_FARES_EXPORT_SCHEDULE)
+                .log(LoggingLevel.INFO, "Get next NeTeX fares export schedule")
+                .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER, Long.class)) != null)
+                .removeHeaders(ALL_CAMEL_HTTP)
+                .process(e -> {
+                    ExportSchedule schedule = new ExportSchedule();
+                    schedule.setWhen(faresScheduleService.getNextScheduledFaresExportForProvider((e.getIn().getHeader(PROVIDER, Long.class))));
+                    e.getIn().setBody(schedule);
+                })
                 .end();
 
         from(ROUTE_ADMIN_POST_FARES_EXPORT_SCHEDULE)

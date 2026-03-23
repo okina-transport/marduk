@@ -155,6 +155,10 @@ public class RouteDeclarationConstants {
     public static final String ROUTE_ADMIN_POST_CHOUETTE_VALIDATE_SCHEDULE =
             DIRECT_ROUTE_PREFIX + ROUTE_ID_ADMIN_POST_CHOUETTE_VALIDATE_SCHEDULE;
 
+    public static final String ROUTE_ID_ADMIN_GET_FARES_EXPORT_SCHEDULE = "admin-get-fares-netex-export-schedule";
+    public static final String ROUTE_ADMIN_GET_FARES_EXPORT_SCHEDULE =
+            DIRECT_ROUTE_PREFIX + ROUTE_ID_ADMIN_GET_FARES_EXPORT_SCHEDULE;
+
     public static final String ROUTE_ID_ADMIN_POST_FARES_EXPORT_SCHEDULE = "admin-post-fares-netex-export-schedule";
     public static final String ROUTE_ADMIN_POST_FARES_EXPORT_SCHEDULE =
             DIRECT_ROUTE_PREFIX + ROUTE_ID_ADMIN_POST_FARES_EXPORT_SCHEDULE;
