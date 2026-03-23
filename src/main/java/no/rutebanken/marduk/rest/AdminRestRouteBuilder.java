@@ -653,7 +653,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .to(ROUTE_ADMIN_GET_FARES_EXPORT_SCHEDULE)
 
                 .post("/export/netexFares/schedule")
-                .type(FaresExportSchedule.class)
+                .type(ExportSchedule.class)
                 .description("Schedule manual FARES export for provider")
                 .param().name(PROVIDER).type(RestParamType.path).description(PROVIDER_DESCRIPTION).dataType(INTEGER).endParam()
                 .consumes(MediaType.APPLICATION_JSON)
@@ -1423,7 +1423,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .removeHeaders(ALL_CAMEL_HTTP)
                 .process(e -> faresScheduleService.scheduleManualFaresExportForProvider(
                         e.getIn().getHeader(PROVIDER, Long.class),
-                        e.getIn().getBody(FaresExportSchedule.class).getExportSchedule(),
+                        e.getIn().getBody(ExportSchedule.class).getWhen(),
                         e.getIn().getHeader(USER, String.class)))
                 .end();
 
