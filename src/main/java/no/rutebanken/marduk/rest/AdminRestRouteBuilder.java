@@ -60,6 +60,7 @@ import static no.rutebanken.marduk.utils.constants.RouteDeclarationConstants.*;
 import static no.rutebanken.marduk.utils.constants.RouteParamsConstants.*;
 import static no.rutebanken.marduk.utils.constants.RouteParamsConstants.Description.PROVIDER_DESCRIPTION;
 import static no.rutebanken.marduk.utils.constants.RouteParamsConstants.Headers.ALL_CAMEL_HTTP;
+import static no.rutebanken.marduk.utils.constants.RouteParamsConstants.Headers.CRON_EXPRESSION;
 import static no.rutebanken.marduk.utils.constants.RouteParamsConstants.JOB_ID;
 import static no.rutebanken.marduk.utils.constants.RouteParamsConstants.ParamTypes.INTEGER;
 import static no.rutebanken.marduk.utils.constants.RouteParamsConstants.QueryParams.*;
@@ -124,7 +125,8 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
 
         RestPropertyDefinition corsAllowedHeaders = new RestPropertyDefinition();
         corsAllowedHeaders.setKey("Access-Control-Allow-Headers");
-        corsAllowedHeaders.setValue("Origin, Accept, X-Requested-With, Content-Type, Access-Control-Request-Method, Access-Control-Request-Headers, Authorization, x-okina-referential, RutebankenUser, RutebankenDescription, EXPORT_LINES_IDS, EXPORT_START_DATE, EXPORT_END_DATE, ImportType, routeMerge, splitCharacter, commercialPointIdPrefixToRemove, quayIdPrefixToRemove, areaCentroidPrefixToRemove, linePrefixToRemove, stopAreaPrefixToRemove, ignoreCommercialPoints, analysisJobId, cleanMode, keepBoardingAlightingPossibility, keepStopGeolocalisation, keepStopNames, removeParentStations, importShapesFile, updateStopAccessibility, railUICprocessing, generateMapMatching, routesReorganization, distanceGeolocation, routeSortOrder, netexImportLayouts, netexImportColors, useTargetNetwork, targetNetwork, renameRoutesAfterMerge, importFareFiles, recomputeStopPlacesLocation, importTargetRoutes, exportGeneratedMissingQuays, overwriteLineInformation, exportExternalIds");
+        corsAllowedHeaders.setValue("Origin, Accept, X-Requested-With, Content-Type, Access-Control-Request-Method, " +
+                "Access-Control-Request-Headers, Authorization, x-okina-referential, RutebankenUser, RutebankenDescription, EXPORT_LINES_IDS, EXPORT_START_DATE, EXPORT_END_DATE, ImportType, routeMerge, splitCharacter, commercialPointIdPrefixToRemove, quayIdPrefixToRemove, areaCentroidPrefixToRemove, linePrefixToRemove, stopAreaPrefixToRemove, ignoreCommercialPoints, analysisJobId, cleanMode, keepBoardingAlightingPossibility, keepStopGeolocalisation, keepStopNames, removeParentStations, importShapesFile, updateStopAccessibility, railUICprocessing, generateMapMatching, routesReorganization, distanceGeolocation, routeSortOrder, netexImportLayouts, netexImportColors, useTargetNetwork, targetNetwork, renameRoutesAfterMerge, importFareFiles, recomputeStopPlacesLocation, importTargetRoutes, exportGeneratedMissingQuays, overwriteLineInformation, exportExternalIds, CronExpression");
 
         RestPropertyDefinition corsAllowedOrigin = new RestPropertyDefinition();
         corsAllowedOrigin.setKey("Access-Control-Allow-Origin");
@@ -651,6 +653,27 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .consumes(MediaType.APPLICATION_JSON)
                 .responseMessage(200, COMMAND_ACCEPTED)
                 .to(ROUTE_ADMIN_POST_FARES_EXPORT_SCHEDULE)
+
+                .get("/predefinedExport/netexFares/{exportConfigurationId}/schedule")
+                .description("Retrieve QUARTZ CRON trigger (if it exists) for NETEX fares export")
+                .param().name(PROVIDER).type(RestParamType.path).description(PROVIDER_DESCRIPTION).dataType(INTEGER).endParam()
+                .param().name(EXPORT_CONFIGURATION_ID).type(RestParamType.path).description("Export configuration id").dataType(INTEGER).endParam()
+                .to(ROUTE_ADMIN_GET_PREDEFINED_FARES_EXPORT_SCHEDULE)
+
+                .post("/predefinedExport/netexFares/{exportConfigurationId}/schedule")
+                .description("Schedule predefined FARES export for provider")
+                .param().name(PROVIDER).type(RestParamType.path).description(PROVIDER_DESCRIPTION).dataType(INTEGER).endParam()
+                .param().name(EXPORT_CONFIGURATION_ID).type(RestParamType.path).description("Export configuration id").dataType(INTEGER).endParam()
+                .consumes(MediaType.APPLICATION_JSON)
+                .responseMessage(200, COMMAND_ACCEPTED)
+                .to(ROUTE_ADMIN_POST_PREDEFINED_FARES_EXPORT_SCHEDULE)
+
+                .delete("/predefinedExport/netexFares/{exportConfigurationId}/schedule")
+                .description("Delete scheduled predefined FARES export for provider")
+                .param().name(PROVIDER).type(RestParamType.path).description(PROVIDER_DESCRIPTION).dataType(INTEGER).endParam()
+                .param().name(EXPORT_CONFIGURATION_ID).type(RestParamType.path).description("Export configuration id").dataType(INTEGER).endParam()
+                .responseMessage(200, COMMAND_ACCEPTED)
+                .to(ROUTE_ADMIN_DELETE_PREDEFINED_FARES_EXPORT_SCHEDULE)
 
                 .post("/delete-exports")
                 .description("Delete all exports linked to provider")
@@ -1384,6 +1407,35 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                         e.getIn().getHeader(PROVIDER, Long.class),
                         e.getIn().getBody(FaresExportSchedule.class).getExportSchedule(),
                         e.getIn().getHeader(USER, String.class)))
+                .end();
+
+        from(ROUTE_ADMIN_GET_PREDEFINED_FARES_EXPORT_SCHEDULE)
+                .routeId(ROUTE_ID_ADMIN_GET_PREDEFINED_FARES_EXPORT_SCHEDULE)
+                .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER, Long.class)) != null)
+                .removeHeaders(ALL_CAMEL_HTTP)
+                .process(e -> e.getIn().setBody(
+                        faresScheduleService.getPredefinedFaresExportCronExpressionByProviderByExportConfigurationId(
+                        e.getIn().getHeader(PROVIDER, Long.class),
+                        e.getIn().getHeader(EXPORT_CONFIGURATION_ID, Long.class)))
+                ).end();
+
+        from(ROUTE_ADMIN_POST_PREDEFINED_FARES_EXPORT_SCHEDULE)
+                .routeId(ROUTE_ID_ADMIN_POST_PREDEFINED_FARES_EXPORT_SCHEDULE)
+                .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER, Long.class)) != null)
+                .removeHeaders(ALL_CAMEL_HTTP)
+                .process(e -> faresScheduleService.schedulePredefinedFaresExportForProvider(
+                        e.getIn().getHeader(PROVIDER, Long.class),
+                        e.getIn().getHeader(EXPORT_CONFIGURATION_ID, Long.class),
+                        e.getIn().getHeader(CRON_EXPRESSION, String.class)))
+                .end();
+
+        from(ROUTE_ADMIN_DELETE_PREDEFINED_FARES_EXPORT_SCHEDULE)
+                .routeId(ROUTE_ID_ADMIN_DELETE_PREDEFINED_FARES_EXPORT_SCHEDULE)
+                .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER, Long.class)) != null)
+                .removeHeaders(ALL_CAMEL_HTTP)
+                .process(e -> faresScheduleService.unschedulePredefinedFaresExportForProvider(
+                        e.getIn().getHeader(PROVIDER, Long.class),
+                        e.getIn().getHeader(EXPORT_CONFIGURATION_ID, Long.class)))
                 .end();
 
         from(ROUTE_ADMIN_DELETE_EXPORTS)

@@ -1,0 +1,45 @@
+package no.rutebanken.marduk.jobs;
+
+import no.rutebanken.marduk.domain.Provider;
+import no.rutebanken.marduk.repository.ProviderRepository;
+import org.apache.camel.ProducerTemplate;
+import org.quartz.Job;
+import org.quartz.JobDataMap;
+import org.quartz.JobExecutionContext;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+
+import java.util.HashMap;
+import java.util.Map;
+
+import static no.rutebanken.marduk.Constants.*;
+
+@Component
+public class FaresPredefinedExportJob implements Job {
+
+    private static final Logger logger = LoggerFactory.getLogger(FaresPredefinedExportJob.class);
+
+    @Autowired
+    private ProviderRepository providerRepository;
+
+    @Autowired
+    ProducerTemplate producer;
+
+    @Override
+    public void execute(JobExecutionContext context) {
+        JobDataMap jobDataMap = context.getJobDetail().getJobDataMap();
+        Long providerId = jobDataMap.getLong(PROVIDER_ID);
+        Provider provider = providerRepository.getProvider(providerId);
+        Integer exportConfigurationId = jobDataMap.getInt(EXPORT_CONFIGURATION_ID);
+
+        logger.info("FaresExportJob triggered for provider {} and export configuration id {}", provider.getName(), exportConfigurationId);
+
+        Map<String, Object> headers = new HashMap<>();
+        headers.put(USER, "Mobi-iti");
+        headers.put(PROVIDER_ID, providerId);
+        headers.put(EXPORT_CONFIGURATION_ID, exportConfigurationId);
+        producer.sendBodyAndHeaders("jms:queue:predefinedExport", null, headers);
+    }
+}

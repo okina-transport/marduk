@@ -46,6 +46,13 @@ public class QuartzService {
         return "ChouetteValidationExportJobDetails-manual-" + provider.chouetteInfo.referential;
     }
 
+    public static @NonNull String getManualNetexFaresExportJobTriggerName(Provider provider) {
+        return "NetexFaresExportJobTrigger-manual-" + provider.chouetteInfo.referential;
+    }
+
+    public static @NonNull String getManualNetexFaresExportJobName(Provider provider) {
+        return "NetexFaresExportJobDetails-manual-" + provider.chouetteInfo.referential;
+    }
 
     public static @NonNull String getPredefinedNetexFaresExportJobTriggerName(Provider provider, Long exportConfigurationId) {
         return "NetexFaresExportJobTrigger-predefined-" + provider.chouetteInfo.referential + "-" + exportConfigurationId;

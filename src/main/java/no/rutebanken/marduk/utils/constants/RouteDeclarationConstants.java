@@ -155,10 +155,22 @@ public class RouteDeclarationConstants {
     public static final String ROUTE_ADMIN_POST_CHOUETTE_VALIDATE_SCHEDULE =
             DIRECT_ROUTE_PREFIX + ROUTE_ID_ADMIN_POST_CHOUETTE_VALIDATE_SCHEDULE;
 
+    public static final String ROUTE_ID_ADMIN_POST_FARES_EXPORT_SCHEDULE = "admin-post-fares-netex-export-schedule";
+    public static final String ROUTE_ADMIN_POST_FARES_EXPORT_SCHEDULE =
+            DIRECT_ROUTE_PREFIX + ROUTE_ID_ADMIN_POST_FARES_EXPORT_SCHEDULE;
 
+    public static final String ROUTE_ID_ADMIN_GET_PREDEFINED_FARES_EXPORT_SCHEDULE = "admin-get-fares-netex-predefined-export-schedule";
+    public static final String ROUTE_ADMIN_GET_PREDEFINED_FARES_EXPORT_SCHEDULE =
+            DIRECT_ROUTE_PREFIX + ROUTE_ID_ADMIN_GET_PREDEFINED_FARES_EXPORT_SCHEDULE;
+    
     public static final String ROUTE_ID_ADMIN_POST_PREDEFINED_FARES_EXPORT_SCHEDULE = "admin-post-fares-netex-predefined-export-schedule";
     public static final String ROUTE_ADMIN_POST_PREDEFINED_FARES_EXPORT_SCHEDULE =
             DIRECT_ROUTE_PREFIX + ROUTE_ID_ADMIN_POST_PREDEFINED_FARES_EXPORT_SCHEDULE;
+
+    public static final String ROUTE_ID_ADMIN_DELETE_PREDEFINED_FARES_EXPORT_SCHEDULE = "admin-delete-fares-netex-predefined-export-schedule";
+    public static final String ROUTE_ADMIN_DELETE_PREDEFINED_FARES_EXPORT_SCHEDULE =
+            DIRECT_ROUTE_PREFIX + ROUTE_ID_ADMIN_DELETE_PREDEFINED_FARES_EXPORT_SCHEDULE;
+    
     public static final String ROUTE_ID_ADMIN_DELETE_EXPORTS = "admin-delete-exports";
     public static final String ROUTE_ADMIN_DELETE_EXPORTS =  DIRECT_ROUTE_PREFIX + ROUTE_ID_ADMIN_DELETE_EXPORTS;
 

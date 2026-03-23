@@ -2,6 +2,7 @@ package no.rutebanken.marduk.services;
 
 import jakarta.annotation.Nullable;
 import no.rutebanken.marduk.domain.ExportTemplate;
+import no.rutebanken.marduk.domain.ExportType;
 import no.rutebanken.marduk.domain.Provider;
 import no.rutebanken.marduk.jobs.FaresExportJob;
 import no.rutebanken.marduk.jobs.FaresPredefinedExportJob;
@@ -14,6 +15,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
+import java.util.regex.Pattern;
 
 import static no.rutebanken.marduk.Constants.*;
 
@@ -21,6 +23,10 @@ import static no.rutebanken.marduk.Constants.*;
 public class FaresScheduleService {
 
     private static final Logger logger = LoggerFactory.getLogger(FaresScheduleService.class);
+
+    // fields minutes, hours and day of weeks must be set, others must not be set
+    private static final Pattern VALID_CRON_PATTERN = Pattern.compile("^0 \\d{1,2} \\d{1,2} \\? \\* [1-7](," +
+            "[1-7])* \\*$");
 
     private final ProviderRepository providerRepository;
     private final QuartzService quartzService;
@@ -60,10 +66,14 @@ public class FaresScheduleService {
         quartzService.rescheduleJob(job, trigger);
     }
 
-    public void schedulePredefinedFaresExportForProvider(Long providerId, Date when, Long exportConfigurationId) throws SchedulerException {
+    public void schedulePredefinedFaresExportForProvider(Long providerId, Long exportConfigurationId, String cronExpression) throws SchedulerException {
+        if (!VALID_CRON_PATTERN.matcher(cronExpression).matches()) {
+            throw new IllegalArgumentException("Invalid CRON expression " + cronExpression + ", must match pattern " + VALID_CRON_PATTERN.pattern());
+        }
+
         Provider provider = providerRepository.getProvider(providerId);
 
-        logger.info("Scheduling predefined FARES export for provider {} / exportConfigurationId {} at {}", provider.getName(), exportConfigurationId, when);
+        logger.info("Scheduling predefined FARES export for provider {} / exportConfigurationId {} with CRON expression {}", provider.getName(), exportConfigurationId, cronExpression);
 
         JobDataMap jobDataMap = new JobDataMap(
                 Map.of(
@@ -81,11 +91,21 @@ public class FaresScheduleService {
         Trigger trigger =
                 TriggerBuilder
                         .newTrigger()
-                        .startAt(when)
+                        .startAt(new Date())
+                        .withSchedule(CronScheduleBuilder.cronSchedule(cronExpression).withMisfireHandlingInstructionDoNothing())
                         .withIdentity(QuartzService.getPredefinedNetexFaresExportJobTriggerName(provider, exportConfigurationId))
                         .build();
 
         quartzService.rescheduleJob(job, trigger);
+    }
+
+    public @Nullable String getPredefinedFaresExportCronExpressionByProviderByExportConfigurationId(Long providerId, Long exportConfigurationId) {
+        Provider provider = providerRepository.getProvider(providerId);
+
+        return quartzService.findTriggerByName(QuartzService.getPredefinedNetexFaresExportJobTriggerName(provider, exportConfigurationId))
+                .filter(CronTrigger.class::isInstance)
+                .map(trigger -> ((CronTrigger) trigger).getCronExpression())
+                .orElse(null);
     }
 
     public void unschedulePredefinedFaresExportForProvider(Long providerId, Long exportConfigurationId) throws SchedulerException {
@@ -112,6 +132,7 @@ public class FaresScheduleService {
         }
         if (CollectionUtils.isNotEmpty(exportTemplates)) {
             exportTemplates.stream()
+                    .filter(exportTemplate -> ExportType.NETEX_FARES == exportTemplate.getType())
                     .map(e -> QuartzService.getPredefinedNetexFaresExportJobTriggerName(provider, e.getId()))
                     .map(quartzService::getNextFireTimeForTrigger)
                     .filter(Optional::isPresent)

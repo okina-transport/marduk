@@ -47,6 +47,7 @@ public class RouteParamsConstants {
         public static final String FILTER = "filter";
         public static final String LOCATION = "Location";
         public static final String JOB_ID = "RutebankenJobId";
+        public static final String CRON_EXPRESSION = "CronExpression";
     }
 
     public static class Description {
