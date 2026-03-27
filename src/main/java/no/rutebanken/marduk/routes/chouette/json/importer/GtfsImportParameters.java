@@ -113,6 +113,9 @@ public class GtfsImportParameters extends ChouetteJobParameters {
 
         @JsonProperty("overwrite_line_information")
         private Boolean overwriteLineInformation = false;
+
+        @JsonProperty("allow_gtfs_flex")
+        private boolean allowGtfsFlex = false;
     }
 
     public static GtfsImportParameters create(RawImportParameters rawImportParameters) {
@@ -165,6 +168,7 @@ public class GtfsImportParameters extends ChouetteJobParameters {
         gtfsImport.allowNonStandardGtfs = rawImportParameters.isNonStandardGtfsAllowed();
         gtfsImport.fillMissingStopName = rawImportParameters.getFillMissingStopName();
         gtfsImport.fillMissingCoordinates = rawImportParameters.getFillMissingCoordinates();
+        gtfsImport.allowGtfsFlex = rawImportParameters.isAllowGtfsFlex();
 
         return gtfsImportParameters;
     }

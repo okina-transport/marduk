@@ -65,6 +65,8 @@ public class JobEvent {
 
     public Status lugStatus;
 
+    public Boolean flexible;
+
     private JobEvent() {
     }
 
@@ -183,6 +185,11 @@ public class JobEvent {
             return this;
         }
 
+        public Builder flexible(Boolean flexible) {
+            jobEvent.flexible = flexible;
+            return this;
+        }
+
         public JobEvent build() {
             if (JobDomain.TIMETABLE.equals(jobEvent.domain) && jobEvent.providerId == null) {
                 throw new IllegalArgumentException("No provider id");
@@ -225,6 +232,7 @@ public class JobEvent {
             jobEvent.description = exchange.getIn().getHeader(DESCRIPTION, String.class);
             jobEvent.type = exchange.getIn().getHeader(FILE_TYPE, String.class);
             jobEvent.lugStatus = exchange.getIn().getHeader(LUG_STATUS, Status.class);
+            jobEvent.flexible = exchange.getIn().getHeader(ALLOW_GTFS_FLEX, Boolean.class);
             return this;
         }
 

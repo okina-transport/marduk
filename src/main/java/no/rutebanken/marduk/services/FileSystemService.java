@@ -210,7 +210,7 @@ public class FileSystemService {
                 .parse(reader);
     }
 
-    private static String guessDelimiter(String fileContent) {
+    public static String guessDelimiter(String fileContent) {
 
         String[] lines = fileContent.split("\n");
         String firstLine = lines[0];
