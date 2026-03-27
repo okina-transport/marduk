@@ -40,6 +40,7 @@ public class ImportParameters {
     private String fillMissingStopName;
     private String fillMissingCoordinates;
     private Boolean overwriteLineInformation;
+    private Boolean allowGtfsFlex;
 
     public Long getId() {
         return id;
@@ -319,5 +320,13 @@ public class ImportParameters {
 
     public void setOverwriteLineInformation(Boolean overwriteLineInformation) {
         this.overwriteLineInformation = overwriteLineInformation;
+    }
+
+    public Boolean isAllowGtfsFlex() {
+        return allowGtfsFlex;
+    }
+
+    public void setAllowGtfsFlex(Boolean gtfsFlex) {
+        this.allowGtfsFlex = gtfsFlex;
     }
 }

@@ -46,6 +46,7 @@ public class RawImportParameters {
     private String fillMissingStopName;
     private String fillMissingCoordinates;
     private boolean overwriteLineInformation;
+    private boolean allowGtfsFlex;
 
     public String getFileName() {
         return fileName;
@@ -327,5 +328,13 @@ public class RawImportParameters {
 
     public void setOverwriteLineInformation(Boolean overwriteLineInformation) {
         this.overwriteLineInformation = overwriteLineInformation;
+    }
+
+    public Boolean isAllowGtfsFlex() {
+        return allowGtfsFlex;
+    }
+
+    public void setAllowGtfsFlex(Boolean gtfsFlex) {
+        this.allowGtfsFlex = gtfsFlex;
     }
 }

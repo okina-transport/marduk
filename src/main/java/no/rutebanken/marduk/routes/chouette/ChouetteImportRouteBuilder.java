@@ -50,6 +50,7 @@ import static no.rutebanken.marduk.utils.constants.RouteDeclarationConstants.*;
 import static no.rutebanken.marduk.utils.constants.RouteParamsConstants.CamelProperty.CHOUETTE_URL;
 import static no.rutebanken.marduk.utils.constants.RouteParamsConstants.Headers.ALL_CAMEL_HEADERS;
 import static no.rutebanken.marduk.utils.constants.RouteParamsConstants.Headers.FILTER;
+import static org.apache.camel.support.builder.PredicateBuilder.and;
 
 /**
  * Submits files to Chouette
@@ -254,6 +255,9 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
 
                     boolean recomputeStopPlacesLocation = BooleanUtils.isTrue(e.getIn().getHeader(RECOMPUTE_STOP_PLACES_LOCATION, Boolean.class));
 
+                    String allowGtfsFlexStr = e.getIn().getHeader(ALLOW_GTFS_FLEX, String.class);
+                    boolean allowGtfsFlex = !StringUtils.isEmpty(allowGtfsFlexStr) && Boolean.parseBoolean(allowGtfsFlexStr);
+
                     rawImportParameters.setFileName(fileName);
                     rawImportParameters.setFileType(fileType);
                     rawImportParameters.setProviderId(providerId);
@@ -288,6 +292,7 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
                     rawImportParameters.setFillMissingStopName(fillMissingStopName);
                     rawImportParameters.setFillMissingCoordinates(fillMissingCoordinates);
                     rawImportParameters.setOverwriteLineInformation(overwriteLineInformation);
+                    rawImportParameters.setAllowGtfsFlex(allowGtfsFlex);
 
                     e.getIn().setHeader(JSON_PART, getStringImportParameters(rawImportParameters));
                 }) //Using header to addToExchange json data
@@ -332,7 +337,7 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
                 .to("log:" + getClass().getName() + "?level=DEBUG&showAll=true&multiline=true")
                 .setBody(constant(""))
                 .choice()
-                    .when(org.apache.camel.support.builder.PredicateBuilder.and(constant("true").isEqualTo(header(ANALYZE_ACTION)), simple("${header.action_report_result} == 'OK' && ${header.validation_report_result} == 'OK'")))
+                    .when(and(constant("true").isEqualTo(header(ANALYZE_ACTION)), simple("${header.action_report_result} == 'OK' && ${header.validation_report_result} == 'OK'")))
                     .to("direct:proceedAnalyseResult")
                 .otherwise()
                     .to("direct:proceedResult")
@@ -395,8 +400,18 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
                 .to(ROUTE_ANALYS_RUNNING);
 
         from(ROUTE_ANALYS_RUNNING)
-            .process(e -> e.getIn().setHeader(ANALYZE_ACTION, false))
-            .to("jms:queue:ChouetteImportQueue");
+            .process(e -> {
+                e.getIn().setHeader(ANALYZE_ACTION, false);
+            })
+            .log(LoggingLevel.INFO, correlation() + "Checking for Flex file before multicast...")
+            .multicast().parallelProcessing(false)
+                .to("jms:queue:ChouetteImportQueue")
+                .choice()
+                    .when(header("GTFS_FLEX_FILE_PATH").isNotNull())
+                        .log(LoggingLevel.INFO, correlation() + "Sending Flex part to Uttu")
+                        .to("jms:queue:GtfsFlexUttuPredefinedImport")
+                .end()
+            .end();
 
         from(ROUTE_ANALYSIS_ERROR)
             .log(LoggingLevel.ERROR, correlation() + "File analysis found a major issue. Cannot launch import")
@@ -411,7 +426,7 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
                 .routeId("proceedResult")
                 //import ok
                 .choice()
-                    .when(org.apache.camel.support.builder.PredicateBuilder.and(constant("false").isEqualTo(header(ENABLE_VALIDATION)), simple("${header.action_report_result} == 'OK'")))
+                    .when(and(constant("false").isEqualTo(header(ENABLE_VALIDATION)), simple("${header.action_report_result} == 'OK'")))
                         .to(ROUTE_CHECK_SCHEDULED_JOBS_BEFORE_TRIGGERING_NEXT_ACTION)
                         .process(e -> JobEvent.providerJobBuilder(e).timetableAction(ImportRouteBuilder.getTimeTableAction(e)).state(State.OK).build())
                     //import ok
