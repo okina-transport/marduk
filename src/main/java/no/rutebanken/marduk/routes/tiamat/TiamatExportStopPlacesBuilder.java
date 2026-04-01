@@ -99,11 +99,6 @@ public class TiamatExportStopPlacesBuilder extends AbstractChouetteRouteBuilder 
                     e.getIn().setBody(con.getInputStream());
 
                     Job job = e.getIn().getBody(Job.class);
-                    if (e.getIn().getHeader(EXPORT_FILE_NAME) != null) {
-                        job.setFileName(e.getIn().getHeader(EXPORT_FILE_NAME).toString());
-                    } else if (e.getIn().getHeader(FILE_NAME) != null) {
-                        job.setFileName(e.getIn().getHeader(FILE_NAME).toString());
-                    }
                     e.getIn().getHeaders().put(FILE_NAME, job.getFileName());
                     // required to skip chouette reports parsing when polling job status
                     e.getIn().setHeader(TIAMAT_STOP_PLACES_EXPORT, job.getId());
