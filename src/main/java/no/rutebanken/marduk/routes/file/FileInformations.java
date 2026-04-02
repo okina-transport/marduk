@@ -13,6 +13,7 @@ import java.nio.file.Path;
 import java.util.UUID;
 
 import static no.rutebanken.marduk.Constants.CLEAN_INPUT_NETEX_ZIP;
+import static no.rutebanken.marduk.Constants.INPUT_OFFER_ZIP_FILE_PATH;
 
 public class FileInformations {
 
@@ -23,17 +24,21 @@ public class FileInformations {
     }
 
     public static void getObjectUpload(Exchange e) {
-        Path temporaryFileZipFile = FileUtils.createTemporaryFile(e);
+        Path inputFilePath = e.getIn().getHeader(INPUT_OFFER_ZIP_FILE_PATH, Path.class);
+        if (inputFilePath == null) {
+            inputFilePath = FileUtils.createTemporaryFile(e);
+        }
+
         if (BooleanUtils.isTrue((Boolean) e.getIn().getHeader(CLEAN_INPUT_NETEX_ZIP))) {
             try {
                 Path directoryPath = Path.of("/tmp/", UUID.randomUUID().toString());
-                Path cleanFilepath = Path.of(directoryPath.toString(), temporaryFileZipFile.getFileName().toString());
+                Path cleanFilepath = Path.of(directoryPath.toString(), inputFilePath.getFileName().toString());
                 Files.createDirectories(directoryPath);
                 Files.createFile(cleanFilepath);
                 try (FileOutputStream fos = new FileOutputStream(cleanFilepath.toFile())) {
-                    ZipFileUtils.copyZipFileWithoutUnwantedFiles(temporaryFileZipFile, fos, ".xml");
+                    ZipFileUtils.copyZipFileWithoutUnwantedFiles(inputFilePath, fos, ".xml");
                     e.getMessage().setBody(cleanFilepath.toFile());
-                    Files.delete(temporaryFileZipFile);
+                    Files.delete(inputFilePath);
                 }
             } catch (IOException exception) {
                 LOG.error(exception.getMessage());

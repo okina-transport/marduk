@@ -742,7 +742,7 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
         return fileNames.getOrDefault(optionValue, "default.zip");
     }
 
-    private void getCron(Exchange e) throws SchedulerException, JSONException {
+    private void getCron(Exchange e) throws JSONException {
         Provider provider = getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class));
         Integer importConfigurationId = e.getIn().getHeader(IMPORT_CONFIGURATION_ID, Integer.class);
         String triggerName = QuartzService.getImportConfigurationJobTriggerName(provider, importConfigurationId);

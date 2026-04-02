@@ -213,5 +213,6 @@ public class Constants {
     public static final String FILL_MISSING_COORDINATES = "fillMissingCoordinates";
 
     public static final String CLEAN_INPUT_NETEX_ZIP = "cleanInputNetexZip";
+    public static final String INPUT_OFFER_ZIP_FILE_PATH = "inputOfferZipFilePath";
 }
 
