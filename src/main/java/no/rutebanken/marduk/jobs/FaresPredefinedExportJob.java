@@ -32,7 +32,7 @@ public class FaresPredefinedExportJob implements Job {
         JobDataMap jobDataMap = context.getJobDetail().getJobDataMap();
         Long providerId = jobDataMap.getLong(PROVIDER_ID);
         Provider provider = providerRepository.getProvider(providerId);
-        Integer exportConfigurationId = jobDataMap.getInt(EXPORT_CONFIGURATION_ID);
+        Long exportConfigurationId = jobDataMap.getLong(EXPORT_CONFIGURATION_ID);
 
         logger.info("FaresExportJob triggered for provider {} and export configuration id {}", provider.getName(), exportConfigurationId);
 

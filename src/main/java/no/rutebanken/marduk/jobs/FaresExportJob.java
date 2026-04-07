@@ -14,8 +14,7 @@ import org.springframework.stereotype.Component;
 import java.util.HashMap;
 import java.util.Map;
 
-import static no.rutebanken.marduk.Constants.PROVIDER_ID;
-import static no.rutebanken.marduk.Constants.USER;
+import static no.rutebanken.marduk.Constants.*;
 
 @Component
 public class FaresExportJob implements Job {
@@ -40,6 +39,7 @@ public class FaresExportJob implements Job {
         Map<String, Object> headers = new HashMap<>();
         headers.put(USER, user);
         headers.put(PROVIDER_ID, providerId);
+        headers.put(CHOUETTE_REFERENTIAL, provider.getName());
         producer.sendBodyAndHeaders("jms:queue:exportNetexFaresQueue", null, headers);
     }
 }
