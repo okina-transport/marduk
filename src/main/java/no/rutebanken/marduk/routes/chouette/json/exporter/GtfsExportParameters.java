@@ -116,12 +116,15 @@ public class GtfsExportParameters {
         @JsonProperty("agency_lang")
         private String agencyLang;
 
+        @JsonProperty("service_journey_trip_object_name")
+        public boolean serviceJourneyTripObjectName = false;
+
 
 
         public GtfsExport(String name, String objectIdPrefix, String referentialName, String organisationName, String userName, boolean keepOriginalId, Date startDate, Date endDate, String exportedFilename,
                           IdParameters idParams, boolean mappingLinesIds, Boolean commercialPointExport, AttributionsExportModes attributionsExportModes, Boolean googleMapsCompatibility,
                           boolean useExtendedGtfsRouteTypes, AgencyParameters agencyParameters, String exportedReferentials, Long exportConfigurationId,
-                          boolean exportAllLines) {
+                          boolean exportAllLines, boolean serviceJourneyTripObjectName) {
             this.name = name;
             this.objectIdPrefix = objectIdPrefix;
             this.referentialName = referentialName;
@@ -149,10 +152,11 @@ public class GtfsExportParameters {
             this.exportedReferentials = exportedReferentials;
             this.exportConfigurationId = exportConfigurationId;
             this.exportAllLines = exportAllLines;
+            this.serviceJourneyTripObjectName = serviceJourneyTripObjectName;
         }
 
         public GtfsExport(String name, String objectIdPrefix, String referentialName, String organisationName, String userName, boolean keepOriginalId, String exportedFilename,  Long exportConfigurationId, boolean exportAllLines) {
-            this(name, objectIdPrefix, referentialName, organisationName, userName, keepOriginalId, null, null, exportedFilename, new IdParameters(), false, false, AttributionsExportModes.NONE, false, false, new AgencyParameters(), null, exportConfigurationId, false);
+            this(name, objectIdPrefix, referentialName, organisationName, userName, keepOriginalId, null, null, exportedFilename, new IdParameters(), false, false, AttributionsExportModes.NONE, false, false, new AgencyParameters(), null, exportConfigurationId, false, false);
         }
 
     }

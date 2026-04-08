@@ -113,6 +113,8 @@ public class PredefinedExportsRouteBuilder extends AbstractChouetteRouteBuilder 
                     e.getMessage().getHeaders().put("providerId", mobiitiProvider.getId());
                     e.getMessage().getHeaders().put(ORIGINAL_PROVIDER_ID, provider.getId());
                     e.getMessage().getHeaders().put(FARES_INCLUDED_HEADER,export.isIncludeFares());
+                    e.getMessage().getHeaders().put(SERVICE_JOURNEY_IN_TRIP_OBJECT_NAME, export.isServiceJourneyTripObjectName());
+
                     export.setStatus(Status.PROCESSING.name());
                     exportTemplateDAO.saveExportTemplate(providerName,export);
                 })

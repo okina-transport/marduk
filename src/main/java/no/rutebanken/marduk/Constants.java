@@ -105,6 +105,7 @@ public class Constants {
     public static final String NETEX_EXPORT_GLOBAL = "RutebankenNetexExportGlobal";
     public static final String GTFS_EXPORT_GLOBAL = "RutebankenGtfsExportGlobal";
     public static final String IMPORT = "RutebankenImport";
+    public static final String SERVICE_JOURNEY_IN_TRIP_OBJECT_NAME = "ServiceJourneyInTripObjectName";
 
     public static final String CURRENT_AGGREGATED_GTFS_FILENAME = "aggregated-gtfs.zip";
     public static final String CURRENT_AGGREGATED_NETEX_FILENAME = "aggregated-netex.zip";

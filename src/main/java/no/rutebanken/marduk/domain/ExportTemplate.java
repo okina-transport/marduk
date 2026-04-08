@@ -40,6 +40,7 @@ public class ExportTemplate implements Serializable {
     private boolean exportExternalIds;
     private String status;
     private boolean includeFares;
+    private boolean serviceJourneyTripObjectName;
 
 
 
@@ -301,5 +302,13 @@ public class ExportTemplate implements Serializable {
 
     public void setIncludeFares(boolean includeFares) {
         this.includeFares = includeFares;
+    }
+
+    public boolean isServiceJourneyTripObjectName() {
+        return serviceJourneyTripObjectName;
+    }
+
+    public void setServiceJourneyTripObjectName(boolean serviceJourneyTripObjectName) {
+        this.serviceJourneyTripObjectName = serviceJourneyTripObjectName;
     }
 }
