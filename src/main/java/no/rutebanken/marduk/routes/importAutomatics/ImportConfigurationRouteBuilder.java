@@ -30,6 +30,8 @@ import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 import org.jspecify.annotations.NonNull;
 import org.quartz.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -59,6 +61,8 @@ import static no.rutebanken.marduk.utils.constants.RouteDeclarationConstants.ROU
 
 @Component
 public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilder {
+
+    private static final Logger LOG = LoggerFactory.getLogger(ImportConfigurationRouteBuilder.class);
 
     @Value("${client.name}")
     private String client;
@@ -742,38 +746,31 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
         return fileNames.getOrDefault(optionValue, "default.zip");
     }
 
-    private void getCron(Exchange e) throws SchedulerException, JSONException {
+    private void getCron(Exchange e) throws JSONException {
         Provider provider = getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class));
         Integer importConfigurationId = e.getIn().getHeader(IMPORT_CONFIGURATION_ID, Integer.class);
         String triggerName = QuartzService.getImportConfigurationJobTriggerName(provider, importConfigurationId);
         Optional<Trigger> trigger = quartzService.findTriggerByName(triggerName);
+        e.getIn().setBody(cronTriggerToJson(trigger));
+    }
+
+    private static @NonNull CronInfo cronTriggerToJson(Optional<Trigger> trigger) {
+        CronInfo cronInfo = new CronInfo();
         if (trigger.isPresent()) {
-            JSONObject jsonObject = cronTriggerToJson(trigger);
-            e.getIn().setBody(jsonObject.toString());
-        } else {
-            JSONObject jsonObject = emptyCronTriggerJson();
-            e.getIn().setBody(jsonObject.toString());
+            CronTrigger cronTrigger = (CronTrigger) trigger.get();
+            String[] dateFromCron = cronTrigger.getCronExpression().split(" ");
+
+            try {
+                cronInfo.setDate(cronTrigger.getStartTime().getTime());
+                cronInfo.setHours(Integer.parseInt(dateFromCron[2]));
+                cronInfo.setMinutes(Integer.parseInt(dateFromCron[1]));
+                List<Integer> applicationDays = Arrays.stream(dateFromCron[5].split(",")).map(Integer::parseInt).toList();
+                cronInfo.setApplicationDays(applicationDays);
+            } catch (Exception e) {
+                LOG.error("Error converting cronTrigger to object");
+            }
         }
-    }
-
-    private static @NonNull JSONObject cronTriggerToJson(Optional<Trigger> trigger) throws JSONException {
-        CronTrigger cronTrigger = (CronTrigger) trigger.get();
-        String[] dateFromCron = cronTrigger.getCronExpression().split(" ");
-        JSONObject jsonObject = new JSONObject();
-        jsonObject.append("hour", dateFromCron[2]);
-        jsonObject.append("minutes", dateFromCron[1]);
-        jsonObject.append("date", cronTrigger.getStartTime().getTime());
-        jsonObject.append("applicationDays", dateFromCron[5]);
-        return jsonObject;
-    }
-
-    private static @NonNull JSONObject emptyCronTriggerJson() throws JSONException {
-        JSONObject jsonObject = new JSONObject();
-        jsonObject.append("hour", "");
-        jsonObject.append("minutes", "");
-        jsonObject.append("date", "");
-        jsonObject.append("applicationDays", "");
-        return jsonObject;
+        return cronInfo;
     }
 
     private void getCronValidationExport(Exchange e) throws JSONException {
@@ -781,13 +778,7 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
         Integer importConfigurationId = e.getIn().getHeader(IMPORT_CONFIGURATION_ID, Integer.class);
         String triggerName = QuartzService.getAutomaticChouetteValidationExportJobTriggerName(provider, importConfigurationId);
         Optional<Trigger> trigger = quartzService.findTriggerByName(triggerName);
-        if (trigger.isPresent()) {
-            JSONObject jsonObject = cronTriggerToJson(trigger);
-            e.getIn().setBody(jsonObject.toString());
-        } else {
-            JSONObject jsonObject = emptyCronTriggerJson();
-            e.getIn().setBody(jsonObject.toString());
-        }
+        e.getIn().setBody(cronTriggerToJson(trigger));
     }
 
     private void updateSchedulerImportConfiguration(Exchange e) throws SchedulerException {
