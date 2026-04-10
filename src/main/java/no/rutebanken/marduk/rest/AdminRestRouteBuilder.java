@@ -1556,7 +1556,6 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .log(LoggingLevel.INFO, "Mapbox update with data from tiamat")
                 .removeHeaders(ALL_CAMEL_HTTP)
                 .to("direct:runMapboxUpdate");
-
     }
 
 }

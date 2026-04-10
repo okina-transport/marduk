@@ -45,7 +45,7 @@ public class MultipleExportProcessor implements Processor {
         exchange.getIn().setBody(null);
         exports.forEach(export -> {
 
-            if (BooleanUtils.toBoolean(!export.getExportEnabled())){
+            if (!BooleanUtils.toBoolean(export.getExportEnabled())){
                 log.info("Multiple export : not launching disabled export : {}/{}", export.getId(), export.getName());
                 return;
             }
