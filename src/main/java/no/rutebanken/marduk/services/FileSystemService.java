@@ -59,6 +59,9 @@ public class FileSystemService {
         if (e.getIn().getBody() instanceof Job){
             Job job = e.getIn().getBody(Job.class);
             filename = tiamatStoragePath + File.separator + job.getSubFolder() + File.separator + job.getFileName();
+        }else if(e.getIn().getHeader(ORIGINAL_JOB) != null){
+            Job job = e.getIn().getHeader(ORIGINAL_JOB, Job.class);
+            filename = tiamatStoragePath + File.separator + job.getSubFolder() + File.separator + job.getFileName();
         }else if (  e.getIn().getHeader(SUB_FOLDER) != null){
             filename = tiamatStoragePath + File.separator+  e.getIn().getHeader(SUB_FOLDER) + File.separator + e.getIn().getHeader(FILE_NAME);
         }else{
