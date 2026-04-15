@@ -40,6 +40,7 @@ import java.util.Map;
 import java.util.Optional;
 
 import static no.rutebanken.marduk.utils.constants.RouteDeclarationConstants.ROUTE_IMPORT_LAUNCH;
+import static no.rutebanken.marduk.utils.constants.RouteDeclarationConstants.ROUTE_UPDATE_STATUS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
@@ -119,7 +120,7 @@ class ChouetteImportFileMardukRouteIntegrationTest extends MardukRouteBuilderInt
 
         // Mock update status calls
         AdviceWith.adviceWith(context, "chouette-process-import-status", adviceWithRouteBuilder -> {
-            adviceWithRouteBuilder.interceptSendToEndpoint("direct:updateStatus").skipSendToOriginalEndpoint()
+            adviceWithRouteBuilder.interceptSendToEndpoint(ROUTE_UPDATE_STATUS).skipSendToOriginalEndpoint()
                     .to("mock:updateStatus");
             adviceWithRouteBuilder.interceptSendToEndpoint("direct:checkScheduledJobsBeforeTriggeringNextAction").skipSendToOriginalEndpoint()
                     .to("mock:checkScheduledJobsBeforeTriggeringNextAction");
@@ -187,7 +188,7 @@ class ChouetteImportFileMardukRouteIntegrationTest extends MardukRouteBuilderInt
 
         // Mock update status calls
         AdviceWith.adviceWith(context, "chouette-process-import-status", adviceWithRouteBuilder -> {
-            adviceWithRouteBuilder.interceptSendToEndpoint("direct:updateStatus").skipSendToOriginalEndpoint()
+            adviceWithRouteBuilder.interceptSendToEndpoint(ROUTE_UPDATE_STATUS).skipSendToOriginalEndpoint()
                     .to("mock:updateStatus");
             adviceWithRouteBuilder.interceptSendToEndpoint("direct:checkScheduledJobsBeforeTriggeringNextAction").skipSendToOriginalEndpoint()
                     .to("mock:checkScheduledJobsBeforeTriggeringNextAction");

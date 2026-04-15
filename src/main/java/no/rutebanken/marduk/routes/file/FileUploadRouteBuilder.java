@@ -54,7 +54,7 @@ public class FileUploadRouteBuilder extends BaseRouteBuilder {
 
 
         from("direct:uploadFileAndStartImport")
-                .process(e -> JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.FILE_TRANSFER).state(JobEvent.State.STARTED).build()).to("direct:updateStatus")
+                .process(e -> JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.FILE_TRANSFER).state(JobEvent.State.STARTED).build()).to(ROUTE_UPDATE_STATUS)
                 .doTry()
                 .log(LoggingLevel.INFO, correlation() + "About to upload timetable file to blob store: ${header." + FILE_HANDLE + "}")
                 .setBody(header(FILE_CONTENT_HEADER))
@@ -66,12 +66,12 @@ public class FileUploadRouteBuilder extends BaseRouteBuilder {
                 .log(LoggingLevel.INFO, correlation() + "Triggered import pipeline for timetable file: ${header." + FILE_HANDLE + "}")
                 .doCatch(Exception.class)
                 .log(LoggingLevel.WARN, correlation() + "Upload of timetable data to blob store failed for file: ${header." + FILE_HANDLE + "}")
-                .process(e -> JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.FILE_TRANSFER).state(JobEvent.State.FAILED).build()).to("direct:updateStatus")
+                .process(e -> JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.FILE_TRANSFER).state(JobEvent.State.FAILED).build()).to(ROUTE_UPDATE_STATUS)
                 .end()
                 .routeId("file-upload-and-start-import");
 
         from("direct:tiamatUploadFileAndStartImport")
-                .process(e -> JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.FILE_TRANSFER).type(e.getIn().getHeader(IMPORT_TYPE, String.class)).state(JobEvent.State.STARTED).build()).to("direct:updateStatus")
+                .process(e -> JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.FILE_TRANSFER).type(e.getIn().getHeader(IMPORT_TYPE, String.class)).state(JobEvent.State.STARTED).build()).to(ROUTE_UPDATE_STATUS)
                 .doTry()
                 .log(LoggingLevel.INFO, correlation() + "About to upload timetable file to blob store: ${header." + FILE_HANDLE + "}")
                 .setBody(header(FILE_CONTENT_HEADER))
@@ -83,12 +83,12 @@ public class FileUploadRouteBuilder extends BaseRouteBuilder {
                 .log(LoggingLevel.INFO, correlation() + "Triggered import pipeline for timetable file: ${header." + FILE_HANDLE + "}")
                 .doCatch(Exception.class)
                 .log(LoggingLevel.WARN, correlation() + "Upload of timetable data to blob store failed for file: ${header." + FILE_HANDLE + "}")
-                .process(e -> JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.FILE_TRANSFER).state(JobEvent.State.FAILED).build()).to("direct:updateStatus")
+                .process(e -> JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.FILE_TRANSFER).state(JobEvent.State.FAILED).build()).to(ROUTE_UPDATE_STATUS)
                 .end()
                 .routeId("tiamat-file-upload-and-start-import");
 
         from("direct:faresUploadFileAndStartImport")
-                .process(e -> JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.FILE_TRANSFER).type(e.getIn().getHeader(IMPORT_TYPE, String.class)).state(JobEvent.State.STARTED).build()).to("direct:updateStatus")
+                .process(e -> JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.FILE_TRANSFER).type(e.getIn().getHeader(IMPORT_TYPE, String.class)).state(JobEvent.State.STARTED).build()).to(ROUTE_UPDATE_STATUS)
                 .doTry()
                 .log(LoggingLevel.INFO, correlation() + "About to upload timetable file to blob store: ${header." + FILE_HANDLE + "}")
                 .setBody(header(FILE_CONTENT_HEADER))
@@ -100,7 +100,7 @@ public class FileUploadRouteBuilder extends BaseRouteBuilder {
                 .log(LoggingLevel.INFO, correlation() + "Triggered import pipeline for timetable file: ${header." + FILE_HANDLE + "}")
                 .doCatch(Exception.class)
                 .log(LoggingLevel.WARN, correlation() + "Upload of timetable data to blob store failed for file: ${header." + FILE_HANDLE + "}")
-                .process(e -> JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.FILE_TRANSFER).state(JobEvent.State.FAILED).build()).to("direct:updateStatus")
+                .process(e -> JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.FILE_TRANSFER).state(JobEvent.State.FAILED).build()).to(ROUTE_UPDATE_STATUS)
                 .end()
                 .routeId("fares-file-upload-and-start-import");
 

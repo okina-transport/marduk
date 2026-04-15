@@ -44,6 +44,7 @@ import java.util.List;
 
 import static no.rutebanken.marduk.Constants.*;
 import static no.rutebanken.marduk.routes.chouette.json.Status.*;
+import static no.rutebanken.marduk.utils.constants.RouteDeclarationConstants.ROUTE_UPDATE_STATUS;
 
 @Component
 public class TiamatPollJobStatusRoute extends AbstractChouetteRouteBuilder {
@@ -138,7 +139,7 @@ public class TiamatPollJobStatusRoute extends AbstractChouetteRouteBuilder {
                 .toD("${exchangeProperty.tiamat_url}")
                 .setBody(constant((Object) null))
                 .process(e -> JobEvent.providerJobBuilder(e).timetableAction(TimetableAction.IMPORT).state(State.CANCELLED).type(e.getIn().getHeader(FILE_TYPE, String.class)).build())
-                .to("direct:updateStatus")
+                .to(ROUTE_UPDATE_STATUS)
                 .routeId("tiamat-cancel-job");
 
         from("direct:tiamatCancelAllJobsForProvider")
@@ -227,7 +228,7 @@ public class TiamatPollJobStatusRoute extends AbstractChouetteRouteBuilder {
                 .choice()
                 .when(simple("${exchangeProperty.current_status} == '" + STARTED + "' && ${header.loopCounter} == 1"))
                 .process(e -> JobEvent.providerJobBuilder(e).timetableAction(TimetableAction.valueOf((String) e.getIn().getHeader(Constants.JOB_STATUS_JOB_TYPE))).state(State.STARTED).jobId(e.getIn().getHeader(Constants.JOB_ID, Long.class)).build())
-                .to("direct:updateStatus")
+                .to(ROUTE_UPDATE_STATUS)
                 .end()
                 // Remove or ActiveMQ will think message is overdue and resend immediately
                 .removeHeader("scheduledJobId")
@@ -245,16 +246,16 @@ public class TiamatPollJobStatusRoute extends AbstractChouetteRouteBuilder {
                     .when(simple("${header.current_status} == '" + SCHEDULED + "' || ${header.current_status} == '" + STARTED + "' || ${header.current_status} == '" + PROCESSING + "' || ${header.current_status} == '" + RESCHEDULED + "'"))
                         .log(LoggingLevel.WARN, correlation() + "Job timed out with state ${header.current_status}. Config should probably be tweaked. Stopping route.")
                         .process(e -> JobEvent.providerJobBuilder(e).timetableAction(TimetableAction.valueOf((String) e.getIn().getHeader(JOB_STATUS_JOB_TYPE))).state(State.TIMEOUT).build())
-                        .to("direct:updateStatus")
+                        .to(ROUTE_UPDATE_STATUS)
                         .stop()
                     .when(simple("${header.current_status} == '" + ABORTED + "'"))
                         .log(LoggingLevel.WARN, correlation() + "Job ended in state FAILED. Stopping route.")
-                        .to("direct:updateStatus")
+                        .to(ROUTE_UPDATE_STATUS)
                         .stop()
                     .when(simple("${header.current_status} == '" + CANCELED + "' || ${header.current_status} == '" + FAILED + "'"))
                         .log(LoggingLevel.WARN, correlation() + "Job ended in state CANCELLED. Stopping route.")
                         .process(e -> JobEvent.providerJobBuilder(e).timetableAction(TimetableAction.valueOf((String) e.getIn().getHeader(JOB_STATUS_JOB_TYPE))).state(State.CANCELLED).build())
-                        .to("direct:updateStatus")
+                        .to(ROUTE_UPDATE_STATUS)
                         .stop()
                 .end()
                 // Fetch and parse action report
@@ -264,7 +265,7 @@ public class TiamatPollJobStatusRoute extends AbstractChouetteRouteBuilder {
                         createMail.createMail(e, "NETEX", ImportRouteBuilder.getTimeTableAction(e), true);
                     }
                 })
-                .to("direct:updateStatus")
+                .to(ROUTE_UPDATE_STATUS)
                 .removeHeaders("Camel*")
                 .setBody(simple(""))
                 .routeId("tiamat-process-job-reports");

@@ -123,7 +123,7 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
                     TimetableAction action = BooleanUtils.toBoolean(analyze) ? TimetableAction.FILE_ANALYZE : TimetableAction.IMPORT;
                     JobEvent.providerJobBuilder(e).timetableAction(action).state(State.PENDING).type(e.getIn().getHeader(FILE_TYPE, String.class)).build();
                 })
-                .to("direct:updateStatus")
+                .to(ROUTE_UPDATE_STATUS)
                 .to("direct:getBlob")
                 .choice()
                     .when(body().isNull())
@@ -342,7 +342,7 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
                 .otherwise()
                     .to("direct:proceedResult")
                 .end()
-                .to("direct:updateStatus")
+                .to(ROUTE_UPDATE_STATUS)
                 .routeId("chouette-process-import-status");
 
         // Check that no other import jobs in status SCHEDULED exists for this referential. If so, do not trigger export
