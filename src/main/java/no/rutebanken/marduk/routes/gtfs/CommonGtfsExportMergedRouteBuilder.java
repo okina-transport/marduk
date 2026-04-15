@@ -33,6 +33,7 @@ import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.toList;
 import static no.rutebanken.marduk.Constants.*;
+import static no.rutebanken.marduk.utils.constants.RouteDeclarationConstants.ROUTE_UPDATE_STATUS;
 import static org.apache.camel.Exchange.FILE_PARENT;
 
 /**
@@ -71,7 +72,7 @@ public class CommonGtfsExportMergedRouteBuilder extends BaseRouteBuilder {
 
         from("direct:reportExportMergedGtfsOK")
                 .process(e -> JobEvent.systemJobBuilder(e).state(JobEvent.State.OK).build())
-                .to("direct:updateStatus")
+                .to(ROUTE_UPDATE_STATUS)
                 .routeId("gtfs-export-merged-report-ok");
 
         from("direct:fetchLatestGtfs")

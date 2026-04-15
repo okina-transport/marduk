@@ -33,6 +33,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import static no.rutebanken.marduk.utils.constants.RouteDeclarationConstants.ROUTE_UPDATE_STATUS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
@@ -82,7 +83,7 @@ class ChouettePollJobStatusMardukRouteIntegrationTest extends MardukRouteBuilder
             adviceWithRouteBuilder.interceptSendToEndpoint(chouetteUrl + "/chouette_iev/referentials/rut/scheduled_jobs/1")
                     .skipSendToOriginalEndpoint().to("mock:chouetteGetJobStatus");
 
-            adviceWithRouteBuilder.interceptSendToEndpoint("direct:updateStatus").skipSendToOriginalEndpoint().to("mock:updateStatus");
+            adviceWithRouteBuilder.interceptSendToEndpoint(ROUTE_UPDATE_STATUS).skipSendToOriginalEndpoint().to("mock:updateStatus");
         });
 
         AdviceWith.adviceWith(context, "chouette-process-job-reports", adviceWithRouteBuilder -> {
@@ -94,11 +95,11 @@ class ChouettePollJobStatusMardukRouteIntegrationTest extends MardukRouteBuilder
         });
 
         AdviceWith.adviceWith(context, "chouette-reschedule-job", adviceWithRouteBuilder -> {
-            adviceWithRouteBuilder.interceptSendToEndpoint("direct:updateStatus").skipSendToOriginalEndpoint().to("mock:updateStatus");
+            adviceWithRouteBuilder.interceptSendToEndpoint(ROUTE_UPDATE_STATUS).skipSendToOriginalEndpoint().to("mock:updateStatus");
         });
 
         AdviceWith.adviceWith(context, "chouette-reschedule-job", adviceWithRouteBuilder -> {
-            adviceWithRouteBuilder.interceptSendToEndpoint("direct:updateStatus").skipSendToOriginalEndpoint().to("mock:updateStatus");
+            adviceWithRouteBuilder.interceptSendToEndpoint(ROUTE_UPDATE_STATUS).skipSendToOriginalEndpoint().to("mock:updateStatus");
         });
 
 

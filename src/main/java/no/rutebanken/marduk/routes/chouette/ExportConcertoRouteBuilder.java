@@ -38,6 +38,7 @@ import static no.rutebanken.marduk.Constants.JSON_PART;
 import static no.rutebanken.marduk.Constants.PROVIDER_ID;
 import static no.rutebanken.marduk.Constants.USER;
 import static no.rutebanken.marduk.utils.Utils.getLastPathElementOfUrl;
+import static no.rutebanken.marduk.utils.constants.RouteDeclarationConstants.ROUTE_UPDATE_STATUS;
 
 /**
  * Exports concerto files from Chouette
@@ -83,7 +84,7 @@ public class ExportConcertoRouteBuilder extends AbstractChouetteRouteBuilder {
                     e.getIn().removeHeader(Constants.JOB_ID);
                 })
                 .process(e -> JobEvent.providerJobBuilder(e).timetableAction(TimetableAction.EXPORT_CONCERTO).state(State.PENDING).build())
-                .to("direct:updateStatus")
+                .to(ROUTE_UPDATE_STATUS)
 
                 .process(e -> e.getIn().setHeader(CHOUETTE_REFERENTIAL, getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)).chouetteInfo.referential))
                 .process(e -> {
@@ -131,7 +132,7 @@ public class ExportConcertoRouteBuilder extends AbstractChouetteRouteBuilder {
                 .log(LoggingLevel.ERROR, correlation() + "Something went wrong on export")
                 .process(e -> JobEvent.providerJobBuilder(e).timetableAction(TimetableAction.EXPORT_CONCERTO).state(State.FAILED).build())
                 .end()
-                .to("direct:updateStatus")
+                .to(ROUTE_UPDATE_STATUS)
                 .routeId("chouette-process-export-concerto-status");
     }
 

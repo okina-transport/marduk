@@ -34,6 +34,7 @@ import java.util.UUID;
 
 import static no.rutebanken.marduk.Constants.*;
 import static no.rutebanken.marduk.utils.constants.RouteDeclarationConstants.ROUTE_PROCESS_FILE_QUEUE;
+import static no.rutebanken.marduk.utils.constants.RouteDeclarationConstants.ROUTE_UPDATE_STATUS;
 
 /**
  * Downloads file from lamassu, putting it in blob store, posting handle on queue.
@@ -86,7 +87,7 @@ public class SftpReceiverRouteBuilder extends BaseRouteBuilder {
 
                 .choice().when(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)).chouetteInfo.enableAutoImport)
                 .process(e -> JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.FILE_TRANSFER).state(JobEvent.State.STARTED).build())
-                .to("direct:updateStatus")
+                .to(ROUTE_UPDATE_STATUS)
                 .log(LoggingLevel.INFO, correlation() + "Putting handle ${header." + FILE_HANDLE + "} on queue...")
                 .to(ROUTE_PROCESS_FILE_QUEUE)
                 .otherwise()

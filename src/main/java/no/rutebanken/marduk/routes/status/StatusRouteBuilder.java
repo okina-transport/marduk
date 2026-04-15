@@ -31,6 +31,7 @@ import java.util.Set;
 
 import static no.rutebanken.marduk.Constants.*;
 import static no.rutebanken.marduk.routes.status.JobEvent.State.OK;
+import static no.rutebanken.marduk.utils.constants.RouteDeclarationConstants.ROUTE_UPDATE_STATUS;
 
 @Component
 public class StatusRouteBuilder extends RouteBuilder {
@@ -45,7 +46,7 @@ public class StatusRouteBuilder extends RouteBuilder {
 
     @Override
     public void configure() throws Exception {
-        from("direct:updateStatus")
+        from(ROUTE_UPDATE_STATUS)
                 .log(LoggingLevel.INFO, getClass().getName(), "Sending off job status event: ${body}")
                 .process(e -> {
 
@@ -88,7 +89,7 @@ public class StatusRouteBuilder extends RouteBuilder {
                 })
                 .choice()
                 .when(simple("${header.exportToConsumerStatus} != null"))
-                .to("direct:updateStatus")
+                .to(ROUTE_UPDATE_STATUS)
                 .end()
                 .routeId("update-export-to-consumer-status");
     }

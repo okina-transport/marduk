@@ -36,6 +36,7 @@ import java.util.UUID;
 import static java.util.stream.Collectors.toList;
 import static no.rutebanken.marduk.Constants.*;
 import static no.rutebanken.marduk.utils.Utils.getLastPathElementOfUrl;
+import static no.rutebanken.marduk.utils.constants.RouteDeclarationConstants.ROUTE_UPDATE_STATUS;
 
 /**
  * Exports neptune files from Chouette
@@ -72,7 +73,7 @@ public class ChouetteExportNeptuneRouteBuilder extends AbstractChouetteRouteBuil
                     log.info("Lancement export Neptune - Fichier : " + exportName + " - Espace de données : " + getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)).chouetteInfo.referential);
                 })
                 .process(e -> JobEvent.providerJobBuilder(e).timetableAction(TimetableAction.EXPORT).state(State.PENDING).build())
-                .to("direct:updateStatus")
+                .to(ROUTE_UPDATE_STATUS)
                 .process(e -> e.getIn().setHeader(CHOUETTE_REFERENTIAL, getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)).chouetteInfo.referential))
                 .process(e -> {
                     String user = e.getIn().getHeader(USER, String.class);
@@ -159,7 +160,7 @@ public class ChouetteExportNeptuneRouteBuilder extends AbstractChouetteRouteBuil
                             }
                         })
                 .end()
-                .to("direct:updateStatus")
+                .to(ROUTE_UPDATE_STATUS)
                 .routeId("chouette-process-export-neptune-status");
 
     }
