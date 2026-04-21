@@ -10,7 +10,7 @@
 
     <groupId>no.rutebanken.marduk</groupId>
     <artifactId>marduk</artifactId>
-    <version>2.7.8-mobi-iti-SNAPSHOT</version>
+    <version>2.7.9-mobi-iti-SNAPSHOT</version>
 
   <name>marduk</name>
   <description>Mobi-iti orchestrator</description>
