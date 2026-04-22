@@ -18,8 +18,7 @@ class GtfsFileInputWithParametersTest {
                 new HashSet<>(0),
                 false,
                 "",
-                "",
-                false);
+                "");
 
         assertNotNull(test);
         assertFalse(test.isAllowNonStandardGtfs());
@@ -35,8 +34,7 @@ class GtfsFileInputWithParametersTest {
                 new HashSet<>(0),
                 true,
                 "stop",
-                "",
-                false);
+                "");
 
         assertNotNull(test);
         assertTrue(test.isAllowNonStandardGtfs());
@@ -52,8 +50,7 @@ class GtfsFileInputWithParametersTest {
                 new HashSet<>(0),
                 true,
                 "stop",
-                "43.481402,-1.514699",
-                false);
+                "43.481402,-1.514699");
 
         assertNotNull(test);
         assertTrue(test.isAllowNonStandardGtfs());
