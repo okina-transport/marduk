@@ -28,6 +28,7 @@ public class GtfsFileInputWithParameters {
 
     private final double defaultLatitude;
 
+
     public GtfsFileInputWithParameters(File inputFile, Set<String> routeIds, boolean allowNonStandardGtfs, String fillMissingStopName, String fillMissingCoordinates) {
         this.inputFile = inputFile;
         this.allowNonStandardGtfs = allowNonStandardGtfs;
