@@ -28,14 +28,12 @@ public class GtfsFileInputWithParameters {
 
     private final double defaultLatitude;
 
-    private final boolean allowGtfsFlex;
 
-    public GtfsFileInputWithParameters(File inputFile, Set<String> routeIds, boolean allowNonStandardGtfs, String fillMissingStopName, String fillMissingCoordinates, boolean allowGtfsFlex) {
+    public GtfsFileInputWithParameters(File inputFile, Set<String> routeIds, boolean allowNonStandardGtfs, String fillMissingStopName, String fillMissingCoordinates) {
         this.inputFile = inputFile;
         this.allowNonStandardGtfs = allowNonStandardGtfs;
         this.fillMissingStopName = fillMissingStopName;
         this.routeIds = routeIds;
-        this.allowGtfsFlex = allowGtfsFlex;
         double defaultLatitudeValue = DEFAULT_VALUE;
         double defaultLongitudeValue = DEFAULT_VALUE;
         if (allowNonStandardGtfs
@@ -75,9 +73,5 @@ public class GtfsFileInputWithParameters {
 
     public double getDefaultLatitude() {
         return defaultLatitude;
-    }
-
-    public boolean isAllowGtfsFlex() {
-        return allowGtfsFlex;
     }
 }
