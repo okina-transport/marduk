@@ -93,6 +93,7 @@ public class Constants {
     // fare exports
     public static final String FARE_NETEX_EXPORT = "FARE_NETEX_EXPORT";
 
+
     // (providerId can change during the process when transferring data from one referential to another
     public static final String CORRELATION_ID = "RutebankenCorrelationId";
     public static final String CHOUETTE_REFERENTIAL = "RutebankenChouetteReferential";
