@@ -10,12 +10,9 @@ import org.apache.camel.LoggingLevel;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.nio.file.Files;
-
-import static no.rutebanken.marduk.Constants.*;
-import static no.rutebanken.marduk.utils.constants.RouteDeclarationConstants.*;
+import static no.rutebanken.marduk.Constants.UTTU_IMPORT_STATUS;
+import static no.rutebanken.marduk.Constants.WORKLOW;
+import static no.rutebanken.marduk.utils.constants.RouteDeclarationConstants.ROUTE_UPDATE_STATUS;
 
 /**
  * Submits files to Uttu

@@ -30,7 +30,6 @@ import org.apache.camel.ValidationException;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Component;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
@@ -94,7 +93,7 @@ public class FileClassificationRouteBuilder extends BaseRouteBuilder {
                         .to("jms:queue:ChouetteImportQueue")
                         .choice()
                             .when(and(
-                                header("GTFS_FLEX_FILE_PATH").isNotNull(),
+                                header(GTFS_FLEX_FILE).isNotNull(),
                                 header(ALLOW_GTFS_FLEX).isEqualTo("true"),
                                 exchange -> JobEvent.TimetableAction.IMPORT.equals(ImportRouteBuilder.getTimeTableAction(exchange))
                             ))

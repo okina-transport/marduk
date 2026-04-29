@@ -20,28 +20,26 @@ import no.rutebanken.marduk.config.MardukPropertiesConfig;
 import no.rutebanken.marduk.exceptions.MardukException;
 import no.rutebanken.marduk.routes.file.beans.FileTypeClassifierBean;
 import no.rutebanken.marduk.routes.file.beans.GtfsFileInputWithParameters;
-import no.rutebanken.marduk.routes.file.onebusaway.FilterOneStopJourney;
-import no.rutebanken.marduk.routes.file.onebusaway.NonStandardStopTransformer;
 import no.rutebanken.marduk.services.FileSystemService;
 import org.apache.camel.Exchange;
 import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
 import org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream;
-import org.apache.commons.csv.CSVFormat;
-import org.apache.commons.csv.CSVParser;
-import org.apache.commons.csv.CSVPrinter;
-import org.apache.commons.csv.CSVRecord;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.BooleanUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Strings;
 import org.onebusaway.gtfs_transformer.GtfsTransformer;
 import org.onebusaway.gtfs_transformer.TransformSpecificationException;
+import org.onebusaway.gtfs_transformer.impl.FilterGtfsFlexStrategy;
+import org.onebusaway.gtfs_transformer.impl.FilterOneStopJourneyStrategy;
+import org.onebusaway.gtfs_transformer.impl.NonStandardStopTransformerStrategy;
+import org.onebusaway.gtfs_transformer.impl.RemoveFlexStrategy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import java.io.*;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.nio.file.FileSystem;
 import java.util.*;
@@ -59,9 +57,11 @@ public class ZipFileUtils {
     private static final Logger logger = LoggerFactory.getLogger(ZipFileUtils.class);
 
     private final MardukPropertiesConfig mardukPropertiesConfig;
+    private final FileSystemService fileSystemService;
 
-    public ZipFileUtils(MardukPropertiesConfig mardukPropertiesConfig) {
+    public ZipFileUtils(MardukPropertiesConfig mardukPropertiesConfig, FileSystemService fileSystemService) {
         this.mardukPropertiesConfig = mardukPropertiesConfig;
+        this.fileSystemService = fileSystemService;
     }
 
     public static Set<String> listFilesInZip(File file) {
@@ -106,7 +106,7 @@ public class ZipFileUtils {
         addLocationTypeFilter(transformer);
         if (gtfsFileInputWithParameter.isAllowNonStandardGtfs()) {
             transformer.getReader()
-                    .addEntityHandler(new NonStandardStopTransformer(
+                    .addEntityHandler(new NonStandardStopTransformerStrategy(
                             gtfsFileInputWithParameter.getFillMissingStopName(),
                             gtfsFileInputWithParameter.getDefaultLatitude(),
                             gtfsFileInputWithParameter.getDefaultLongitude()
@@ -428,32 +428,46 @@ public class ZipFileUtils {
         String fillMissingStopName = exchange.getIn().getHeader(FILL_MISSING_STOP_NAME, String.class);
         String fillMissingCoordinates = exchange.getIn().getHeader(FILL_MISSING_COORDINATES, String.class);
         Boolean importFareFiles = exchange.getIn().getHeader(IMPORT_FARE_FILES, Boolean.class);
-        Boolean importGtfsFlex = exchange.getIn().getHeader(ALLOW_GTFS_FLEX, Boolean.class);
+        String allowGtfsFlexStr = exchange.getIn().getHeader(ALLOW_GTFS_FLEX, String.class);
+        boolean importGtfsFlex = !StringUtils.isEmpty(allowGtfsFlexStr) && Boolean.parseBoolean(allowGtfsFlexStr);
         String originalFileName = exchange.getIn().getHeader(FILE_NAME, String.class);
 
         if (file.exists() && file.length() > 0) {
             Set<String> filenamesInZip = listFilesInZip(file);
             if (FileTypeClassifierBean.isGtfsZip(filenamesInZip)) {
                 try {
-                    if (Boolean.TRUE.equals(importGtfsFlex)) {
-                        String referential = exchange.getIn().getHeader(CHOUETTE_REFERENTIAL, String.class);
+                    if (importGtfsFlex) {
                         String tempDir = System.getProperty("java.io.tmpdir");
 
                         String cleanFileName = new File(originalFileName).getName();
                         File sourceFileForFlex = new File(tempDir, cleanFileName);
-                        File flexFinalFile = File.createTempFile("marduk-flex-"+referential, ".zip");
+                        File flexFinalFile = File.createTempFile(Strings.CS.removeEnd(cleanFileName, ".zip") + "_FLEX",
+                                ".zip");
 
                         if (sourceFileForFlex.exists()) {
-                            logger.info("Analyse : Création du fichier source Flex : {}", sourceFileForFlex.getAbsolutePath());
-                            Files.copy(file.toPath(), sourceFileForFlex.toPath(), StandardCopyOption.REPLACE_EXISTING);
-                            processFlexVersion(sourceFileForFlex);
-                            Files.copy(sourceFileForFlex.toPath(), flexFinalFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                            Path tempOutputDir = Files.createTempDirectory("oba-flex-output-");
+                            try {
+                                GtfsTransformer transformer = new GtfsTransformer();
+                                transformer.setGtfsInputDirectory(sourceFileForFlex);
+                                transformer.setOutputDirectory(tempOutputDir.toFile());
+                                transformer.addTransform(new FilterGtfsFlexStrategy());
+                                executeTransformations(transformer, System.currentTimeMillis());
+                                zipFolder(tempOutputDir, flexFinalFile.toPath());
+                                fileSystemService.copyGtfsFlexZipForUttu(flexFinalFile);
+
+                                exchange.getIn().setHeader(GTFS_FLEX_FILE,
+                                        flexFinalFile.getAbsoluteFile().getName());
+                                logger.info("GTFS-Flex file generated : {}", flexFinalFile.getAbsolutePath());
+
+                            } catch (Exception e) {
+                                throw new IOException("Failure to generate the GTFS-Flex file", e);
+                            } finally {
+                                FileUtils.deleteQuietly(tempOutputDir.toFile());
+                            }
                         }
-                        exchange.getIn().setHeader("GTFS_FLEX_FILE_PATH", flexFinalFile.getAbsolutePath());
-                        logger.info("Fichier Flex unique généré : {}", flexFinalFile.getAbsolutePath());
                     }
 
-                    processStandardVersion(file);
+                    file = removeFlexFromStandardFile(file);
 
                     if (Boolean.FALSE.equals(importFareFiles)) {
                         copyGtfsZipFileWithoutFareFiles(file);
@@ -475,6 +489,44 @@ public class ZipFileUtils {
             }
         }
         return file;
+    }
+
+    private File removeFlexFromStandardFile(File sourceFile) throws IOException {
+        Path tempDir = Files.createTempDirectory("oba-standard-clean-");
+        File cleanFile = File.createTempFile("gtfs-standard-only-", ".zip");
+
+        try {
+            GtfsTransformer transformer = new GtfsTransformer();
+            transformer.setGtfsInputDirectory(sourceFile);
+            transformer.setOutputDirectory(tempDir.toFile());
+            transformer.addTransform(new RemoveFlexStrategy());
+            executeTransformations(transformer, System.currentTimeMillis());
+            zipFolder(tempDir, cleanFile.toPath());
+            return cleanFile;
+        } catch (Exception e) {
+            logger.error("Error during Flex cleaning : {}", e.getMessage());
+            return sourceFile;
+        } finally {
+            FileUtils.deleteQuietly(tempDir.toFile());
+        }
+    }
+
+    private void zipFolder(Path sourceFolderPath, Path zipPath) throws IOException {
+        try (ZipOutputStream zos = new ZipOutputStream(new FileOutputStream(zipPath.toFile()))) {
+            try (var paths = Files.walk(sourceFolderPath)) {
+                paths.filter(path -> !Files.isDirectory(path))
+                        .forEach(path -> {
+                            ZipEntry zipEntry = new ZipEntry(sourceFolderPath.relativize(path).toString());
+                            try {
+                                zos.putNextEntry(zipEntry);
+                                Files.copy(path, zos);
+                                zos.closeEntry();
+                            } catch (IOException e) {
+                                throw new RuntimeException("Error adding the file to the ZIP : " + path, e);
+                            }
+                        });
+            }
+        }
     }
 
     private static File repackZipToFlatStructureIfNeeded(File inputFile) throws IOException {
@@ -513,10 +565,14 @@ public class ZipFileUtils {
 
             ZipEntry entry;
             while ((entry = zis.getNextEntry()) != null) {
-                if (entry.isDirectory()) continue;
+                if (entry.isDirectory()) {
+                    continue;
+                }
 
                 String newName = entry.getName().substring(commonPathPrefix.length());
-                if(newName.isEmpty()) continue; // Eviter les entrées vides
+                if(newName.isEmpty()) {
+                    continue;
+                }
 
                 zos.putNextEntry(new ZipEntry(newName));
 
@@ -575,7 +631,6 @@ public class ZipFileUtils {
 
             for (File file : files) {
                 try (FileInputStream fileInputStream = new FileInputStream(file)) {
-
                     out.putNextEntry(new ZipEntry(file.getName()));
                     for (int read = fileInputStream.read(buffer); read > -1; read = (fileInputStream).read(buffer)) {
                         out.write(buffer, 0, read);
@@ -622,7 +677,7 @@ public class ZipFileUtils {
         addLocationTypeFilter(transformer);
         if (gtfsFileInputWithParameters.isAllowNonStandardGtfs()) {
             transformer.getReader()
-                    .addEntityHandler(new NonStandardStopTransformer(
+                    .addEntityHandler(new NonStandardStopTransformerStrategy(
                             gtfsFileInputWithParameters.getFillMissingStopName(),
                             gtfsFileInputWithParameters.getDefaultLatitude(),
                             gtfsFileInputWithParameters.getDefaultLongitude()
@@ -638,14 +693,13 @@ public class ZipFileUtils {
         if (mardukPropertiesConfig.isGtfsImportFilterLocationTypeEnabled()) {
             transformer.getTransformFactory().addModificationsFromString("{'op':'remove', 'match':{'file':'stops.txt', 'location_type':'3'}}");
             transformer.getTransformFactory().addModificationsFromString("{'op':'remove', 'match':{'file':'stops.txt', 'location_type':'4'}}");
-            transformer.addTransform(new FilterOneStopJourney());
+            transformer.addTransform(new FilterOneStopJourneyStrategy());
         }
     }
 
     private void executeTransformations(GtfsTransformer transformer, long time) throws Exception {
         transformer.getReader().setOverwriteDuplicates(true);
         transformer.run();
-
         logger.info("Filtrage GTFS par route IDs terminé en {} ms", (System.currentTimeMillis() - time));
     }
 
@@ -656,215 +710,5 @@ public class ZipFileUtils {
                     .filter(file -> !file.isDirectory() && file.getName().endsWith(extension))
                     .forEach(File::delete);
         }
-    }
-
-    /**
-     * Prépare la version STANDARD : Supprime les fichiers Flex et les colonnes Flex de stop_times.
-     */
-    private void processStandardVersion(File file) throws IOException {
-        List<String> flexFiles = Arrays.asList("location_group_stops.txt", "location_groups.txt", "locations.geojson", "booking_rules.txt");
-        List<String> flexCols = Arrays.asList("start_pickup_drop_off_window", "end_pickup_drop_off_window", "pickup_booking_rule_id", "drop_off_booking_rule_id");
-
-        Map<String, String> env = new HashMap<>();
-        env.put("create", "false");
-
-        try (FileSystem zipfs = FileSystems.newFileSystem(file.toPath(), env, null)) {
-            for (String f : flexFiles) {
-                Path p = zipfs.getPath(f);
-                if (Files.exists(p)) Files.delete(p);
-            }
-
-            Path stopTimesPath = zipfs.getPath("stop_times.txt");
-            if (Files.exists(stopTimesPath)) {
-                byte[] bytes = Files.readAllBytes(stopTimesPath);
-                String content = new String(bytes, StandardCharsets.UTF_8);
-                CSVFormat format = createBaseFormat(content);
-                File tmpFile = File.createTempFile("st_std", ".tmp");
-
-                try (CSVParser parser = format.parse(new StringReader(content));
-                     CSVPrinter printer = getPrinterForFile(tmpFile, format)) {
-
-                    List<String> headers = parser.getHeaderNames();
-                    List<String> filteredHeaders = headers.stream()
-                            .filter(h -> !flexCols.contains(h))
-                            .collect(Collectors.toList());
-
-                    printer.printRecord(filteredHeaders);
-
-                    for (CSVRecord record : parser) {
-                        List<String> values = new ArrayList<>();
-                        for (String h : filteredHeaders) values.add(record.get(h));
-                        printer.printRecord(values);
-                    }
-                }
-                Files.copy(tmpFile.toPath(), stopTimesPath, StandardCopyOption.REPLACE_EXISTING);
-                tmpFile.delete();
-            }
-        }
-    }
-
-    /**
-     * Prépare la version FLEX : Ne garde QUE les lignes Flex et synchronise Trips/Stops.
-     */
-    private void processFlexVersion(File file) throws IOException {
-        Map<String, String> env = new HashMap<>();
-        env.put("create", "false");
-
-        try (FileSystem zipfs = FileSystems.newFileSystem(file.toPath(), env, null)) {
-            Path locGroupStopsPath = zipfs.getPath("location_group_stops.txt");
-            if (!Files.exists(locGroupStopsPath)) return;
-
-            Set<String> flexStops = new HashSet<>();
-            Set<String> flexGroupIds = new HashSet<>();
-
-            try (CSVParser parser = getParserForPath(locGroupStopsPath)) {
-                for (CSVRecord record : parser) {
-                    flexStops.add(record.get("stop_id").trim());
-                    flexGroupIds.add(record.get("location_group_id").trim());
-                }
-            }
-
-            Path stopTimesPath = zipfs.getPath("stop_times.txt");
-            byte[] stBytes = Files.readAllBytes(stopTimesPath);
-            String stContent = new String(stBytes, StandardCharsets.UTF_8);
-            CSVFormat stFormat = createBaseFormat(stContent);
-
-            File stTmp = File.createTempFile("st_flex", ".tmp");
-            Set<String> activeTrips = new HashSet<>();
-            Set<String> stopsToKeep = new HashSet<>();
-
-            try (CSVParser parser = stFormat.parse(new StringReader(stContent));
-                 CSVPrinter printer = getPrinterForFile(stTmp, stFormat)) {
-
-                printer.printRecord(parser.getHeaderNames());
-                boolean hasLocCol = parser.getHeaderMap().containsKey("location_group_id");
-
-                for (CSVRecord record : parser) {
-                    String stopId = record.get("stop_id").trim();
-                    String locGroupId = hasLocCol ? record.get("location_group_id").trim() : "";
-
-                    if (flexStops.contains(stopId) && !locGroupId.isEmpty()) {
-                        printer.printRecord(record);
-                        activeTrips.add(record.get("trip_id").trim());
-                        stopsToKeep.add(stopId);
-                    }
-                }
-            }
-            Files.copy(stTmp.toPath(), stopTimesPath, StandardCopyOption.REPLACE_EXISTING);
-            stTmp.delete();
-
-            Set<String> activeRoutes = new HashSet<>();
-            Set<String> activeServices = new HashSet<>();
-            Set<String> activeShapes = new HashSet<>();
-
-            filterTripsAndCollect(zipfs, activeTrips, activeRoutes, activeServices, activeShapes);
-
-            filterFileByIds(zipfs, "routes.txt", "route_id", activeRoutes);
-            filterFileByIds(zipfs, "calendar.txt", "service_id", activeServices);
-            filterFileByIds(zipfs, "calendar_dates.txt", "service_id", activeServices);
-            filterFileByIds(zipfs, "shapes.txt", "shape_id", activeShapes);
-            filterFileByIds(zipfs, "location_groups.txt", "location_group_id", flexGroupIds);
-
-            syncStopsWithParents(zipfs, stopsToKeep);
-        }
-    }
-
-    private void filterTripsAndCollect(FileSystem zipfs, Set<String> activeTrips, Set<String> activeRoutes, Set<String> activeServices, Set<String> activeShapes) throws IOException {
-        Path path = zipfs.getPath("trips.txt");
-        if (!Files.exists(path)) return;
-
-        byte[] bytes = Files.readAllBytes(path);
-        String content = new String(bytes, StandardCharsets.UTF_8);
-        CSVFormat format = createBaseFormat(content);
-        File tmp = File.createTempFile("trips_flex", ".tmp");
-
-        try (CSVParser parser = format.parse(new StringReader(content));
-             CSVPrinter printer = getPrinterForFile(tmp, format)) {
-
-            printer.printRecord(parser.getHeaderNames());
-            boolean hasShape = parser.getHeaderMap().containsKey("shape_id");
-
-            for (CSVRecord record : parser) {
-                if (activeTrips.contains(record.get("trip_id").trim())) {
-                    printer.printRecord(record);
-                    activeRoutes.add(record.get("route_id").trim());
-                    activeServices.add(record.get("service_id").trim());
-                    if (hasShape) activeShapes.add(record.get("shape_id").trim());
-                }
-            }
-        }
-        Files.copy(tmp.toPath(), path, StandardCopyOption.REPLACE_EXISTING);
-        tmp.delete();
-    }
-
-    private void filterFileByIds(FileSystem zipfs, String fileName, String idColumnName, Set<String> allowedIds) throws IOException {
-        Path path = zipfs.getPath(fileName);
-        if (!Files.exists(path)) return;
-
-        byte[] bytes = Files.readAllBytes(path);
-        String content = new String(bytes, StandardCharsets.UTF_8);
-        CSVFormat format = createBaseFormat(content);
-        File tmp = File.createTempFile("filter_" + fileName, ".tmp");
-
-        try (CSVParser parser = format.parse(new StringReader(content));
-             CSVPrinter printer = getPrinterForFile(tmp, format)) {
-
-            printer.printRecord(parser.getHeaderNames());
-            for (CSVRecord record : parser) {
-                if (allowedIds.contains(record.get(idColumnName).trim())) {
-                    printer.printRecord(record);
-                }
-            }
-        }
-        Files.copy(tmp.toPath(), path, StandardCopyOption.REPLACE_EXISTING);
-        tmp.delete();
-    }
-
-    private void syncStopsWithParents(FileSystem zipfs, Set<String> activeStops) throws IOException {
-        Path path = zipfs.getPath("stops.txt");
-        Set<String> allRequired = new HashSet<>(activeStops);
-
-        try (CSVParser parser = getParserForPath(path)) {
-            boolean hasParent = parser.getHeaderMap().containsKey("parent_station");
-            for (CSVRecord record : parser) {
-                String sid = record.get("stop_id").trim();
-                if (activeStops.contains(sid) && hasParent) {
-                    String parent = record.get("parent_station").trim();
-                    if (!parent.isEmpty()) allRequired.add(parent);
-                }
-            }
-        }
-        filterFileByIds(zipfs, "stops.txt", "stop_id", allRequired);
-    }
-
-    private static CSVParser getParserForPath(Path path) throws IOException {
-        byte[] bytes = Files.readAllBytes(path);
-        String sample = new String(bytes, StandardCharsets.UTF_8);
-        String delimiter = FileSystemService.guessDelimiter(sample);
-
-        return CSVFormat.DEFAULT.builder()
-                .setDelimiter(delimiter)
-                .setHeader()
-                .setSkipHeaderRecord(false)
-                .setTrim(true)
-                .build()
-                .parse(new StringReader(sample));
-    }
-
-    private static CSVFormat createBaseFormat(String sample) {
-        String delimiter = FileSystemService.guessDelimiter(sample);
-        return CSVFormat.DEFAULT.builder()
-                .setDelimiter(delimiter)
-                .setHeader()
-                .setSkipHeaderRecord(false)
-                .setTrim(true)
-                .build();
-    }
-
-    private static CSVPrinter getPrinterForFile(File file, CSVFormat format) throws IOException {
-        return new CSVPrinter(
-                Files.newBufferedWriter(file.toPath(), StandardCharsets.UTF_8),
-                format
-        );
     }
 }

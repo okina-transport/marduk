@@ -400,18 +400,8 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
                 .to(ROUTE_ANALYS_RUNNING);
 
         from(ROUTE_ANALYS_RUNNING)
-            .process(e -> {
-                e.getIn().setHeader(ANALYZE_ACTION, false);
-            })
-            .log(LoggingLevel.INFO, correlation() + "Checking for Flex file before multicast...")
-            .multicast().parallelProcessing(false)
-                .to("jms:queue:ChouetteImportQueue")
-                .choice()
-                    .when(header("GTFS_FLEX_FILE_PATH").isNotNull())
-                        .log(LoggingLevel.INFO, correlation() + "Sending Flex part to Uttu")
-                        .to("jms:queue:GtfsFlexUttuPredefinedImport")
-                .end()
-            .end();
+            .process(e -> e.getIn().setHeader(ANALYZE_ACTION, false))
+            .to("jms:queue:ChouetteImportQueue");
 
         from(ROUTE_ANALYSIS_ERROR)
             .log(LoggingLevel.ERROR, correlation() + "File analysis found a major issue. Cannot launch import")

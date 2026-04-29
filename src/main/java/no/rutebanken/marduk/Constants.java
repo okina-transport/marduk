@@ -60,6 +60,7 @@ public class Constants {
     public static final String LUG_STATUS = "lugStatus";
     public static final String ALLOW_GTFS_FLEX = "allowGtfsFlex";
     public static final String UTTU_IMPORT_STATUS = "uttuImportStatus";
+    public static final String GTFS_FLEX_FILE = "gtfsFlexFile";
 
     public static final String UPDATE_STOP_ACCESSIBILITY = "updateStopAccessibility";
 
