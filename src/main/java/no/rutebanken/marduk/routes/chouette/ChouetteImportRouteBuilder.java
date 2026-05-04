@@ -258,6 +258,9 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
                     String allowGtfsFlexStr = e.getIn().getHeader(ALLOW_GTFS_FLEX, String.class);
                     boolean allowGtfsFlex = !StringUtils.isEmpty(allowGtfsFlexStr) && Boolean.parseBoolean(allowGtfsFlexStr);
 
+                    String externalRefField = e.getIn().getHeader(EXTERNAL_REF_FIELD, String.class);
+                    String driverControllerCodeField = e.getIn().getHeader(DRIVER_CONTROLLER_CODE_FIELD, String.class);
+
                     rawImportParameters.setFileName(fileName);
                     rawImportParameters.setFileType(fileType);
                     rawImportParameters.setProviderId(providerId);
@@ -293,6 +296,8 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
                     rawImportParameters.setFillMissingCoordinates(fillMissingCoordinates);
                     rawImportParameters.setOverwriteLineInformation(overwriteLineInformation);
                     rawImportParameters.setAllowGtfsFlex(allowGtfsFlex);
+                    rawImportParameters.setExternalRefField(externalRefField);
+                    rawImportParameters.setDriverControllerCodeField(driverControllerCodeField);
 
                     e.getIn().setHeader(JSON_PART, getStringImportParameters(rawImportParameters));
                 }) //Using header to addToExchange json data

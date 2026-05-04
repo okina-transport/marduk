@@ -41,6 +41,8 @@ public class ImportParameters {
     private String fillMissingCoordinates;
     private Boolean overwriteLineInformation;
     private Boolean allowGtfsFlex;
+    private String externalRefField;
+    private String driverControllerCodeField;
 
     public Long getId() {
         return id;
@@ -328,5 +330,22 @@ public class ImportParameters {
 
     public void setAllowGtfsFlex(Boolean gtfsFlex) {
         this.allowGtfsFlex = gtfsFlex;
+    }
+
+
+    public String getExternalRefField() {
+        return externalRefField;
+    }
+
+    public void setExternalRefField(String externalRefField) {
+        this.externalRefField = externalRefField;
+    }
+
+    public String getDriverControllerCodeField() {
+        return driverControllerCodeField;
+    }
+
+    public void setDriverControllerCodeField(String driverControllerCodeField) {
+        this.driverControllerCodeField = driverControllerCodeField;
     }
 }
