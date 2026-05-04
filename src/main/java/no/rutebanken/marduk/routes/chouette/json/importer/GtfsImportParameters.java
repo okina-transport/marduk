@@ -116,6 +116,12 @@ public class GtfsImportParameters extends ChouetteJobParameters {
 
         @JsonProperty("allow_gtfs_flex")
         private boolean allowGtfsFlex = false;
+
+        @JsonProperty("external_ref_field")
+        private String externalRefField = null;
+
+        @JsonProperty("driver_controller_code_field")
+        private String driverControllerCodeField = null;
     }
 
     public static GtfsImportParameters create(RawImportParameters rawImportParameters) {
@@ -169,6 +175,8 @@ public class GtfsImportParameters extends ChouetteJobParameters {
         gtfsImport.fillMissingStopName = rawImportParameters.getFillMissingStopName();
         gtfsImport.fillMissingCoordinates = rawImportParameters.getFillMissingCoordinates();
         gtfsImport.allowGtfsFlex = rawImportParameters.isAllowGtfsFlex();
+        gtfsImport.externalRefField = rawImportParameters.getExternalRefField();
+        gtfsImport.driverControllerCodeField = rawImportParameters.getDriverControllerCodeField();
 
         return gtfsImportParameters;
     }

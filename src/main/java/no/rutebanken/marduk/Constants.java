@@ -59,6 +59,8 @@ public class Constants {
     public static final String OVERWRITE_LINE_INFORMATION = "overwriteLineInformation";
     public static final String LUG_STATUS = "lugStatus";
     public static final String ALLOW_GTFS_FLEX = "allowGtfsFlex";
+    public static final String EXTERNAL_REF_FIELD = "externalRefField";
+    public static final String DRIVER_CONTROLLER_CODE_FIELD = "driverControllerCodeField";
     public static final String UTTU_IMPORT_STATUS = "uttuImportStatus";
     public static final String GTFS_FLEX_FILE = "gtfsFlexFile";
 
