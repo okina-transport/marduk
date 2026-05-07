@@ -19,6 +19,7 @@ package no.rutebanken.marduk.routes.file;
 
 import no.rutebanken.marduk.Constants;
 import no.rutebanken.marduk.domain.WorkflowEnum;
+import no.rutebanken.marduk.exceptions.FileValidationException;
 import no.rutebanken.marduk.routes.BaseRouteBuilder;
 import no.rutebanken.marduk.routes.chouette.json.Parameters;
 import no.rutebanken.marduk.routes.chouette.json.importer.RawImportParameters;
@@ -50,7 +51,7 @@ public class FileClassificationRouteBuilder extends BaseRouteBuilder {
     public void configure() throws Exception {
         super.configure();
 
-        onException(ValidationException.class, IOException.class)
+        onException(ValidationException.class, IOException.class, FileValidationException.class)
                 .handled(true)
                 .log(LoggingLevel.INFO, correlation() + "Could not process file ${header." + FILE_HANDLE + "}")
                 .process(e -> JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.FILE_CLASSIFICATION).state(JobEvent.State.FAILED).build())
