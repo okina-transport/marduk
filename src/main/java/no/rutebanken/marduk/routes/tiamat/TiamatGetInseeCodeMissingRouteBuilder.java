@@ -40,7 +40,7 @@ public class TiamatGetInseeCodeMissingRouteBuilder extends BaseRouteBuilder {
                 .setBody(constant((Object) null))
                 .setHeader(Exchange.HTTP_METHOD, constant(HttpMethods.POST))
                 .process(e -> {
-                    String url = tiamatUrl.replace("http4://", "http://") + "/get_missing_inseecode";
+                    String url = tiamatUrl.replace("http4://", "http://") + "get_missing_inseecode";
                     e.setProperty("tiamat_url", url);
                     e.getIn().setHeader("Authorization", "Bearer " + tokenService.getToken());
                 })
