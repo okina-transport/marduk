@@ -32,6 +32,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import static no.rutebanken.marduk.Constants.CHOUETTE_REFERENTIAL;
+import static no.rutebanken.marduk.utils.constants.RouteDeclarationConstants.ROUTE_UPDATE_STATUS;
 import static org.mockito.Mockito.when;
 
 class ChouetteTransferToDataspaceMardukRouteIntegrationTest extends MardukRouteBuilderIntegrationTestBase {
@@ -75,7 +76,7 @@ class ChouetteTransferToDataspaceMardukRouteIntegrationTest extends MardukRouteB
             adviceWithRouteBuilder.interceptSendToEndpoint("jms:queue:ChouettePollStatusQueue")
                     .skipSendToOriginalEndpoint().to("mock:pollJobStatus");
 
-            adviceWithRouteBuilder.interceptSendToEndpoint("direct:updateStatus").skipSendToOriginalEndpoint()
+            adviceWithRouteBuilder.interceptSendToEndpoint(ROUTE_UPDATE_STATUS).skipSendToOriginalEndpoint()
                     .to("mock:updateStatus");
         });
 
@@ -83,7 +84,7 @@ class ChouetteTransferToDataspaceMardukRouteIntegrationTest extends MardukRouteB
 
 		// Mock update status calls
         AdviceWith.adviceWith(context, "chouette-process-transfer-status", adviceWithRouteBuilder -> {
-            adviceWithRouteBuilder.interceptSendToEndpoint("direct:updateStatus").skipSendToOriginalEndpoint()
+            adviceWithRouteBuilder.interceptSendToEndpoint(ROUTE_UPDATE_STATUS).skipSendToOriginalEndpoint()
                     .to("mock:updateStatus");
 
             adviceWithRouteBuilder.interceptSendToEndpoint("direct:checkScheduledJobsBeforeTriggeringRBSpaceValidation").skipSendToOriginalEndpoint()

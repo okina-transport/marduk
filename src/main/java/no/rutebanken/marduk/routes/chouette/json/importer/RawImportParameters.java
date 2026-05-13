@@ -46,6 +46,9 @@ public class RawImportParameters {
     private String fillMissingStopName;
     private String fillMissingCoordinates;
     private boolean overwriteLineInformation;
+    private boolean allowGtfsFlex;
+    private String externalRefField;
+    private String driverControllerCodeField;
 
     public String getFileName() {
         return fileName;
@@ -327,5 +330,29 @@ public class RawImportParameters {
 
     public void setOverwriteLineInformation(Boolean overwriteLineInformation) {
         this.overwriteLineInformation = overwriteLineInformation;
+    }
+
+    public Boolean isAllowGtfsFlex() {
+        return allowGtfsFlex;
+    }
+
+    public void setAllowGtfsFlex(Boolean gtfsFlex) {
+        this.allowGtfsFlex = gtfsFlex;
+    }
+
+    public String getExternalRefField() {
+        return externalRefField;
+    }
+
+    public void setExternalRefField(String externalRefField) {
+        this.externalRefField = externalRefField;
+    }
+
+    public String getDriverControllerCodeField() {
+        return driverControllerCodeField;
+    }
+
+    public void setDriverControllerCodeField(String driverControllerCodeField) {
+        this.driverControllerCodeField = driverControllerCodeField;
     }
 }

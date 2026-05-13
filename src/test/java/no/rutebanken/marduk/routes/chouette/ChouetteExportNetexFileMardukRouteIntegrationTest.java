@@ -35,6 +35,7 @@ import java.util.Map;
 
 import static no.rutebanken.marduk.Constants.*;
 import static no.rutebanken.marduk.utils.constants.RouteDeclarationConstants.ROUTE_CHOUETTE_EXPORT_NETEX_QUEUE;
+import static no.rutebanken.marduk.utils.constants.RouteDeclarationConstants.ROUTE_UPDATE_STATUS;
 import static org.mockito.Mockito.when;
 
 class ChouetteExportNetexFileMardukRouteIntegrationTest extends MardukRouteBuilderIntegrationTestBase {
@@ -76,7 +77,7 @@ class ChouetteExportNetexFileMardukRouteIntegrationTest extends MardukRouteBuild
         AdviceWith.adviceWith(context, "chouette-start-export-netex", adviceRouteBuilder -> {
             adviceRouteBuilder.weaveByToUri(chouetteUrl + "/chouette_iev/referentials/${header." + CHOUETTE_REFERENTIAL + "}/exporter/netexprofile")
                     .replace().to("mock:chouetteCreateExport");
-            adviceRouteBuilder.interceptSendToEndpoint("direct:updateStatus").skipSendToOriginalEndpoint()
+            adviceRouteBuilder.interceptSendToEndpoint(ROUTE_UPDATE_STATUS).skipSendToOriginalEndpoint()
                     .to("mock:updateStatus");
         });
 
@@ -90,7 +91,7 @@ class ChouetteExportNetexFileMardukRouteIntegrationTest extends MardukRouteBuild
 
 		// Mock update status calls
         AdviceWith.adviceWith(context, "chouette-process-export-netex-status", adviceRouteBuilder -> {
-            adviceRouteBuilder.interceptSendToEndpoint("direct:updateStatus").skipSendToOriginalEndpoint()
+            adviceRouteBuilder.interceptSendToEndpoint(ROUTE_UPDATE_STATUS).skipSendToOriginalEndpoint()
                     .to("mock:updateStatus");
             adviceRouteBuilder.interceptSendToEndpoint("direct:exportMergedNetex").skipSendToOriginalEndpoint()
                     .to("mock:exportMergedNetex");

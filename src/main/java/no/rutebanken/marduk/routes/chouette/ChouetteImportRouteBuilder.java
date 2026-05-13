@@ -50,6 +50,7 @@ import static no.rutebanken.marduk.utils.constants.RouteDeclarationConstants.*;
 import static no.rutebanken.marduk.utils.constants.RouteParamsConstants.CamelProperty.CHOUETTE_URL;
 import static no.rutebanken.marduk.utils.constants.RouteParamsConstants.Headers.ALL_CAMEL_HEADERS;
 import static no.rutebanken.marduk.utils.constants.RouteParamsConstants.Headers.FILTER;
+import static org.apache.camel.support.builder.PredicateBuilder.and;
 
 /**
  * Submits files to Chouette
@@ -122,7 +123,7 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
                     TimetableAction action = BooleanUtils.toBoolean(analyze) ? TimetableAction.FILE_ANALYZE : TimetableAction.IMPORT;
                     JobEvent.providerJobBuilder(e).timetableAction(action).state(State.PENDING).type(e.getIn().getHeader(FILE_TYPE, String.class)).build();
                 })
-                .to("direct:updateStatus")
+                .to(ROUTE_UPDATE_STATUS)
                 .to("direct:getBlob")
                 .choice()
                     .when(body().isNull())
@@ -254,6 +255,12 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
 
                     boolean recomputeStopPlacesLocation = BooleanUtils.isTrue(e.getIn().getHeader(RECOMPUTE_STOP_PLACES_LOCATION, Boolean.class));
 
+                    String allowGtfsFlexStr = e.getIn().getHeader(ALLOW_GTFS_FLEX, String.class);
+                    boolean allowGtfsFlex = !StringUtils.isEmpty(allowGtfsFlexStr) && Boolean.parseBoolean(allowGtfsFlexStr);
+
+                    String externalRefField = e.getIn().getHeader(EXTERNAL_REF_FIELD, String.class);
+                    String driverControllerCodeField = e.getIn().getHeader(DRIVER_CONTROLLER_CODE_FIELD, String.class);
+
                     rawImportParameters.setFileName(fileName);
                     rawImportParameters.setFileType(fileType);
                     rawImportParameters.setProviderId(providerId);
@@ -288,6 +295,9 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
                     rawImportParameters.setFillMissingStopName(fillMissingStopName);
                     rawImportParameters.setFillMissingCoordinates(fillMissingCoordinates);
                     rawImportParameters.setOverwriteLineInformation(overwriteLineInformation);
+                    rawImportParameters.setAllowGtfsFlex(allowGtfsFlex);
+                    rawImportParameters.setExternalRefField(externalRefField);
+                    rawImportParameters.setDriverControllerCodeField(driverControllerCodeField);
 
                     e.getIn().setHeader(JSON_PART, getStringImportParameters(rawImportParameters));
                 }) //Using header to addToExchange json data
@@ -332,12 +342,12 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
                 .to("log:" + getClass().getName() + "?level=DEBUG&showAll=true&multiline=true")
                 .setBody(constant(""))
                 .choice()
-                    .when(org.apache.camel.support.builder.PredicateBuilder.and(constant("true").isEqualTo(header(ANALYZE_ACTION)), simple("${header.action_report_result} == 'OK' && ${header.validation_report_result} == 'OK'")))
+                    .when(and(constant("true").isEqualTo(header(ANALYZE_ACTION)), simple("${header.action_report_result} == 'OK' && ${header.validation_report_result} == 'OK'")))
                     .to("direct:proceedAnalyseResult")
                 .otherwise()
                     .to("direct:proceedResult")
                 .end()
-                .to("direct:updateStatus")
+                .to(ROUTE_UPDATE_STATUS)
                 .routeId("chouette-process-import-status");
 
         // Check that no other import jobs in status SCHEDULED exists for this referential. If so, do not trigger export
@@ -411,7 +421,7 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
                 .routeId("proceedResult")
                 //import ok
                 .choice()
-                    .when(org.apache.camel.support.builder.PredicateBuilder.and(constant("false").isEqualTo(header(ENABLE_VALIDATION)), simple("${header.action_report_result} == 'OK'")))
+                    .when(and(constant("false").isEqualTo(header(ENABLE_VALIDATION)), simple("${header.action_report_result} == 'OK'")))
                         .to(ROUTE_CHECK_SCHEDULED_JOBS_BEFORE_TRIGGERING_NEXT_ACTION)
                         .process(e -> JobEvent.providerJobBuilder(e).timetableAction(ImportRouteBuilder.getTimeTableAction(e)).state(State.OK).build())
                     //import ok

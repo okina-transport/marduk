@@ -19,9 +19,13 @@ package no.rutebanken.marduk.routes.file;
 
 import no.rutebanken.marduk.Constants;
 import no.rutebanken.marduk.domain.WorkflowEnum;
+import no.rutebanken.marduk.exceptions.FileValidationException;
 import no.rutebanken.marduk.routes.BaseRouteBuilder;
+import no.rutebanken.marduk.routes.chouette.json.Parameters;
+import no.rutebanken.marduk.routes.chouette.json.importer.RawImportParameters;
 import no.rutebanken.marduk.routes.file.beans.FileTypeClassifierBean;
 import no.rutebanken.marduk.routes.status.JobEvent;
+import no.rutebanken.marduk.utils.ImportRouteBuilder;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.ValidationException;
 import org.apache.commons.lang3.StringUtils;
@@ -34,6 +38,7 @@ import java.util.UUID;
 import static no.rutebanken.marduk.Constants.*;
 import static no.rutebanken.marduk.utils.constants.RouteDeclarationConstants.ROUTE_PROCESS_FILE_QUEUE;
 import static no.rutebanken.marduk.utils.constants.RouteDeclarationConstants.ROUTE_UPDATE_STATUS;
+import static org.apache.camel.support.builder.PredicateBuilder.and;
 
 /**
  * Receives file handle, pulls file from blob store, classifies files and performs initial validation.
@@ -46,7 +51,7 @@ public class FileClassificationRouteBuilder extends BaseRouteBuilder {
     public void configure() throws Exception {
         super.configure();
 
-        onException(ValidationException.class, IOException.class)
+        onException(ValidationException.class, IOException.class, FileValidationException.class)
                 .handled(true)
                 .log(LoggingLevel.INFO, correlation() + "Could not process file ${header." + FILE_HANDLE + "}")
                 .process(e -> JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.FILE_CLASSIFICATION).state(JobEvent.State.FAILED).build())
@@ -87,6 +92,15 @@ public class FileClassificationRouteBuilder extends BaseRouteBuilder {
                         .to("jms:queue:FaresImportQueue")
                     .otherwise()
                         .to("jms:queue:ChouetteImportQueue")
+                        .choice()
+                            .when(and(
+                                header(GTFS_FLEX_FILE).isNotNull(),
+                                header(ALLOW_GTFS_FLEX).isEqualTo("true"),
+                                exchange -> JobEvent.TimetableAction.IMPORT.equals(ImportRouteBuilder.getTimeTableAction(exchange))
+                            ))
+                                .log(LoggingLevel.INFO, correlation() + "GTFS Flex and IMPORT action detected: triggering Uttu")
+                                .wireTap("jms:queue:GtfsFlexUttuPredefinedImport")
+                        .end()
                 .end()
                 .routeId("file-classify");
 
@@ -148,6 +162,11 @@ public class FileClassificationRouteBuilder extends BaseRouteBuilder {
             if (StandardCharsets.ISO_8859_1.newEncoder().canEncode(val)) result.append(val);
         }
         return result.toString();
+    }
+
+    private String getStringImportParameters(RawImportParameters rawImportParameters) {
+        rawImportParameters.setProvider(getProviderRepository().getProvider(rawImportParameters.getProviderId()));
+        return Parameters.createStringImportParameters(rawImportParameters);
     }
 
 }

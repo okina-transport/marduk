@@ -43,6 +43,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import static no.rutebanken.marduk.Constants.*;
+import static no.rutebanken.marduk.utils.constants.RouteDeclarationConstants.ROUTE_UPDATE_STATUS;
 
 /**
  * Route combining netex exports per provider with stop place export for a common netex export for Norway.
@@ -112,7 +113,7 @@ public class NetexExportMergedRouteBuilder extends BaseRouteBuilder {
         from("direct:reportExportMergedNetexOK")
                 .process(e -> JobEvent.systemJobBuilder(e).state(JobEvent.State.OK).build())
                 .setExchangePattern(ExchangePattern.InOnly)
-                .to("direct:updateStatus")
+                .to(ROUTE_UPDATE_STATUS)
                 .routeId("netex-export-merged-report-ok");
 
 
@@ -201,7 +202,7 @@ public class NetexExportMergedRouteBuilder extends BaseRouteBuilder {
                 .process(e -> copyStopFiles( e.getProperty(FOLDER_NAME, String.class) + "/stops", e.getProperty(FOLDER_NAME, String.class)))
                 .otherwise()
                 .log(LoggingLevel.WARN, getClass().getName(), "No stop place export found, unable to create merged Netex for Norway")
-                .process(e -> JobEvent.systemJobBuilder(e).state(JobEvent.State.FAILED).build()).to("direct:updateStatus")
+                .process(e -> JobEvent.systemJobBuilder(e).state(JobEvent.State.FAILED).build()).to(ROUTE_UPDATE_STATUS)
                 .stop()
                 .routeId("netex-export-fetch-latest-for-stops");
 

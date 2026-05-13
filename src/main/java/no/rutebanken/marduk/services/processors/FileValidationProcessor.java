@@ -37,7 +37,7 @@ public class FileValidationProcessor implements Processor {
         boolean isInvalid = false;
         if (Strings.CI.equals("gtfs",importType)) {
             for (String file : files) {
-                if (!file.endsWith(".txt")) {
+                if (!file.endsWith(".txt") && !file.equalsIgnoreCase("locations.geojson")) {
                     String errorMsg = "GTFS file containing non-txt file:" + file;
                     LOGGER.error(errorMsg);
                     throw new MardukException(errorMsg);

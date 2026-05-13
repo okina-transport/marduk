@@ -28,6 +28,7 @@ import org.springframework.stereotype.Component;
 import java.io.InputStream;
 
 import static no.rutebanken.marduk.Constants.FILE_SKIP_STATUS_UPDATE_FOR_DUPLICATES;
+import static no.rutebanken.marduk.utils.constants.RouteDeclarationConstants.ROUTE_UPDATE_STATUS;
 import static org.apache.camel.builder.PredicateBuilder.and;
 import static org.apache.camel.builder.PredicateBuilder.not;
 
@@ -75,7 +76,7 @@ public class IdempotentFileFilterRoute extends BaseRouteBuilder {
 
         from("direct:updateStatusForDuplicateFile")
                 .choice().when(not(simple("${header." + FILE_SKIP_STATUS_UPDATE_FOR_DUPLICATES + "}")))
-                .process(e -> JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.FILE_TRANSFER).state(JobEvent.State.DUPLICATE).build()).to("direct:updateStatus").endChoice();
+                .process(e -> JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.FILE_TRANSFER).state(JobEvent.State.DUPLICATE).build()).to(ROUTE_UPDATE_STATUS).endChoice();
 
     }
 }

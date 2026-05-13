@@ -13,6 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import static no.rutebanken.marduk.Constants.*;
+import static no.rutebanken.marduk.utils.constants.RouteDeclarationConstants.ROUTE_UPDATE_STATUS;
 
 @Component
 public class LugRouteBuilder extends BaseRouteBuilder {
@@ -65,7 +66,7 @@ public class LugRouteBuilder extends BaseRouteBuilder {
                             .state(JobEvent.State.OK)
                             .build();
                 })
-                .to("direct:updateStatus")
+                .to(ROUTE_UPDATE_STATUS)
                 .choice()
                 .when(header(JOB_STATUS_JOB_TYPE).isEqualTo("EXPORT_NETEX"))
                     .to("direct:processNetexExportResultEnd")

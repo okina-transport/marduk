@@ -40,6 +40,7 @@ import static no.rutebanken.marduk.Constants.PROVIDER_ID;
 import static no.rutebanken.marduk.Constants.RECIPIENTS;
 import static no.rutebanken.marduk.Constants.WORKLOW;
 import static no.rutebanken.marduk.utils.Utils.getLastPathElementOfUrl;
+import static no.rutebanken.marduk.utils.constants.RouteDeclarationConstants.ROUTE_UPDATE_STATUS;
 
 /**
  * Transfers data from one space to another in Chouette
@@ -77,7 +78,7 @@ public class ChouetteTransferToDataspaceRouteBuilder extends AbstractChouetteRou
 	                e.getIn().removeHeader(Constants.JOB_ID);
                 })
 				.process(e -> JobEvent.providerJobBuilder(e).timetableAction(TimetableAction.DATASPACE_TRANSFER).state(State.PENDING).build())
-		        .to("direct:updateStatus")
+		        .to(ROUTE_UPDATE_STATUS)
                 .log(LoggingLevel.INFO,correlation()+"Creating multipart request")
                 .process(this::toGenericChouetteMultipart)
                 .toD(chouetteUrl + "/chouette_iev/referentials/${header." + CHOUETTE_REFERENTIAL + "}/exporter/transfer")
@@ -99,7 +100,7 @@ public class ChouetteTransferToDataspaceRouteBuilder extends AbstractChouetteRou
  		        .choice()
  		        .when(simple("${header.action_report_result} == 'OK'"))
 				 	.process(e -> JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.DATASPACE_TRANSFER).state(State.OK).build())
-					.to("direct:updateStatus")
+					.to(ROUTE_UPDATE_STATUS)
 					.process(e -> {
 	            		// Update provider, now context switches to next provider level
 	            		Provider currentProvider = getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class));
@@ -110,11 +111,11 @@ public class ChouetteTransferToDataspaceRouteBuilder extends AbstractChouetteRou
  		        .when(simple("${header.action_report_result} == 'NOK'"))
  		        	.log(LoggingLevel.INFO,correlation() + "Transfer failed")
 				 	.process(this::setStateAndSendMailFailed)
- 	 		        .to("direct:updateStatus")
+ 	 		        .to(ROUTE_UPDATE_STATUS)
  		        .otherwise()
  		            .log(LoggingLevel.ERROR,correlation() + "Something went wrong on transfer")
 				 	.process(this::setStateAndSendMailFailed)
- 	 		        .to("direct:updateStatus")
+ 	 		        .to(ROUTE_UPDATE_STATUS)
  		        .end()
  		        .routeId("chouette-process-transfer-status");
  	

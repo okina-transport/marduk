@@ -40,6 +40,9 @@ public class ImportParameters {
     private String fillMissingStopName;
     private String fillMissingCoordinates;
     private Boolean overwriteLineInformation;
+    private Boolean allowGtfsFlex;
+    private String externalRefField;
+    private String driverControllerCodeField;
 
     public Long getId() {
         return id;
@@ -319,5 +322,30 @@ public class ImportParameters {
 
     public void setOverwriteLineInformation(Boolean overwriteLineInformation) {
         this.overwriteLineInformation = overwriteLineInformation;
+    }
+
+    public Boolean isAllowGtfsFlex() {
+        return allowGtfsFlex;
+    }
+
+    public void setAllowGtfsFlex(Boolean gtfsFlex) {
+        this.allowGtfsFlex = gtfsFlex;
+    }
+
+
+    public String getExternalRefField() {
+        return externalRefField;
+    }
+
+    public void setExternalRefField(String externalRefField) {
+        this.externalRefField = externalRefField;
+    }
+
+    public String getDriverControllerCodeField() {
+        return driverControllerCodeField;
+    }
+
+    public void setDriverControllerCodeField(String driverControllerCodeField) {
+        this.driverControllerCodeField = driverControllerCodeField;
     }
 }

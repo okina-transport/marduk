@@ -34,6 +34,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import static no.rutebanken.marduk.Constants.*;
+import static no.rutebanken.marduk.utils.constants.RouteDeclarationConstants.ROUTE_UPDATE_STATUS;
 import static org.mockito.Mockito.when;
 
 class ChouetteExportGtfsFileMardukRouteIntegrationTest extends MardukRouteBuilderIntegrationTestBase {
@@ -72,13 +73,13 @@ class ChouetteExportGtfsFileMardukRouteIntegrationTest extends MardukRouteBuilde
         AdviceWith.adviceWith(context, "chouette-send-export-job", adviceRouteBuilder -> {
             adviceRouteBuilder.weaveByToUri(chouetteUrl + "/chouette_iev/referentials/${header." + CHOUETTE_REFERENTIAL + "}/exporter/gtfs")
                     .replace().to("mock:chouetteCreateExport");
-            adviceRouteBuilder.interceptSendToEndpoint("direct:updateStatus").skipSendToOriginalEndpoint()
+            adviceRouteBuilder.interceptSendToEndpoint(ROUTE_UPDATE_STATUS).skipSendToOriginalEndpoint()
                     .to("mock:updateStatus");
         });
 
         // Mock update status calls
         AdviceWith.adviceWith(context, "chouette-process-export-status", adviceRouteBuilder -> {
-            adviceRouteBuilder.interceptSendToEndpoint("direct:updateStatus").skipSendToOriginalEndpoint()
+            adviceRouteBuilder.interceptSendToEndpoint(ROUTE_UPDATE_STATUS).skipSendToOriginalEndpoint()
                     .to("mock:updateStatus");
         });
 
@@ -92,6 +93,11 @@ class ChouetteExportGtfsFileMardukRouteIntegrationTest extends MardukRouteBuilde
         AdviceWith.adviceWith(context, "chouette-get-job-status", adviceRouteBuilder -> {
             adviceRouteBuilder.interceptSendToEndpoint(chouetteUrl + "/chouette_iev/referentials/rut/jobs/1/data")
                     .skipSendToOriginalEndpoint().to("mock:chouetteGetData");
+        });
+
+        AdviceWith.adviceWith(context, "terminate-gtfs-export", adviceRouteBuilder -> {
+            adviceRouteBuilder.interceptSendToEndpoint(ROUTE_UPDATE_STATUS).skipSendToOriginalEndpoint()
+                    .to("mock:updateStatus");
         });
 
 
@@ -120,11 +126,9 @@ class ChouetteExportGtfsFileMardukRouteIntegrationTest extends MardukRouteBuilde
 
 
         pollJobStatus.expectedMessageCount(1);
-
         updateStatus.expectedMessageCount(2);
 
-
-        Map<String, Object> headers = new HashMap<String, Object>();
+        Map<String, Object> headers = new HashMap<>();
         headers.put(Constants.PROVIDER_ID, "2");
         headers.put(GTFS_EXPORT_GLOBAL, false);
         headers.put(EXPORT_NAME, "testExport");

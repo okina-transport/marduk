@@ -28,6 +28,7 @@ import org.springframework.stereotype.Component;
 
 import static no.rutebanken.marduk.Constants.*;
 import static no.rutebanken.marduk.utils.constants.RouteDeclarationConstants.ROUTE_PROCESS_FILE_QUEUE;
+import static no.rutebanken.marduk.utils.constants.RouteDeclarationConstants.ROUTE_UPDATE_STATUS;
 
 /**
  * Receives file notification from "external" queue and uses this to download the file from blob store.
@@ -43,7 +44,7 @@ public class JmsReceiverRouteBuilder extends BaseRouteBuilder {
                 .handled(true)
                 .log(LoggingLevel.INFO, correlation() + "Could not process file ${header." + FILE_HANDLE + "}")
                 .process(e -> JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.FILE_CLASSIFICATION).state(JobEvent.State.FAILED).build())
-                .to("direct:updateStatus")
+                .to(ROUTE_UPDATE_STATUS)
                 .setBody(simple(""))      //remove file data from body
                 .to("jms:queue:DeadLetterQueue");
 
@@ -69,7 +70,7 @@ public class JmsReceiverRouteBuilder extends BaseRouteBuilder {
                 .to("direct:uploadBlob")
                 .to("log:" + getClass().getName() + "?level=DEBUG&showAll=true&multiline=true")
                 .process(e -> JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.FILE_TRANSFER).state(JobEvent.State.STARTED).build())
-                .to("direct:updateStatus")
+                .to(ROUTE_UPDATE_STATUS)
                 .choice()
                 .when(simple("{{blobstore.delete.external.blobs:true}}"))
                 .to("direct:deleteExternalBlob")

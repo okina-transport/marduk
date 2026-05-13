@@ -17,20 +17,29 @@
 package no.rutebanken.marduk.routes.file;
 
 import no.rutebanken.marduk.config.MardukPropertiesConfig;
+import no.rutebanken.marduk.exceptions.FileValidationException;
 import no.rutebanken.marduk.exceptions.MardukException;
 import no.rutebanken.marduk.routes.file.beans.FileTypeClassifierBean;
 import no.rutebanken.marduk.routes.file.beans.GtfsFileInputWithParameters;
-import no.rutebanken.marduk.routes.file.onebusaway.FilterOneStopJourney;
-import no.rutebanken.marduk.routes.file.onebusaway.NonStandardStopTransformer;
+import no.rutebanken.marduk.routes.file.gtfs.StopTimesParser;
+import no.rutebanken.marduk.services.FileSystemService;
 import org.apache.camel.Exchange;
 import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
 import org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.BooleanUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.Strings;
+import org.onebusaway.gtfs.model.BookingRule;
+import org.onebusaway.gtfs.model.LocationGroup;
+import org.onebusaway.gtfs.model.LocationGroupElement;
 import org.onebusaway.gtfs_transformer.GtfsTransformer;
 import org.onebusaway.gtfs_transformer.TransformSpecificationException;
+import org.onebusaway.gtfs_transformer.impl.FilterGtfsFlexStrategy;
+import org.onebusaway.gtfs_transformer.impl.FilterOneStopJourneyStrategy;
+import org.onebusaway.gtfs_transformer.impl.NonStandardStopTransformerStrategy;
+import org.onebusaway.gtfs_transformer.impl.RemoveFlexStrategy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -52,10 +61,31 @@ import static no.rutebanken.marduk.Constants.*;
 public class ZipFileUtils {
     private static final Logger logger = LoggerFactory.getLogger(ZipFileUtils.class);
 
+    private static final List<String> FARES_FILES = Arrays.asList(
+            "fare_attributes.txt",
+            "fare_rules.txt",
+            "fare_products.txt",
+            "fare_media.txt",
+            "fare_leg_rules.txt",
+            "fare_transfer_rules.txt",
+            "fare_leg_join_rules.txt"
+    );
+    private static final List<String> FLEX_FILES = Arrays.asList(
+            "booking_rules.txt",
+            "location_groups.txt",
+            "locations.geojson",
+            "location_group_stops.txt"
+    );
     private final MardukPropertiesConfig mardukPropertiesConfig;
+    private final FileSystemService fileSystemService;
+    private final StopTimesParser stopTimesParser;
 
-    public ZipFileUtils(MardukPropertiesConfig mardukPropertiesConfig) {
+    public ZipFileUtils(MardukPropertiesConfig mardukPropertiesConfig,
+                        FileSystemService fileSystemService,
+                        StopTimesParser stopTimesParser) {
         this.mardukPropertiesConfig = mardukPropertiesConfig;
+        this.fileSystemService = fileSystemService;
+        this.stopTimesParser = stopTimesParser;
     }
 
     public static Set<String> listFilesInZip(File file) {
@@ -100,7 +130,7 @@ public class ZipFileUtils {
         addLocationTypeFilter(transformer);
         if (gtfsFileInputWithParameter.isAllowNonStandardGtfs()) {
             transformer.getReader()
-                    .addEntityHandler(new NonStandardStopTransformer(
+                    .addEntityHandler(new NonStandardStopTransformerStrategy(
                             gtfsFileInputWithParameter.getFillMissingStopName(),
                             gtfsFileInputWithParameter.getDefaultLatitude(),
                             gtfsFileInputWithParameter.getDefaultLongitude()
@@ -351,33 +381,26 @@ public class ZipFileUtils {
         }
     }
 
-    public static void copyGtfsZipFileWithoutFareFiles(File file) {
-        List<String> fareFilesToRemove = Arrays.asList(
-                "fare_attributes.txt",
-                "fare_rules.txt",
-                "fare_products.txt",
-                "fare_media.txt",
-                "fare_leg_rules.txt",
-                "fare_transfer_rules.txt",
-                "fare_leg_join_rules.txt"
-        );
+    public static boolean removeFilesFromGtfsArchive(File file, List<String> fileToRemove) {
 
         Map<String, String> env = new HashMap<>();
         env.put("create", "false");
+        boolean zipArchiveUpdated = false;
 
         try (FileSystem zipfs = FileSystems.newFileSystem(file.toPath(), env, null)) {
-            for (String fileName : fareFilesToRemove) {
+            for (String fileName : fileToRemove) {
                 Path pathInZip = zipfs.getPath(fileName);
                 if (Files.exists(pathInZip)) {
                     Files.delete(pathInZip);
                     logger.info("File removed from ZIP: {}", fileName);
+                    zipArchiveUpdated = true;
                 }
             }
         } catch (IOException e) {
             logger.error("Error while modifying ZIP: {}", file.getName(), e);
             throw new RuntimeException("Error while removing fare files from ZIP", e);
         }
-
+        return zipArchiveUpdated;
     }
 
     private static ZipArchiveEntry copyZipArchiveEntry(ZipArchiveEntry zipEntry) {
@@ -410,43 +433,124 @@ public class ZipFileUtils {
         try {
             file = repackZipToFlatStructureIfNeeded(file);
         } catch (IOException e) {
-            throw new RuntimeException("Failed to recompress ZIP file", e);
+            throw new FileValidationException("Failed to recompress ZIP file", e);
         }
 
-        Object header = exchange.getIn().getHeader("importtargetroutes");
-        Set<String> routeIds = header != null ?
-                Arrays.stream(header.toString().split(","))
-                .map(String::trim).filter(s -> !s.isEmpty()).collect(Collectors.toSet()) : new HashSet<>();
+        Object headerRoute = exchange.getIn().getHeader("importtargetroutes");
+        Set<String> routeIds = headerRoute != null ?
+                Arrays.stream(headerRoute.toString().split(","))
+                        .map(String::trim).filter(s -> !s.isEmpty()).collect(Collectors.toSet()) : new HashSet<>();
 
-        String allowNonStandardGtfsRawStr = exchange.getIn().getHeader(ALLOW_NON_STANDARD_GTFS, String.class);
-        boolean allowNonStandardGtfs = BooleanUtils.toBoolean(allowNonStandardGtfsRawStr);
-
+        boolean allowNonStandardGtfs = BooleanUtils.toBoolean(exchange.getIn().getHeader(ALLOW_NON_STANDARD_GTFS, String.class));
         String fillMissingStopName = exchange.getIn().getHeader(FILL_MISSING_STOP_NAME, String.class);
         String fillMissingCoordinates = exchange.getIn().getHeader(FILL_MISSING_COORDINATES, String.class);
         Boolean importFareFiles = exchange.getIn().getHeader(IMPORT_FARE_FILES, Boolean.class);
+        String allowGtfsFlexStr = exchange.getIn().getHeader(ALLOW_GTFS_FLEX, String.class);
+        boolean importGtfsFlex = !StringUtils.isEmpty(allowGtfsFlexStr) && Boolean.parseBoolean(allowGtfsFlexStr);
+        String originalFileName = exchange.getIn().getHeader(FILE_NAME, String.class);
 
         if (file.exists() && file.length() > 0) {
             Set<String> filenamesInZip = listFilesInZip(file);
             if (FileTypeClassifierBean.isGtfsZip(filenamesInZip)) {
                 try {
-                    GtfsFileInputWithParameters gtfsFileInputWithParameter =
-                            new GtfsFileInputWithParameters(file, routeIds, allowNonStandardGtfs, fillMissingStopName, fillMissingCoordinates);
-                    if (importFareFiles != null && importFareFiles.equals(false)) {
-                        copyGtfsZipFileWithoutFareFiles(file);
+                    if (importGtfsFlex) {
+                        String tempDir = System.getProperty("java.io.tmpdir");
+
+                        String cleanFileName = new File(originalFileName).getName();
+                        File sourceFileForFlex = new File(tempDir, cleanFileName);
+                        File flexFinalFile = File.createTempFile(Strings.CS.removeEnd(cleanFileName, ".zip") + "_FLEX",
+                                ".zip");
+
+                        if (sourceFileForFlex.exists()) {
+                            Path tempOutputDir = Files.createTempDirectory("oba-flex-output-");
+                            try {
+                                GtfsTransformer transformer = new GtfsTransformer();
+                                transformer.setGtfsInputDirectory(sourceFileForFlex);
+                                transformer.setOutputDirectory(tempOutputDir.toFile());
+                                transformer.addTransform(new FilterGtfsFlexStrategy());
+                                executeTransformations(transformer, System.currentTimeMillis());
+                                zipFolder(tempOutputDir, flexFinalFile.toPath());
+                                fileSystemService.copyGtfsFlexZipForUttu(flexFinalFile);
+
+                                exchange.getIn().setHeader(GTFS_FLEX_FILE,
+                                        flexFinalFile.getAbsoluteFile().getName());
+                                logger.info("GTFS-Flex file generated : {}", flexFinalFile.getAbsolutePath());
+
+                            } catch (Exception e) {
+                                throw new IOException("Failure to generate the GTFS-Flex file", e);
+                            } finally {
+                                FileUtils.deleteQuietly(tempOutputDir.toFile());
+                            }
+                        }
                     }
+
+                    file = removeFlexFromStandardFile(file);
+
+                    if (Boolean.FALSE.equals(importFareFiles)) {
+                        removeFilesFromGtfsArchive(file, FARES_FILES);
+                    }
+
+                    GtfsFileInputWithParameters params = new GtfsFileInputWithParameters(file, routeIds,
+                            allowNonStandardGtfs, fillMissingStopName, fillMissingCoordinates, importGtfsFlex);
+
                     if (!routeIds.isEmpty()) {
-                        file = filterGtfsByRouteIds(gtfsFileInputWithParameter);
+                        file = filterGtfsByRouteIds(params);
                     } else {
-                        file = transformGtfsFiles(gtfsFileInputWithParameter);
+                        file = transformGtfsFiles(params);
                     }
                 } catch (Exception e) {
-                    throw new RuntimeException("GTFS conversion failed", e);
+                    throw new FileValidationException("GTFS conversion failed", e);
                 }
             } else {
                 logger.warn("The ZIP file does not appear to be a valid GTFS file. Files found : {}", filenamesInZip);
             }
         }
         return file;
+    }
+
+    private File removeFlexFromStandardFile(File sourceFile) throws IOException {
+        Path tempDir = Files.createTempDirectory("oba-standard-clean-");
+        File cleanFile = File.createTempFile("gtfs-standard-only-", ".zip");
+
+        try {
+            boolean flexFileRemoved = removeFilesFromGtfsArchive(sourceFile, FLEX_FILES);
+            if (flexFileRemoved) {
+                stopTimesParser.cleanStopTimesFile(sourceFile);
+            }
+            GtfsTransformer transformer = new GtfsTransformer();
+                    transformer.setGtfsInputDirectory(sourceFile);
+            transformer.setOutputDirectory(tempDir.toFile());
+            transformer.getReader()
+                    .getEntityClasses()
+                    .removeAll(List.of(BookingRule.class, LocationGroup.class, LocationGroupElement.class));
+            transformer.addTransform(new RemoveFlexStrategy());
+            executeTransformations(transformer, System.currentTimeMillis());
+            zipFolder(tempDir, cleanFile.toPath());
+            return cleanFile;
+        } catch (Exception e) {
+            logger.error("Error during Flex cleaning : {}", e.getMessage());
+            return sourceFile;
+        } finally {
+            FileUtils.deleteQuietly(tempDir.toFile());
+        }
+    }
+
+    private void zipFolder(Path sourceFolderPath, Path zipPath) throws IOException {
+        try (ZipOutputStream zos = new ZipOutputStream(new FileOutputStream(zipPath.toFile()))) {
+            try (var paths = Files.walk(sourceFolderPath)) {
+                paths.filter(path -> !Files.isDirectory(path))
+                        .forEach(path -> {
+                            ZipEntry zipEntry = new ZipEntry(sourceFolderPath.relativize(path).toString());
+                            try {
+                                zos.putNextEntry(zipEntry);
+                                Files.copy(path, zos);
+                                zos.closeEntry();
+                            } catch (IOException e) {
+                                throw new RuntimeException("Error adding the file to the ZIP : " + path, e);
+                            }
+                        });
+            }
+        }
     }
 
     private static File repackZipToFlatStructureIfNeeded(File inputFile) throws IOException {
@@ -485,10 +589,14 @@ public class ZipFileUtils {
 
             ZipEntry entry;
             while ((entry = zis.getNextEntry()) != null) {
-                if (entry.isDirectory()) continue;
+                if (entry.isDirectory()) {
+                    continue;
+                }
 
                 String newName = entry.getName().substring(commonPathPrefix.length());
-                if(newName.isEmpty()) continue; // Eviter les entrées vides
+                if(newName.isEmpty()) {
+                    continue;
+                }
 
                 zos.putNextEntry(new ZipEntry(newName));
 
@@ -547,7 +655,6 @@ public class ZipFileUtils {
 
             for (File file : files) {
                 try (FileInputStream fileInputStream = new FileInputStream(file)) {
-
                     out.putNextEntry(new ZipEntry(file.getName()));
                     for (int read = fileInputStream.read(buffer); read > -1; read = (fileInputStream).read(buffer)) {
                         out.write(buffer, 0, read);
@@ -594,7 +701,7 @@ public class ZipFileUtils {
         addLocationTypeFilter(transformer);
         if (gtfsFileInputWithParameters.isAllowNonStandardGtfs()) {
             transformer.getReader()
-                    .addEntityHandler(new NonStandardStopTransformer(
+                    .addEntityHandler(new NonStandardStopTransformerStrategy(
                             gtfsFileInputWithParameters.getFillMissingStopName(),
                             gtfsFileInputWithParameters.getDefaultLatitude(),
                             gtfsFileInputWithParameters.getDefaultLongitude()
@@ -610,14 +717,13 @@ public class ZipFileUtils {
         if (mardukPropertiesConfig.isGtfsImportFilterLocationTypeEnabled()) {
             transformer.getTransformFactory().addModificationsFromString("{'op':'remove', 'match':{'file':'stops.txt', 'location_type':'3'}}");
             transformer.getTransformFactory().addModificationsFromString("{'op':'remove', 'match':{'file':'stops.txt', 'location_type':'4'}}");
-            transformer.addTransform(new FilterOneStopJourney());
+            transformer.addTransform(new FilterOneStopJourneyStrategy());
         }
     }
 
     private void executeTransformations(GtfsTransformer transformer, long time) throws Exception {
         transformer.getReader().setOverwriteDuplicates(true);
         transformer.run();
-
         logger.info("Filtrage GTFS par route IDs terminé en {} ms", (System.currentTimeMillis() - time));
     }
 

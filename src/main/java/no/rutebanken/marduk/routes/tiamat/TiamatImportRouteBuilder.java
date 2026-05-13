@@ -44,6 +44,7 @@ import java.io.InputStream;
 import static no.rutebanken.marduk.Constants.*;
 import static no.rutebanken.marduk.utils.Utils.getHttp4;
 import static no.rutebanken.marduk.utils.Utils.getLastPathElementOfUrl;
+import static no.rutebanken.marduk.utils.constants.RouteDeclarationConstants.ROUTE_UPDATE_STATUS;
 
 
 @Component
@@ -68,7 +69,7 @@ public class TiamatImportRouteBuilder extends AbstractChouetteRouteBuilder {
                 .log(LoggingLevel.INFO, correlation() + "Starting Tiamat import")
                 .removeHeader(JOB_ID)
                 .process(e -> JobEvent.providerJobBuilder(e).timetableAction(TimetableAction.IMPORT).state(State.PENDING).type(e.getIn().getHeader(FILE_TYPE, String.class)).build())
-                .to("direct:updateStatus")
+                .to(ROUTE_UPDATE_STATUS)
                 .to("direct:getBlob")
                 .choice()
                     .when(body().isNull())
@@ -184,7 +185,7 @@ public class TiamatImportRouteBuilder extends AbstractChouetteRouteBuilder {
                 .setHeader(JOB_STATUS_JOB_TYPE, constant(TimetableAction.IMPORT_NETEX.name()))
                 .removeHeader("loopCounter")
                 .process(e -> JobEvent.providerJobBuilder(e).timetableAction(TimetableAction.IMPORT).state(State.STARTED).type(e.getIn().getHeader(FILE_TYPE, String.class)).build())
-                .to("direct:updateStatus")
+                .to(ROUTE_UPDATE_STATUS)
                 .to("jms:queue:TiamatPollStatusQueue")
                 .routeId("tiamat-send-import-job");
 
@@ -203,7 +204,7 @@ public class TiamatImportRouteBuilder extends AbstractChouetteRouteBuilder {
                      })
                 .end()
 
-                .to("direct:updateStatus")
+                .to(ROUTE_UPDATE_STATUS)
                 .routeId("timat-process-import-status");
 
 

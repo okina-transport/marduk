@@ -572,6 +572,9 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
             e.getIn().setHeader(IMPORT_FARE_FILES, importParameters.getImportFareFiles());
             e.getIn().setHeader(RECOMPUTE_STOP_PLACES_LOCATION, importParameters.getRecomputeStopPlacesLocation());
             e.getIn().setHeader(OVERWRITE_LINE_INFORMATION, importParameters.getOverwriteLineInformation());
+            e.getIn().setHeader(ALLOW_GTFS_FLEX, importParameters.isAllowGtfsFlex());
+            e.getIn().setHeader(EXTERNAL_REF_FIELD, importParameters.getExternalRefField());
+            e.getIn().setHeader(DRIVER_CONTROLLER_CODE_FIELD, importParameters.getDriverControllerCodeField());
             if (importParameters.getImportTargetRoutes() != null) {
                 e.getIn().setHeader(IMPORT_TARGET_ROUTES, importParameters.getImportTargetRoutes()
                         .stream()

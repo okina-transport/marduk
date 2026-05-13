@@ -48,6 +48,9 @@ public class FileSystemService {
     @Value("${fares.storage.path:/srv/docker-data/data/fares}")
     private String faresStoragePath;
 
+    @Value("${uttu.storage.path:/srv/docker-data/data/uttu}")
+    private Path uttuStoragePath;
+
     @Autowired
     CacheProviderRepository providerRepository;
 
@@ -210,7 +213,7 @@ public class FileSystemService {
                 .parse(reader);
     }
 
-    private static String guessDelimiter(String fileContent) {
+    public static String guessDelimiter(String fileContent) {
 
         String[] lines = fileContent.split("\n");
         String firstLine = lines[0];
@@ -377,6 +380,14 @@ public class FileSystemService {
         } finally {
             FileUtils.deleteQuietly(unzipTmpDir);
         }
+    }
+
+    public void copyGtfsFlexZipForUttu(File gtfsZip) throws IOException {
+        if (!uttuStoragePath.toFile().exists()) {
+            Files.createDirectories(uttuStoragePath);
+        }
+        Path destFile = uttuStoragePath.resolve(gtfsZip.getName());
+        Files.copy(gtfsZip.toPath(), destFile);
     }
 
 }
