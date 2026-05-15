@@ -27,6 +27,7 @@ import no.rutebanken.marduk.routes.status.JobEvent;
 import no.rutebanken.marduk.routes.status.JobEvent.State;
 import no.rutebanken.marduk.routes.status.JobEvent.TimetableAction;
 import no.rutebanken.marduk.services.processors.MergeOfferAndFaresInGTFSProcessor;
+import no.rutebanken.marduk.services.processors.MergeOfferAndFlexInGTFSProcessor;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.component.http.HttpMethods;
@@ -65,15 +66,17 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
     private final UpdateExportTemplateProcessor updateExportTemplateProcessor;
     private final CreateMail createMail;
     private final MergeOfferAndFaresInGTFSProcessor mergeOfferAndFaresInGTFSProcessor;
+    private final MergeOfferAndFlexInGTFSProcessor mergeOfferAndFlexInGTFSProcessor;
 
     public ChouetteExportGtfsRouteBuilder(@Value("${chouette.url}") String chouetteUrl, @Value("${google.publish.public:false}") boolean publicPublication, ExportToConsumersProcessor exportToConsumersProcessor,
-                                          UpdateExportTemplateProcessor updateExportTemplateProcessor, CreateMail createMail, MergeOfferAndFaresInGTFSProcessor mergeOfferAndFaresInGTFSProcessor) {
+                                          UpdateExportTemplateProcessor updateExportTemplateProcessor, CreateMail createMail, MergeOfferAndFaresInGTFSProcessor mergeOfferAndFaresInGTFSProcessor, MergeOfferAndFlexInGTFSProcessor mergeOfferAndFlexInGTFSProcessor) {
         this.chouetteUrl = chouetteUrl;
         this.publicPublication = publicPublication;
         this.exportToConsumersProcessor = exportToConsumersProcessor;
         this.updateExportTemplateProcessor = updateExportTemplateProcessor;
         this.createMail = createMail;
         this.mergeOfferAndFaresInGTFSProcessor = mergeOfferAndFaresInGTFSProcessor;
+        this.mergeOfferAndFlexInGTFSProcessor = mergeOfferAndFlexInGTFSProcessor;
     }
 
     @Override
@@ -187,10 +190,12 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
                 .when(header(FARES_INCLUDED_HEADER).isEqualTo(Boolean.TRUE))
                    .log(LoggingLevel.INFO,"Launching fares export")
                    .to("jms:queue:exportGtfsFaresQueue")
+                .when(header(FLEX_INCLUDED_HEADER).isEqualTo(Boolean.TRUE))
+                    .log(LoggingLevel.INFO,"Launching flex export")
+                    .to("jms:queue:exportGtfsFlexQueue")
                 .otherwise()
                    .to("direct:terminateGtfsExport")
                 .end()
-
                 .routeId("handle-gtfs-export-ok");
 
         from("jms:queue:exportGtfsFaresCompleted")
@@ -198,13 +203,40 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
                 .when(header(FARES_EXPORT_STATUS).isEqualTo("OK"))
                     .log(LoggingLevel.INFO,"GTFS fares export completed successfully")
                     .process(mergeOfferAndFaresInGTFSProcessor)
-                    .to("direct:terminateGtfsExport")
+                    .to("direct:gtfsExportPostFaresProcess")
                 .otherwise()
                     .log(LoggingLevel.ERROR,"Error on GTFS fares export")
                     .to("direct:handleGtfsExportERROR")
                 .endChoice()
                 .end()
                 .routeId("export-gtfs-fares-completed");
+
+        from("jms:queue:exportGtfsFlexUttuCompleted")
+                .choice()
+                .when(header(FLEX_EXPORT_STATUS).isEqualTo("OK"))
+                    .log(LoggingLevel.INFO,"GTFS flex export completed successfully")
+                    .process(mergeOfferAndFlexInGTFSProcessor)
+                    .to("direct:terminateGtfsExport")
+                .otherwise()
+                    .log(LoggingLevel.ERROR,"Error on GTFS flex export")
+                    .to("direct:handleGtfsExportERROR")
+                .endChoice()
+                .end()
+
+
+                .routeId("export-gtfs-flex-completed");
+
+
+
+        from("direct:gtfsExportPostFaresProcess")
+                .choice()
+                .when(header(FLEX_INCLUDED_HEADER).isEqualTo(Boolean.TRUE))
+                    .log(LoggingLevel.INFO,"PostFareProcess - Launching flex export")
+                    .to("jms:queue:exportGtfsFlexQueue")
+                .otherwise()
+                    .to("direct:terminateGtfsExport")
+                .routeId("gtfs-export-post-fares-process");
+
 
         from("direct:terminateGtfsExport")
                 .process(exportToConsumersProcessor)

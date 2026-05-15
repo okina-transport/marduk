@@ -861,6 +861,10 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
             if (headers.get(FARES_INCLUDED_HEADER) != null){
                 e.getIn().setHeader(FARES_INCLUDED_HEADER, headers.get(FARES_INCLUDED_HEADER));
             }
+
+            if (headers.get(FLEX_INCLUDED_HEADER) != null){
+                e.getIn().setHeader(FLEX_INCLUDED_HEADER, headers.get(FLEX_INCLUDED_HEADER));
+            }
         }
     }
 

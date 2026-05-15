@@ -41,6 +41,7 @@ public class ExportTemplate implements Serializable {
     private String status;
     private boolean includeFares;
     private boolean serviceJourneyTripObjectName;
+    private boolean includeFlex;
 
 
 
@@ -302,6 +303,14 @@ public class ExportTemplate implements Serializable {
 
     public void setIncludeFares(boolean includeFares) {
         this.includeFares = includeFares;
+    }
+
+    public boolean isIncludeFlex() {
+        return includeFlex;
+    }
+
+    public void setIncludeFlex(boolean includeFlex) {
+        this.includeFlex = includeFlex;
     }
 
     public boolean isServiceJourneyTripObjectName() {

@@ -100,7 +100,9 @@ public class Constants {
     public static final String CORRELATION_ID = "RutebankenCorrelationId";
     public static final String CHOUETTE_REFERENTIAL = "RutebankenChouetteReferential";
     public static final String FARES_INCLUDED_HEADER = "faresIncluded";
+    public static final String FLEX_INCLUDED_HEADER = "includeFlex";
     public static final String FARES_EXPORT_STATUS = "faresExportStatus";
+    public static final String FLEX_EXPORT_STATUS = "FlexExportStatus";
     public static final String FARES_DIRECTORY = "faresDirectory";
     public static final String JSON_PART = "RutebankenJsonPart";
     public static final String FILE_NAME = "RutebankenFileName";
@@ -219,5 +221,7 @@ public class Constants {
 
     public static final String CLEAN_INPUT_NETEX_ZIP = "cleanInputNetexZip";
     public static final String INPUT_OFFER_ZIP_FILE_PATH = "inputOfferZipFilePath";
+
+    public static final String UTTU_JOB_ID = "UttuJobId";
 }
 
