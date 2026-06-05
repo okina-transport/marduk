@@ -792,7 +792,6 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
     }
 
 
-
     public static class ImportFilesSplitter {
         public List<String> splitFiles(@Body BlobStoreFiles files) {
             return files.getFiles().stream().map(File::getName).collect(Collectors.toList());
@@ -858,12 +857,32 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
             if (headers.get(USE_EXTENDED_GTFS_ROUTE_TYPES) != null) {
                 e.getIn().setHeader(USE_EXTENDED_GTFS_ROUTE_TYPES, headers.get(USE_EXTENDED_GTFS_ROUTE_TYPES));
             }
-            if (headers.get(FARES_INCLUDED_HEADER) != null){
+            if (headers.get(FARES_INCLUDED_HEADER) != null) {
                 e.getIn().setHeader(FARES_INCLUDED_HEADER, headers.get(FARES_INCLUDED_HEADER));
             }
-
-            if (headers.get(FLEX_INCLUDED_HEADER) != null){
+            if (headers.get(FLEX_INCLUDED_HEADER) != null) {
                 e.getIn().setHeader(FLEX_INCLUDED_HEADER, headers.get(FLEX_INCLUDED_HEADER));
+            }
+            if (headers.get(GOOGLE_MAPS_COMPATIBILITY) != null) {
+                e.getIn().setHeader(GOOGLE_MAPS_COMPATIBILITY, headers.get(GOOGLE_MAPS_COMPATIBILITY));
+            }
+            if (headers.get(ID_SUFFIX) != null) {
+                e.getIn().setHeader(ID_SUFFIX, headers.get(ID_SUFFIX));
+            }
+            if (headers.get(COMMERCIAL_POINT_ID_PREFIX) != null) {
+                e.getIn().setHeader(COMMERCIAL_POINT_ID_PREFIX, headers.get(COMMERCIAL_POINT_ID_PREFIX));
+            }
+            if (headers.get(COMMERCIAL_POINT_EXPORT) != null) {
+                e.getIn().setHeader(COMMERCIAL_POINT_EXPORT, headers.get(COMMERCIAL_POINT_EXPORT));
+            }
+            if (headers.get(EXPORTED_FILENAME) != null) {
+                e.getIn().setHeader(EXPORTED_FILENAME, headers.get(EXPORTED_FILENAME));
+            }
+            if (headers.get(STOP_ID_PREFIX) != null) {
+                e.getIn().setHeader(STOP_ID_PREFIX, headers.get(STOP_ID_PREFIX));
+            }
+            if (headers.get(LINE_ID_PREFIX) != null) {
+                e.getIn().setHeader(LINE_ID_PREFIX, headers.get(LINE_ID_PREFIX));
             }
         }
     }
@@ -1350,7 +1369,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .setExchangePattern(ExchangePattern.InOnly)
                 .to("jms:queue:TiamatPointOfInterestExport");
 
-            from(ROUTE_ADMIN_FARES_EXPORT_NETEX_FARES)
+        from(ROUTE_ADMIN_FARES_EXPORT_NETEX_FARES)
                 .routeId(ROUTE_ID_ADMIN_FARES_EXPORT_NETEX_FARES)
                 .setHeader(PROVIDER_ID, header(PROVIDER))
                 .to(ROUTE_AUTHORIZE_REQUEST)
@@ -1398,8 +1417,8 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER, Long.class)) != null)
                 .removeHeaders(ALL_CAMEL_HTTP)
                 .process(e -> chouetteValidationScheduleService.scheduleManualValidationForProvider(
-                                e.getIn().getHeader(PROVIDER, Long.class),
-                                e.getIn().getBody(ChouetteValidationSchedule.class).getValidationSchedule()))
+                        e.getIn().getHeader(PROVIDER, Long.class),
+                        e.getIn().getBody(ChouetteValidationSchedule.class).getValidationSchedule()))
                 .end();
 
         from(ROUTE_ADMIN_GET_FARES_EXPORT_SCHEDULE)
@@ -1431,8 +1450,8 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .removeHeaders(ALL_CAMEL_HTTP)
                 .process(e -> e.getIn().setBody(
                         faresScheduleService.getPredefinedFaresExportCronExpressionByProviderByExportConfigurationId(
-                        e.getIn().getHeader(PROVIDER, Long.class),
-                        e.getIn().getHeader(EXPORT_CONFIGURATION_ID, Long.class)))
+                                e.getIn().getHeader(PROVIDER, Long.class),
+                                e.getIn().getHeader(EXPORT_CONFIGURATION_ID, Long.class)))
                 ).end();
 
         from(ROUTE_ADMIN_POST_PREDEFINED_FARES_EXPORT_SCHEDULE)
