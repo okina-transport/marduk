@@ -32,14 +32,6 @@ public class StopTimesParser {
                     return true;
                 }
 
-                if ("2".equals(stopTime.getPickupType()) || "3".equals(stopTime.getPickupType())) {
-                    return true;
-                }
-
-                if ("2".equals(stopTime.getDropOffType()) || "3".equals(stopTime.getDropOffType())) {
-                    return true;
-                }
-
                 if ("2".equals(stopTime.getContinuousPickup()) || "3".equals(stopTime.getContinuousPickup())) {
                     return true;
                 }
