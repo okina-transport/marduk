@@ -7,9 +7,8 @@ import no.rutebanken.marduk.routes.chouette.UpdateExportTemplateProcessor;
 import no.rutebanken.marduk.routes.chouette.json.Job;
 import no.rutebanken.marduk.routes.status.JobEvent;
 import no.rutebanken.marduk.security.TokenService;
-import no.rutebanken.marduk.services.FileSystemService;
+import no.rutebanken.marduk.services.UserActionsLoggingService;
 import org.apache.camel.LoggingLevel;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -28,20 +27,20 @@ public class TiamatExportPointsOfInterestBuilder extends AbstractChouetteRouteBu
 
     private static final String TIAMAT_EXPORT_POI_ROUTING_DESTINATION = "direct:processTiamatExportPOIResult";
 
-    @Value("${stop-places-export.api.url}")
-    private String stopPlacesExportUrl;
 
-    @Value("${google.publish.public:false}")
-    private boolean publicPublication;
+    private final String stopPlacesExportUrl;
+    private final ExportToConsumersProcessor exportToConsumersProcessor;
+    private final UpdateExportTemplateProcessor updateExportTemplateProcessor;
+    private final TokenService tokenService;
+    private final UserActionsLoggingService userActionsLoggingService;
 
-    @Autowired
-    ExportToConsumersProcessor exportToConsumersProcessor;
-
-    @Autowired
-    UpdateExportTemplateProcessor updateExportTemplateProcessor;
-
-    @Autowired
-    TokenService tokenService;
+    public TiamatExportPointsOfInterestBuilder(@Value("${stop-places-export.api.url}") String stopPlacesExportUrl, ExportToConsumersProcessor exportToConsumersProcessor, UpdateExportTemplateProcessor updateExportTemplateProcessor, TokenService tokenService, UserActionsLoggingService userActionsLoggingService) {
+        this.stopPlacesExportUrl = stopPlacesExportUrl;
+        this.exportToConsumersProcessor = exportToConsumersProcessor;
+        this.updateExportTemplateProcessor = updateExportTemplateProcessor;
+        this.tokenService = tokenService;
+        this.userActionsLoggingService = userActionsLoggingService;
+    }
 
     @Override
     public void configure() throws Exception {
@@ -64,6 +63,7 @@ public class TiamatExportPointsOfInterestBuilder extends AbstractChouetteRouteBu
                     .log(LoggingLevel.INFO, "Ajout d'un correlation id")
                     .process(e -> e.getIn().setHeader(Constants.CORRELATION_ID, e.getIn().getHeader(Constants.CORRELATION_ID, UUID.randomUUID().toString())))
                 .end()
+                .bean(userActionsLoggingService, "recordPoiExport")
                 .process(e -> {
 
                     try{

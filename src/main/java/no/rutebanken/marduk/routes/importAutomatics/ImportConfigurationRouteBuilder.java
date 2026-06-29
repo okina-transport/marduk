@@ -12,6 +12,7 @@ import no.rutebanken.marduk.routes.chouette.AbstractChouetteRouteBuilder;
 import no.rutebanken.marduk.routes.file.FileType;
 import no.rutebanken.marduk.services.FileSystemService;
 import no.rutebanken.marduk.services.QuartzService;
+import no.rutebanken.marduk.services.UserActionsLoggingService;
 import no.rutebanken.marduk.utils.CipherEncryption;
 import no.rutebanken.marduk.utils.SendMail;
 import org.apache.camel.Exchange;
@@ -25,7 +26,6 @@ import org.apache.commons.net.ftp.FTPClient;
 import org.apache.commons.net.ftp.FTPClientConfig;
 import org.apache.commons.net.ftp.FTPFile;
 import org.json.JSONException;
-import org.json.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 import org.jspecify.annotations.NonNull;
@@ -88,17 +88,19 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
     private final SendMail sendMail;
     private final FileSystemService fileSystemService;
     private final QuartzService quartzService;
+    private final UserActionsLoggingService userActionsLoggingService;
 
     public ImportConfigurationRouteBuilder(CipherEncryption cipherEncryption,
                                            ImportConfigurationDAO importConfigurationDAO,
                                            SendMail sendMail,
                                            FileSystemService fileSystemService,
-                                           QuartzService quartzService) {
+                                           QuartzService quartzService, UserActionsLoggingService userActionsLoggingService) {
         this.cipherEncryption = cipherEncryption;
         this.importConfigurationDAO = importConfigurationDAO;
         this.sendMail = sendMail;
         this.fileSystemService = fileSystemService;
         this.quartzService = quartzService;
+        this.userActionsLoggingService = userActionsLoggingService;
     }
 
     @Override
@@ -153,6 +155,8 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
         String referential = e.getIn().getHeader(CHOUETTE_REFERENTIAL, String.class);
         String importConfigurationId = e.getIn().getHeader(IMPORT_CONFIGURATION_ID, String.class);
         ImportConfiguration importConfiguration = importConfigurationDAO.getImportConfiguration(referential, importConfigurationId);
+
+        userActionsLoggingService.recordPredefinedImport(e, importConfiguration);
 
         if (!importConfiguration.isActivated()) {
             log.warn("{} Import is inactive (id : {})", correlation(), importConfigurationId);

@@ -19,11 +19,11 @@ package no.rutebanken.marduk.routes.chouette;
 import no.rutebanken.marduk.domain.Provider;
 import no.rutebanken.marduk.routes.chouette.json.Parameters;
 import no.rutebanken.marduk.routes.status.JobEvent;
+import no.rutebanken.marduk.services.UserActionsLoggingService;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.component.http.HttpMethods;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -40,26 +40,28 @@ import static no.rutebanken.marduk.utils.constants.RouteDeclarationConstants.ROU
 
 @Component
 public class ChouetteExportNetexRouteBuilder extends AbstractChouetteRouteBuilder {
-    @Value("${chouette.url}")
-    private String chouetteUrl;
 
-    @Value("${chouette.netex.export.stops:false}")
-    private boolean exportStops;
+    private final String chouetteUrl;
+    private final boolean exportStops;
+    private final boolean publicPublication;
+    private final ExportToConsumersProcessor exportToConsumersProcessor;
+    private final UpdateExportTemplateProcessor updateExportTemplateProcessor;
+    private final CreateMail createMail;
+    private final String lugUrl;
+    private final UserActionsLoggingService userActionsLoggingService;
 
-    @Value("${google.publish.public:false}")
-    private boolean publicPublication;
-
-    @Autowired
-    ExportToConsumersProcessor exportToConsumersProcessor;
-
-    @Autowired
-    UpdateExportTemplateProcessor updateExportTemplateProcessor;
-    
-    @Autowired
-    CreateMail createMail;
-
-    @Value("${lug.url}")
-    private String lugUrl;
+    public ChouetteExportNetexRouteBuilder(@Value("${chouette.url}") String chouetteUrl, @Value("${chouette.netex.export.stops:false}") boolean exportStops, @Value("${google.publish.public:false}") boolean publicPublication,
+                                           ExportToConsumersProcessor exportToConsumersProcessor, UpdateExportTemplateProcessor updateExportTemplateProcessor, CreateMail createMail,
+                                           @Value("${lug.url}")String lugUrl, UserActionsLoggingService userActionsLoggingService) {
+        this.chouetteUrl = chouetteUrl;
+        this.exportStops = exportStops;
+        this.publicPublication = publicPublication;
+        this.exportToConsumersProcessor = exportToConsumersProcessor;
+        this.updateExportTemplateProcessor = updateExportTemplateProcessor;
+        this.createMail = createMail;
+        this.lugUrl = lugUrl;
+        this.userActionsLoggingService = userActionsLoggingService;
+    }
 
     @Override
     public void configure() throws Exception {
@@ -101,6 +103,7 @@ public class ChouetteExportNetexRouteBuilder extends AbstractChouetteRouteBuilde
                     String exportExternalIds = e.getIn().getHeader(EXPORT_EXTERNAL_IDS) != null ? String.valueOf(e.getIn().getHeader(EXPORT_EXTERNAL_IDS)) : null;
                     e.getIn().setHeader(JSON_PART, Parameters.getNetexExportProvider(getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)), exportStops, user, exportedFilename, null, null, exportGeneratedMissingQuays, exportExternalIds));
                 }) //Using header to addToExchange json data
+                .bean(userActionsLoggingService,"recordUserAction")
                 .log(LoggingLevel.INFO, correlation() + "Creating multipart request")
                 .process(this::toGenericChouetteMultipart)
                 .setHeader(Exchange.CONTENT_TYPE, simple("multipart/form-data"))

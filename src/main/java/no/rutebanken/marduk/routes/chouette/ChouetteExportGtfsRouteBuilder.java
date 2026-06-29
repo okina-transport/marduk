@@ -26,6 +26,7 @@ import no.rutebanken.marduk.routes.file.ZipFileUtils;
 import no.rutebanken.marduk.routes.status.JobEvent;
 import no.rutebanken.marduk.routes.status.JobEvent.State;
 import no.rutebanken.marduk.routes.status.JobEvent.TimetableAction;
+import no.rutebanken.marduk.services.UserActionsLoggingService;
 import no.rutebanken.marduk.services.processors.MergeOfferAndFaresInGTFSProcessor;
 import no.rutebanken.marduk.services.processors.MergeOfferAndFlexInGTFSProcessor;
 import org.apache.camel.Exchange;
@@ -67,9 +68,10 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
     private final CreateMail createMail;
     private final MergeOfferAndFaresInGTFSProcessor mergeOfferAndFaresInGTFSProcessor;
     private final MergeOfferAndFlexInGTFSProcessor mergeOfferAndFlexInGTFSProcessor;
+    private final UserActionsLoggingService userActionsLoggingService;
 
     public ChouetteExportGtfsRouteBuilder(@Value("${chouette.url}") String chouetteUrl, @Value("${google.publish.public:false}") boolean publicPublication, ExportToConsumersProcessor exportToConsumersProcessor,
-                                          UpdateExportTemplateProcessor updateExportTemplateProcessor, CreateMail createMail, MergeOfferAndFaresInGTFSProcessor mergeOfferAndFaresInGTFSProcessor, MergeOfferAndFlexInGTFSProcessor mergeOfferAndFlexInGTFSProcessor) {
+                                          UpdateExportTemplateProcessor updateExportTemplateProcessor, CreateMail createMail, MergeOfferAndFaresInGTFSProcessor mergeOfferAndFaresInGTFSProcessor, MergeOfferAndFlexInGTFSProcessor mergeOfferAndFlexInGTFSProcessor, UserActionsLoggingService userActionsLoggingService) {
         this.chouetteUrl = chouetteUrl;
         this.publicPublication = publicPublication;
         this.exportToConsumersProcessor = exportToConsumersProcessor;
@@ -77,6 +79,7 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
         this.createMail = createMail;
         this.mergeOfferAndFaresInGTFSProcessor = mergeOfferAndFaresInGTFSProcessor;
         this.mergeOfferAndFlexInGTFSProcessor = mergeOfferAndFlexInGTFSProcessor;
+        this.userActionsLoggingService = userActionsLoggingService;
     }
 
     @Override
@@ -105,6 +108,7 @@ public class ChouetteExportGtfsRouteBuilder extends AbstractChouetteRouteBuilder
                 .process(e -> e.getIn().setHeader(CHOUETTE_REFERENTIAL, getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)).chouetteInfo.referential))
                 .process(e -> e.getIn().setHeader(OKINA_REFERENTIAL, getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)).chouetteInfo.referential))
                 .process(e -> setJsonPartHeaderFromExchange(e)) //Reading exchange to create a json with all parameters
+                .bean(userActionsLoggingService, "recordUserAction")
                 .log(LoggingLevel.INFO, correlation() + "Creating multipart request")
                 .to("log:" + getClass().getName() + "?level=DEBUG&showAll=true&multiline=true")
                 .process(this::toGenericChouetteMultipart)

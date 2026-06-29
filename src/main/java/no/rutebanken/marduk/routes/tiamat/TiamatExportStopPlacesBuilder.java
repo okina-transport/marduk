@@ -7,13 +7,12 @@ import no.rutebanken.marduk.routes.chouette.UpdateExportTemplateProcessor;
 import no.rutebanken.marduk.routes.chouette.json.Job;
 import no.rutebanken.marduk.routes.status.JobEvent;
 import no.rutebanken.marduk.security.TokenService;
-import no.rutebanken.marduk.services.FileSystemService;
+import no.rutebanken.marduk.services.UserActionsLoggingService;
 import no.rutebanken.marduk.services.processors.GetTiamatFileProcessor;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.component.http.HttpMethods;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -33,32 +32,27 @@ public class TiamatExportStopPlacesBuilder extends AbstractChouetteRouteBuilder 
 
     private static final String TIAMAT_EXPORT_ROUTING_DESTINATION = "direct:processTiamatExportResult";
 
-    @Value("${stop-places-export.api.url}")
-    private String stopPlacesExportUrl;
+    private final String stopPlacesExportUrl;
+    private final ExportToConsumersProcessor exportToConsumersProcessor;
+    private final GetTiamatFileProcessor getTiamatFileProcessor;
+    private final UpdateExportTemplateProcessor updateExportTemplateProcessor;
+    private final NotifyExportTemplateJobCompletionProcessor notifyExportTemplateJobCompletionProcessor;
+    private final String lugUrl;
+    private final TokenService tokenService;
+    private final UserActionsLoggingService userActionsLoggingService;
 
-    @Value("${google.publish.public:false}")
-    private boolean publicPublication;
-
-    @Autowired
-    FileSystemService fileSystemService;
-
-    @Autowired
-    ExportToConsumersProcessor exportToConsumersProcessor;
-
-    @Autowired
-    GetTiamatFileProcessor getTiamatFileProcessor;
-
-    @Autowired
-    UpdateExportTemplateProcessor updateExportTemplateProcessor;
-
-    @Autowired
-    NotifyExportTemplateJobCompletionProcessor notifyExportTemplateJobCompletionProcessor;
-
-    @Value("${lug.url}")
-    private String lugUrl;
-
-    @Autowired
-    TokenService tokenService;
+    public TiamatExportStopPlacesBuilder(@Value("${stop-places-export.api.url}") String stopPlacesExportUrl, ExportToConsumersProcessor exportToConsumersProcessor, GetTiamatFileProcessor getTiamatFileProcessor,
+                                         UpdateExportTemplateProcessor updateExportTemplateProcessor, NotifyExportTemplateJobCompletionProcessor notifyExportTemplateJobCompletionProcessor,
+                                         @Value("${lug.url}") String lugUrl, TokenService tokenService, UserActionsLoggingService userActionsLoggingService) {
+        this.stopPlacesExportUrl = stopPlacesExportUrl;
+        this.exportToConsumersProcessor = exportToConsumersProcessor;
+        this.getTiamatFileProcessor = getTiamatFileProcessor;
+        this.updateExportTemplateProcessor = updateExportTemplateProcessor;
+        this.notifyExportTemplateJobCompletionProcessor = notifyExportTemplateJobCompletionProcessor;
+        this.lugUrl = lugUrl;
+        this.tokenService = tokenService;
+        this.userActionsLoggingService = userActionsLoggingService;
+    }
 
     @Override
     public void configure() throws Exception {
@@ -86,6 +80,7 @@ public class TiamatExportStopPlacesBuilder extends AbstractChouetteRouteBuilder 
                     .log(LoggingLevel.INFO, "Ajout d'un correlation id")
                     .process(e -> e.getIn().setHeader(CORRELATION_ID, e.getIn().getHeader(CORRELATION_ID, UUID.randomUUID().toString())))
                 .end()
+                .bean(userActionsLoggingService, "recordStopExport")
                 .process(e -> {
                     Object tiamatProviderId = e.getIn().getHeaders().get("tiamatProviderId");
                     log.info("Tiamat Stop Places Export : launching export for provider {}", tiamatProviderId);

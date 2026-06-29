@@ -7,9 +7,8 @@ import no.rutebanken.marduk.routes.chouette.UpdateExportTemplateProcessor;
 import no.rutebanken.marduk.routes.chouette.json.Job;
 import no.rutebanken.marduk.routes.status.JobEvent;
 import no.rutebanken.marduk.security.TokenService;
-import no.rutebanken.marduk.services.FileSystemService;
+import no.rutebanken.marduk.services.UserActionsLoggingService;
 import org.apache.camel.LoggingLevel;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -28,20 +27,21 @@ public class TiamatExportParkingsBuilder extends AbstractChouetteRouteBuilder {
 
     private static final String TIAMAT_EXPORT_ROUTING_DESTINATION = "direct:processTiamatExportParkingsResult";
 
-    @Value("${stop-places-export.api.url}")
-    private String parkingsExportUrl;
 
-    @Autowired
-    FileSystemService fileSystemService;
+    private final String parkingsExportUrl;
+    private final ExportToConsumersProcessor exportToConsumersProcessor;
+    private final UpdateExportTemplateProcessor updateExportTemplateProcessor;
+    private final TokenService tokenService;
+    private final UserActionsLoggingService userActionsLoggingService;
 
-    @Autowired
-    ExportToConsumersProcessor exportToConsumersProcessor;
-
-    @Autowired
-    UpdateExportTemplateProcessor updateExportTemplateProcessor;
-
-    @Autowired
-    TokenService tokenService;
+    public TiamatExportParkingsBuilder( @Value("${stop-places-export.api.url}") String parkingsExportUrl, ExportToConsumersProcessor exportToConsumersProcessor,
+                                        UpdateExportTemplateProcessor updateExportTemplateProcessor, TokenService tokenService, UserActionsLoggingService userActionsLoggingService) {
+        this.parkingsExportUrl = parkingsExportUrl;
+        this.exportToConsumersProcessor = exportToConsumersProcessor;
+        this.updateExportTemplateProcessor = updateExportTemplateProcessor;
+        this.tokenService = tokenService;
+        this.userActionsLoggingService = userActionsLoggingService;
+    }
 
 
     @Override
@@ -65,6 +65,7 @@ public class TiamatExportParkingsBuilder extends AbstractChouetteRouteBuilder {
                     .log(LoggingLevel.INFO, "Ajout d'un correlation id")
                     .process(e -> e.getIn().setHeader(Constants.CORRELATION_ID, e.getIn().getHeader(Constants.CORRELATION_ID, UUID.randomUUID().toString())))
                 .end()
+                .bean(userActionsLoggingService, "recordParkingExport")
                 .process(e -> {
                     Object tiamatProviderId = e.getIn().getHeaders().get("tiamatProviderId");
                     log.info("Tiamat Parkings Export : launching export for provider " + tiamatProviderId.toString());
