@@ -2,6 +2,7 @@ package no.rutebanken.marduk.routes.chouette;
 
 import no.rutebanken.marduk.domain.*;
 import no.rutebanken.marduk.repository.ProviderRepository;
+import no.rutebanken.marduk.services.UserActionsLoggingService;
 import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
 import org.apache.camel.ProducerTemplate;
@@ -9,7 +10,6 @@ import org.apache.commons.lang3.BooleanUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -27,17 +27,20 @@ public class MultipleExportProcessor implements Processor {
 
     Logger log = LoggerFactory.getLogger(this.getClass());
 
-    @Autowired
-    ProducerTemplate producer;
 
-    @Autowired
-    ProviderRepository providerRepository;
+    private final ProducerTemplate producer;
+    private final ProviderRepository providerRepository;
+    private final ExportJsonMapper exportJsonMapper;
+    private final String superspaceName;
+    private final UserActionsLoggingService userActionsLoggingService;
 
-    @Autowired
-    ExportJsonMapper exportJsonMapper;
-
-    @Value("${superspace.name}")
-    private String superspaceName;
+    public MultipleExportProcessor(ProducerTemplate producer, ProviderRepository providerRepository, ExportJsonMapper exportJsonMapper, @Value("${superspace.name}") String superspaceName, UserActionsLoggingService userActionsLoggingService) {
+        this.producer = producer;
+        this.providerRepository = providerRepository;
+        this.exportJsonMapper = exportJsonMapper;
+        this.superspaceName = superspaceName;
+        this.userActionsLoggingService = userActionsLoggingService;
+    }
 
     @Override
     public void process(Exchange exchange) {
@@ -221,6 +224,7 @@ public class MultipleExportProcessor implements Processor {
     private void toNetexFaresExport(ExportTemplate export, Exchange exchange) throws Exception {
         log.info("Routing to NETEX fares export => {}/{}", export.getId(), export.getName());
         prepareHeadersForExport(exchange, export);
+        userActionsLoggingService.recordFaresExport(exchange);
         producer.send("jms:queue:NetexFaresPredefinedExport", exchange);
     }
 

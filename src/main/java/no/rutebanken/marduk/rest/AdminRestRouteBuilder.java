@@ -27,10 +27,7 @@ import no.rutebanken.marduk.routes.chouette.json.Status;
 import no.rutebanken.marduk.routes.status.JobEvent;
 import no.rutebanken.marduk.security.AuthorizationClaim;
 import no.rutebanken.marduk.security.AuthorizationService;
-import no.rutebanken.marduk.services.BlobStoreService;
-import no.rutebanken.marduk.services.ChouetteValidationScheduleService;
-import no.rutebanken.marduk.services.FaresScheduleService;
-import no.rutebanken.marduk.services.FileSystemService;
+import no.rutebanken.marduk.services.*;
 import no.rutebanken.marduk.services.processors.FileValidationProcessor;
 import no.rutebanken.marduk.services.processors.MultiPartProcessor;
 import org.apache.camel.Body;
@@ -102,13 +99,15 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
 
     private final FaresScheduleService faresScheduleService;
 
+    private final UserActionsLoggingService userActionsLoggingService;
+
     public AdminRestRouteBuilder(AuthorizationService authorizationService,
                                  BlobStoreService blobStoreService,
                                  FileSystemService fileSystemService,
                                  MultiPartProcessor multiPartProcessor,
                                  FileValidationProcessor fileValidationProcessor,
                                  ChouetteValidationScheduleService chouetteValidationScheduleService,
-                                 FaresScheduleService faresScheduleService) {
+                                 FaresScheduleService faresScheduleService, UserActionsLoggingService userActionsLoggingService) {
         this.authorizationService = authorizationService;
         this.blobStoreService = blobStoreService;
         this.fileSystemService = fileSystemService;
@@ -116,6 +115,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
         this.fileValidationProcessor = fileValidationProcessor;
         this.chouetteValidationScheduleService = chouetteValidationScheduleService;
         this.faresScheduleService = faresScheduleService;
+        this.userActionsLoggingService = userActionsLoggingService;
     }
 
 
@@ -1379,6 +1379,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .process(e -> e.getIn().setHeader(CHOUETTE_REFERENTIAL, getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)).chouetteInfo.referential))
                 .process(e -> e.getIn().setHeader(USER, getHeaders(e, USER)))
                 .setBody(simple(null))
+                .bean(userActionsLoggingService, "recordFaresExport")
                 .setExchangePattern(ExchangePattern.InOnly)
                 .to("jms:queue:exportNetexFaresQueue");
 
@@ -1397,6 +1398,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .setHeader(JOB_STATUS_JOB_VALIDATION_LEVEL, constant(JobEvent.TimetableAction.VALIDATION_LEVEL_1.name()))
                 .end()
                 .setBody().simple(CAMEL_HEADERS)
+                .bean(userActionsLoggingService, "recordValidation")
                 .setExchangePattern(ExchangePattern.InOnly)
                 .to("jms:queue:ChouetteValidationQueue");
 

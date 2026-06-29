@@ -16,7 +16,6 @@
 
 package no.rutebanken.marduk.routes.chouette;
 
-import no.rutebanken.marduk.Constants;
 import no.rutebanken.marduk.domain.ImportGenerateMapMatching;
 import no.rutebanken.marduk.domain.Provider;
 import no.rutebanken.marduk.routes.chouette.json.IdParameters;
@@ -26,6 +25,7 @@ import no.rutebanken.marduk.routes.chouette.json.importer.RawImportParameters;
 import no.rutebanken.marduk.routes.status.JobEvent;
 import no.rutebanken.marduk.routes.status.JobEvent.State;
 import no.rutebanken.marduk.routes.status.JobEvent.TimetableAction;
+import no.rutebanken.marduk.services.UserActionsLoggingService;
 import no.rutebanken.marduk.utils.ImportRouteBuilder;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
@@ -59,11 +59,18 @@ import static org.apache.camel.support.builder.PredicateBuilder.and;
 public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
 
 
-    @Value("${chouette.url}")
-    private String chouetteUrl;
+
+    private final String chouetteUrl;
+    private final UserActionsLoggingService userActionsLoggingService;
+
 
     @Autowired
     CreateMail createMail;
+
+    public ChouetteImportRouteBuilder( @Value("${chouette.url}") String chouetteUrl, UserActionsLoggingService userActionsLoggingService) {
+        this.chouetteUrl = chouetteUrl;
+        this.userActionsLoggingService = userActionsLoggingService;
+    }
 
     // @formatter:off
     @Override
@@ -83,7 +90,7 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
                 .process(e -> e.getIn().setBody(getProviderRepository().getProviders()))
                 .split().body().parallelProcessing().executorService(allProvidersExecutorService)
                 .removeHeaders(ALL_CAMEL_HEADERS)
-                .setHeader(Constants.PROVIDER_ID, simple("${body.id}"))
+                .setHeader(PROVIDER_ID, simple("${body.id}"))
                 .validate(header(FILTER).in("all", "level1", "level2"))
                 .choice()
                     .when(header(FILTER).isEqualTo("level1"))
@@ -298,8 +305,8 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
                     rawImportParameters.setAllowGtfsFlex(allowGtfsFlex);
                     rawImportParameters.setExternalRefField(externalRefField);
                     rawImportParameters.setDriverControllerCodeField(driverControllerCodeField);
-
                     e.getIn().setHeader(JSON_PART, getStringImportParameters(rawImportParameters));
+                    userActionsLoggingService.recordUserAction(e);
                 }) //Using header to addToExchange json data
                 .log(LoggingLevel.DEBUG, correlation() + "import parameters: " + header(JSON_PART))
                 .to("direct:sendImportJobRequest")
@@ -318,20 +325,20 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
                         .setProperty(CHOUETTE_URL, simple(chouetteUrl + "/chouette_iev/referentials/${header." + CHOUETTE_REFERENTIAL + "}/importer/${header." + FILE_TYPE + ".toLowerCase()}"))
                     .end()
                 .log(LoggingLevel.DEBUG, correlation() + "Calling Chouette with URL: ${exchangeProperty.chouette_url}")
-                .setHeader(Exchange.HTTP_METHOD, constant(org.apache.camel.component.http.HttpMethods.POST))
+                .setHeader(Exchange.HTTP_METHOD, constant(HttpMethods.POST))
                 // Attempt to retrigger delivery in case of errors
                 .toD("${exchangeProperty.chouette_url}")
                 .to("log:" + getClass().getName() + "?level=DEBUG&showAll=true&multiline=true")
                 .process(e -> {
-                    e.getIn().setHeader(Constants.JOB_STATUS_URL, getHttp4(e.getIn().getHeader("Location", String.class)));
-                    e.getIn().setHeader(Constants.JOB_ID, getLastPathElementOfUrl(e.getIn().getHeader("Location", String.class)));
+                    e.getIn().setHeader(JOB_STATUS_URL, getHttp4(e.getIn().getHeader("Location", String.class)));
+                    e.getIn().setHeader(JOB_ID, getLastPathElementOfUrl(e.getIn().getHeader("Location", String.class)));
                 })
-                .setHeader(Constants.JOB_STATUS_ROUTING_DESTINATION, constant("direct:processImportResult"))
+                .setHeader(JOB_STATUS_ROUTING_DESTINATION, constant("direct:processImportResult"))
                 .choice()
                     .when(simple("${header." + ANALYZE_ACTION + "}"))
-                        .setHeader(Constants.JOB_STATUS_JOB_TYPE, constant(TimetableAction.FILE_ANALYZE.name()))
+                        .setHeader(JOB_STATUS_JOB_TYPE, constant(TimetableAction.FILE_ANALYZE.name()))
                     .otherwise()
-                        .setHeader(Constants.JOB_STATUS_JOB_TYPE, constant(JobEvent.TimetableAction.IMPORT.name()))
+                        .setHeader(JOB_STATUS_JOB_TYPE, constant(TimetableAction.IMPORT.name()))
                     .end()
                 .removeHeader("loopCounter")
                 .to("jms:queue:ChouettePollStatusQueue")
@@ -362,9 +369,9 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
                         .setBody(constant(""))
                         .to("log:" + getClass().getName() + "?level=DEBUG&showAll=true&multiline=true")
                         .choice()
-                            .when(constant("true").isEqualTo(header(Constants.ENABLE_VALIDATION)))
+                            .when(constant("true").isEqualTo(header(ENABLE_VALIDATION)))
                                 .log(LoggingLevel.INFO, correlation() + "Import ok, triggering validation")
-                                .setHeader(JOB_STATUS_JOB_VALIDATION_LEVEL, constant(JobEvent.TimetableAction.VALIDATION_LEVEL_1.name()))
+                                .setHeader(JOB_STATUS_JOB_VALIDATION_LEVEL, constant(TimetableAction.VALIDATION_LEVEL_1.name()))
                                 .to("jms:queue:ChouetteValidationQueue")
                             .when(method(getClass(), "isValidationExportScheduled").isEqualTo(true))
                                 .log(LoggingLevel.INFO, correlation() + "Import ok, validation and export are scheduled, stopping here")

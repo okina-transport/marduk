@@ -21,10 +21,10 @@ import no.rutebanken.marduk.routes.chouette.json.Parameters;
 import no.rutebanken.marduk.routes.status.JobEvent;
 import no.rutebanken.marduk.routes.status.JobEvent.State;
 import no.rutebanken.marduk.routes.status.JobEvent.TimetableAction;
+import no.rutebanken.marduk.services.UserActionsLoggingService;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -44,17 +44,20 @@ import static no.rutebanken.marduk.utils.constants.RouteDeclarationConstants.ROU
 @Component
 public class ChouetteExportNeptuneRouteBuilder extends AbstractChouetteRouteBuilder {
 
-    @Value("${chouette.url}")
-    private String chouetteUrl;
 
-    @Autowired
-    ExportToConsumersProcessor exportToConsumersProcessor;
+    private final String chouetteUrl;
+    private final ExportToConsumersProcessor exportToConsumersProcessor;
+    private final UpdateExportTemplateProcessor updateExportTemplateProcessor;
+    private final CreateMail createMail;
+    private final UserActionsLoggingService userActionsLoggingService;
 
-    @Autowired
-    UpdateExportTemplateProcessor updateExportTemplateProcessor;
-
-    @Autowired
-    CreateMail createMail;
+    public ChouetteExportNeptuneRouteBuilder(  @Value("${chouette.url}")String chouetteUrl, ExportToConsumersProcessor exportToConsumersProcessor, UpdateExportTemplateProcessor updateExportTemplateProcessor, CreateMail createMail, UserActionsLoggingService userActionsLoggingService) {
+        this.chouetteUrl = chouetteUrl;
+        this.exportToConsumersProcessor = exportToConsumersProcessor;
+        this.updateExportTemplateProcessor = updateExportTemplateProcessor;
+        this.createMail = createMail;
+        this.userActionsLoggingService = userActionsLoggingService;
+    }
 
     @Override
     public void configure() throws Exception {
@@ -104,6 +107,7 @@ public class ChouetteExportNeptuneRouteBuilder extends AbstractChouetteRouteBuil
 
                     e.getIn().setHeader(JSON_PART, neptuneParams);
                 }) //Using header to addToExchange json data
+                .bean(userActionsLoggingService, "recordUserAction")
                 .log(LoggingLevel.INFO, correlation() + "Creating multipart request")
                 .to("log:" + getClass().getName() + "?level=DEBUG&showAll=true&multiline=true")
                 .process(this::toGenericChouetteMultipart)
