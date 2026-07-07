@@ -68,7 +68,6 @@ public class QuartzService {
      * @throws SchedulerException on QUARTZ exception
      */
     public void deleteJobByName(String jobName) throws SchedulerException {
-        schedulerFactoryBean.start();
         JobKey jobKey = JobKey.jobKey(jobName);
         if (schedulerFactoryBean.getScheduler().deleteJob(jobKey)) {
             LOGGER.info("Deleted scheduled job {} and its trigger from QUARTZ", jobName);
@@ -82,7 +81,6 @@ public class QuartzService {
      * @throws SchedulerException on QUARTZ exception
      */
     public void rescheduleJob(JobDetail jobDetail, Trigger trigger) throws SchedulerException {
-        schedulerFactoryBean.start();
         deleteJobByName(jobDetail.getKey().getName());
         LOGGER.info("(Re)schedule job {} into QUARTZ", jobDetail.getKey().getName());
         schedulerFactoryBean.getScheduler().scheduleJob(jobDetail, trigger);
@@ -94,7 +92,6 @@ public class QuartzService {
      * @return trigger wrapper in {@link Optional}
      */
     public Optional<Trigger> findTriggerByName(String triggerName) {
-        schedulerFactoryBean.start();
         TriggerKey key = TriggerKey.triggerKey(triggerName);
         try {
             return Optional.ofNullable(schedulerFactoryBean.getScheduler().getTrigger(key));
