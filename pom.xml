@@ -19,7 +19,7 @@
     <okina-helpers.version>1.0.33</okina-helpers.version>
     <httpcomponents.version>5.5.1</httpcomponents.version>
     <assertj-core.version>3.27.6</assertj-core.version>
-    <onebusaway.gtfs.modules>11.2.5-mobi-iti</onebusaway.gtfs.modules>
+    <onebusaway.gtfs.modules>11.2.6-mobi-iti</onebusaway.gtfs.modules>
     <activemq.artemis.version>2.43.0</activemq.artemis.version>
     <hazelcast-version>5.5.0</hazelcast-version>
   </properties>
