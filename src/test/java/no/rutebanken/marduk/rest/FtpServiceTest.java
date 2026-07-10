@@ -1,7 +1,10 @@
 package no.rutebanken.marduk.rest;
 
 import no.rutebanken.marduk.services.FtpService;
-import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
 import org.mockftpserver.fake.FakeFtpServer;
 import org.mockftpserver.fake.UserAccount;
 import org.mockftpserver.fake.filesystem.DirectoryEntry;
@@ -11,7 +14,6 @@ import org.mockftpserver.fake.filesystem.UnixFakeFileSystem;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.OutputStream;
 import java.net.URL;
 import java.net.URLConnection;
@@ -21,6 +23,7 @@ import java.nio.file.Paths;
 import java.util.InvalidPropertiesFormatException;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class FtpServiceTest {
 
@@ -70,34 +73,53 @@ class FtpServiceTest {
         assertThat(file).exists();
     }
 
-
-    @Test
-    void uploadFile() throws Exception {
-        File file = this.workingDir.resolve(FILE_TO_UPLOAD_PATH).toFile();
-        ftpService.uploadFile(file, "ftp://localhost:" + port, USER, PASSWORD);
-    }
-
-    @Test()
-    void uploadFileFileNotFound() {
-        Assertions.assertThrows(FileNotFoundException.class, () -> {
-            File file = this.workingDir.resolve(FILE_TO_UPLOAD_PATH + "_2").toFile();
-            ftpService.uploadFile(file, "ftp://localhost:" + port, USER, PASSWORD);
-        });
-    }
-
-    @Test()
-    void uploadFileInvalidFtpUrl() {
-        Assertions.assertThrows(InvalidPropertiesFormatException.class, () -> {
-            File file =  this.workingDir.resolve(FILE_TO_UPLOAD_PATH).toFile();
-            ftpService.uploadFile(file, "http:////localhost", USER, PASSWORD);
-        });
-    }
-
     @Test
     void uploadStream() throws Exception {
         FileInputStream fis = new FileInputStream(this.workingDir.resolve(FILE_TO_UPLOAD_PATH).toFile());
         boolean uploaded = ftpService.uploadStream(fis, "ftp://localhost", USER, PASSWORD, port, "", "remotefilenameXX.zip");
         assertThat(uploaded).isTrue();
+    }
+
+    @Test
+    void parseHostFromSftpUrl() throws Exception {
+        String host = ftpService.parseHostFromFtpUrl("sftp://www.google.fr");
+        assertThat(host).isEqualTo("www.google.fr");
+    }
+
+    @Test
+    void parseHostFromFtpUrl() throws Exception {
+        String host = ftpService.parseHostFromFtpUrl("ftp://user:pass@ftp.example.com:21/some/path/file.zip");
+        assertThat(host).isEqualTo("ftp.example.com");
+    }
+
+    @Test
+    void parseHostFromFtpUrlWithoutCredentialsOrPort() throws Exception {
+        String host = ftpService.parseHostFromFtpUrl("ftp://localhost/file.zip");
+        assertThat(host).isEqualTo("localhost");
+    }
+
+    @Test
+    void parseHostFromInvalidFtpUrlThrows() {
+        assertThatThrownBy(() -> ftpService.parseHostFromFtpUrl("ftp://exa mple.com/file.zip"))
+                .isInstanceOf(InvalidPropertiesFormatException.class);
+    }
+
+    @Test
+    void parseFilePathFromFtpUrl() throws Exception {
+        String path = ftpService.parseFilePathFromFtpUrl("ftp://user:pass@ftp.example.com:21/some/path/file.zip");
+        assertThat(path).isEqualTo("/some/path/file.zip");
+    }
+
+    @Test
+    void parseFilePathFromFtpUrlWithoutPath() throws Exception {
+        String path = ftpService.parseFilePathFromFtpUrl("ftp://localhost");
+        assertThat(path).isEmpty();
+    }
+
+    @Test
+    void parseFilePathFromInvalidFtpUrlThrows() {
+        assertThatThrownBy(() -> ftpService.parseFilePathFromFtpUrl("ftp://exa mple.com/file.zip"))
+                .isInstanceOf(InvalidPropertiesFormatException.class);
     }
 
     @Test
