@@ -14,13 +14,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.InputStream;
-import java.io.OutputStream;
-import java.net.URL;
-import java.net.URLConnection;
-import java.nio.file.Files;
+import java.net.URI;
 import java.util.InvalidPropertiesFormatException;
 
 @Component
@@ -34,34 +29,10 @@ public class FtpService {
 
     private static final Logger logger = LoggerFactory.getLogger(FtpService.class);
 
-    /**
-     * Uploads a file to a ftp server location
-     *
-     * @param file
-     * @param ftpUrl
-     * @param user
-     * @param password
-     * @throws Exception
-     */
-    public void uploadFile(File file, String ftpUrl, String user, String password) throws Exception {
-        if (file == null || !file.exists()) {
-            String msg = file != null ? "File " + file.getName() + "not found for ftp upload " : "No file defined for upload: null file";
-            throw new FileNotFoundException(msg);
-        }
-        String[] tokens = ftpUrl.split("//");
-        if (tokens == null || tokens.length != 2 || !tokens[0].equalsIgnoreCase("ftp:")) {
-            throw new InvalidPropertiesFormatException("Invalid ftp url " + ftpUrl + " for file upload");
-        }
-
-        String fullUrl = String.format(tokens[0] + "//%s:%s@" + tokens[1] + "/%s", user, password, file.getName());
-        URLConnection urlConnection = new URL(fullUrl).openConnection();
-        try (OutputStream out = urlConnection.getOutputStream();) {
-            Files.copy(file.toPath(), out);
-        }
-    }
-
-
     public boolean uploadStream(InputStream uploadStream, String ftpUrl, String user, String password, Integer port, String destinationPath, String ftpFileName) throws Exception {
+        if (!ftpUrl.startsWith("ftp://")) {
+            ftpUrl = "ftp://" + ftpUrl;
+        }
         FTPClient ftpClient = new FTPClient();
         String ftpHost = parseHostFromFtpUrl(ftpUrl);
         ftpClient.connect(ftpHost, port);
@@ -96,27 +67,28 @@ public class FtpService {
     }
 
 
-    private String parseHostFromFtpUrl(String ftpUrl) throws InvalidPropertiesFormatException {
-        String[] tokens = ftpUrl.split("//");
-        if (tokens == null || tokens.length != 2 || !tokens[0].equalsIgnoreCase("ftp:")) {
+    public String parseHostFromFtpUrl(String ftpUrl) throws InvalidPropertiesFormatException {
+        try {
+            return URI.create(ftpUrl).getHost();
+        } catch (Exception e) {
+            logger.error("Error while parsing ftp url", e);
             throw new InvalidPropertiesFormatException("Invalid ftp url " + ftpUrl + " for file upload");
         }
-        return tokens[1].split("/")[0];
     }
 
-    private String parseFilePathFromFtpUrl(String ftpUrl) throws InvalidPropertiesFormatException {
-        if (ftpUrl.contains("//")) {
-            String[] tokens = ftpUrl.split("//");
-            if (tokens == null || tokens.length != 2 || !tokens[0].equalsIgnoreCase("ftp:")) {
-                throw new InvalidPropertiesFormatException("Invalid ftp url " + ftpUrl + " for file upload");
-            }
-            return tokens[1] != null && tokens[1].contains("/") ? tokens[1].split("/")[1] : "";
-        } else {
-            return ftpUrl;
+    public String parseFilePathFromFtpUrl(String ftpUrl) throws InvalidPropertiesFormatException {
+        try {
+            return URI.create(ftpUrl).getPath();
+        } catch (Exception e) {
+            logger.error("Error while parsing ftp url", e);
+            throw new InvalidPropertiesFormatException("Invalid ftp url " + ftpUrl + " for file upload");
         }
     }
 
     public void uploadStreamSFTP(InputStream streamToUpload, String ftpUrl, String login, String password, Integer port, String destinationPath, String sftpFileName) throws Exception {
+        if (!ftpUrl.startsWith("sftp://")) {
+            ftpUrl = "sftp://" + ftpUrl;
+        }
         String ftpFilePath = parseFilePathFromFtpUrl(ftpUrl);
         String ftpHost = parseHostFromFtpUrl(ftpUrl);
 
