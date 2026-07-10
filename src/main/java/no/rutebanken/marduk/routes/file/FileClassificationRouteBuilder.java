@@ -53,7 +53,10 @@ public class FileClassificationRouteBuilder extends BaseRouteBuilder {
 
         onException(ValidationException.class, IOException.class, FileValidationException.class)
                 .handled(true)
-                .log(LoggingLevel.INFO, correlation() + "Could not process file ${header." + FILE_HANDLE + "}")
+                .log(LoggingLevel.ERROR,
+                        correlation() + "Could not process file ${header." + FILE_HANDLE + "} +\n" +
+                                "Exception: ${exception.class}: ${exception.message}\n" +
+                                "${exception.stacktrace}")
                 .process(e -> JobEvent.providerJobBuilder(e).timetableAction(JobEvent.TimetableAction.FILE_CLASSIFICATION).state(JobEvent.State.FAILED).build())
                 .to(ROUTE_UPDATE_STATUS)
                 .setBody(simple(""))      //remove file data from body
