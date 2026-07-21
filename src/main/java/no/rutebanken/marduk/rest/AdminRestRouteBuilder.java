@@ -850,6 +850,11 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
             }
             if (headers.get(ID_FORMAT) != null) {
                 e.getIn().setHeader(ID_FORMAT, headers.get(ID_FORMAT));
+
+                if(headers.get(ID_FORMAT).equals("TRIDENT")){
+                    String organization = (String) e.getIn().getHeader(OKINA_REFERENTIAL);
+                    e.getIn().setHeader(LINE_ID_PREFIX, organization.toUpperCase());
+                }
             }
             if (headers.get(EXPORT_ATTRIBUTIONS) != null) {
                 e.getIn().setHeader(EXPORT_ATTRIBUTIONS, headers.get(EXPORT_ATTRIBUTIONS));
