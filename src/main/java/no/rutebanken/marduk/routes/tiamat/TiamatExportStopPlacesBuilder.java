@@ -172,6 +172,8 @@ public class TiamatExportStopPlacesBuilder extends AbstractChouetteRouteBuilder 
 
 
         from("direct:setLugCompleted")
+                .setBody().constant(null)
+                .removeHeaders("*", JOB_ID)
                 .setHeader(Exchange.HTTP_METHOD, constant(HttpMethods.POST))
                 .process(e -> e.getIn().getHeaders().put("Authorization", tokenService.getAuthorizationHeader()))
                 .toD(stopPlacesExportUrl + "/setPostProcessCompleted/${header." + JOB_ID + "}")
