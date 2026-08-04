@@ -38,18 +38,18 @@ public class UserActionsLoggingService {
             .registerModule(new JavaTimeModule())
             .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
             .addMixIn(ConfigurationFtp.class, ConfigurationFtpMixin.class);
-    private static final String GTFS_IMPORT_ACTION_TYPE = "GTFS-IMPORT";
-    private static final String NETEX_IMPORT_ACTION_TYPE = "NETEX-IMPORT";
-    private static final String NEPTUNE_IMPORT_ACTION_TYPE = "NEPTUNE-IMPORT";
-    private static final String PREDEFINED_IMPORT_ACTION_TYPE = "PREDEFINED-IMPORT";
+    private static final String GTFS_IMPORT_ACTION_TYPE = "GTFS_IMPORT";
+    private static final String NETEX_IMPORT_ACTION_TYPE = "NETEX_IMPORT";
+    private static final String NEPTUNE_IMPORT_ACTION_TYPE = "NEPTUNE_IMPORT";
+    private static final String PREDEFINED_IMPORT_ACTION_TYPE = "PREDEFINED_IMPORT";
     private static final String VALIDATION_ACTION_TYPE = "VALIDATION";
-    private static final String GTFS_EXPORT_ACTION_TYPE = "GTFS-EXPORT";
-    private static final String NETEX_EXPORT_ACTION_TYPE = "NETEX-EXPORT";
-    private static final String NEPTUNE_EXPORT_ACTION_TYPE = "NEPTUNE-EXPORT";
-    private static final String FARES_EXPORT_ACTION_TYPE = "FARES-EXPORT";
-    private static final String STOP_EXPORT_ACTION_TYPE = "STOP-EXPORT";
-    private static final String PARKING_EXPORT_ACTION_TYPE = "PARKING-EXPORT";
-    private static final String POI_EXPORT_ACTION_TYPE = "POI-EXPORT";
+    private static final String GTFS_EXPORT_ACTION_TYPE = "GTFS_EXPORT";
+    private static final String NETEX_EXPORT_ACTION_TYPE = "NETEX_EXPORT";
+    private static final String NEPTUNE_EXPORT_ACTION_TYPE = "NEPTUNE_EXPORT";
+    private static final String FARES_EXPORT_ACTION_TYPE = "FARES_EXPORT";
+    private static final String STOP_EXPORT_ACTION_TYPE = "STOP_EXPORT";
+    private static final String PARKING_EXPORT_ACTION_TYPE = "PARKING_EXPORT";
+    private static final String POI_EXPORT_ACTION_TYPE = "POI_EXPORT";
 
     private final boolean userActionsLoggingEnabled;
     private final ProducerTemplate producer;
