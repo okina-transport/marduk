@@ -45,6 +45,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.nio.file.FileSystem;
 import java.util.*;
@@ -75,6 +76,10 @@ public class ZipFileUtils {
             "location_groups.txt",
             "locations.geojson",
             "location_group_stops.txt"
+    );
+    private static final List<String> NON_STANDARD_PASSTHROUGH_FILES = Arrays.asList(
+            "companies.txt",
+            "trips_extensions.txt"
     );
     private final MardukPropertiesConfig mardukPropertiesConfig;
     private final FileSystemService fileSystemService;
@@ -452,6 +457,7 @@ public class ZipFileUtils {
         if (file.exists() && file.length() > 0) {
             Set<String> filenamesInZip = listFilesInZip(file);
             if (FileTypeClassifierBean.isGtfsZip(filenamesInZip)) {
+                File originalGtfsFile = file;
                 try {
                     if (importGtfsFlex) {
                         String tempDir = System.getProperty("java.io.tmpdir");
@@ -498,6 +504,8 @@ public class ZipFileUtils {
                     } else {
                         file = transformGtfsFiles(params);
                     }
+
+                    restoreNonStandardFiles(originalGtfsFile, file);
                 } catch (Exception e) {
                     throw new FileValidationException("GTFS conversion failed", e);
                 }
@@ -506,6 +514,43 @@ public class ZipFileUtils {
             }
         }
         return file;
+    }
+
+    private static void restoreNonStandardFiles(File sourceZip, File targetZip) {
+        for (String fileName : NON_STANDARD_PASSTHROUGH_FILES) {
+            try {
+                ByteArrayOutputStream content;
+                try (FileInputStream fis = new FileInputStream(sourceZip)) {
+                    content = extractFileFromZipFile(fis, fileName);
+                }
+                if (content == null) {
+                    continue;
+                }
+                byte[] bytes = ensureTrailingLineTerminator(content.toByteArray());
+                try (FileSystem targetFs = FileSystems.newFileSystem(targetZip.toPath(), (ClassLoader) null)) {
+                    Path targetPath = targetFs.getPath(fileName);
+                    if (!Files.exists(targetPath)) {
+                        try (OutputStream out = Files.newOutputStream(targetPath, StandardOpenOption.CREATE_NEW)) {
+                            out.write(bytes);
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                logger.warn("Unable to restore non-standard file '{}' in the transformed GTFS archive", fileName, e);
+            }
+        }
+    }
+
+    private static byte[] ensureTrailingLineTerminator(byte[] bytes) {
+        if (bytes.length == 0 || bytes[bytes.length - 1] == '\n') {
+            return bytes;
+        }
+        byte[] lineTerminator = Strings.CS.contains(new String(bytes, StandardCharsets.UTF_8), "\r\n")
+                ? "\r\n".getBytes(StandardCharsets.UTF_8)
+                : "\n".getBytes(StandardCharsets.UTF_8);
+        byte[] result = Arrays.copyOf(bytes, bytes.length + lineTerminator.length);
+        System.arraycopy(lineTerminator, 0, result, bytes.length, lineTerminator.length);
+        return result;
     }
 
     private File removeFlexFromStandardFile(File sourceFile) throws IOException {
