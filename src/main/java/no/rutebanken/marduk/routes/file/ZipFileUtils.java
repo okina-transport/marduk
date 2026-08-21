@@ -24,6 +24,7 @@ import no.rutebanken.marduk.routes.file.beans.GtfsFileInputWithParameters;
 import no.rutebanken.marduk.routes.file.gtfs.StopTimesParser;
 import no.rutebanken.marduk.services.FileSystemService;
 import org.apache.camel.Exchange;
+import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.compress.archivers.zip.ZipArchiveEntry;
 import org.apache.commons.compress.archivers.zip.ZipArchiveOutputStream;
 import org.apache.commons.io.FileUtils;
@@ -742,7 +743,11 @@ public class ZipFileUtils {
         File outputFile = File.createTempFile("marduk-filtered", ".zip");
         transformer.setGtfsInputDirectories(Collections.singletonList(gtfsFileInputWithParameters.getInputFile()));
         transformer.setOutputDirectory(outputFile);
-        transformer.addTransform(new FilterByRouteIdsStrategy(gtfsFileInputWithParameters.getRouteIds()));
+        if (CollectionUtils.isNotEmpty(gtfsFileInputWithParameters.getRouteIds())) {
+            for (String id : gtfsFileInputWithParameters.getRouteIds()) {
+                transformer.getTransformFactory().addModificationsFromString("{'op':'retain', 'match':{'file':'routes.txt', 'route_id':'"+ id +"'}}");
+            }
+        }
         addLocationTypeFilter(transformer);
         if (gtfsFileInputWithParameters.isAllowNonStandardGtfs()) {
             transformer.getReader()
