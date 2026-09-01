@@ -35,9 +35,11 @@ public class JobEvent {
 
     public enum JobDomain {TIMETABLE, GRAPH, TIMETABLE_PUBLISH}
 
-    public enum TimetableAction {FILE_TRANSFER, FILE_CLASSIFICATION, FILE_ANALYZE, IMPORT, IMPORT_NETEX, EXPORT, VALIDATION_LEVEL_1, VALIDATION_LEVEL_2, CLEAN, DATASPACE_TRANSFER, EXPORT_NETEX, EXPORT_NETEX_FARES, EXPORT_CONCERTO, BUILD_MAP_MATCHING, EXPORT_TO_CONSUMER, EXPORT_GTFS_MERGED, EXPORT_NETEX_MERGED}
+    public enum TimetableAction {FILE_TRANSFER, FILE_CLASSIFICATION, FILE_ANALYZE, IMPORT, IMPORT_UTTU, IMPORT_NETEX, EXPORT, VALIDATION_LEVEL_1, VALIDATION_LEVEL_2, CLEAN, DATASPACE_TRANSFER, EXPORT_NETEX, EXPORT_NETEX_FARES, EXPORT_CONCERTO, BUILD_MAP_MATCHING, EXPORT_TO_CONSUMER, EXPORT_GTFS_MERGED, EXPORT_NETEX_MERGED}
 
     public enum State {PENDING, STARTED, TIMEOUT, FAILED, OK, DUPLICATE, CANCELLED}
+
+    public static final String GTFS_FULL_FLEX_TYPE = "GTFS_FULL_FLEX";
 
     public String name;
 
@@ -230,7 +232,9 @@ public class JobEvent {
             jobEvent.referential = exchange.getIn().getHeader(CHOUETTE_REFERENTIAL, String.class);
             jobEvent.username = exchange.getIn().getHeader(USER, String.class);
             jobEvent.description = exchange.getIn().getHeader(DESCRIPTION, String.class);
-            jobEvent.type = exchange.getIn().getHeader(FILE_TYPE, String.class);
+            jobEvent.type = Boolean.TRUE.equals(exchange.getIn().getHeader(GTFS_FLEX_ONLY, Boolean.class))
+                    ? GTFS_FULL_FLEX_TYPE
+                    : exchange.getIn().getHeader(FILE_TYPE, String.class);
             jobEvent.lugStatus = exchange.getIn().getHeader(LUG_STATUS, Status.class);
             jobEvent.flexible = exchange.getIn().getHeader(ALLOW_GTFS_FLEX, Boolean.class);
             return this;

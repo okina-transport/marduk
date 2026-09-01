@@ -112,6 +112,7 @@ public class FileUploadRouteBuilder extends BaseRouteBuilder {
                     Long providerId = e.getIn().getHeader(PROVIDER_ID, Long.class);
                     Provider provider = getProviderRepository().getNonMobiitiProvider(providerId)
                             .orElseThrow(() -> new Exception("No provider found for import with id " + providerId));
+                    e.getIn().setHeader(CHOUETTE_REFERENTIAL, getProviderRepository().getReferential(providerId));
                     File fileItem = (File) e.getIn().getBody();
                     if (fileItem != null) {
                         String importPath = BlobStoreRoute.importPath(provider) + "/" + fileItem.getName();

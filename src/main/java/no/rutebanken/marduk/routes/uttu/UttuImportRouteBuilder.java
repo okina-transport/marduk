@@ -10,6 +10,9 @@ import org.apache.camel.LoggingLevel;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
+import static no.rutebanken.marduk.Constants.GTFS_FLEX_ONLY;
+import static no.rutebanken.marduk.Constants.JOB_STATUS_JOB_TYPE;
+import static no.rutebanken.marduk.Constants.JOB_STATUS_ROUTING_DESTINATION;
 import static no.rutebanken.marduk.Constants.UTTU_IMPORT_STATUS;
 import static no.rutebanken.marduk.Constants.WORKLOW;
 import static no.rutebanken.marduk.utils.constants.RouteDeclarationConstants.ROUTE_UPDATE_STATUS;
@@ -25,6 +28,12 @@ public class UttuImportRouteBuilder extends AbstractChouetteRouteBuilder {
 
     public UttuImportRouteBuilder() {}
 
+    private static String gtfsFlexJobType(org.apache.camel.Exchange e) {
+        return Boolean.TRUE.equals(e.getIn().getHeader(GTFS_FLEX_ONLY, Boolean.class))
+                ? JobEvent.GTFS_FULL_FLEX_TYPE
+                : String.valueOf(FileType.GTFS_FLEX);
+    }
+
     @Override
     public void configure() throws Exception {
         super.configure();
@@ -35,16 +44,20 @@ public class UttuImportRouteBuilder extends AbstractChouetteRouteBuilder {
                 .transacted()
                 .process(e -> {
                     JobEvent.providerJobBuilder(e)
-                            .timetableAction(TimetableAction.IMPORT)
+                            .timetableAction(TimetableAction.IMPORT_UTTU)
                             .state(State.PENDING)
-                            .type(String.valueOf(FileType.GTFS_FLEX))
+                            .type(gtfsFlexJobType(e))
                             .build();
                 })
                 .to(ROUTE_UPDATE_STATUS)
                 .to("jms:queue:importGtfsFlexUttuQueue")
+                .setHeader(JOB_STATUS_ROUTING_DESTINATION, constant("direct:processUttuGtfsFlexImportResult"))
+                .setHeader(JOB_STATUS_JOB_TYPE, constant(TimetableAction.IMPORT_UTTU.name()))
+                .removeHeader("loopCounter")
+                .to("jms:queue:UttuPollStatusQueue")
                 .end();
 
-        from("jms:queue:importGtfsFlexUttuCompleted")
+        from("direct:processUttuGtfsFlexImportResult")
                 .choice()
                     .when(header(UTTU_IMPORT_STATUS).isEqualTo("OK"))
                         .log(LoggingLevel.INFO,"GTFS flex import completed successfully")
@@ -54,14 +67,14 @@ public class UttuImportRouteBuilder extends AbstractChouetteRouteBuilder {
                         .to("direct:handleGtfsFlexImportERROR")
                 .endChoice()
                 .end()
-                .routeId("import-gtfs-flex-uttu-completed");
+                .routeId("process-uttu-gtfs-flex-import-result");
 
         from("direct:terminateGtfsFlexUttuImport")
                 .process(e -> {
                     JobEvent.providerJobBuilder(e)
-                            .timetableAction(TimetableAction.IMPORT)
+                            .timetableAction(TimetableAction.IMPORT_UTTU)
                             .state(State.OK)
-                            .type(String.valueOf(FileType.GTFS_FLEX))
+                            .type(gtfsFlexJobType(e))
                             .build();
 
                     if (e.getIn().getHeader(WORKLOW, String.class) != null) {
@@ -75,9 +88,9 @@ public class UttuImportRouteBuilder extends AbstractChouetteRouteBuilder {
                 .log(LoggingLevel.ERROR, correlation() + "Something went wrong on import")
                 .process(e -> {
                     JobEvent.providerJobBuilder(e)
-                            .timetableAction(TimetableAction.IMPORT)
+                            .timetableAction(TimetableAction.IMPORT_UTTU)
                             .state(State.FAILED)
-                            .type(String.valueOf(FileType.GTFS_FLEX))
+                            .type(gtfsFlexJobType(e))
                             .build();
 
                     if (e.getIn().getHeader(WORKLOW, String.class) != null) {

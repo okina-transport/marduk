@@ -47,6 +47,40 @@ public class StopTimesParser {
                 return StringUtils.isNotBlank(stopTime.getLocationId());
             });
 
+    public boolean hasOnlyFlexStopTimes(File gtfsZip) throws IOException {
+        Path zipFile = Paths.get(gtfsZip.getAbsolutePath());
+        Map<String, String> env = Map.of("create", "false");
+
+        try (FileSystem zipFs = FileSystems.newFileSystem(zipFile, env)) {
+            Path fileInZip = zipFs.getPath("stop_times.txt");
+            if (!Files.exists(fileInZip)) {
+                return false;
+            }
+
+            try (InputStream is = Files.newInputStream(fileInZip)) {
+                Reader reader = new InputStreamReader(is, StandardCharsets.UTF_8);
+                CSVFormat format = CSVFormat.RFC4180.builder()
+                        .setHeader()
+                        .setSkipHeaderRecord(true)
+                        .setAllowMissingColumnNames(true)
+                        .setIgnoreEmptyLines(true)
+                        .build();
+
+                boolean hasStopTimes = false;
+                try (org.apache.commons.csv.CSVParser parser = format.parse(reader)) {
+                    for (CSVRecord stopTimeLine : parser) {
+                        hasStopTimes = true;
+                        RawCsvStopTime stopTime = mapRecordToStopTime(stopTimeLine);
+                        if (!IS_FLEX.test(stopTime)) {
+                            return false;
+                        }
+                    }
+                }
+                return hasStopTimes;
+            }
+        }
+    }
+
     public void cleanStopTimesFile(File gtfsZip) throws IOException {
         Path zipFile = Paths.get(gtfsZip.getAbsolutePath());
         Map<String, String> env = Map.of("create", "false");

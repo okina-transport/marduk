@@ -20,6 +20,7 @@ import jakarta.ws.rs.NotFoundException;
 import jakarta.ws.rs.core.MediaType;
 import no.rutebanken.marduk.domain.*;
 import no.rutebanken.marduk.domain.BlobStoreFiles.File;
+import no.rutebanken.marduk.exceptions.MardukException;
 import no.rutebanken.marduk.routes.BaseRouteBuilder;
 import no.rutebanken.marduk.routes.blobstore.BlobStoreRoute;
 import no.rutebanken.marduk.routes.chouette.json.JobResponse;
@@ -414,6 +415,8 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .post("/files")
                 .description("Upload file for import into Chouette")
                 .param().name(PROVIDER).type(RestParamType.path).description(PROVIDER_DESCRIPTION).dataType(INTEGER).endParam()
+                .param().name(GTFS_FLEX_ONLY).type(RestParamType.query).description("Set to true when the analyzed file was detected as GTFS-Flex-only: Chouette is skipped and the file is fetched from Marduk's blob store instead of a Chouette job folder.").dataType("boolean").endParam()
+                .param().name(FILE_NAME).type(RestParamType.query).description("Original file name, required when " + GTFS_FLEX_ONLY + " is true to locate the file in Marduk's blob store.").dataType("string").endParam()
                 .consumes(MULTIPART_FORM_DATA)
                 .produces(MediaType.TEXT_PLAIN)
                 .bindingMode(RestBindingMode.off)
@@ -1109,15 +1112,39 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .process(e -> log.info("Authorized request passed"))
                 .validate(e -> getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)) != null)
                 .process(e -> log.info("validation passed"))
-                .process(e -> {
-                    String referential = getProviderRepository().getReferential(e.getIn().getHeader(PROVIDER_ID, Long.class));
-                    String jobId = e.getIn().getHeader(ANALYSIS_JOB_ID, String.class);
-                    java.io.File gtfsZipFile = fileSystemService.getImportZipFileByReferentialAndJobId(referential, jobId);
-                    e.getIn().setBody(gtfsZipFile);
-                    e.getIn().setHeader(CHOUETTE_REFERENTIAL, referential);
-                    e.getIn().setHeader(FILE_NAME, gtfsZipFile.getName());
-                    e.getIn().setHeader(GENERATE_MAP_MATCHING, getGenerateMapMatchingHeaders(e));
-                })
+                .choice()
+                    .when(header(GTFS_FLEX_ONLY).isEqualTo(true))
+                        .process(e -> {
+                            Provider provider = getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class));
+                            String fileName = e.getIn().getHeader(FILE_NAME, String.class);
+                            e.getIn().setHeader(FILE_HANDLE, BlobStoreRoute.importPath(provider) + "/" + fileName);
+                            e.getIn().setHeader(ALLOW_GTFS_FLEX, "true");
+                        })
+                        .to("direct:getBlob")
+                        .process(e -> {
+                            java.io.InputStream inputStream = e.getIn().getBody(java.io.InputStream.class);
+                            if (inputStream == null) {
+                                throw new MardukException("GTFS-Flex file not found for handle " + e.getIn().getHeader(FILE_HANDLE, String.class));
+                            }
+                            String fileName = e.getIn().getHeader(FILE_NAME, String.class);
+                            java.io.File gtfsFlexZipFile = new java.io.File(System.getProperty("java.io.tmpdir"), fileName);
+                            try (java.io.OutputStream os = new java.io.FileOutputStream(gtfsFlexZipFile)) {
+                                inputStream.transferTo(os);
+                            }
+                            e.getIn().setBody(gtfsFlexZipFile);
+                            e.getIn().setHeader(GENERATE_MAP_MATCHING, getGenerateMapMatchingHeaders(e));
+                        })
+                    .otherwise()
+                        .process(e -> {
+                            String referential = getProviderRepository().getReferential(e.getIn().getHeader(PROVIDER_ID, Long.class));
+                            String jobId = e.getIn().getHeader(ANALYSIS_JOB_ID, String.class);
+                            java.io.File gtfsZipFile = fileSystemService.getImportZipFileByReferentialAndJobId(referential, jobId);
+                            e.getIn().setBody(gtfsZipFile);
+                            e.getIn().setHeader(CHOUETTE_REFERENTIAL, referential);
+                            e.getIn().setHeader(FILE_NAME, gtfsZipFile.getName());
+                            e.getIn().setHeader(GENERATE_MAP_MATCHING, getGenerateMapMatchingHeaders(e));
+                        })
+                .end()
                 .log(LoggingLevel.INFO, correlation() + "upload files and start import pipeline")
                 .removeHeaders(ALL_CAMEL_HTTP)
                 .to(ROUTE_IMPORT_LAUNCH);

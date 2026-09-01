@@ -22,6 +22,7 @@ import no.rutebanken.marduk.exceptions.MardukException;
 import no.rutebanken.marduk.routes.file.beans.FileTypeClassifierBean;
 import no.rutebanken.marduk.routes.file.beans.GtfsFileInputWithParameters;
 import no.rutebanken.marduk.routes.file.gtfs.StopTimesParser;
+import no.rutebanken.marduk.services.BlobStoreService;
 import no.rutebanken.marduk.services.FileSystemService;
 import org.apache.camel.Exchange;
 import org.apache.commons.collections4.CollectionUtils;
@@ -85,13 +86,24 @@ public class ZipFileUtils {
     private final MardukPropertiesConfig mardukPropertiesConfig;
     private final FileSystemService fileSystemService;
     private final StopTimesParser stopTimesParser;
+    private final BlobStoreService blobStoreService;
 
     public ZipFileUtils(MardukPropertiesConfig mardukPropertiesConfig,
                         FileSystemService fileSystemService,
-                        StopTimesParser stopTimesParser) {
+                        StopTimesParser stopTimesParser,
+                        BlobStoreService blobStoreService) {
         this.mardukPropertiesConfig = mardukPropertiesConfig;
         this.fileSystemService = fileSystemService;
         this.stopTimesParser = stopTimesParser;
+        this.blobStoreService = blobStoreService;
+    }
+
+    private void uploadGtfsFlexFileToBlobStore(File flexFile, Exchange exchange) throws IOException {
+        String referential = exchange.getIn().getHeader(CHOUETTE_REFERENTIAL, String.class);
+        String fileHandle = BLOBSTORE_PATH_INBOUND + referential + "/" + flexFile.getName();
+        try (InputStream inputStream = new FileInputStream(flexFile)) {
+            blobStoreService.uploadBlob(fileHandle, false, inputStream);
+        }
     }
 
     public static Set<String> listFilesInZip(File file) {
@@ -460,53 +472,68 @@ public class ZipFileUtils {
             if (FileTypeClassifierBean.isGtfsZip(filenamesInZip)) {
                 File originalGtfsFile = file;
                 try {
-                    if (importGtfsFlex) {
-                        String tempDir = System.getProperty("java.io.tmpdir");
+                    boolean gtfsFlexOnly = importGtfsFlex && stopTimesParser.hasOnlyFlexStopTimes(file);
 
+                    if (gtfsFlexOnly) {
+                        exchange.getIn().setHeader(GTFS_FLEX_ONLY, true);
                         String cleanFileName = new File(originalFileName).getName();
-                        File sourceFileForFlex = new File(tempDir, cleanFileName);
-                        File flexFinalFile = File.createTempFile(Strings.CS.removeEnd(cleanFileName, ".zip") + "_FLEX",
-                                ".zip");
+                        File originalNamedFile = new File(System.getProperty("java.io.tmpdir"), cleanFileName);
+                        Files.copy(file.toPath(), originalNamedFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                        fileSystemService.copyGtfsFlexZipForUttu(originalNamedFile);
+                        uploadGtfsFlexFileToBlobStore(originalNamedFile, exchange);
+                        exchange.getIn().setHeader(GTFS_FLEX_FILE, cleanFileName);
+                        logger.info("GTFS file '{}' only contains GTFS-Flex stop times: skipping standard GTFS conversion and Chouette import",
+                                originalFileName);
+                    } else {
+                        if (importGtfsFlex) {
+                            String tempDir = System.getProperty("java.io.tmpdir");
 
-                        if (sourceFileForFlex.exists()) {
-                            Path tempOutputDir = Files.createTempDirectory("oba-flex-output-");
-                            try {
-                                GtfsTransformer transformer = new GtfsTransformer();
-                                transformer.setGtfsInputDirectory(sourceFileForFlex);
-                                transformer.setOutputDirectory(tempOutputDir.toFile());
-                                transformer.addTransform(new FilterGtfsFlexStrategy());
-                                executeTransformations(transformer, System.currentTimeMillis());
-                                zipFolder(tempOutputDir, flexFinalFile.toPath());
-                                fileSystemService.copyGtfsFlexZipForUttu(flexFinalFile);
+                            String cleanFileName = new File(originalFileName).getName();
+                            File sourceFileForFlex = new File(tempDir, cleanFileName);
+                            File flexFinalFile = File.createTempFile(Strings.CS.removeEnd(cleanFileName, ".zip") + "_FLEX",
+                                    ".zip");
 
-                                exchange.getIn().setHeader(GTFS_FLEX_FILE,
-                                        flexFinalFile.getAbsoluteFile().getName());
-                                logger.info("GTFS-Flex file generated : {}", flexFinalFile.getAbsolutePath());
+                            if (sourceFileForFlex.exists()) {
+                                Path tempOutputDir = Files.createTempDirectory("oba-flex-output-");
+                                try {
+                                    GtfsTransformer transformer = new GtfsTransformer();
+                                    transformer.setGtfsInputDirectory(sourceFileForFlex);
+                                    transformer.setOutputDirectory(tempOutputDir.toFile());
+                                    transformer.addTransform(new FilterGtfsFlexStrategy());
+                                    executeTransformations(transformer, System.currentTimeMillis());
+                                    zipFolder(tempOutputDir, flexFinalFile.toPath());
+                                    fileSystemService.copyGtfsFlexZipForUttu(flexFinalFile);
+                                    uploadGtfsFlexFileToBlobStore(flexFinalFile, exchange);
 
-                            } catch (Exception e) {
-                                throw new IOException("Failure to generate the GTFS-Flex file", e);
-                            } finally {
-                                FileUtils.deleteQuietly(tempOutputDir.toFile());
+                                    exchange.getIn().setHeader(GTFS_FLEX_FILE,
+                                            flexFinalFile.getAbsoluteFile().getName());
+                                    logger.info("GTFS-Flex file generated : {}", flexFinalFile.getAbsolutePath());
+
+                                } catch (Exception e) {
+                                    throw new IOException("Failure to generate the GTFS-Flex file", e);
+                                } finally {
+                                    FileUtils.deleteQuietly(tempOutputDir.toFile());
+                                }
                             }
                         }
+
+                        file = removeFlexFromStandardFile(file);
+
+                        if (Boolean.FALSE.equals(importFareFiles)) {
+                            removeFilesFromGtfsArchive(file, FARES_FILES);
+                        }
+
+                        GtfsFileInputWithParameters params = new GtfsFileInputWithParameters(file, routeIds,
+                                allowNonStandardGtfs, fillMissingStopName, fillMissingCoordinates, importGtfsFlex);
+
+                        if (!routeIds.isEmpty()) {
+                            file = filterGtfsByRouteIds(params);
+                        } else {
+                            file = transformGtfsFiles(params);
+                        }
+
+                        restoreNonStandardFiles(originalGtfsFile, file);
                     }
-
-                    file = removeFlexFromStandardFile(file);
-
-                    if (Boolean.FALSE.equals(importFareFiles)) {
-                        removeFilesFromGtfsArchive(file, FARES_FILES);
-                    }
-
-                    GtfsFileInputWithParameters params = new GtfsFileInputWithParameters(file, routeIds,
-                            allowNonStandardGtfs, fillMissingStopName, fillMissingCoordinates, importGtfsFlex);
-
-                    if (!routeIds.isEmpty()) {
-                        file = filterGtfsByRouteIds(params);
-                    } else {
-                        file = transformGtfsFiles(params);
-                    }
-
-                    restoreNonStandardFiles(originalGtfsFile, file);
                 } catch (Exception e) {
                     throw new FileValidationException("GTFS conversion failed", e);
                 }

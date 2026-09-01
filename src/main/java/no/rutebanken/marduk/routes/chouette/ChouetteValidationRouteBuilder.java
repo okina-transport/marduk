@@ -60,9 +60,6 @@ public class ChouetteValidationRouteBuilder extends AbstractChouetteRouteBuilder
     private String chouetteUrl;
 
     @Autowired
-    ExportJsonMapper exportJsonMapper;
-
-    @Autowired
     private ExportTemplateDAO exportTemplateDAO;
 
     @Autowired
@@ -190,6 +187,10 @@ public class ChouetteValidationRouteBuilder extends AbstractChouetteRouteBuilder
                     }
                 })
                 .to(ROUTE_UPDATE_STATUS)
+                .choice()
+                    .when(constant(VALIDATION_LEVEL_1).isEqualTo(header(JOB_STATUS_JOB_VALIDATION_LEVEL)))
+                        .to("direct:triggerUttuGtfsFlexImportIfNeeded")
+                .end()
                 .choice()
                     .when(and(
                             org.apache.camel.support.builder.PredicateBuilder.constant(autoExportsOnValidate),
