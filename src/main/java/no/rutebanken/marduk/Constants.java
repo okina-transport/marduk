@@ -63,6 +63,7 @@ public class Constants {
     public static final String DRIVER_CONTROLLER_CODE_FIELD = "driverControllerCodeField";
     public static final String UTTU_IMPORT_STATUS = "uttuImportStatus";
     public static final String GTFS_FLEX_FILE = "gtfsFlexFile";
+    public static final String GTFS_FLEX_ONLY = "gtfsFlexOnly";
 
     public static final String UPDATE_STOP_ACCESSIBILITY = "updateStopAccessibility";
 

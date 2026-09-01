@@ -125,35 +125,90 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
                 .transacted()
                 .log(LoggingLevel.INFO, correlation() + "Starting Chouette import")
                 .removeHeader(JOB_ID)
-                .process(e -> {
-                    Boolean analyze = e.getIn().getHeader(ANALYZE_ACTION, Boolean.class) != null && e.getIn().getHeader(ANALYZE_ACTION, Boolean.class);
-                    TimetableAction action = BooleanUtils.toBoolean(analyze) ? TimetableAction.FILE_ANALYZE : TimetableAction.IMPORT;
-                    JobEvent.providerJobBuilder(e).timetableAction(action).state(State.PENDING).type(e.getIn().getHeader(FILE_TYPE, String.class)).build();
-                })
-                .to(ROUTE_UPDATE_STATUS)
-                .to("direct:getBlob")
                 .choice()
-                    .when(body().isNull())
-                        .log(LoggingLevel.WARN, correlation() + "Import failed because blob could not be found")
-                        .process(e-> {
-                            if(TimetableAction.IMPORT.equals(ImportRouteBuilder.getTimeTableAction(e)) && e.getIn().getHeader(IMPORT_CONFIGURATION_ID) != null){
-                                ImportRouteBuilder.updateLastTimestamp(e);
-                            }
-                            JobEvent.providerJobBuilder(e).timetableAction(ImportRouteBuilder.getTimeTableAction(e)).state(State.FAILED).build();
-                            if (e.getIn().getHeader(WORKLOW, String.class) != null) {
-                                createMail.createMail(e, null, ImportRouteBuilder.getTimeTableAction(e), false);
-                            }
-                        })
+                    .when(and(
+                        header(GTFS_FLEX_ONLY).isEqualTo(true),
+                        exchange -> TimetableAction.IMPORT.equals(ImportRouteBuilder.getTimeTableAction(exchange))
+                    ))
+                        .to("direct:skipChouetteForGtfsFlexOnly")
                     .otherwise()
                         .process(e -> {
-                            Provider provider = getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class));
-                            e.getIn().setHeader(CHOUETTE_REFERENTIAL, provider.chouetteInfo.referential);
-                            e.getIn().setHeader(ENABLE_VALIDATION, provider.chouetteInfo.enableValidation);
+                            Boolean analyze = e.getIn().getHeader(ANALYZE_ACTION, Boolean.class) != null && e.getIn().getHeader(ANALYZE_ACTION, Boolean.class);
+                            TimetableAction action = BooleanUtils.toBoolean(analyze) ? TimetableAction.FILE_ANALYZE : TimetableAction.IMPORT;
+                            JobEvent.providerJobBuilder(e).timetableAction(action).state(State.PENDING).build();
                         })
-                        .to("log:" + getClass().getName() + "?level=DEBUG&showAll=true&multiline=true")
-                        .to("direct:addImportParameters")
+                        .to(ROUTE_UPDATE_STATUS)
+                        .choice()
+                            .when(header(GTFS_FLEX_ONLY).isEqualTo(true))
+                                .to("direct:skipChouetteForGtfsFlexOnly")
+                            .otherwise()
+                        .to("direct:getBlob")
+                        .choice()
+                            .when(body().isNull())
+                                .log(LoggingLevel.WARN, correlation() + "Import failed because blob could not be found")
+                                .process(e-> {
+                                    if(TimetableAction.IMPORT.equals(ImportRouteBuilder.getTimeTableAction(e)) && e.getIn().getHeader(IMPORT_CONFIGURATION_ID) != null){
+                                        ImportRouteBuilder.updateLastTimestamp(e);
+                                    }
+                                    JobEvent.providerJobBuilder(e).timetableAction(ImportRouteBuilder.getTimeTableAction(e)).state(State.FAILED).build();
+                                    if (e.getIn().getHeader(WORKLOW, String.class) != null) {
+                                        createMail.createMail(e, null, ImportRouteBuilder.getTimeTableAction(e), false);
+                                    }
+                                })
+                            .otherwise()
+                                .process(e -> {
+                                    Provider provider = getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class));
+                                    e.getIn().setHeader(CHOUETTE_REFERENTIAL, provider.chouetteInfo.referential);
+                                    e.getIn().setHeader(ENABLE_VALIDATION, provider.chouetteInfo.enableValidation);
+                                })
+                                .to("log:" + getClass().getName() + "?level=DEBUG&showAll=true&multiline=true")
+                                .to("direct:addImportParameters")
+                        .end()
+                        .end()
                 .end()
                 .routeId("chouette-import-dataspace");
+
+        from("direct:skipChouetteForGtfsFlexOnly")
+                .log(LoggingLevel.INFO, correlation() + "GTFS file only contains GTFS-Flex data: skipping Chouette entirely")
+                .choice()
+                    .when(exchange -> TimetableAction.FILE_ANALYZE.equals(ImportRouteBuilder.getTimeTableAction(exchange)))
+                        .process(e -> {
+                            TimetableAction action = ImportRouteBuilder.getTimeTableAction(e);
+                            JobEvent.providerJobBuilder(e)
+                                    .timetableAction(action)
+                                    .state(State.OK)
+                                    .description("GTFS-Flex only: there is no standard data to analyse or import into Chouette; only Uttu imports are supported.")
+                                    .build();
+                        })
+                        .to(ROUTE_UPDATE_STATUS)
+                .end()
+                .choice()
+                    .when(e -> {
+                        String worklow = e.getIn().getHeader(WORKLOW, String.class);
+                        return TimetableAction.FILE_ANALYZE.equals(ImportRouteBuilder.getTimeTableAction(e))
+                                && worklow != null
+                                && (worklow.equals("IMPORT") || worklow.equals("VALIDATION") || worklow.equals("EXPORT"));
+                    })
+                        .to(ROUTE_ANALYS_RUNNING)
+                    .otherwise()
+                        .to("direct:triggerUttuGtfsFlexImportIfNeeded")
+                .end()
+                .routeId("chouette-import-skip-gtfs-flex-only");
+
+        from("direct:triggerUttuGtfsFlexImportIfNeeded")
+                .choice()
+                    .when(and(
+                        header(GTFS_FLEX_FILE).isNotNull(),
+                        header(ALLOW_GTFS_FLEX).isEqualTo("true"),
+                        exchange -> TimetableAction.IMPORT.equals(ImportRouteBuilder.getTimeTableAction(exchange))
+                    ))
+                        .process(e -> {
+                            e.getIn().setHeader(OKINA_REFERENTIAL,
+                                getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class)).chouetteInfo.referential);})
+                        .log(LoggingLevel.INFO, correlation() + "Chouette import validated (level 1): triggering Uttu GTFS-Flex import")
+                        .wireTap("jms:queue:GtfsFlexUttuPredefinedImport")
+                .end()
+                .routeId("chouette-import-trigger-uttu-gtfs-flex");
 
 
         from("direct:addImportParameters")
@@ -431,6 +486,7 @@ public class ChouetteImportRouteBuilder extends AbstractChouetteRouteBuilder {
                     .when(and(constant("false").isEqualTo(header(ENABLE_VALIDATION)), simple("${header.action_report_result} == 'OK'")))
                         .to(ROUTE_CHECK_SCHEDULED_JOBS_BEFORE_TRIGGERING_NEXT_ACTION)
                         .process(e -> JobEvent.providerJobBuilder(e).timetableAction(ImportRouteBuilder.getTimeTableAction(e)).state(State.OK).build())
+                        .to("direct:triggerUttuGtfsFlexImportIfNeeded")
                     //import ok
                     .when(simple("${header.action_report_result} == 'OK' && ${header.validation_report_result} == 'OK'"))
                         .to(ROUTE_CHECK_SCHEDULED_JOBS_BEFORE_TRIGGERING_NEXT_ACTION)

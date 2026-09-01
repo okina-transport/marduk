@@ -387,7 +387,7 @@ public class FileSystemService {
             Files.createDirectories(uttuStoragePath);
         }
         Path destFile = uttuStoragePath.resolve(gtfsZip.getName());
-        Files.copy(gtfsZip.toPath(), destFile);
+        Files.copy(gtfsZip.toPath(), destFile, StandardCopyOption.REPLACE_EXISTING);
     }
 
 }
