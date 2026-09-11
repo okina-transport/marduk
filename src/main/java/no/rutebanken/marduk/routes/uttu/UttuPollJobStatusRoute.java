@@ -44,7 +44,7 @@ public class UttuPollJobStatusRoute extends AbstractChouetteRouteBuilder {
                 .process(e -> e.getIn().setHeader("loopCounter", (Integer) e.getIn().getHeader("loopCounter", 0) + 1))
                 .process(e -> {
                     String correlationId = e.getIn().getHeader(CORRELATION_ID, String.class);
-                    URL url = new URL(uttuUrl + "services/flexible-lines/job/correlation/" + correlationId);
+                    URL url = new URL(uttuUrl + "/job/correlation/" + correlationId);
                     HttpURLConnection con = (HttpURLConnection) url.openConnection();
                     con.setRequestMethod("GET");
                     con.setRequestProperty("Accept", "application/json");
