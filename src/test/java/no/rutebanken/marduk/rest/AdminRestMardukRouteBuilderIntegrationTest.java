@@ -35,10 +35,15 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.io.StringWriter;
+import java.net.Socket;
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -87,6 +92,9 @@ class AdminRestMardukRouteBuilderIntegrationTest extends MardukRouteBuilderInteg
 
     @Value("#{'${timetable.export.blob.prefixes:outbound/gtfs/,outbound/netex/}'.split(',')}")
     private List<String> exportFileStaticPrefixes;
+    @Value("${server.port}")
+    private int serverPort;
+
     @Autowired
     private AdminRestRouteBuilder adminRestRouteBuilder;
 
@@ -310,5 +318,23 @@ class AdminRestMardukRouteBuilderIntegrationTest extends MardukRouteBuilderInteg
         String result = adminRestRouteBuilder.getGenerateMapMatchingHeaders(build);
 
         assertThat(result).isEqualTo(ImportGenerateMapMatching.CAR.name());
+    }
+
+    @Test
+    void deletePredefinedFaresExportScheduleWithoutContentLength() throws Exception {
+        context.start();
+
+        try (Socket socket = new Socket("localhost", serverPort)) {
+            OutputStream out = socket.getOutputStream();
+            out.write(("DELETE /services/timetable_admin/2/predefinedExport/netexFares/999999/schedule HTTP/1.1\r\n" +
+                    "Host: localhost\r\n" +
+                    "Connection: close\r\n" +
+                    "\r\n").getBytes(StandardCharsets.US_ASCII));
+            out.flush();
+
+            String statusLine = new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.US_ASCII)).readLine();
+
+            assertThat(statusLine).startsWith("HTTP/1.1 2");
+        }
     }
 }

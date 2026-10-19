@@ -1505,6 +1505,7 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
                 .process(e -> faresScheduleService.unschedulePredefinedFaresExportForProvider(
                         e.getIn().getHeader(PROVIDER, Long.class),
                         e.getIn().getHeader(EXPORT_CONFIGURATION_ID, Long.class)))
+                .setBody(simple(null))
                 .end();
 
         from(ROUTE_ADMIN_DELETE_EXPORTS)
