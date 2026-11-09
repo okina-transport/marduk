@@ -48,6 +48,9 @@ public class ChouetteRemoveOldJobsRouteBuilder extends BaseRouteBuilder {
     @Value("${nabu.url}")
     private String nabuUrl;
 
+    @Value("${tiamat.url}")
+    private String tiamatUrl;
+
     @Autowired
     private BlobStoreService blobStoreService;
 
@@ -63,7 +66,7 @@ public class ChouetteRemoveOldJobsRouteBuilder extends BaseRouteBuilder {
         singletonFrom("quartz://marduk/chouetteRemoveOldJobsQuartz?cron=" + cronSchedule + "&trigger.timeZone=" + Constants.TIME_ZONE)
                 .autoStartup("{{chouette.remove.old.jobs.autoStartup:true}}")
                 .filter(e -> shouldQuartzRouteTrigger(e, cronSchedule))
-                .log(LoggingLevel.INFO, "Quartz triggers deletion of old jobs in Chouette and Nabu.")
+                .log(LoggingLevel.INFO, "Quartz triggers deletion of old jobs in Chouette, Nabu and Tiamat.")
                 .bean(blobStoreService, "cleanOldFiles")
                 .to("direct:chouetteRemoveOldJobs")
                 .routeId("chouette-remove-old-jobs-quartz");
@@ -107,7 +110,30 @@ public class ChouetteRemoveOldJobsRouteBuilder extends BaseRouteBuilder {
                 .process(e -> e.getIn().getHeaders().put("Authorization", tokenService.getAuthorizationHeader()))
                 .toD(nabuUrl + "/timetable/clear-events?keepJobs=${header.keepJobs}&keepDays=${header.keepDays}")
                 .log(LoggingLevel.INFO, correlation() + "Completed Nabu remove old events")
-
+                .to("direct:tiamatRemoveOldJobs")
                 .routeId("nabu-remove-old-events");
+
+        from("direct:tiamatRemoveOldJobs")
+                .log(LoggingLevel.INFO, correlation() + "Starting Tiamat remove old jobs")
+                .removeHeaders("Camel*")
+                .setBody(constant((Object) null))
+                .setHeader(Exchange.HTTP_METHOD, constant(HttpMethods.DELETE))
+                .choice()
+                    .when(header("keepJobs").isNull())
+                    .setHeader("keepJobs", constant(keepJobs))
+                .end()
+                .choice()
+                    .when(header("keepDays").isNull())
+                    .setHeader("keepDays", constant(keepDays))
+                .end()
+                // A Tiamat failure must not fail the whole purge (Chouette and Nabu are already done)
+                .doTry()
+                    .process(e -> e.getIn().getHeaders().put("Authorization", tokenService.getAuthorizationHeader()))
+                    .toD(tiamatUrl + "/jobs/completed?keepJobs=${header.keepJobs}&keepDays=${header.keepDays}")
+                    .log(LoggingLevel.INFO, correlation() + "Completed Tiamat remove old jobs: ${body}")
+                .doCatch(Exception.class)
+                    .log(LoggingLevel.ERROR, correlation() + "Tiamat remove old jobs failed, purge continues: ${exception.message}")
+                .end()
+                .routeId("tiamat-remove-old-jobs");
     }
 }
