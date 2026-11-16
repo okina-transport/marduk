@@ -72,7 +72,7 @@ public class Constants {
 
     public static final String ID_SUFFIX = "ID_SUFFIX";
     public static final String COMMERCIAL_POINT_ID_PREFIX = "COMMERCIAL_POINT_ID_PREFIX";
-    public static final String COMMERCIAL_POINT_EXPORT = "COMMERCIAL_POINT_EXPORT";
+    public static final String DISCARD_COMMERCIAL_POINTS = "DISCARD_COMMERCIAL_POINTS";
     public static final String GOOGLE_MAPS_COMPATIBILITY = "GOOGLE_MAPS_COMPATIBILITY";
     public static final String USE_EXTENDED_GTFS_ROUTE_TYPES = "USE_EXTENDED_GTFS_ROUTE_TYPES";
     public static final String STOP_AREA_PREFIX_TO_REMOVE = "stopAreaPrefixToRemove";

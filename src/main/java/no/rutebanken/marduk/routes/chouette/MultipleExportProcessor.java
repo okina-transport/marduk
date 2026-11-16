@@ -139,8 +139,8 @@ public class MultipleExportProcessor implements Processor {
             exchange.getIn().getHeaders().put(COMMERCIAL_POINT_ID_PREFIX, export.getCommercialPointIdPrefix());
         }
 
-        if (export.getCommercialPointExport() != null) {
-            exchange.getIn().getHeaders().put(COMMERCIAL_POINT_EXPORT, export.getCommercialPointExport());
+        if (export.getDiscardCommercialPoints() != null) {
+            exchange.getIn().getHeaders().put(DISCARD_COMMERCIAL_POINTS, export.getDiscardCommercialPoints());
         }
 
         if (export.getGoogleMapsCompatibility() != null) {

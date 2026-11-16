@@ -880,8 +880,8 @@ public class AdminRestRouteBuilder extends BaseRouteBuilder {
             if (headers.get(COMMERCIAL_POINT_ID_PREFIX) != null) {
                 e.getIn().setHeader(COMMERCIAL_POINT_ID_PREFIX, headers.get(COMMERCIAL_POINT_ID_PREFIX));
             }
-            if (headers.get(COMMERCIAL_POINT_EXPORT) != null) {
-                e.getIn().setHeader(COMMERCIAL_POINT_EXPORT, headers.get(COMMERCIAL_POINT_EXPORT));
+            if (headers.get(DISCARD_COMMERCIAL_POINTS) != null) {
+                e.getIn().setHeader(DISCARD_COMMERCIAL_POINTS, headers.get(DISCARD_COMMERCIAL_POINTS));
             }
             if (headers.get(EXPORTED_FILENAME) != null) {
                 e.getIn().setHeader(EXPORTED_FILENAME, headers.get(EXPORTED_FILENAME));

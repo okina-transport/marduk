@@ -23,7 +23,7 @@ public class ExportTemplate implements Serializable {
     private IdFormat idFormat;
     private String idSuffix;
     private String commercialPointIdPrefix;
-    private Boolean commercialPointExport;
+    private Boolean discardCommercialPoints;
     private Boolean googleMapsCompatibility;
     private Boolean exportEnabled;
     private AttributionsExportModes attributionsExportModes;
@@ -165,12 +165,12 @@ public class ExportTemplate implements Serializable {
         this.commercialPointIdPrefix = commercialPointIdPrefix;
     }
 
-    public Boolean getCommercialPointExport() {
-        return commercialPointExport;
+    public Boolean getDiscardCommercialPoints() {
+        return discardCommercialPoints;
     }
 
-    public void setCommercialPointExport(Boolean commercialPointExport) {
-        this.commercialPointExport = commercialPointExport;
+    public void setDiscardCommercialPoints(Boolean discardCommercialPoints) {
+        this.discardCommercialPoints = discardCommercialPoints;
     }
 
     public Boolean getGoogleMapsCompatibility() {
