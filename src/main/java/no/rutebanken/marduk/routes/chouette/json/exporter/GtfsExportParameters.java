@@ -86,8 +86,8 @@ public class GtfsExportParameters {
         @JsonProperty("commercial_point_id_prefix")
         public String commercialPointIdPrefix;
 
-        @JsonProperty("commercial_point_export")
-        private Boolean commercialPointExport;
+        @JsonProperty("discard_commercial_points")
+        private Boolean discardCommercialPoints;
 
         @JsonProperty("google_maps_compatibility")
         private Boolean googleMapsCompatibility;
@@ -122,7 +122,7 @@ public class GtfsExportParameters {
 
 
         public GtfsExport(String name, String objectIdPrefix, String referentialName, String organisationName, String userName, boolean keepOriginalId, Date startDate, Date endDate, String exportedFilename,
-                          IdParameters idParams, boolean mappingLinesIds, Boolean commercialPointExport, AttributionsExportModes attributionsExportModes, Boolean googleMapsCompatibility,
+                          IdParameters idParams, boolean mappingLinesIds, Boolean discardCommercialPoints, AttributionsExportModes attributionsExportModes, Boolean googleMapsCompatibility,
                           boolean useExtendedGtfsRouteTypes, AgencyParameters agencyParameters, String exportedReferentials, Long exportConfigurationId,
                           boolean exportAllLines, boolean serviceJourneyTripObjectName) {
             this.name = name;
@@ -139,7 +139,7 @@ public class GtfsExportParameters {
             this.idSuffix = idParams.getIdSuffix();
             this.lineIdPrefix = idParams.getLineIdPrefix();
             this.commercialPointIdPrefix = idParams.getCommercialPointIdPrefix();
-            this.commercialPointExport = commercialPointExport;
+            this.discardCommercialPoints = discardCommercialPoints;
             this.googleMapsCompatibility = googleMapsCompatibility;
             this.mappingLinesIds = mappingLinesIds;
             this.attributionsExportModes = attributionsExportModes;
