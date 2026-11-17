@@ -23,6 +23,7 @@ import no.rutebanken.marduk.services.BlobStoreService;
 import org.apache.camel.Exchange;
 import org.apache.camel.LoggingLevel;
 import org.apache.camel.component.http.HttpMethods;
+import org.apache.commons.lang3.Strings;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -88,7 +89,7 @@ public class ChouetteRemoveOldJobsRouteBuilder extends BaseRouteBuilder {
                     .setHeader("keepDays", constant(keepDays))
                 .end()
 
-                .toD(chouetteUrl + "/chouette_iev/admin/completed_jobs?keepJobs=${header.keepJobs}&keepDays=${header.keepDays}")
+                .toD(Strings.CS.removeEnd(chouetteUrl, "/") + "/chouette_iev/admin/completed_jobs?keepJobs=${header.keepJobs}&keepDays=${header.keepDays}")
                 .log(LoggingLevel.INFO, correlation() + "Completed Chouette remove old jobs")
 
                 .to("direct:nabuRemoveOldJobs")
@@ -108,7 +109,7 @@ public class ChouetteRemoveOldJobsRouteBuilder extends BaseRouteBuilder {
                     .setHeader("keepDays", constant(keepDays))
                 .end()
                 .process(e -> e.getIn().getHeaders().put("Authorization", tokenService.getAuthorizationHeader()))
-                .toD(nabuUrl + "/timetable/clear-events?keepJobs=${header.keepJobs}&keepDays=${header.keepDays}")
+                .toD(Strings.CS.removeEnd(nabuUrl, "/") + "/timetable/clear-events?keepJobs=${header.keepJobs}&keepDays=${header.keepDays}")
                 .log(LoggingLevel.INFO, correlation() + "Completed Nabu remove old events")
                 .to("direct:tiamatRemoveOldJobs")
                 .routeId("nabu-remove-old-events");
@@ -129,7 +130,7 @@ public class ChouetteRemoveOldJobsRouteBuilder extends BaseRouteBuilder {
                 // A Tiamat failure must not fail the whole purge (Chouette and Nabu are already done)
                 .doTry()
                     .process(e -> e.getIn().getHeaders().put("Authorization", tokenService.getAuthorizationHeader()))
-                    .toD(tiamatUrl + "/jobs/completed?keepJobs=${header.keepJobs}&keepDays=${header.keepDays}")
+                    .toD(Strings.CS.removeEnd(tiamatUrl, "/") + "/jobs/completed?keepJobs=${header.keepJobs}&keepDays=${header.keepDays}")
                     .log(LoggingLevel.INFO, correlation() + "Completed Tiamat remove old jobs: ${body}")
                 .doCatch(Exception.class)
                     .log(LoggingLevel.ERROR, correlation() + "Tiamat remove old jobs failed, purge continues: ${exception.message}")
