@@ -155,8 +155,10 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
         String referential = e.getIn().getHeader(CHOUETTE_REFERENTIAL, String.class);
         String importConfigurationId = e.getIn().getHeader(IMPORT_CONFIGURATION_ID, String.class);
         ImportConfiguration importConfiguration = importConfigurationDAO.getImportConfiguration(referential, importConfigurationId);
+        boolean forceImport = Boolean.TRUE.equals(e.getIn().getHeader(FORCE_IMPORT, Boolean.class));
+        e.getIn().removeHeader(FORCE_IMPORT);
 
-        userActionsLoggingService.recordPredefinedImport(e, importConfiguration);
+        userActionsLoggingService.recordPredefinedImport(e, importConfiguration, forceImport);
 
         if (!importConfiguration.isActivated()) {
             log.warn("{} Import is inactive (id : {})", correlation(), importConfigurationId);
@@ -184,9 +186,9 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
         Optional<Path> importFile = Optional.empty();
         try {
             if (CollectionUtils.isNotEmpty(importConfiguration.getConfigurationFtpList())) {
-                importFile = retrieveImportFromFtp(referential, importConfiguration, importConfiguration.getConfigurationFtpList().getFirst());
+                importFile = retrieveImportFromFtp(referential, importConfiguration, importConfiguration.getConfigurationFtpList().getFirst(), forceImport);
             } else if (CollectionUtils.isNotEmpty(importConfiguration.getConfigurationUrlList())) {
-                importFile = retrieveImportFromUrl(referential, importConfiguration, importConfiguration.getConfigurationUrlList().getFirst());
+                importFile = retrieveImportFromUrl(referential, importConfiguration, importConfiguration.getConfigurationUrlList().getFirst(), forceImport);
             } else {
                 log.error("{} No FTP or URL configuration set for import", correlation());
                 log.warn("{} Abort automatic import", correlation());
@@ -238,18 +240,18 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
         }
     }
 
-    private Optional<Path> retrieveImportFromFtp(String referential, ImportConfiguration importConfiguration, ConfigurationFtp configurationFtp) throws AutomaticImportException {
+    private Optional<Path> retrieveImportFromFtp(String referential, ImportConfiguration importConfiguration, ConfigurationFtp configurationFtp, boolean forceImport) throws AutomaticImportException {
         if (configurationFtp.getType().equals("FTP")) {
-            return getFileFromFTP(referential, importConfiguration, configurationFtp);
+            return getFileFromFTP(referential, importConfiguration, configurationFtp, forceImport);
         } else if (configurationFtp.getType().equals("SFTP")) {
-            return getFileFromSFTP(referential, importConfiguration, configurationFtp);
+            return getFileFromSFTP(referential, importConfiguration, configurationFtp, forceImport);
         } else {
             log.error("{} Invalid FTP configuration type {} (should be 'FTP' or 'STFP')", correlation(), configurationFtp.getType());
             throw new AutomaticImportException("Configuration de l'import automatique incorrect, veuillez supprimer puis recréer la configuration FTP/STFP");
         }
     }
 
-    private Optional<Path> getFileFromSFTP(String referential, ImportConfiguration importConfiguration, ConfigurationFtp configurationFtp) throws AutomaticImportException {
+    private Optional<Path> getFileFromSFTP(String referential, ImportConfiguration importConfiguration, ConfigurationFtp configurationFtp, boolean forceImport) throws AutomaticImportException {
         log.info("Retrieve import file from SFTP (url: {})", configurationFtp.getUrl());
 
         Session session = null;
@@ -295,7 +297,8 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
                     throw new AutomaticImportException(ERROR_RETRIEVING_IMPORT_FILE, e);
                 }
                 if (targetFile.length() > 0) {
-                    if (configurationFtp.getLastTimestamp() == null || localDateTime.isAfter(configurationFtp.getLastTimestamp())) {
+                    if (forceImport || configurationFtp.getLastTimestamp() == null || localDateTime.isAfter(configurationFtp.getLastTimestamp())) {
+                        logForcedImport(forceImport);
                         configurationFtp.setLastTimestamp(localDateTime);
                         return Optional.of(copyFileFromInputStream(new FileInputStream(targetFile), configurationFtp.getFilename()));
                     } else {
@@ -321,7 +324,7 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
         }
     }
 
-    private Optional<Path> getFileFromFTP(String referential, ImportConfiguration importConfiguration, ConfigurationFtp configurationFtp) throws AutomaticImportException {
+    private Optional<Path> getFileFromFTP(String referential, ImportConfiguration importConfiguration, ConfigurationFtp configurationFtp, boolean forceImport) throws AutomaticImportException {
         log.info("Retrieve import file from FTP (url: {})", configurationFtp.getUrl());
 
         FTPClient ftpClient = new FTPClient();
@@ -357,7 +360,8 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
             if (optionalFTPFile.isPresent()) {
                 FTPFile file = optionalFTPFile.get();
                 LocalDateTime fileTimestamp = LocalDateTime.ofInstant(file.getTimestamp().toInstant(), file.getTimestamp().getTimeZone().toZoneId());
-                if (configurationFtp.getLastTimestamp() == null || fileTimestamp.isAfter(configurationFtp.getLastTimestamp())) {
+                if (forceImport || configurationFtp.getLastTimestamp() == null || fileTimestamp.isAfter(configurationFtp.getLastTimestamp())) {
+                    logForcedImport(forceImport);
                     String remotePath = Path.of(configurationFtp.getFolder(), file.getName()).toString();
                     try (InputStream importFile = ftpClient.retrieveFileStream(remotePath)) {
                         if (importFile == null) {
@@ -403,7 +407,7 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
                 .max(Comparator.comparing(f -> f.getTimestamp()));
     }
 
-    private Optional<Path> retrieveImportFromUrl(String referential, ImportConfiguration importConfiguration, ConfigurationUrl configurationUrl) throws AutomaticImportException {
+    private Optional<Path> retrieveImportFromUrl(String referential, ImportConfiguration importConfiguration, ConfigurationUrl configurationUrl, boolean forceImport) throws AutomaticImportException {
         log.info("{} Retrieve import file from URL: {}", correlation(), configurationUrl.getUrl());
 
         // handle authentication
@@ -443,11 +447,12 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
 
         // get import last modified time
         LocalDateTime importLastTimeModified = getImportModificationDateFromUrl(configurationUrl, importFileUrlConnection);
-        if (configurationUrl.getLastTimestamp() != null && !configurationUrl.getLastTimestamp().isBefore(importLastTimeModified)) {
+        if (!forceImport && configurationUrl.getLastTimestamp() != null && !configurationUrl.getLastTimestamp().isBefore(importLastTimeModified)) {
             log.warn("{} No new file to import for the referential : {} for the import configuration URL : {}", correlation(), referential, configurationUrl.getUrl());
             sendMailForFileAlreadyImported(importConfiguration, referential, fileName);
             return Optional.empty();
         }
+        logForcedImport(forceImport);
 
         try {
             configurationUrl.setLastTimestamp(importLastTimeModified);
@@ -466,6 +471,12 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
         } catch (IOException e) {
             log.error("{} Error downloading import file from {}", correlation(), importFileUrl);
             throw new AutomaticImportException(ERROR_RETRIEVING_IMPORT_FILE, e);
+        }
+    }
+
+    private void logForcedImport(boolean forceImport) {
+        if (forceImport) {
+            log.info("{} Forced import, timestamp check skipped", correlation());
         }
     }
 

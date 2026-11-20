@@ -38,7 +38,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import java.net.URL;
 import java.util.Arrays;
 import java.util.List;
 
@@ -181,8 +180,7 @@ public class TiamatPollJobStatusRoute extends AbstractChouetteRouteBuilder {
                 .setHeader(Exchange.HTTP_METHOD, constant(HttpMethods.GET))
                 // Attempt to retrigger delivery in case of errors
                 .process(e -> e.getOut().setHeaders(e.getIn().getHeaders()))
-                .toD("${exchangeProperty.tiamat_url}")
-                .process(e -> e.getIn().setBody(new URL(e.getIn().getHeader(Constants.JOB_STATUS_URL, String.class).replace("http4", "http")).openConnection().getInputStream()))
+                .toD("${exchangeProperty.tiamat_url}?followRedirects=true")
                 .choice()
                     .when(simple("${header.RutebankenJobId} != null"))
                         .process(e -> {
