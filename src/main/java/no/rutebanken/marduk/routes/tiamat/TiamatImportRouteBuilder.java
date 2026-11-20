@@ -84,6 +84,7 @@ public class TiamatImportRouteBuilder extends AbstractChouetteRouteBuilder {
                             }
                         })
                     .otherwise()
+                        .setHeader(ANALYZE_ACTION, constant(false))
                         .process(e -> {
                             Provider provider = getProviderRepository().getProvider(e.getIn().getHeader(PROVIDER_ID, Long.class));
                             e.getIn().setHeader(CHOUETTE_REFERENTIAL, provider.chouetteInfo.referential);

@@ -297,13 +297,29 @@ class UserActionsLoggingServiceTest {
         config.setName("my-import");
         config.setActivated(true);
 
-        serviceEnabled.recordPredefinedImport(exchange, config);
+        serviceEnabled.recordPredefinedImport(exchange, config, false);
 
         ArgumentCaptor<String> bodyCaptor = ArgumentCaptor.forClass(String.class);
         verify(producer).sendBody(eq(QUEUE), bodyCaptor.capture());
         assertThat(bodyCaptor.getValue())
                 .contains("PREDEFINED-IMPORT")
-                .contains("my-import");
+                .contains("my-import")
+                .contains("\\\"forceImport\\\":false");
+    }
+
+    @Test
+    void recordPredefinedImport_whenForced_tracesForceImport() {
+        when(message.getHeader(USER, String.class)).thenReturn(USER_VALUE);
+        when(message.getHeader(CHOUETTE_REFERENTIAL, String.class)).thenReturn(ORG_VALUE);
+
+        ImportConfiguration config = new ImportConfiguration();
+        config.setName("my-import");
+
+        serviceEnabled.recordPredefinedImport(exchange, config, true);
+
+        ArgumentCaptor<String> bodyCaptor = ArgumentCaptor.forClass(String.class);
+        verify(producer).sendBody(eq(QUEUE), bodyCaptor.capture());
+        assertThat(bodyCaptor.getValue()).contains("\\\"forceImport\\\":true");
     }
 
     @Test
@@ -311,7 +327,7 @@ class UserActionsLoggingServiceTest {
         ImportConfiguration config = new ImportConfiguration();
         config.setName("my-import");
 
-        serviceDisabled.recordPredefinedImport(exchange, config);
+        serviceDisabled.recordPredefinedImport(exchange, config, false);
 
         verifyNoInteractions(producer);
     }

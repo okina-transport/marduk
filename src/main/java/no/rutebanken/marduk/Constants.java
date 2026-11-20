@@ -175,6 +175,7 @@ public class Constants {
     public static final String MISSING_EXPORTS = "missingExports";
 
     public static final String IMPORT_CONFIGURATION_ID = "importConfigurationId";
+    public static final String FORCE_IMPORT = "forceImport";
     public static final String IMPORT_CONFIGURATION = "importConfiguration";
     public static final String IS_ACTIVE = "isActive";
     public static final String WORKLOW = "worklow";
