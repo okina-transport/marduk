@@ -5,6 +5,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import no.rutebanken.marduk.domain.ConfigurationFtp;
 import no.rutebanken.marduk.domain.ImportConfiguration;
@@ -218,10 +219,13 @@ public class UserActionsLoggingService {
         }
     }
 
-    public void recordPredefinedImport(Exchange e, ImportConfiguration importConfiguration) {
+    public void recordPredefinedImport(Exchange e, ImportConfiguration importConfiguration, boolean forceImport) {
         try {
+            ObjectNode metadata = OBJECT_MAPPER.valueToTree(importConfiguration);
+            metadata.put(FORCE_IMPORT, forceImport);
+
             LogContentDto logContent = new LogContentDto();
-            logContent.setMetadata(OBJECT_MAPPER.writeValueAsString(importConfiguration));
+            logContent.setMetadata(OBJECT_MAPPER.writeValueAsString(metadata));
 
             LogEntryDto logEntry = new LogEntryDto();
             logEntry.setEventTimestamp(Instant.now());
@@ -231,7 +235,7 @@ public class UserActionsLoggingService {
             logEntry.setLogContent(logContent);
 
             recordUserAction(logEntry);
-        } catch (JsonProcessingException ex) {
+        } catch (JsonProcessingException | IllegalArgumentException ex) {
             logger.error("Failed to serialize ImportConfiguration to JSON", ex);
         }
     }
