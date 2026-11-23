@@ -195,6 +195,9 @@ public class Constants {
     public static final String EXPORT_GLOBAL_GTFS_ZIP = "export_global_gtfs.zip";
 
     public static final String POST_PROCESS = "postProcess";
+    public static final String POST_PROCESS_FAILED = "POST_PROCESS_FAILED";
+    public static final String POST_PROCESS_ERROR_MESSAGE = "POST_PROCESS_ERROR_MESSAGE";
+    public static final String POST_PROCESS_EXPORT_TYPE = "JobType";
 
     public static final String EXPORT_TO_CONSUMER_STATUS = "exportToConsumerStatus";
     public static final String EXPORT_TO_CONSUMER_DATA = "exportToConsumerDATA";
