@@ -1,6 +1,7 @@
 package no.rutebanken.marduk.domain;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import no.rutebanken.marduk.utils.LocalDateTimeDeserializer;
@@ -12,7 +13,8 @@ import java.time.LocalDateTime;
 public class ConfigurationUrl {
     private Long id;
     private String url;
-    private String urlInfo;
+    @JsonProperty("urlInfo")
+    private String fileDateJsonApiUrl;
     private String login;
     private byte[] password;
 
@@ -36,12 +38,12 @@ public class ConfigurationUrl {
         this.url = url;
     }
 
-    public String getUrlInfo() {
-        return urlInfo;
+    public String getFileDateJsonApiUrl() {
+        return fileDateJsonApiUrl;
     }
 
-    public void setUrlInfo(String urlInfo) {
-        this.urlInfo = urlInfo;
+    public void setFileDateJsonApiUrl(String fileDateJsonApiUrl) {
+        this.fileDateJsonApiUrl = fileDateJsonApiUrl;
     }
 
     public String getLogin() {
