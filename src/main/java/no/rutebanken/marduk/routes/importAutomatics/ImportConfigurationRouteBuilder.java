@@ -506,10 +506,10 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
      * @param configurationUrl URL configuration
      * @param httpURLConnection opened connection to server
      * @return modification date of import file from server
-     * @throws AutomaticImportException when connection to URL info server fails or JSON parsing of URL info server response fails
+     * @throws AutomaticImportException when connection to file date JSON API fails or JSON parsing of its response fails
      */
     private LocalDateTime getImportModificationDateFromUrl(ConfigurationUrl configurationUrl, HttpURLConnection httpURLConnection) throws AutomaticImportException {
-        if (StringUtils.isEmpty(configurationUrl.getUrlInfo())) {
+        if (StringUtils.isEmpty(configurationUrl.getFileDateJsonApiUrl())) {
             long date = httpURLConnection.getLastModified();
             if (date == 0) {
                 // take current time instead of 1970/01/01 00:00:00 to trigger
@@ -518,21 +518,21 @@ public class ImportConfigurationRouteBuilder extends AbstractChouetteRouteBuilde
             }
             return LocalDateTime.ofInstant(Instant.ofEpochMilli(date), TimeZone.getDefault().toZoneId());
         }
-        URL urlInfo = parseUrl(configurationUrl.getUrlInfo());
-        try (InputStream inputStreamUrlInfo = urlInfo.openStream()) {
+        URL fileDateJsonApiUrl = parseUrl(configurationUrl.getFileDateJsonApiUrl());
+        try (InputStream inputStreamFileDateJsonApi = fileDateJsonApiUrl.openStream()) {
             JSONParser jsonParser = new JSONParser();
             org.json.simple.JSONObject jsonObject;
             try {
-                jsonObject = (org.json.simple.JSONObject) jsonParser.parse(new InputStreamReader(inputStreamUrlInfo, StandardCharsets.UTF_8));
+                jsonObject = (org.json.simple.JSONObject) jsonParser.parse(new InputStreamReader(inputStreamFileDateJsonApi, StandardCharsets.UTF_8));
             } catch (IOException | ParseException e) {
-                log.error("{} Error parsing JSON from {}", correlation(), urlInfo);
+                log.error("{} Error parsing JSON from {}", correlation(), fileDateJsonApiUrl);
                 throw new AutomaticImportException(ERROR_INTERNAL, e);
             }
             String stringDateLastModified = jsonObject.get("updated").toString();
             OffsetDateTime offsetDateTime = OffsetDateTime.parse(stringDateLastModified);
             return offsetDateTime.toLocalDateTime();
         } catch (IOException e) {
-            log.error("{} Error opening connection to {}", correlation(), urlInfo);
+            log.error("{} Error opening connection to {}", correlation(), fileDateJsonApiUrl);
             throw new AutomaticImportException(ERROR_INTERNAL, e);
         }
     }
